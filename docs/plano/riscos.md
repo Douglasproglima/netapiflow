@@ -2,7 +2,9 @@
 
 Todo risco tem uma prova: um teste (ou medição) específico que precisa existir para o risco ser
 considerado tratado, não só "levado em conta". Estado inicial de todos: **Planejado**. A
-Executora atualiza para **Mitigado** ao entregar a prova, citando o arquivo de teste.
+Executora **não edita esta tabela** — ela cita, no resumo de fim de fase, qual arquivo de teste
+prova cada risco da fase. A Planejadora atualiza o estado para **Mitigado** durante
+`/revisar-fase N`, depois de rodar a prova e confirmar que ela é real.
 
 | # | Risco | Mitigação | Prova | Fase | Estado |
 |---|---|---|---|---|---|
