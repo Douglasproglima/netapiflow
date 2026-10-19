@@ -19,7 +19,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 
 | Fase | Nome | Status | Observação |
 |---|---|---|---|
-| 0 | Fundação | Em revisão | Implementada em `feature/fase-0-fundacao` (ainda não mergeada). 2 pendências técnicas encontradas na revisão (versão do pacote e SourceLink), já refletidas nas tarefas 0.1/0.3 |
+| 0 | Fundação | **Aceita** (2026-10-19) | Implementada em `feature/fase-0-fundacao`, ainda não mergeada em `develop`. Build/format/test/pack reproduzidos pela Planejadora; as 2 pendências técnicas (versão, SourceLink) corrigidas e verificadas |
 | 1 | Núcleo de captura | Planejada | Depende da Fase 0 completa |
 | 2 | Formas de marcação | Planejada | Depende da Fase 1 |
 | 3 | API do dashboard e SSE | Planejada | Tarefa 3.1 deve congelar `contratos.md` antes da Fase 4 começar |
@@ -28,9 +28,9 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: a Executora corrige as 2 pendências técnicas da Fase 0 (versão `0.1.0` do pacote
-e `Microsoft.SourceLink.GitHub`) em `feature/fase-0-fundacao`, reportando no resumo. A
-Planejadora então confirma e autoriza o merge para `develop`.
+Próximo passo: merge de `feature/fase-0-fundacao` em `develop` (aguardando confirmação explícita
+de quem opera o repositório, ver `.claude/rules/git-workflow.md`) e início da Fase 1 pela
+Executora.
 
 ## Regra de avanço
 
