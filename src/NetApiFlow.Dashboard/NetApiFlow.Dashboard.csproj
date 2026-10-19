@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>NetApiFlow.Dashboard</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetApiFlow\NetApiFlow.csproj" />
+  </ItemGroup>
+
+</Project>
