@@ -8,6 +8,7 @@
     <PackageReference Include="Shouldly" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +18,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Dashboard\NetApiFlow.Dashboard.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\samples\SampleApi.Controllers\SampleApi.Controllers.csproj" />
   </ItemGroup>
 
 </Project>

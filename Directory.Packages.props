@@ -34,6 +34,9 @@
     <!-- Test-only: exercises FlowDbCommandInterceptor against a real relational provider (InMemory never calls DbCommandInterceptor) -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.21" />
 
+    <!-- samples/SampleApi.Controllers -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+
     <!-- NetApiFlow.MediatR -->
     <PackageVersion Include="MediatR" Version="12.4.1" />
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
@@ -39,6 +40,10 @@ internal class FlowInterceptorProxy : DispatchProxy
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
 
+        // Captured so Activity.Current can be restored once the synchronous part of this call
+        // returns, instead of staying pinned to this step until it completes asynchronously later
+        // (which would make unrelated concurrent calls parent themselves under this step by mistake).
+        var callerActivity = Activity.Current;
         var step = NetApiFlow.Step(_component, targetMethod.Name, _componentType);
 
         object? result;
@@ -64,26 +69,34 @@ internal class FlowInterceptorProxy : DispatchProxy
 
         if (returnType == typeof(Task))
         {
-            return WrapTask((Task)result!, step);
+            var wrapped = WrapTask((Task)result!, step);
+            Activity.Current = callerActivity;
+            return wrapped;
         }
 
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
         {
             var elementType = returnType.GetGenericArguments()[0];
-            return WrapTaskGenericMethod.MakeGenericMethod(elementType).Invoke(null, [result, step]);
+            var wrapped = WrapTaskGenericMethod.MakeGenericMethod(elementType).Invoke(null, [result, step]);
+            Activity.Current = callerActivity;
+            return wrapped;
         }
 
         if (returnType == typeof(ValueTask))
         {
 #pragma warning disable CA2012 // The boxed ValueTask from reflection is passed straight through to WrapValueTask, which consumes it exactly once via AsTask().
-            return WrapValueTask((ValueTask)result!, step);
+            var wrapped = WrapValueTask((ValueTask)result!, step);
 #pragma warning restore CA2012
+            Activity.Current = callerActivity;
+            return wrapped;
         }
 
         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(ValueTask<>))
         {
             var elementType = returnType.GetGenericArguments()[0];
-            return WrapValueTaskGenericMethod.MakeGenericMethod(elementType).Invoke(null, [result, step]);
+            var wrapped = WrapValueTaskGenericMethod.MakeGenericMethod(elementType).Invoke(null, [result, step]);
+            Activity.Current = callerActivity;
+            return wrapped;
         }
 
         step.Dispose();

@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/SampleApi.Controllers/SampleApi.Controllers.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/NetApiFlow.Dashboard/NetApiFlow.Dashboard.csproj" />
     <Project Path="src/NetApiFlow.EntityFrameworkCore/NetApiFlow.EntityFrameworkCore.csproj" />
