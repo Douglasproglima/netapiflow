@@ -18,9 +18,10 @@ o planejamento e a execução, e um nome livre então pode ter sido registrado p
 `NetApiFlow`, `NetApiFlow.Dashboard`, `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`,
 `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`.
 
-**Pronto quando:** resultado da reconfirmação (livre ou ocupado, com data e link) acrescentado a
-D-14 em `docs/plano/decisoes.md`. Se algum ID estiver ocupado, **parar e relatar à Planejadora
-antes de continuar**: não escolher um nome alternativo sozinho.
+**Pronto quando:** resultado da reconfirmação (livre ou ocupado, data, método usado) citado no
+resumo de fim de fase. **Você não edita `docs/plano/decisoes.md`** — quem acrescenta o resultado
+a D-14 é a Planejadora, durante `/revisar-fase 0`. Se algum ID estiver ocupado, **parar e
+relatar antes de continuar**: não escolher um nome alternativo sozinho.
 
 ### 0.2: `global.json`
 
@@ -48,15 +49,28 @@ Na raiz. Propriedades comuns a todo projeto de produto (`src/**`):
   `<RepositoryType>git</RepositoryType>`
 - SourceLink: `<PublishRepositoryUrl>true</PublishRepositoryUrl>`,
   `<EmbedUntrackedSources>true</EmbedUntrackedSources>`,
-  `<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>`
+  `<ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>`,
+  **e** o `PackageReference` de `Microsoft.SourceLink.GitHub` (via `Directory.Packages.props` +
+  um `ItemGroup` em `src/Directory.Build.props`, ou direto em cada `.csproj` de `src/`) — as três
+  propriedades acima não embutem nada sozinhas, sem o provedor do SourceLink instalado
+  (`.claude/rules/packaging.md`).
 - `<IncludeSymbols>true</IncludeSymbols>`, `<SymbolPackageFormat>snupkg</SymbolPackageFormat>`
 - `<GenerateDocumentationFile>true</GenerateDocumentationFile>` (exigido pela regra de comentário
   XML em `.claude/rules/dotnet-core.md`)
+- `<Version>0.1.0</Version>` (ADR-0001/D-01): sem isso, `dotnet pack` usa o default `1.0.0` do
+  SDK, que contradiz "API instável até 1.0.0". O workflow de release (Fase 7, tarefa 7.7)
+  sobrescreve este valor via `/p:Version=` extraído da tag; aqui é só o valor usado em build e
+  pack locais/de CI fora de uma tag.
 
 `tests/Directory.Build.props` (ou um `<PropertyGroup>` condicional por caminho) desliga
-`GenerateDocumentationFile` e mantém os dois TFMs (D-11).
+`GenerateDocumentationFile` e mantém os dois TFMs (D-11). O SourceLink não precisa ser desligado
+para `tests/`, mas também não faz efeito prático lá, já que projeto de teste não é empacotado.
 
-**Pronto quando:** `dotnet restore` passa sem warning de propriedade desconhecida.
+**Pronto quando:** `dotnet restore` passa sem warning de propriedade desconhecida; `dotnet pack`
+gera pacotes com versão `0.1.0` (não `1.0.0`); o `.nuspec` de cada pacote lista
+`Microsoft.SourceLink.GitHub` nas dependências de build (conferir com
+`dotnet pack --no-build -o <pasta> && unzip -p <pasta>/NetApiFlow.0.1.0.nupkg "*.nuspec"` ou
+equivalente).
 
 ### 0.4: `Directory.Packages.props`
 
@@ -169,7 +183,9 @@ existir para a Fase 7 linkar) resolve para um arquivo real.
 
 - `dotnet build NetApiFlow.slnx` e `dotnet test NetApiFlow.slnx` verdes em Linux e Windows, nos
   dois TFMs.
-- `dotnet pack NetApiFlow.slnx -c Release` gera 6 `.nupkg` e 6 `.snupkg`.
+- `dotnet pack NetApiFlow.slnx -c Release` gera 6 `.nupkg` e 6 `.snupkg`, **com versão `0.1.0`**,
+  não o default `1.0.0` do SDK.
+- `Microsoft.SourceLink.GitHub` presente como dependência de build nos pacotes gerados.
 - Os 6 IDs de pacote confirmados livres (tarefa 0.1).
 
 ## Ao terminar
