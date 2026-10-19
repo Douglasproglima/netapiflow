@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
+using NetApiFlow.Sanitization;
 
 namespace NetApiFlow.Instrumentation;
 
@@ -104,7 +105,7 @@ internal sealed class FlowActivityListener : IDisposable
             DurationMicros = (long)activity.Duration.TotalMicroseconds,
             Status = status,
             ErrorType = activity.GetTagItem(FlowTagNames.ErrorType) as string,
-            ErrorMessage = activity.GetTagItem(FlowTagNames.ErrorMessage) as string,
+            ErrorMessage = ErrorMessageSanitizer.Sanitize(activity.GetTagItem(FlowTagNames.ErrorMessage) as string),
             IsErrorOrigin = isErrorOrigin,
         };
 

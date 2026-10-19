@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
+using NetApiFlow.Sanitization;
 
 namespace NetApiFlow.Recording;
 
@@ -99,7 +100,7 @@ internal sealed class FlowRecorder
             DurationMicros = (long)(endedAtUtc - trace.StartedAtUtc).TotalMicroseconds,
             SpanCount = trace.Spans.Count,
             Truncated = trace.Truncated,
-            ErrorMessage = errorMessage,
+            ErrorMessage = ErrorMessageSanitizer.Sanitize(errorMessage),
         };
 
         TraceCompleted?.Invoke(result);
