@@ -15,14 +15,19 @@ Fonte única de verdade do produto: `netapiflow-prompt.md` (fora deste repositó
 
 ## Papel das duas IAs
 
-Este projeto é conduzido por duas IAs com papéis fixos, que não trocam de uma rodada para outra:
+Este projeto é conduzido por duas IAs com responsabilidades diferentes. Nenhuma sessão é uma ou
+outra por padrão — o papel é definido por quem está operando a conversa, pelo que foi pedido no
+início dela (ver "Qual é o seu papel" em `.claude/rules/git-workflow.md`):
 
-- **IA Planejadora (nós, nesta sessão):** escreve e mantém `docs/plano/`, `docs/adr/` e
-  `.claude/rules/`. Nunca escreve `src/`, `tests/` ou `samples/`. Revisa cada fase entregue
-  contra os critérios de aceite antes de liberar a próxima.
+- **IA Planejadora:** escreve e mantém `docs/plano/`, `docs/adr/` e `.claude/rules/`. Nunca
+  escreve `src/`, `tests/` ou `samples/`. Revisa cada fase entregue contra os critérios de
+  aceite antes de liberar a próxima.
 - **IA Executora:** lê `docs/plano/fase-N-*.md` e implementa. Não altera `docs/plano/` nem
   `docs/adr/`. Ao fim de cada fase, entrega um resumo: o que foi feito, como verificar, o que
   ficou pendente (ver `.claude/rules/planning.md`).
+
+Dentro de uma mesma rodada de trabalho o papel não troca: quem começou planejando não passa a
+implementar no meio da conversa, e vice-versa.
 
 Decisão nova tomada durante a execução que valha além da tarefa corrente vira ADR, escrito
 pela Planejadora, não pela Executora.
