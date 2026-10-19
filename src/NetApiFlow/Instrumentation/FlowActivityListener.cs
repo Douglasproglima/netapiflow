@@ -108,7 +108,7 @@ internal sealed class FlowActivityListener : IDisposable
             IsErrorOrigin = isErrorOrigin,
         };
 
-        _recorder.UpdateSpan(traceId, updated);
+        _recorder.CompleteSpan(traceId, updated);
 
         if (isErrorOrigin)
         {

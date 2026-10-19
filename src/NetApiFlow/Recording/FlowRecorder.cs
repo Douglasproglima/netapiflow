@@ -32,6 +32,15 @@ internal sealed class FlowRecorder
     /// <summary>Raised when a trace is closed, with its final consolidated state.</summary>
     public event Action<FlowTrace>? TraceCompleted;
 
+    /// <summary>Raised when a span is opened.</summary>
+    public event Action<FlowSpan>? SpanStarted;
+
+    /// <summary>Raised when a span closes without an error.</summary>
+    public event Action<FlowSpan>? SpanCompleted;
+
+    /// <summary>Raised when a span closes in an error status.</summary>
+    public event Action<FlowSpan>? SpanFailed;
+
     public bool TryStartTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc)
     {
         if (_activeTraces.Count >= MaxActiveTraces)
@@ -103,6 +112,7 @@ internal sealed class FlowRecorder
 
         if (trace.TryAddSpan(span, _options.Limits.MaxSpansPerTrace))
         {
+            SpanStarted?.Invoke(span);
             return true;
         }
 
@@ -110,11 +120,32 @@ internal sealed class FlowRecorder
         return false;
     }
 
+    /// <summary>Updates a span in place without publishing an event. Used to propagate an error status to a still-running ancestor.</summary>
     public void UpdateSpan(string traceId, FlowSpan span)
     {
         if (_activeTraces.TryGetValue(traceId, out var trace))
         {
             trace.ReplaceSpan(span);
+        }
+    }
+
+    /// <summary>Records a span's final state and publishes <see cref="SpanCompleted"/> or <see cref="SpanFailed"/>.</summary>
+    public void CompleteSpan(string traceId, FlowSpan span)
+    {
+        if (!_activeTraces.TryGetValue(traceId, out var trace))
+        {
+            return;
+        }
+
+        trace.ReplaceSpan(span);
+
+        if (span.Status == FlowStatus.Error)
+        {
+            SpanFailed?.Invoke(span);
+        }
+        else
+        {
+            SpanCompleted?.Invoke(span);
         }
     }
 
