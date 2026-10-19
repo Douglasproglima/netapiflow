@@ -4,4 +4,8 @@
     <PackageId>NetApiFlow</PackageId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="..\..\docs\images\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>

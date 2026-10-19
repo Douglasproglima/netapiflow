@@ -13,4 +13,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\docs\images\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>
