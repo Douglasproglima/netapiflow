@@ -52,7 +52,51 @@ public interface ITraceStore
 
 public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
 public interface IDashboardAuthorizationFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
+
+public sealed class NetApiFlowOptions
+{
+    public bool Enabled { get; set; } = true;
+    public TimeSpan SlowThreshold { get; set; } = TimeSpan.FromMilliseconds(250);
+    public bool CaptureSqlText { get; set; }
+    public RetentionOptions Retention { get; }
+    public LimitsOptions Limits { get; }
+    public IReadOnlyList<string> IncludePatterns { get; }
+    public IReadOnlyList<string> ExcludePatterns { get; }
+    public NetApiFlowOptions IncludePaths(params string[] patterns);
+    public NetApiFlowOptions ExcludePaths(params string[] patterns);
+}
+
+public sealed class RetentionOptions
+{
+    public int MaxTraces { get; set; } = 1000;
+    public TimeSpan MaxAge { get; set; } = TimeSpan.FromHours(24);
+}
+
+public sealed class LimitsOptions
+{
+    public int MaxSpansPerTrace { get; set; } = 300;
+}
+
+public static class NetApiFlowServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlow(this IServiceCollection services,
+                                                    Action<NetApiFlowOptions>? configure = null);
+}
 ```
+
+Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
+do prompt já descrevesse essa forma de configuração em código).
+
+### DTOs de apoio de `ITraceStore` (provisórios até a Fase 3)
+
+`PagedResult<T>`, `FlowTraceSummary`, `TraceQuery`, `ComponentStat`, `StatsQuery` e
+`RetentionPolicy` existem desde a Fase 1 com a forma implementada em `src/NetApiFlow/*.cs`,
+cobrindo os filtros da seção 7.1 item 3 (status, método, rota, tenant, período, duração mínima,
+paginação) e as métricas da seção 7.1 item 4 (execuções, erros, mediana, média, p95, máximo).
+Cada um traz `/// <remarks>Provisional shape...</remarks>` no comentário XML. O contrato
+definitivo (campo a campo, JSON de exemplo) continua sendo responsabilidade da tarefa 3.1 — a
+Fase 3 pode renomear ou reformar esses tipos sem que isso seja uma quebra de contrato desta
+seção, só uma substituição do que era provisório.
 
 Notas de implementação, não normativas (a Executora decide o detalhe, mas não a forma pública
 acima):

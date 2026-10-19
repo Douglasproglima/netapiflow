@@ -19,18 +19,18 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 
 | Fase | Nome | Status | Observação |
 |---|---|---|---|
-| 0 | Fundação | **Aceita** (2026-10-19) | Implementada em `feature/fase-0-fundacao`, ainda não mergeada em `develop`. Build/format/test/pack reproduzidos pela Planejadora; as 2 pendências técnicas (versão, SourceLink) corrigidas e verificadas |
-| 1 | Núcleo de captura | Planejada | Depende da Fase 0 completa |
-| 2 | Formas de marcação | Planejada | Depende da Fase 1 |
+| 0 | Fundação | **Aceita e mergeada** (2026-10-19) | PR #1, CI verde nos 4 checks (build-test ×2 SO, pr-lint, secret-scan) |
+| 1 | Núcleo de captura | **Aceita** (2026-10-19) | Implementada em `feature/fase-1-nucleo-de-captura`, ainda não mergeada. 54 testes (49 unitários + 4 integração + 1 placeholder), verdes nos dois TFMs, reproduzidos pela Planejadora. `contratos.md` atualizado com `NetApiFlowOptions` e os DTOs provisórios de `ITraceStore` |
+| 2 | Formas de marcação | Planejada | Depende da Fase 1 (aceita, falta só o merge) |
 | 3 | API do dashboard e SSE | Planejada | Tarefa 3.1 deve congelar `contratos.md` antes da Fase 4 começar |
 | 4 | Dashboard Angular | Planejada | Depende do contrato REST congelado na Fase 3 |
 | 5 | Empacotamento | Planejada | Depende das Fases 1-4 |
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: merge de `feature/fase-0-fundacao` em `develop` (aguardando confirmação explícita
-de quem opera o repositório, ver `.claude/rules/git-workflow.md`) e início da Fase 1 pela
-Executora.
+Próximo passo: PR de `feature/fase-1-nucleo-de-captura` para `develop` (aguardando confirmação
+explícita de quem opera o repositório, ver `.claude/rules/git-workflow.md`) e início da Fase 2
+pela Executora.
 
 ## Regra de avanço
 
