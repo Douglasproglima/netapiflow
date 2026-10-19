@@ -7,6 +7,7 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
 {
     private readonly object _lock = new();
     private readonly List<FlowSpan> _spans = [];
+    private int _nextSequence;
 
     public string TraceId { get; } = traceId;
 
@@ -28,6 +29,8 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
             }
         }
     }
+
+    public int NextSequence() => Interlocked.Increment(ref _nextSequence);
 
     public bool TryAddSpan(FlowSpan span, int maxSpansPerTrace)
     {

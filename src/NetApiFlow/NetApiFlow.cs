@@ -9,14 +9,22 @@ public static class NetApiFlow
     /// <summary>Marks the start of a tracked step. Dispose the returned <see cref="FlowStep"/> to close it.</summary>
     public static FlowStep Step(string component, string operation, ComponentType type = ComponentType.Custom)
     {
-        var activity = FlowActivitySource.Source.StartActivity($"{component}.{operation}", ActivityKind.Internal);
-
-        if (activity is not null)
+        if (!FlowActivitySource.Source.HasListeners())
         {
-            activity.SetTag(FlowTagNames.Component, component);
-            activity.SetTag(FlowTagNames.Operation, operation);
-            activity.SetTag(FlowTagNames.ComponentType, type.ToString());
+            return new FlowStep(null);
         }
+
+        var tags = new ActivityTagsCollection
+        {
+            [FlowTagNames.Component] = component,
+            [FlowTagNames.Operation] = operation,
+            [FlowTagNames.ComponentType] = type.ToString(),
+        };
+
+        var activity = FlowActivitySource.Source.StartActivity(
+            kind: ActivityKind.Internal,
+            tags: tags,
+            name: $"{component}.{operation}");
 
         return new FlowStep(activity);
     }
