@@ -19,6 +19,9 @@ internal class FlowInterceptorProxy : DispatchProxy
     private string _component = null!;
     private ComponentType _componentType;
 
+    /// <summary>The decorated instance. Used by tests to verify DI lifetime identity across proxy instances.</summary>
+    internal object Target => _target;
+
     /// <summary>Creates a proxy of <typeparamref name="TInterface"/> that tracks every call against <paramref name="target"/>.</summary>
     public static TInterface Create<TInterface, TImplementation>(TImplementation target, ComponentType componentType)
         where TInterface : class
