@@ -1,0 +1,20 @@
+# Riscos técnicos e mitigação
+
+Todo risco tem uma prova: um teste (ou medição) específico que precisa existir para o risco ser
+considerado tratado, não só "levado em conta". Estado inicial de todos: **Planejado**. A
+Executora atualiza para **Mitigado** ao entregar a prova, citando o arquivo de teste.
+
+| # | Risco | Mitigação | Prova | Fase | Estado |
+|---|---|---|---|---|---|
+| R-01 | `ValueTask` só pode ser consumida uma vez. Anexar continuação no `DispatchProxy` para fechar o span pode quebrar o retorno | Converter com `.AsTask()` antes de anexar, ou consumir o `ValueTaskAwaiter` uma única vez. `IAsyncEnumerable<T>` fica fora da v1 (limitação conhecida) | Teste com `ValueTask<T>` já completada e com `ValueTask<T>` que completa após delay; duração precisa refletir o delay | 2 | Planejado |
+| R-02 | `DispatchProxy` perde o lifetime do DI ao registrar a interface decorada | Registrar a concreta com o lifetime pedido e a interface com o mesmo lifetime via `ImplementationFactory` | Teste que resolve duas vezes no mesmo escopo e verifica identidade | 2 | Planejado |
+| R-03 | Reescrita do `<base href>` quebra sob `PathBase` de proxy reverso ou em caminho diferente de `/flow` | Ler o `index.html` embutido uma vez, trocar `<base href="/">` por `<base href="{PathBase}{DashboardPath}/">`, cachear por chave de base path | Teste de integração com `UsePathBase("/app")` e dashboard em `/qualquer/caminho` | 5 | Planejado |
+| R-04 | SSE em `net8.0` não tem `TypedResults.ServerSentEvents`. As duas implementações podem divergir | `#if NET10_0_OR_GREATER` separa. Em `net8.0`: `text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`, `IHttpResponseBodyFeature.DisableBuffering()`, `FlushAsync()` por evento | Testes de integração de SSE rodam nos dois TFMs (D-11), com as mesmas asserções | 3 | Planejado |
+| R-05 | O `ActivityListener` encarece toda `Activity` do processo | Decidir no `Sample`, não no `ActivityStarted`: devolver `ActivitySamplingResult.None` cedo quando `Enabled` é falso ou o limite de 500 traces foi atingido | Benchmark na Fase 7, número publicado no README | 1 e 7 | Planejado |
+| R-06 | Escutar a source `"Npgsql"` duplica spans de quem também usa o interceptor do EF Core | Desligado por padrão. Quando ligado, deduplicar por `Activity.Id` | Teste com as duas fontes ativas ao mesmo tempo | 2 | Planejado |
+| R-07 | Sanitização por regex de CPF, CNPJ, e-mail e token é alvo de ReDoS | `[GeneratedRegex]` com `RegexOptions.NonBacktracking` onde couber, `matchTimeout` explícito, truncar em 300 caracteres antes de sanitizar | Teste com entrada patológica e `Stopwatch` com teto | 1 | Planejado |
+| R-08 | `dotnet pack` sair sem UI ou com UI velha | Target MSBuild com `Inputs`/`Outputs` para build incremental, passo de CI que falha se `dist/` não existir antes do pack | Teste que resolve `index.html` pelo `ManifestEmbeddedFileProvider` e falha se o arquivo não vier | 5 | Planejado |
+| R-09 | Dashboard exposto fora de Development por descuido | Middleware devolve 404 por padrão quando `IHostEnvironment.IsDevelopment()` é falso e não há autorização configurada | Teste de integração com `UseEnvironment("Production")` esperando 404 | 5 | Planejado |
+| R-10 | Cliente SSE lento segura memória | Canal por cliente, bounded em 5000, `BoundedChannelFullMode.DropOldest`, desconectar quem ficar muito para trás | Teste com consumidor que não lê e verificação de que a memória não cresce sem limite | 3 | Planejado |
+| R-11 | `Activity.Current` se perde com `ExecutionContext.SuppressFlow()` ou thread pool próprio | Não dá para resolver no código. Vai para limitações conhecidas no README | Documentação, seção 12 do README | 7 | Planejado (documentação, não código) |
+| R-12 | Os 6 IDs de pacote podem estar ocupados no nuget.org | Conferir os seis antes de qualquer outra tarefa. Pré-checagem da Planejadora em 2026-10-19: os 6 estão livres (D-14) | Resultado registrado em `decisoes.md`; ID ocupado bloqueia o plano até resolver; Executora reconfirma na tarefa 0.1 antes de empacotar de verdade | 0 | Pré-checado, livre. Reconfirmação na tarefa 0.1 **bloqueante** |

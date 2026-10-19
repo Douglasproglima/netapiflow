@@ -1,0 +1,22 @@
+# Decisões travadas
+
+Append-only. Decisão aceita não é editada para mudar de sentido: uma decisão nova que substitui
+uma anterior ganha seu próprio número e cita o que substitui. Decisão estrutural que vale além do
+planejamento (afeta como o código é escrito) também vira ADR em `docs/adr/`, referenciado aqui.
+
+| # | Decisão | Justificativa | ADR relacionado |
+|---|---|---|---|
+| D-01 | SemVer, começando em `0.1.0`. Branches `release/0.1.0`, tag `v0.1.0` | É o que o consumidor de NuGet espera para resolver range de versão e identificar breaking change. Difere do `VERSAO.ANOMES.RELEASE.FIX` usado em outros projetos pessoais do autor, de propósito | [ADR-0001](../adr/0001-gitflow-e-semver.md) |
+| D-02 | Público em inglês, interno em pt-BR. Código, comentários XML, logs, README, CHANGELOG, commits e títulos de PR em inglês. `docs/plano/`, `docs/adr/` e a conversa com a Planejadora em pt-BR | O pacote é internacional, o planejamento é interno | — |
+| D-03 | Handoff por arquivo, modelo de arquivos de plano + regras, sem framework de orquestração | `docs/plano/fase-N-*.md` + `.claude/rules/` + agents de revisão. A Executora lê o plano da fase e implementa | — |
+| D-04 | Entrega da rodada de bootstrap: governança do repositório + plano mestre das Fases 0 a 7 | Pedido da seção 15 do `netapiflow-prompt.md` | — |
+| D-05 | ADO.NET direto nos storages (`NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`), sem Dapper | Conjunto de queries pequeno e fixo. Caminho quente é escrita em lote, melhor servida por `NpgsqlBinaryImporter` e `SqlBulkCopy`, que Dapper não cobre. Sem Dapper, o pacote de storage tem só o driver como dependência | [ADR-0004](../adr/0004-storages-ado-net-direto.md) |
+| D-06 | Shouldly para asserções | FluentAssertions v8 exige licença paga para uso comercial. Shouldly é BSD-3-Clause, compatível com MIT | [ADR-0008](../adr/0008-ferramentas-de-teste.md) |
+| D-07 | NSubstitute para mocks | O episódio do SponsorLink no Moq 4.20 queimou confiança em projeto open source. NSubstitute é BSD-3, sem telemetria | [ADR-0008](../adr/0008-ferramentas-de-teste.md) |
+| D-08 | Glob de rotas (`IncludePaths`/`ExcludePaths`) escrito do zero no núcleo | O núcleo só pode ter `FrameworkReference` para `Microsoft.AspNetCore.App`. Um matcher de `*` e `**` sobre segmentos de path cabe em poucas linhas e fica 100% testado | — |
+| D-09 | `NetApiFlow.Step(...)` devolve um `readonly struct FlowStep : IDisposable` | Com tracing desligado, o struct carrega `Activity? = null` e o `Dispose` não faz nada. Zero alocação no caminho frio | — |
+| D-10 | Cobertura mínima de 80% de linha em `NetApiFlow` (núcleo) e no `graph-builder` do Angular. Sem meta global de cobertura | O código de integração (middleware, interceptors, proxy) é provado por teste de integração, não por percentual de linha | — |
+| D-11 | Projetos de teste também multi-targetam `net8.0;net10.0` | Só assim o aceite "funciona nos dois TFMs" é verificado de verdade, principalmente para o SSE, que tem implementação diferente em cada TFM | [ADR-0003](../adr/0003-multi-targeting-net8-net10.md) |
+| D-12 | O plano mestre mora em `docs/plano/` dentro do repositório, não só no `G:\` | A Executora precisa dele no mesmo clone. O arquivo em `G:\` continua sendo a fonte de origem do produto, não do plano de execução | — |
+| D-13 | `.editorconfig`, `.gitignore`, `.gitattributes` e `.gitleaks.toml` criados no bootstrap de governança, antes da tarefa 0.1 da Fase 0 | `.gitignore` precisa existir antes do primeiro commit com `bin/`, `obj/` e `node_modules/`; `.editorconfig` antes do primeiro `.cs`. Desvio consciente da ordem literal do prompt, registrado aqui para não ser lido como lacuna do plano | — |
+| D-14 | Os 6 IDs de pacote (`NetApiFlow`, `NetApiFlow.Dashboard`, `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`) estão **livres** no nuget.org, conferido em 2026-10-19 | Página de cada ID devolve 404 (pacote inexistente); busca pelo prefixo `NetApiFlow` na API de busca do NuGet (`azuresearch-usnc.nuget.org/query?q=NetApiFlow`) devolve 0 resultados correspondentes. Checagem antecipada pela Planejadora, não bloqueia mais a tarefa 0.1 da Fase 0, mas a Executora deve reconferir na hora de empacotar de verdade, porque meses podem ter passado e um nome livre hoje pode ser registrado por outra pessoa antes da primeira publicação | — |
