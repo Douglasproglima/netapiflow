@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>NetApiFlow.Dashboard</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetApiFlow\NetApiFlow.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\docs\images\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
