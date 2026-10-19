@@ -26,6 +26,12 @@ internal sealed class FlowRecorder
 
     public long DroppedSpanCount => Interlocked.Read(ref _droppedSpanCount);
 
+    /// <summary>Raised when a trace is opened.</summary>
+    public event Action<FlowTrace>? TraceStarted;
+
+    /// <summary>Raised when a trace is closed, with its final consolidated state.</summary>
+    public event Action<FlowTrace>? TraceCompleted;
+
     public bool TryStartTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc)
     {
         if (_activeTraces.Count >= MaxActiveTraces)
@@ -34,7 +40,58 @@ internal sealed class FlowRecorder
             return false;
         }
 
-        return _activeTraces.TryAdd(traceId, new ActiveTrace(traceId, method, routeTemplate, startedAtUtc));
+        if (!_activeTraces.TryAdd(traceId, new ActiveTrace(traceId, method, routeTemplate, startedAtUtc)))
+        {
+            return false;
+        }
+
+        TraceStarted?.Invoke(new FlowTrace
+        {
+            TraceId = traceId,
+            Method = method,
+            RouteTemplate = routeTemplate,
+            Status = FlowStatus.Running,
+            StartedAt = startedAtUtc,
+        });
+
+        return true;
+    }
+
+    /// <summary>Updates the route template for an open trace, once routing has resolved the matched endpoint.</summary>
+    public void UpdateRouteTemplate(string traceId, string routeTemplate)
+    {
+        if (_activeTraces.TryGetValue(traceId, out var trace))
+        {
+            trace.RouteTemplate = routeTemplate;
+        }
+    }
+
+    /// <summary>Closes an open trace and returns its final consolidated state, or <see langword="null"/> if it was not tracked.</summary>
+    public FlowTrace? CompleteTrace(string traceId, int? httpStatus, FlowStatus status, string? errorMessage)
+    {
+        if (!TryCompleteTrace(traceId, out var trace) || trace is null)
+        {
+            return null;
+        }
+
+        var endedAtUtc = DateTime.UtcNow;
+        var result = new FlowTrace
+        {
+            TraceId = trace.TraceId,
+            Method = trace.Method,
+            RouteTemplate = trace.RouteTemplate,
+            HttpStatus = httpStatus,
+            Status = status,
+            StartedAt = trace.StartedAtUtc,
+            EndedAt = endedAtUtc,
+            DurationMicros = (long)(endedAtUtc - trace.StartedAtUtc).TotalMicroseconds,
+            SpanCount = trace.Spans.Count,
+            Truncated = trace.Truncated,
+            ErrorMessage = errorMessage,
+        };
+
+        TraceCompleted?.Invoke(result);
+        return result;
     }
 
     public bool TryAddSpan(string traceId, FlowSpan span)

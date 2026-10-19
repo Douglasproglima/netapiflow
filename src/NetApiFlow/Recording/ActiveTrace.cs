@@ -13,7 +13,7 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
 
     public string Method { get; } = method;
 
-    public string RouteTemplate { get; } = routeTemplate;
+    public string RouteTemplate { get; set; } = routeTemplate;
 
     public DateTime StartedAtUtc { get; } = startedAtUtc;
 
