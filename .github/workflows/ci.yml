@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: build-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore NetApiFlow.slnx
+
+      - name: Format check
+        run: dotnet format NetApiFlow.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build NetApiFlow.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test NetApiFlow.slnx -c Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Pack (verification only)
+        run: dotnet pack NetApiFlow.slnx -c Release --no-build
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --config=/repo/.gitleaks.toml -v
