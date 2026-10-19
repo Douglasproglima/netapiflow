@@ -6,6 +6,12 @@ public sealed class NetApiFlowOptions
     private readonly List<string> _includePatterns = [];
     private readonly List<string> _excludePatterns = [];
 
+    /// <summary>
+    /// Base path where the dashboard is mounted. Routes under it are never traced, even without
+    /// explicit configuration. Set internally by <c>UseNetApiFlowDashboard</c>. Default: <c>/flow</c>.
+    /// </summary>
+    internal string DashboardBasePath { get; set; } = "/flow";
+
     /// <summary>Whether tracing is active. Default: <see langword="true"/>.</summary>
     public bool Enabled { get; set; } = true;
 
