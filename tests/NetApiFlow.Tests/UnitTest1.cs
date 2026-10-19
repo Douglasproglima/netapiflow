@@ -1,4 +1,4 @@
-﻿namespace NetApiFlow.Tests;
+namespace NetApiFlow.Tests;
 
 public class UnitTest1
 {

@@ -1,4 +1,4 @@
-﻿namespace NetApiFlow.Storage.Tests;
+namespace NetApiFlow.Storage.Tests;
 
 public class UnitTest1
 {
