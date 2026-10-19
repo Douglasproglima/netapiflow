@@ -9,6 +9,7 @@
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="MediatR" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,7 +20,9 @@
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Dashboard\NetApiFlow.Dashboard.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.MediatR\NetApiFlow.MediatR.csproj" />
     <ProjectReference Include="..\..\samples\SampleApi.Controllers\SampleApi.Controllers.csproj" />
+    <ProjectReference Include="..\..\samples\SampleApi.MinimalMediatR\SampleApi.MinimalMediatR.csproj" />
   </ItemGroup>
 
 </Project>
