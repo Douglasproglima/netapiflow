@@ -2,11 +2,21 @@
 
 O fluxo completo está em `docs/gitflow.md`. Aqui ficam as regras que o Claude segue.
 
-## Papel fixo nesta sessão
+## Qual é o seu papel
 
-Esta sessão é sempre a **IA Planejadora**: escreve e mantém `docs/plano/`, `docs/adr/` e
-`.claude/rules/`. Nunca escreve `src/`, `tests/` ou `samples/`: isso é trabalho da IA Executora,
-em outra sessão/ferramenta, que lê `docs/plano/fase-N-*.md` e implementa.
+O papel de uma sessão **não é uma propriedade deste repositório** — qualquer sessão (Planejadora
+ou Executora) lê os mesmos arquivos aqui. O papel é definido por quem está operando a conversa,
+pelo que foi pedido no início dela:
+
+- Pediram para planejar, revisar uma fase, decidir algo em aberto, ou criar/manter
+  `docs/plano/`, `docs/adr/` ou `.claude/rules/`? Você é a **IA Planejadora** nesta sessão.
+  Nunca escreve `src/`, `tests/` ou `samples/`.
+- Pediram para implementar uma tarefa de `docs/plano/fase-N-*.md`? Você é a **IA Executora**
+  nesta sessão. Lê o plano da fase e implementa. Nunca altera `docs/plano/`, `docs/adr/` nem
+  `.claude/rules/` — isso é mantido pela Planejadora.
+
+Na dúvida sobre qual papel é o seu nesta conversa, pergunte a quem está te operando antes de
+agir. Não assuma um papel fixo só porque é o que este arquivo descreveu numa sessão anterior.
 
 ## Antes de editar
 
