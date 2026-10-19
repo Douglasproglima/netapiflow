@@ -20,17 +20,15 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | Fase | Nome | Status | Observação |
 |---|---|---|---|
 | 0 | Fundação | **Aceita e mergeada** (2026-10-19) | PR #1, CI verde nos 4 checks (build-test ×2 SO, pr-lint, secret-scan) |
-| 1 | Núcleo de captura | **Aceita** (2026-10-19) | Implementada em `feature/fase-1-nucleo-de-captura`, ainda não mergeada. 54 testes (49 unitários + 4 integração + 1 placeholder), verdes nos dois TFMs, reproduzidos pela Planejadora. `contratos.md` atualizado com `NetApiFlowOptions` e os DTOs provisórios de `ITraceStore` |
-| 2 | Formas de marcação | Planejada | Depende da Fase 1 (aceita, falta só o merge) |
+| 1 | Núcleo de captura | **Aceita e mergeada** (2026-10-19) | PR #2, CI verde nos 4 checks. 54 testes (49 unitários + 4 integração + 1 placeholder). `contratos.md` atualizado com `NetApiFlowOptions` e os DTOs provisórios de `ITraceStore` |
+| 2 | Formas de marcação | Planejada | Pode começar |
 | 3 | API do dashboard e SSE | Planejada | Tarefa 3.1 deve congelar `contratos.md` antes da Fase 4 começar |
 | 4 | Dashboard Angular | Planejada | Depende do contrato REST congelado na Fase 3 |
 | 5 | Empacotamento | Planejada | Depende das Fases 1-4 |
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: PR de `feature/fase-1-nucleo-de-captura` para `develop` (aguardando confirmação
-explícita de quem opera o repositório, ver `.claude/rules/git-workflow.md`) e início da Fase 2
-pela Executora.
+Próximo passo: a Executora lê `docs/plano/fase-2-formas-de-marcacao.md` e começa a Fase 2.
 
 ## Regra de avanço
 
