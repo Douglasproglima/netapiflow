@@ -82,7 +82,31 @@ public static class NetApiFlowServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlow(this IServiceCollection services,
                                                     Action<NetApiFlowOptions>? configure = null);
 }
+
+public static class FlowTrackedServiceCollectionExtensions
+{
+    public static IServiceCollection AddFlowTracked<TInterface, TImplementation>(
+        this IServiceCollection services, ComponentType componentType,
+        ServiceLifetime lifetime = ServiceLifetime.Scoped)
+        where TInterface : class where TImplementation : class, TInterface;
+
+    public static IServiceCollection DecorateFlowTracked(
+        this IServiceCollection services, Func<Type, bool> predicate,
+        ComponentType componentType = ComponentType.Service);
+}
+
+public static class NetApiFlowEndpointFilterExtensions
+{
+    public static RouteHandlerBuilder WithNetApiFlowTracking(this RouteHandlerBuilder builder);
+    public static RouteGroupBuilder WithNetApiFlowTracking(this RouteGroupBuilder builder);
+}
 ```
+
+`NetApiFlow.MediatR` expõe `AddNetApiFlowMediatR(this IServiceCollection)` (registra o
+`IPipelineBehavior<,>` que gera span `UseCase`, além do `AddMediatR(...)` do próprio MediatR).
+`NetApiFlow.EntityFrameworkCore` expõe `AddNetApiFlowEntityFrameworkCore(this IServiceCollection)`
+(registra o interceptor; ainda precisa de `optionsBuilder.AddInterceptors(...)` no `DbContext`,
+porque o EF Core não tem registro global de interceptor). Formalizado na revisão da Fase 2.
 
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
