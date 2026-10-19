@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Sanitization;
 
 namespace NetApiFlow.Recording;
@@ -50,6 +51,7 @@ internal sealed class FlowRecorder
         if (_activeTraces.Count >= MaxActiveTraces)
         {
             Interlocked.Increment(ref _droppedTraceCount);
+            FlowMetrics.DroppedTraces.Add(1);
             return false;
         }
 
@@ -122,6 +124,7 @@ internal sealed class FlowRecorder
         }
 
         Interlocked.Increment(ref _droppedSpanCount);
+        FlowMetrics.DroppedSpans.Add(1);
         return false;
     }
 

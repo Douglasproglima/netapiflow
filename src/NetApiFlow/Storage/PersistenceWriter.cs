@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 
 namespace NetApiFlow.Storage;
@@ -49,6 +50,7 @@ internal sealed partial class PersistenceWriter : BackgroundService
         if (!_channel.Writer.TryWrite((trace, spans)))
         {
             Interlocked.Increment(ref _droppedCount);
+            FlowMetrics.PersistenceFailures.Add(1);
         }
     }
 
@@ -63,6 +65,7 @@ internal sealed partial class PersistenceWriter : BackgroundService
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Interlocked.Increment(ref _failureCount);
+                FlowMetrics.PersistenceFailures.Add(1);
                 Log.PersistenceFailed(_logger, trace.TraceId, ex);
             }
         }
