@@ -1,0 +1,43 @@
+namespace NetApiFlow;
+
+/// <summary>Configuration for NetApiFlow, bound from the <c>NetApiFlow</c> configuration section.</summary>
+public sealed class NetApiFlowOptions
+{
+    private readonly List<string> _includePatterns = [];
+    private readonly List<string> _excludePatterns = [];
+
+    /// <summary>Whether tracing is active. Default: <see langword="true"/>.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Duration above which a span is considered slow. Default: 250 ms.</summary>
+    public TimeSpan SlowThreshold { get; set; } = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>Whether to record the SQL command text (without parameter values) for database spans. Default: <see langword="false"/>.</summary>
+    public bool CaptureSqlText { get; set; }
+
+    /// <summary>Retention policy for persisted traces.</summary>
+    public RetentionOptions Retention { get; } = new();
+
+    /// <summary>In-process limits for tracing overhead.</summary>
+    public LimitsOptions Limits { get; } = new();
+
+    /// <summary>Route glob patterns (<c>*</c> for one segment, <c>**</c> for any depth) a request must match to be traced.</summary>
+    public IReadOnlyList<string> IncludePatterns => _includePatterns;
+
+    /// <summary>Route glob patterns excluded from tracing even when they match an include pattern.</summary>
+    public IReadOnlyList<string> ExcludePatterns => _excludePatterns;
+
+    /// <summary>Adds route glob patterns that must match for a request to be traced.</summary>
+    public NetApiFlowOptions IncludePaths(params string[] patterns)
+    {
+        _includePatterns.AddRange(patterns);
+        return this;
+    }
+
+    /// <summary>Adds route glob patterns that are always excluded from tracing, even when they match an include pattern.</summary>
+    public NetApiFlowOptions ExcludePaths(params string[] patterns)
+    {
+        _excludePatterns.AddRange(patterns);
+        return this;
+    }
+}
