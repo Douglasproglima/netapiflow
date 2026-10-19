@@ -41,6 +41,9 @@ internal sealed class FlowRecorder
     /// <summary>Raised when a span closes in an error status.</summary>
     public event Action<FlowSpan>? SpanFailed;
 
+    /// <summary>Raised when a trace closes, with its final state and spans, for the persistence writer.</summary>
+    public event Action<FlowTrace, IReadOnlyList<FlowSpan>>? TraceReadyForPersistence;
+
     public bool TryStartTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc)
     {
         if (_activeTraces.Count >= MaxActiveTraces)
@@ -100,6 +103,7 @@ internal sealed class FlowRecorder
         };
 
         TraceCompleted?.Invoke(result);
+        TraceReadyForPersistence?.Invoke(result, trace.Spans);
         return result;
     }
 
