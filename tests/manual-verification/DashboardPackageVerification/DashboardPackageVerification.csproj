@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Installed from the local feed (nuget.config), not a ProjectReference: tarefa 5.6 proves the
+         published .nupkg works standalone, the way a real consumer would install it. -->
+    <PackageReference Include="NetApiFlow" Version="0.1.0" />
+    <PackageReference Include="NetApiFlow.Dashboard" Version="0.1.0" />
+  </ItemGroup>
+
+</Project>
