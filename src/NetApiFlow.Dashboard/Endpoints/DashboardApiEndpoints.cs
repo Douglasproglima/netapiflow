@@ -15,7 +15,7 @@ namespace NetApiFlow.Dashboard.Endpoints;
 /// <summary>Maps the eleven REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
 internal static class DashboardApiEndpoints
 {
-    public static IEndpointRouteBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
+    public static RouteGroupBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
     {
         var options = endpoints.ServiceProvider.GetRequiredService<IOptions<NetApiFlowOptions>>().Value;
         options.DashboardBasePath = basePath;
@@ -35,7 +35,7 @@ internal static class DashboardApiEndpoints
         group.MapGet("/config", GetConfig);
         group.MapStream();
 
-        return endpoints;
+        return group;
     }
 
     private static async Task<IResult> GetTraces(
