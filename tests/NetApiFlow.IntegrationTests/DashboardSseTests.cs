@@ -164,6 +164,40 @@ public class DashboardSseTests
     }
 
     [Fact]
+    public async Task Stream_WithConcurrentTraces_NeverMixesEventsAcrossTraces()
+    {
+        var (host, client) = await CreateHostAsync();
+        using var _host = host;
+        using var _client = client;
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+
+        var (response, reader) = await ConnectAsync(client);
+        using var _ = response;
+        reader.ShouldNotBeNull();
+
+        // Interleaved on purpose: trace B starts and finishes spans while trace A is still open.
+        recorder.TryStartTrace("concurrent-a", "GET", "/api/orders", DateTime.UtcNow);
+        recorder.TryStartTrace("concurrent-b", "GET", "/api/customers", DateTime.UtcNow);
+        recorder.CompleteTrace("concurrent-b", 200, FlowStatus.Success, null);
+        recorder.CompleteTrace("concurrent-a", 200, FlowStatus.Success, null);
+
+        var events = new List<(long? EventId, string EventType, JsonDocument Data)>();
+        for (var i = 0; i < 4; i++)
+        {
+            events.Add(await ReadEventAsync(reader));
+        }
+
+        foreach (var flowEvent in events)
+        {
+            var traceId = flowEvent.Data.RootElement.GetProperty("traceId").GetString();
+            traceId.ShouldBeOneOf("concurrent-a", "concurrent-b");
+        }
+
+        events.Count(e => e.Data.RootElement.GetProperty("traceId").GetString() == "concurrent-a").ShouldBe(2);
+        events.Count(e => e.Data.RootElement.GetProperty("traceId").GetString() == "concurrent-b").ShouldBe(2);
+    }
+
+    [Fact]
     public async Task Stream_ReconnectWithLastEventId_ReplaysMissedEventsWithoutGapOrDuplicate()
     {
         var (host, client) = await CreateHostAsync();
