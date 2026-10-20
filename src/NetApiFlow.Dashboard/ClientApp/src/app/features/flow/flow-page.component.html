@@ -1,0 +1,34 @@
+<section class="flow-page">
+  @if (trace(); as trace) {
+    <div class="flow-page__layout">
+      <app-flow-graph
+        class="flow-page__graph"
+        [nodes]="graph().nodes"
+        [edges]="graph().edges"
+        [selectedNodeId]="selectedNodeId()"
+        (nodeSelected)="onNodeSelected($event)"
+      />
+      <app-flow-details-panel
+        class="flow-page__details"
+        [trace]="trace"
+        [selectedSpan]="selectedSpanDetail()"
+      />
+    </div>
+  } @else if (liveTracesLoading()) {
+    <p class="flow-page__status" role="status">Loading…</p>
+  } @else if (liveTraces().length === 0) {
+    <p class="flow-page__status">No request is currently in progress.</p>
+  } @else {
+    <ul class="flow-page__live-list">
+      @for (summary of liveTraces(); track summary.traceId) {
+        <li>
+          <button type="button" class="flow-page__live-item" (click)="openTrace(summary.traceId)">
+            <span>{{ summary.method }}</span>
+            <span>{{ summary.routeTemplate }}</span>
+            <span>{{ summary.status }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>

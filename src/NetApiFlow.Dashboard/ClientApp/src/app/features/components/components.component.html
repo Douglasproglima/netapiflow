@@ -1,0 +1,38 @@
+<section class="components">
+  @if (loading()) {
+    <p class="components__status" role="status">Loading…</p>
+  } @else if (error()) {
+    <p class="components__status components__status--error" role="alert">{{ error() }}</p>
+  } @else if (stats().length === 0) {
+    <p class="components__status">No component metrics recorded yet.</p>
+  } @else {
+    <table class="components__table">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Operation</th>
+          <th>Executions</th>
+          <th>Errors</th>
+          <th>Median</th>
+          <th>Average</th>
+          <th>p95</th>
+          <th>Max</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (stat of stats(); track stat.component + '.' + stat.operation) {
+          <tr>
+            <td>{{ stat.component }}</td>
+            <td>{{ stat.operation }}</td>
+            <td>{{ stat.executionCount }}</td>
+            <td>{{ stat.errorCount }}</td>
+            <td>{{ formatDuration(stat.medianDurationMicros) }}</td>
+            <td>{{ formatDuration(stat.averageDurationMicros) }}</td>
+            <td>{{ formatDuration(stat.p95DurationMicros) }}</td>
+            <td>{{ formatDuration(stat.maxDurationMicros) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

@@ -1,0 +1,183 @@
+/**
+ * Mirrors the DTOs frozen in docs/plano/contratos.md, seção 3. Field names match the JSON
+ * exactly (camelCase); every duration is microseconds, every timestamp an ISO 8601 UTC string.
+ */
+
+export type FlowStatus = 'Running' | 'Success' | 'Error';
+
+export type ComponentType =
+  'Endpoint' | 'Controller' | 'UseCase' | 'Service' | 'Repository' | 'Database' | 'Http' | 'Custom';
+
+export type FlowEventType =
+  | 'TraceStarted'
+  | 'SpanStarted'
+  | 'SpanCompleted'
+  | 'SpanFailed'
+  | 'TraceCompleted'
+  | 'TracePersisted';
+
+export const FLOW_EVENT_TYPES: readonly FlowEventType[] = [
+  'TraceStarted',
+  'SpanStarted',
+  'SpanCompleted',
+  'SpanFailed',
+  'TraceCompleted',
+  'TracePersisted',
+];
+
+export interface FlowSpan {
+  spanId: string;
+  parentSpanId: string | null;
+  sequence: number;
+  component: string;
+  operation: string;
+  type: ComponentType;
+  startedAt: string;
+  endedAt: string | null;
+  durationMicros: number | null;
+  status: FlowStatus;
+  errorType: string | null;
+  errorMessage: string | null;
+  isErrorOrigin: boolean;
+  tags: Record<string, string>;
+}
+
+/** Shape shared by GET /traces/{traceId} and the SSE "trace" key: a trace without its spans. */
+export interface FlowTrace {
+  traceId: string;
+  method: string;
+  routeTemplate: string;
+  httpStatus: number | null;
+  status: FlowStatus;
+  startedAt: string;
+  endedAt: string | null;
+  durationMicros: number | null;
+  spanCount: number;
+  truncated: boolean;
+  errorMessage: string | null;
+  tags: Record<string, string>;
+}
+
+/** GET /traces list item: no spans, no tags. */
+export interface FlowTraceSummary {
+  traceId: string;
+  method: string;
+  routeTemplate: string;
+  httpStatus: number | null;
+  status: FlowStatus;
+  startedAt: string;
+  durationMicros: number | null;
+  truncated: boolean;
+}
+
+/** GET /traces/{traceId} and GET /blueprint: a trace with its spans. */
+export interface FlowTraceDetail extends FlowTrace {
+  spans: FlowSpan[];
+}
+
+export interface SpanRef {
+  spanId: string;
+  component: string;
+  operation: string;
+}
+
+/** GET /traces/{traceId}/spans/{spanId} */
+export interface SpanDetail {
+  span: FlowSpan;
+  ancestors: SpanRef[];
+  children: SpanRef[];
+  medianDurationMicros: number | null;
+  deltaFromMedianMicros: number | null;
+}
+
+/** GET /endpoints list item. */
+export interface EndpointDescriptor {
+  method: string;
+  routeTemplate: string;
+  displayName: string;
+}
+
+/** GET /metrics */
+export interface MetricsSummary {
+  totalTraces: number;
+  errorRate: number;
+  averageDurationMicros: number;
+  p95DurationMicros: number;
+  maxDurationMicros: number;
+}
+
+/** GET /config (D-24). */
+export interface DashboardConfig {
+  slowThresholdMicros: number;
+}
+
+/** GET /metrics/components list item. */
+export interface ComponentStat {
+  component: string;
+  operation: string;
+  executionCount: number;
+  errorCount: number;
+  medianDurationMicros: number;
+  averageDurationMicros: number;
+  p95DurationMicros: number;
+  maxDurationMicros: number;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+}
+
+/** Query string accepted by GET /traces. */
+export interface TraceQuery {
+  status?: FlowStatus;
+  method?: string;
+  route?: string;
+  tenant?: string;
+  from?: string;
+  to?: string;
+  minDurationMicros?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+/** Query string accepted by GET /metrics and GET /metrics/components. */
+export interface StatsQuery {
+  from?: string;
+  to?: string;
+}
+
+/**
+ * Minimal OpenAPI 3.x subset read by the Runner (tarefa 4.11): only the fields needed to list
+ * endpoints and build a request form, not a full spec of the format.
+ */
+export interface OpenApiParameter {
+  name: string;
+  in: 'path' | 'query' | 'header' | 'cookie';
+  required?: boolean;
+  schema?: { type?: string };
+}
+
+export interface OpenApiOperation {
+  operationId?: string;
+  summary?: string;
+  parameters?: OpenApiParameter[];
+  requestBody?: {
+    required?: boolean;
+    content?: Record<string, { schema?: unknown }>;
+  };
+}
+
+export interface OpenApiDocument {
+  paths?: Record<string, Record<string, OpenApiOperation>>;
+}
+
+/** SSE event body (seção 2 do contrato). Exactly one of span/trace is present. */
+export interface FlowEvent {
+  eventId: number;
+  type: FlowEventType;
+  traceId: string;
+  timestamp: string;
+  span?: FlowSpan;
+  trace?: FlowTrace;
+}

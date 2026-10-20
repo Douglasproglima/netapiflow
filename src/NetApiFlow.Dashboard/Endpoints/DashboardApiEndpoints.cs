@@ -14,7 +14,7 @@ using NetApiFlow.Routing;
 
 namespace NetApiFlow.Dashboard.Endpoints;
 
-/// <summary>Maps the ten REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
+/// <summary>Maps the eleven REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
 internal static class DashboardApiEndpoints
 {
     public static IEndpointRouteBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
@@ -34,6 +34,7 @@ internal static class DashboardApiEndpoints
         group.MapGet("/endpoints", GetEndpoints);
         group.MapGet("/metrics", GetMetrics);
         group.MapGet("/metrics/components", GetComponentMetrics);
+        group.MapGet("/config", GetConfig);
         group.MapStream();
 
         return endpoints;
@@ -236,5 +237,15 @@ internal static class DashboardApiEndpoints
         var stats = await store.GetComponentStatsAsync(new StatsQuery { From = from, To = to }, cancellationToken);
         var ordered = stats.OrderByDescending(s => s.ExecutionCount).ToList();
         return Results.Json(ordered, DashboardJsonOptions.Rest);
+    }
+
+    private static IResult GetConfig(IOptions<NetApiFlowOptions> options)
+    {
+        var config = new DashboardConfig
+        {
+            SlowThresholdMicros = (long)options.Value.SlowThreshold.TotalMicroseconds,
+        };
+
+        return Results.Json(config, DashboardJsonOptions.Rest);
     }
 }

@@ -62,10 +62,15 @@ public class DashboardSseTests
         return (host, client);
     }
 
-    private static async Task<(HttpResponseMessage Response, StreamReader? Reader)> ConnectAsync(HttpClient client, string? lastEventId = null)
+    private static async Task<(HttpResponseMessage Response, StreamReader? Reader)> ConnectAsync(
+        HttpClient client, string? lastEventId = null, bool viaQueryString = false)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/flow/api/stream");
-        if (lastEventId is not null)
+        var url = viaQueryString && lastEventId is not null
+            ? $"/flow/api/stream?lastEventId={lastEventId}"
+            : "/flow/api/stream";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        if (lastEventId is not null && !viaQueryString)
         {
             request.Headers.Add("Last-Event-ID", lastEventId);
         }
@@ -229,6 +234,44 @@ public class DashboardSseTests
         replayed1.Data.RootElement.GetProperty("traceId").GetString().ShouldBe("reconnect-2");
         replayed2.EventId.ShouldBe(firstEvent.EventId + 2);
         replayed2.Data.RootElement.GetProperty("traceId").GetString().ShouldBe("reconnect-2");
+    }
+
+    [Fact]
+    public async Task Stream_ReconnectWithLastEventIdAsQueryString_ReplaysMissedEvents()
+    {
+        // D-22: EventSource cannot set headers on a connection it creates itself, so a manually
+        // reconnecting client (own exponential backoff, tarefa 4.7) sends Last-Event-ID this way.
+        var (host, client) = await CreateHostAsync();
+        using var _host = host;
+        using var _client = client;
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+
+        var (firstResponse, firstReader) = await ConnectAsync(client);
+        firstReader.ShouldNotBeNull();
+
+        recorder.TryStartTrace("reconnect-qs-1", "GET", "/api/orders", DateTime.UtcNow);
+        var firstEvent = await ReadEventAsync(firstReader);
+        firstEvent.EventType.ShouldBe("TraceStarted");
+
+        firstResponse.Dispose();
+
+        recorder.TryStartTrace("reconnect-qs-2", "GET", "/api/orders", DateTime.UtcNow);
+        recorder.CompleteTrace("reconnect-qs-2", 200, FlowStatus.Success, null);
+
+        var (secondResponse, secondReader) = await ConnectAsync(
+            client,
+            lastEventId: firstEvent.EventId!.Value.ToString(CultureInfo.InvariantCulture),
+            viaQueryString: true);
+        using var _ = secondResponse;
+        secondReader.ShouldNotBeNull();
+
+        var replayed1 = await ReadEventAsync(secondReader);
+        var replayed2 = await ReadEventAsync(secondReader);
+
+        replayed1.EventId.ShouldBe(firstEvent.EventId + 1);
+        replayed1.Data.RootElement.GetProperty("traceId").GetString().ShouldBe("reconnect-qs-2");
+        replayed2.EventId.ShouldBe(firstEvent.EventId + 2);
+        replayed2.Data.RootElement.GetProperty("traceId").GetString().ShouldBe("reconnect-qs-2");
     }
 
     [Fact]

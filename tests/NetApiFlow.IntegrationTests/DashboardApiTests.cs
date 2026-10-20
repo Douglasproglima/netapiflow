@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.Domain;
@@ -16,13 +17,13 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the ten REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3 (tarefa 3.2),
+/// Verifies the eleven REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3 (tarefa 3.2),
 /// against a host running only NetApiFlow's own services (no sample app), seeding
 /// <see cref="InMemoryTraceStore"/> and <see cref="FlowRecorder"/> directly.
 /// </summary>
 public class DashboardApiTests
 {
-    private static IHost CreateHost(string? environmentName = null)
+    private static IHost CreateHost(string? environmentName = null, Action<NetApiFlowOptions>? configure = null)
     {
         environmentName ??= Environments.Development;
 
@@ -34,7 +35,7 @@ public class DashboardApiTests
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
-                    services.AddNetApiFlow();
+                    services.AddNetApiFlow(configure);
                     services.AddNetApiFlowDashboard();
                 });
                 webBuilder.Configure(app =>
@@ -327,6 +328,19 @@ public class DashboardApiTests
     }
 
     [Fact]
+    public async Task GetConfig_ReturnsSlowThresholdConfiguredOnTheHost()
+    {
+        using var host = CreateHost(configure: options => options.SlowThreshold = TimeSpan.FromMilliseconds(400));
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("slowThresholdMicros").GetInt64().ShouldBe(400_000);
+    }
+
+    [Fact]
     public async Task DeleteTraces_ClearsStoreAndActiveTraces()
     {
         using var host = CreateHost();
@@ -353,6 +367,7 @@ public class DashboardApiTests
         (await client.GetAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.DeleteAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/metrics")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]

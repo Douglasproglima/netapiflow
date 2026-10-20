@@ -20,7 +20,12 @@ internal static class DashboardSseEndpoint
 
     private static IResult Handle(HttpContext context, SseBroadcaster broadcaster)
     {
-        var lastEventId = ParseLastEventId(context.Request.Headers["Last-Event-ID"]);
+        // The header wins when both are present. The query string exists only because
+        // EventSource cannot set headers on a connection created by application code, so a
+        // manually-reconnecting client (own exponential backoff, tarefa 4.7) has no other way
+        // to send Last-Event-ID; the browser's own automatic reconnect keeps using the header (D-22).
+        var lastEventId = ParseLastEventId(context.Request.Headers["Last-Event-ID"])
+            ?? ParseLastEventId(context.Request.Query["lastEventId"]);
         var subscription = broadcaster.TrySubscribe(lastEventId);
 
         if (subscription is null)
