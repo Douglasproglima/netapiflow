@@ -43,11 +43,11 @@ public interface IFlowEventListener
 public interface ITraceStore
 {
     ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken);
-    ValueTask<FlowTrace?> GetAsync(string traceId, CancellationToken cancellationToken);
+    ValueTask<FlowTraceDetail?> GetAsync(string traceId, CancellationToken cancellationToken);
     ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
-    ValueTask<FlowTrace?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
@@ -142,6 +142,25 @@ public sealed record TraceStats
 
 `errorRate` do payload de `/metrics` é calculado pela camada de API (`ErrorCount / TotalTraces`,
 `0` quando `TotalTraces` é `0`), não pelo `ITraceStore`.
+
+`GetAsync` e `GetLastSuccessfulAsync` passaram a devolver `FlowTraceDetail?` em vez de
+`FlowTrace?` (D-19 em `docs/plano/decisoes.md`), achado durante a tarefa 3.2: os três
+consumidores reais desses dois métodos (`GET /traces/{traceId}`, `GET
+/traces/{traceId}/spans/{spanId}` e `GET /blueprint`) sempre precisam do trace **e** dos spans
+juntos, nunca só do trace. Forçar uma segunda chamada ao store para buscar os spans seria uma
+troca de rede a mais em todo acesso, permanente, contra os storages de banco da Fase 6.
+
+```csharp
+public sealed record FlowTraceDetail
+{
+    public required FlowTrace Trace { get; init; }
+    public required IReadOnlyList<FlowSpan> Spans { get; init; }
+}
+```
+
+`SaveAsync` continua recebendo trace e spans como parâmetros separados: é escrita, não leitura,
+e os dois já chegam como peças distintas de quem monta a chamada (`PersistenceWriter`). Mudar
+`SaveAsync` por simetria não tem benefício real, só mexeria em código que já funciona.
 
 Notas de implementação, não normativas (a Executora decide o detalhe, mas não a forma pública
 acima):
