@@ -1,0 +1,40 @@
+.flow-graph {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.flow-graph__edge {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+
+.flow-graph__node {
+  cursor: pointer;
+}
+
+.flow-graph__node-rect {
+  fill: var(--flow-node-fill, #e0e0e0);
+  stroke: var(--flow-node-stroke, #757575);
+  stroke-width: 1;
+  rx: 6;
+}
+
+.flow-graph__node--selected .flow-graph__node-rect {
+  stroke-width: 3;
+}
+
+.flow-graph__node-sequence,
+.flow-graph__node-component,
+.flow-graph__node-operation {
+  font-size: 11px;
+  fill: currentColor;
+  user-select: none;
+}
+
+.flow-graph__node-component {
+  font-weight: 600;
+}
