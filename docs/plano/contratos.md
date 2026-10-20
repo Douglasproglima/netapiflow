@@ -188,25 +188,220 @@ Regras do stream:
 
 ## 3. API REST
 
-Base configurável, padrão `/flow/api`. Só DTO, JSON camelCase. Visão geral (seção 8 do prompt):
-
-| Método | Rota | Descrição |
-|---|---|---|
-| GET | `/traces` | Lista paginada com filtros |
-| GET | `/traces/live` | Traces em andamento |
-| GET | `/traces/{traceId}` | Trace consolidado com spans (procura na memória, depois no store) |
-| GET | `/traces/{traceId}/spans/{spanId}` | Span com ancestrais, filhos e comparação com a mediana |
-| GET | `/blueprint?method=&route=` | Spans da última execução bem-sucedida do endpoint (204 se não houver) |
-| GET | `/endpoints` | Endpoints rastreáveis (via `EndpointDataSource` e documento OpenAPI) |
-| GET | `/metrics` | Totais, taxa de erro, latência média, p95 e máxima |
-| GET | `/metrics/components` | Estatísticas por componente e operação |
-| DELETE | `/traces` | Limpa os dados (só em Development, ou com autorização) |
-| GET | `/stream` | Server-Sent Events |
+Base configurável, padrão `/flow/api`. Só DTO, JSON camelCase. Todo campo de duração é
+`*Micros` (`long`, microssegundos). Todo timestamp é UTC, formato ISO 8601
+(`yyyy-MM-ddTHH:mm:ss.ffffffZ`). Parâmetro de query ausente = sem filtro naquele campo.
+Erro de validação de entrada (ex.: `page < 1`) responde `400` com
+`application/problem+json` (`ProblemDetails` padrão do ASP.NET Core), sem corpo customizado.
 
 As rotas do próprio NetApiFlow nunca são rastreadas (nunca aparecem como span `Endpoint` ou
-`Controller` no próprio dashboard).
+`Controller` no próprio dashboard). Congelado na tarefa 3.1: a partir daqui, mudança é decisão
+da Planejadora, igual a qualquer outro contrato deste arquivo.
 
-**Pendente, bloqueante para a Fase 4:** o contrato detalhado de cada rota (query string, formato
-do corpo, DTO de resposta com exemplo JSON) é responsabilidade da tarefa 3.1 em
-`fase-3-api-do-dashboard-e-sse.md`. Este arquivo é atualizado nessa tarefa, pela Planejadora, e
-só então a Fase 4 (Angular) começa, porque o frontend depende desse contrato byte a byte.
+### GET `/traces`
+
+Lista paginada com filtros, mapeados de `TraceQuery` (`src/NetApiFlow/TraceQuery.cs`).
+
+Query string:
+
+| Parâmetro | Tipo | Obrigatório | Filtra |
+|---|---|---|---|
+| `status` | `Running` \| `Success` \| `Error` | não | `FlowTrace.Status` |
+| `method` | string | não | `FlowTrace.Method`, exato |
+| `route` | string | não | `FlowTrace.RouteTemplate`, exato (não é glob) |
+| `tenant` | string | não | tag `tenant` do trace (seção 6.9 do prompt) |
+| `from` | ISO 8601 | não | `StartedAt >= from` |
+| `to` | ISO 8601 | não | `StartedAt <= to` |
+| `minDurationMicros` | long | não | `DurationMicros >= minDurationMicros` |
+| `page` | int, padrão `1` | não | 1-based |
+| `pageSize` | int, padrão `50`, máximo `200` | não | acima do máximo responde `400` |
+
+Resposta `200`, forma de `PagedResult<FlowTraceSummary>`:
+
+```json
+{
+  "items": [
+    {
+      "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-10-19T13:42:11.121624Z",
+      "durationMicros": 18432,
+      "truncated": false
+    }
+  ],
+  "totalCount": 137
+}
+```
+
+### GET `/traces/live`
+
+Traces em andamento (`FlowStatus.Running`), direto do `FlowRecorder` em memória, nunca do
+`ITraceStore`. Sem paginação: o teto é o próprio limite de 500 traces simultâneos (seção 6.7).
+
+Resposta `200`, `FlowTraceSummary[]` (mesma forma da lista acima; `httpStatus` e
+`durationMicros` vêm `null` enquanto o trace não termina).
+
+### GET `/traces/{traceId}`
+
+Trace consolidado com spans. Procura primeiro no `FlowRecorder` (trace ainda em andamento ou
+recém-concluído), depois no `ITraceStore` configurado.
+
+Resposta `200`:
+
+```json
+{
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "method": "GET",
+  "routeTemplate": "/api/orders/{id}",
+  "httpStatus": 200,
+  "status": "Success",
+  "startedAt": "2026-10-19T13:42:11.121624Z",
+  "endedAt": "2026-10-19T13:42:11.139201Z",
+  "durationMicros": 17577,
+  "spanCount": 3,
+  "truncated": false,
+  "errorMessage": null,
+  "tags": { "tenant": "acme" },
+  "spans": [
+    {
+      "spanId": "00f067aa0ba902b7",
+      "parentSpanId": null,
+      "sequence": 0,
+      "component": "OrdersController",
+      "operation": "GetOrder",
+      "type": "Controller",
+      "startedAt": "2026-10-19T13:42:11.121624Z",
+      "endedAt": "2026-10-19T13:42:11.139201Z",
+      "durationMicros": 17577,
+      "status": "Success",
+      "errorType": null,
+      "errorMessage": null,
+      "isErrorOrigin": false,
+      "tags": {}
+    }
+  ]
+}
+```
+
+Campos de nível superior = `FlowTrace` (seção 1), mais `spans: FlowSpan[]` na ordem de
+`Sequence`. `404` se o `traceId` não existir em nenhum dos dois.
+
+### GET `/traces/{traceId}/spans/{spanId}`
+
+Span com ancestrais, filhos e comparação com a mediana normal daquela operação
+(`ComponentStat.MedianDurationMicros` para o par `Component`/`Operation` do span).
+
+Resposta `200`:
+
+```json
+{
+  "span": { "...": "forma de FlowSpan, igual à lista de spans acima" },
+  "ancestors": [
+    { "spanId": "...", "component": "OrdersController", "operation": "GetOrder" }
+  ],
+  "children": [
+    { "spanId": "...", "component": "OrderRepository", "operation": "FindAsync" }
+  ],
+  "medianDurationMicros": 15200,
+  "deltaFromMedianMicros": 2377
+}
+```
+
+`ancestors` vem ordenado da raiz para o pai direto (exclui o próprio span). `children` é só um
+nível (filhos diretos, não a árvore inteira — a árvore completa já está em `/traces/{traceId}`).
+`medianDurationMicros` e `deltaFromMedianMicros` vêm `null` se não houver histórico suficiente
+no `ITraceStore` para aquele componente/operação. `404` se o `traceId` ou o `spanId` não
+existirem.
+
+### GET `/blueprint`
+
+Spans da última execução bem-sucedida do endpoint, usados pelo frontend para inferir etapas
+"não executadas" (seção 7.2 do prompt).
+
+Query string: `method` (obrigatório), `route` (obrigatório, route template exato).
+
+Resposta `200`, mesma forma de `/traces/{traceId}` (trace + spans). `204` sem corpo se não
+houver execução bem-sucedida anterior daquele método/rota. `400` se faltar `method` ou `route`.
+
+### GET `/endpoints`
+
+Endpoints rastreáveis da própria API hospedeira, via `EndpointDataSource` e, quando disponível,
+o documento OpenAPI (`/openapi/v1.json` por padrão, caminho configurável).
+
+Resposta `200`:
+
+```json
+[
+  { "method": "GET", "routeTemplate": "/api/orders/{id}", "displayName": "GetOrder" }
+]
+```
+
+`displayName` vem do `summary`/`operationId` do OpenAPI quando existir; senão, do nome do
+método/endpoint. Lista ordenada por `routeTemplate`, depois `method`.
+
+### GET `/metrics`
+
+Totais da janela de tempo pedida, sobre o `ITraceStore`.
+
+Query string: `from`, `to` (ambos opcionais, forma de `StatsQuery`).
+
+Resposta `200`:
+
+```json
+{
+  "totalTraces": 1842,
+  "errorRate": 0.034,
+  "averageDurationMicros": 21500,
+  "p95DurationMicros": 88200,
+  "maxDurationMicros": 412000
+}
+```
+
+`errorRate` é fração (`0.034` = 3,4%), não percentual. Campos `*DurationMicros` vêm `0` quando
+`totalTraces` é `0` (nunca `null`, para o frontend não precisar tratar ausência).
+
+### GET `/metrics/components`
+
+Estatísticas por componente e operação, forma de `ComponentStat[]` (`src/NetApiFlow/ComponentStat.cs`).
+
+Query string: `from`, `to` (opcionais, forma de `StatsQuery`).
+
+Resposta `200`:
+
+```json
+[
+  {
+    "component": "OrderRepository",
+    "operation": "FindAsync",
+    "executionCount": 412,
+    "errorCount": 3,
+    "medianDurationMicros": 1200,
+    "averageDurationMicros": 1450,
+    "p95DurationMicros": 3100,
+    "maxDurationMicros": 9800
+  }
+]
+```
+
+Ordenado por `executionCount` decrescente.
+
+### DELETE `/traces`
+
+Limpa todos os dados do `ITraceStore` e os traces em andamento do `FlowRecorder`. Só em
+`IHostEnvironment.IsDevelopment()`, ou com `RequireAuthorization`/`IDashboardAuthorizationFilter`
+configurado (ADR-0006). `204` sem corpo em caso de sucesso. `404` fora de Development sem
+autorização configurada (mesma regra do resto do dashboard, risco R-09).
+
+### GET `/stream`
+
+Server-Sent Events, contrato completo na seção 2 deste arquivo.
+
+---
+
+Autorização vale para as dez rotas acima, sem exceção (ADR-0006): fora de
+`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
+`IDashboardAuthorizationFilter` configurado, toda rota responde `404`. Com um dos dois
+configurado e o usuário sem a claim exigida, `403` (risco R-09, mitigação na Fase 5).
