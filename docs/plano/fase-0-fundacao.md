@@ -58,7 +58,7 @@ Na raiz. Propriedades comuns a todo projeto de produto (`src/**`):
 - `<GenerateDocumentationFile>true</GenerateDocumentationFile>` (exigido pela regra de comentário
   XML em `.claude/rules/dotnet-core.md`)
 - `<Version>0.1.0</Version>` (ADR-0001/D-01): sem isso, `dotnet pack` usa o default `1.0.0` do
-  SDK, que contradiz "API instável até 1.0.0". O workflow de release (Fase 7, tarefa 7.7)
+  SDK, que contradiz "API instável até 1.0.0". O workflow de release (Fase 7, tarefa 7.8)
   sobrescreve este valor via `/p:Version=` extraído da tag; aqui é só o valor usado em build e
   pack locais/de CI fora de uma tag.
 
