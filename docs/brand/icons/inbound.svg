@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Icone Inbound / Trigger" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 12 V4 H12 M52 4 H60 V12 M60 52 V60 H52 M12 60 H4 V52" stroke="#475569" stroke-width="2"/>
+  <path d="M14 22 H22 M14 42 H22" stroke="#64748B" stroke-width="2"/>
+  <path d="M10 32 H31 M25 26 L31 32 L25 38" stroke="#A78BFA" stroke-width="2"/>
+  <circle cx="43" cy="32" r="10" stroke="#A78BFA" stroke-width="2"/>
+  <circle cx="43" cy="32" r="3.5" fill="#A78BFA"/>
+</svg>
