@@ -16,8 +16,8 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.CompletedTask;
     }
 
-    public ValueTask<FlowTrace?> GetAsync(string traceId, CancellationToken cancellationToken) =>
-        ValueTask.FromResult(_entries.TryGetValue(traceId, out var entry) ? entry.Trace : null);
+    public ValueTask<FlowTraceDetail?> GetAsync(string traceId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(_entries.TryGetValue(traceId, out var entry) ? ToDetail(entry) : null);
 
     public ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken)
     {
@@ -26,6 +26,7 @@ internal sealed class InMemoryTraceStore : ITraceStore
             .Where(trace => query.Status is null || trace.Status == query.Status)
             .Where(trace => query.Method is null || string.Equals(trace.Method, query.Method, StringComparison.OrdinalIgnoreCase))
             .Where(trace => query.RouteTemplate is null || trace.RouteTemplate == query.RouteTemplate)
+            .Where(trace => query.Tenant is null || trace.Tags.GetValueOrDefault("tenant") == query.Tenant)
             .Where(trace => query.From is null || trace.StartedAt >= query.From)
             .Where(trace => query.To is null || trace.StartedAt <= query.To)
             .Where(trace => query.MinDurationMicros is null || (trace.DurationMicros ?? 0) >= query.MinDurationMicros)
@@ -87,17 +88,40 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult<IReadOnlyList<ComponentStat>>(stats);
     }
 
-    public ValueTask<FlowTrace?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
     {
-        var trace = _entries.Values
-            .Select(e => e.Trace)
-            .Where(t => string.Equals(t.Method, method, StringComparison.OrdinalIgnoreCase))
-            .Where(t => t.RouteTemplate == routeTemplate)
-            .Where(t => t.Status == FlowStatus.Success)
-            .OrderByDescending(t => t.StartedAt)
+        var entry = _entries.Values
+            .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
+            .Where(e => e.Trace.RouteTemplate == routeTemplate)
+            .Where(e => e.Trace.Status == FlowStatus.Success)
+            .OrderByDescending(e => e.Trace.StartedAt)
             .FirstOrDefault();
 
-        return ValueTask.FromResult(trace);
+        return ValueTask.FromResult(entry is null ? null : ToDetail(entry));
+    }
+
+    public ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken)
+    {
+        var traces = _entries.Values
+            .Select(e => e.Trace)
+            .Where(trace => query.From is null || trace.StartedAt >= query.From)
+            .Where(trace => query.To is null || trace.StartedAt <= query.To)
+            .ToList();
+
+        var durations = traces
+            .Where(t => t.DurationMicros is not null)
+            .Select(t => t.DurationMicros!.Value)
+            .OrderBy(d => d)
+            .ToList();
+
+        return ValueTask.FromResult(new TraceStats
+        {
+            TotalTraces = traces.Count,
+            ErrorCount = traces.Count(t => t.Status == FlowStatus.Error),
+            AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
+            P95DurationMicros = Percentile(durations, 0.95),
+            MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
+        });
     }
 
     public ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken)
@@ -122,6 +146,9 @@ internal sealed class InMemoryTraceStore : ITraceStore
 
         return ValueTask.FromResult(removed);
     }
+
+    private static FlowTraceDetail ToDetail(Entry entry) =>
+        new() { Trace = entry.Trace, Spans = entry.Spans };
 
     private static long Percentile(List<long> sortedValues, double percentile)
     {

@@ -160,6 +160,9 @@ internal sealed class FlowRecorder
     public ActiveTrace? GetActiveTrace(string traceId) =>
         _activeTraces.TryGetValue(traceId, out var trace) ? trace : null;
 
+    /// <summary>Snapshot of every trace currently being recorded.</summary>
+    public IReadOnlyList<ActiveTrace> GetActiveTraces() => [.. _activeTraces.Values];
+
     public bool TryCompleteTrace(string traceId, out ActiveTrace? trace) =>
         _activeTraces.TryRemove(traceId, out trace);
 }
