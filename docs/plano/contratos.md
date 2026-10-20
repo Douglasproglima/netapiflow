@@ -218,6 +218,12 @@ Regras do stream:
 
 - `eventId` é sequencial por processo (não reinicia por trace) e é o valor usado como
   `Last-Event-ID` na reconexão.
+- **`GET /stream` aceita o último id recebido de duas formas (D-22):** o header `Last-Event-ID`
+  (reconexão automática do próprio navegador, que o `EventSource` nativo já faz sozinho) **ou**
+  a query string `?lastEventId=<id>` (reconexão manual feita pelo código da aplicação, porque
+  `EventSource` não permite setar headers numa conexão nova criada por código). Se os dois
+  vierem, o header vale. Sem nenhum dos dois, começa do zero. Aditivo: não muda nada de quem já
+  usava só o header.
 - `event:` sempre presente, para o cliente filtrar sem desserializar o corpo.
 - Heartbeat a cada 15 segundos, para o proxy intermediário não derrubar a conexão por
   inatividade. **Formato diverge por TFM (D-20):** em `net8.0` é um comentário SSE puro
