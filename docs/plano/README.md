@@ -22,15 +22,14 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 0 | Fundação | **Aceita e mergeada** (2026-10-19) | PR #1, CI verde nos 4 checks (build-test ×2 SO, pr-lint, secret-scan) |
 | 1 | Núcleo de captura | **Aceita e mergeada** (2026-10-19) | PR #2, CI verde nos 4 checks. 54 testes (49 unitários + 4 integração + 1 placeholder). `contratos.md` atualizado com `NetApiFlowOptions` e os DTOs provisórios de `ITraceStore` |
 | 2 | Formas de marcação | **Aceita e mergeada** (2026-10-19) | PR #3, CI verde nos 4 checks. 83 testes por TFM. `contratos.md` atualizado com `AddFlowTracked`/`DecorateFlowTracked`/`WithNetApiFlowTracking`/registros do MediatR e EF Core. R-01 e R-02 mitigados; D-17 registra a prova de Postgres via SQLite como aceita |
-| 3 | API do dashboard e SSE | Planejada | Tarefa 3.1 deve congelar `contratos.md` antes da Fase 4 começar |
+| 3 | API do dashboard e SSE | Planejada | Tarefa 3.1 (contrato REST detalhado) já congelada em `contratos.md`. Executora pode começar pela 3.2 |
 | 4 | Dashboard Angular | Planejada | Depende do contrato REST congelado na Fase 3 |
 | 5 | Empacotamento | Planejada | Depende das Fases 1-4 |
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: a Fase 3 começa pela tarefa 3.1 (congelar o contrato REST detalhado em
-`contratos.md`), que é trabalho da Planejadora, não da Executora. Antes de a Executora começar a
-implementar qualquer rota da Fase 3, a Planejadora precisa entregar esse contrato.
+Próximo passo: a Executora lê `docs/plano/fase-3-api-do-dashboard-e-sse.md` e começa pela
+tarefa 3.2, contra o contrato já congelado.
 
 ## Regra de avanço
 

@@ -6,14 +6,14 @@ Pré-requisito: Fase 2 aceita.
 
 ## Tarefas
 
-### 3.1: Congelar `docs/plano/contratos.md`
+### 3.1: Congelar `docs/plano/contratos.md` — **feito em 2026-10-19**
 
-Antes de codar qualquer rota: para cada uma das 10 rotas da seção 3 de `contratos.md`, escrever
-o contrato completo: query string aceita, forma do corpo (quando houver), DTO de resposta com
-um exemplo JSON real. Esta tarefa é da Planejadora, não da Executora: se a Executora chegar
-nesta fase e o contrato detalhado ainda não estiver em `contratos.md`, **parar e pedir à
-Planejadora antes de implementar qualquer rota**, porque o Angular da Fase 4 depende desse
-contrato byte a byte.
+Contrato completo das 10 rotas (query string, corpo, DTO de resposta com exemplo JSON) já está
+na seção 3 de `contratos.md`, baseado nos tipos reais entregues na Fase 1
+(`FlowTrace`/`FlowSpan`/`PagedResult<T>`/`TraceQuery`/`ComponentStat`/`StatsQuery`). A Executora
+implementa as tarefas 3.2 em diante contra esse contrato. Se encontrar algo que não dá para
+implementar como descrito, **parar e avisar a Planejadora antes de divergir**, não ajustar o
+contrato sozinha.
 
 ### 3.2: Rotas de consulta
 
