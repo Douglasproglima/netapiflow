@@ -25,10 +25,10 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 3 | API do dashboard e SSE | **Aceita e mergeada** (2026-10-20) | PR #4, CI verde nos 4 checks. 107 testes por TFM. R-04 e R-10 mitigados. D-20 (ping de handshake, heartbeat diverge por TFM) e D-21 (`IFlowTenantResolver` conectado, tarefa 3.8) resolvidos |
 | 4 | Dashboard Angular | **Aceita e mergeada** (2026-10-20) | PR #5, CI verde nos 4 checks. 73 testes Angular + testes .NET de SSE/dashboard/config. Tarefa 4.14 (D-24, `GET /config`) concluída. Verificação visual confirmada (tema claro e escuro limpos, formulário do histórico sem vazamento horizontal em viewport reduzida) |
 | 5 | Empacotamento | **Aceita e mergeada** (2026-10-20) | PR #8, CI verde nos 4 checks. Verificação da tarefa 5.6 rodada pessoalmente pela Planejadora (`dotnet pack` + `dotnet test` em `tests/manual-verification`, 4 testes verdes). PR #9 corrige o "pronto quando" da tarefa 5.5 (D-25) e congela a superfície pública de `NetApiFlow.Dashboard` em `contratos.md` |
-| 6 | Storages persistentes | Revisada, aguardando merge | 3 commits, tarefas 6.1 a 6.5. `dotnet build`/`format --verify-no-changes` limpos. Testcontainers rodado pessoalmente com Docker local: 20 testes por TFM contra Postgres e SQL Server reais, verdes. `contratos.md` ganhou a superfície pública dos dois pacotes de storage, que não tinha sido congelada |
+| 6 | Storages persistentes | **Aceita e mergeada** (2026-10-20) | PR #12, CI verde nos 4 checks (incluindo Testcontainers de verdade no `build-test (ubuntu-latest)`). Testcontainers rodado pessoalmente com Docker local antes do merge: 20 testes por TFM contra Postgres e SQL Server reais. PR #11 congela a superfície pública dos dois pacotes de storage em `contratos.md` |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: autorizar push e PR de `feature/fase-6-storages-persistentes`.
+Próximo passo: a Executora lê `docs/plano/fase-7-documentacao.md` e começa a Fase 7.
 
 ## Regra de avanço
 
