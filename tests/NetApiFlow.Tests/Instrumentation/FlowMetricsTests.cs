@@ -102,8 +102,8 @@ public class FlowMetricsTests
         public ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken) =>
             ValueTask.CompletedTask;
 
-        public ValueTask<FlowTrace?> GetAsync(string traceId, CancellationToken cancellationToken) =>
-            ValueTask.FromResult<FlowTrace?>(null);
+        public ValueTask<FlowTraceDetail?> GetAsync(string traceId, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<FlowTraceDetail?>(null);
 
         public ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken) =>
             ValueTask.FromResult(new PagedResult<FlowTraceSummary> { Items = [], TotalCount = 0 });
@@ -111,8 +111,11 @@ public class FlowMetricsTests
         public ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken) =>
             ValueTask.FromResult<IReadOnlyList<ComponentStat>>([]);
 
-        public ValueTask<FlowTrace?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken) =>
-            ValueTask.FromResult<FlowTrace?>(null);
+        public ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new TraceStats { TotalTraces = 0, ErrorCount = 0, AverageDurationMicros = 0, P95DurationMicros = 0, MaxDurationMicros = 0 });
+
+        public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<FlowTraceDetail?>(null);
 
         public ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken) =>
             ValueTask.FromResult(0);

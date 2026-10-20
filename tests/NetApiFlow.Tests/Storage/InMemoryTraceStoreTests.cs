@@ -26,7 +26,9 @@ public class InMemoryTraceStoreTests
         await _subject.SaveAsync(trace, [], CancellationToken.None);
         var result = await _subject.GetAsync("trace-1", CancellationToken.None);
 
-        result.ShouldBe(trace);
+        result.ShouldNotBeNull();
+        result.Trace.ShouldBe(trace);
+        result.Spans.ShouldBeEmpty();
     }
 
     [Fact]

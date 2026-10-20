@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
@@ -33,6 +34,12 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         if (started)
         {
             context.Response.Headers[TraceIdHeaderName] = traceId;
+
+            var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
+            if (!string.IsNullOrEmpty(tenant))
+            {
+                recorder.SetTraceTag(traceId, "tenant", tenant);
+            }
         }
 
         string? errorMessage = null;
