@@ -76,9 +76,12 @@ Controllers + EF Core + PostgreSQL. Quatro cenários de demonstração (para o G
 também): sucesso, erro de negócio no meio do fluxo, operação lenta (acima do `SlowThreshold`), e
 chamadas paralelas com `Task.WhenAll`.
 
-**Pronto quando:** os quatro cenários produzem o fluxo completo Controller → UseCase → Service →
+**Pronto quando:** os quatro cenários produzem o fluxo completo Controller → Service →
 Repository → Database, sem nenhum `NetApiFlow.Step(...)` manual no código de negócio do sample
-(só as formas automáticas das tarefas 2.1-2.7).
+(só as formas automáticas das tarefas 2.1-2.7). Sem `UseCase`: este sample não usa MediatR
+(corrigido na revisão da Fase 2 — a versão anterior deste texto incluía `UseCase` na cadeia por
+engano, o que só faria sentido se este sample usasse MediatR, que é o caso da tarefa 2.9, não
+desta).
 
 ### 2.9: `samples/SampleApi.MinimalMediatR`
 

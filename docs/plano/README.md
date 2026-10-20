@@ -21,14 +21,16 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 |---|---|---|---|
 | 0 | Fundação | **Aceita e mergeada** (2026-10-19) | PR #1, CI verde nos 4 checks (build-test ×2 SO, pr-lint, secret-scan) |
 | 1 | Núcleo de captura | **Aceita e mergeada** (2026-10-19) | PR #2, CI verde nos 4 checks. 54 testes (49 unitários + 4 integração + 1 placeholder). `contratos.md` atualizado com `NetApiFlowOptions` e os DTOs provisórios de `ITraceStore` |
-| 2 | Formas de marcação | Planejada | Pode começar |
+| 2 | Formas de marcação | **Aceita** (2026-10-19) | Implementada em `feature/fase-2-formas-de-marcacao`, ainda não mergeada. 83 testes por TFM, verdes. `contratos.md` atualizado com `AddFlowTracked`/`DecorateFlowTracked`/`WithNetApiFlowTracking`/registros do MediatR e EF Core. R-01 e R-02 mitigados; D-17 registra a prova de Postgres via SQLite como aceita |
 | 3 | API do dashboard e SSE | Planejada | Tarefa 3.1 deve congelar `contratos.md` antes da Fase 4 começar |
 | 4 | Dashboard Angular | Planejada | Depende do contrato REST congelado na Fase 3 |
 | 5 | Empacotamento | Planejada | Depende das Fases 1-4 |
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: a Executora lê `docs/plano/fase-2-formas-de-marcacao.md` e começa a Fase 2.
+Próximo passo: PR de `feature/fase-2-formas-de-marcacao` para `develop` (aguardando confirmação
+explícita de quem opera o repositório, ver `.claude/rules/git-workflow.md`) e início da Fase 3
+pela Executora.
 
 ## Regra de avanço
 
