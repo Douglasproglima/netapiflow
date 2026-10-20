@@ -142,6 +142,31 @@ export interface StatsQuery {
   to?: string;
 }
 
+/**
+ * Minimal OpenAPI 3.x subset read by the Runner (tarefa 4.11): only the fields needed to list
+ * endpoints and build a request form, not a full spec of the format.
+ */
+export interface OpenApiParameter {
+  name: string;
+  in: 'path' | 'query' | 'header' | 'cookie';
+  required?: boolean;
+  schema?: { type?: string };
+}
+
+export interface OpenApiOperation {
+  operationId?: string;
+  summary?: string;
+  parameters?: OpenApiParameter[];
+  requestBody?: {
+    required?: boolean;
+    content?: Record<string, { schema?: unknown }>;
+  };
+}
+
+export interface OpenApiDocument {
+  paths?: Record<string, Record<string, OpenApiOperation>>;
+}
+
 /** SSE event body (seção 2 do contrato). Exactly one of span/trace is present. */
 export interface FlowEvent {
   eventId: number;

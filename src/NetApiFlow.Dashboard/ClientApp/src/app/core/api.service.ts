@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
@@ -7,6 +7,7 @@ import {
   FlowTraceDetail,
   FlowTraceSummary,
   MetricsSummary,
+  OpenApiDocument,
   PagedResult,
   SpanDetail,
   StatsQuery,
@@ -69,6 +70,21 @@ export class ApiService {
 
   deleteTraces(): Observable<void> {
     return this.http.delete<void>(`${this.basePath}/traces`);
+  }
+
+  /**
+   * Dispatches a request to an arbitrary endpoint of the host application (the Runner, tarefa
+   * 4.11), as opposed to every other method here, which calls the dashboard's own ten routes.
+   * `path` is root-relative, exactly as declared in the host's OpenAPI document (never prefixed
+   * with `basePath`, since it does not belong to the dashboard's own API namespace).
+   */
+  callEndpoint(method: string, path: string, body?: unknown): Observable<HttpResponse<unknown>> {
+    return this.http.request(method, path, { body, observe: 'response' });
+  }
+
+  /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */
+  loadOpenApiDocument(url: string): Observable<OpenApiDocument> {
+    return this.http.get<OpenApiDocument>(url);
   }
 }
 

@@ -162,4 +162,15 @@ describe('ApiService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  it('callEndpoint sends a root-relative request, not prefixed by the dashboard base path', () => {
+    service
+      .callEndpoint('POST', '/api/orders/5', { customerName: 'Acme' })
+      .subscribe((response) => expect(response.headers.get('X-NetApiFlow-TraceId')).toBe('t1'));
+
+    const req = httpMock.expectOne('/api/orders/5');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ customerName: 'Acme' });
+    req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+  });
 });
