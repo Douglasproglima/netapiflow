@@ -72,11 +72,25 @@ um consumidor que não lê o stream prova que o processo não cresce em memória
 com `GC.GetTotalMemory` antes/depois, ou um teto de iterações que não deveria ter efeito
 cumulativo).
 
+### 3.8: Conectar `IFlowTenantResolver` ao middleware (D-21)
+
+`IFlowTenantResolver` está na API pública desde o bootstrap (seção 1 de `contratos.md`), mas
+nenhuma fase anterior tinha a tarefa de resolvê-lo de verdade — buraco encontrado na revisão da
+Fase 3, não decisão da Executora. Em `NetApiFlowMiddleware`, ao abrir o trace: se um
+`IFlowTenantResolver` estiver registrado no DI, chamar `Resolve(HttpContext)` e, se devolver um
+valor não nulo/vazio, gravar como tag `tenant` do trace (seção 6.9 do prompt). Sem resolver
+registrado, nenhuma tag `tenant` é adicionada — comportamento atual, sem mudança.
+
+**Pronto quando:** teste de integração registra um `IFlowTenantResolver` fake que devolve um
+tenant fixo, faz uma requisição rastreada, e confere que o trace resultante tem a tag `tenant`
+com esse valor. Teste sem resolver registrado confere que a tag não aparece.
+
 ## Aceite da fase
 
 Todos os 10 endpoints cobertos por teste de integração. Reconexão com `Last-Event-ID` recupera
 os eventos perdidos. Eventos de traces diferentes nunca se misturam no mesmo stream (teste com
-dois traces concorrentes, cada evento carrega seu próprio `traceId`).
+dois traces concorrentes, cada evento carrega seu próprio `traceId`). `IFlowTenantResolver`
+conectado e testado (tarefa 3.8).
 
 ## Ao terminar
 
