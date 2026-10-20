@@ -471,6 +471,7 @@ Resposta `200`:
 ```json
 {
   "totalTraces": 1842,
+  "errorCount": 63,
   "errorRate": 0.034,
   "averageDurationMicros": 21500,
   "p95DurationMicros": 88200,
@@ -478,8 +479,12 @@ Resposta `200`:
 }
 ```
 
-`errorRate` é fração (`0.034` = 3,4%), não percentual. Campos `*DurationMicros` vêm `0` quando
-`totalTraces` é `0` (nunca `null`, para o frontend não precisar tratar ausência).
+`errorCount` é a contagem bruta (D-30): `TraceStats.ErrorCount` já existe em `ITraceStore` desde a
+tarefa 3.2 (D-18), a API só não o repassava no payload, obrigando quem consome `/metrics` a
+reconstruir um inteiro a partir de `errorRate` por arredondamento. `errorRate` continua no payload
+(`ErrorCount / TotalTraces`, fração, `0.034` = 3,4%, não percentual), para quem só precisa da taxa
+não quebrar. Campos `*DurationMicros` vêm `0` quando `totalTraces` é `0` (nunca `null`, para o
+frontend não precisar tratar ausência).
 
 ### GET `/metrics/components`
 

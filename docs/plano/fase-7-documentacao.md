@@ -4,6 +4,75 @@ Pré-requisito: Fases 0 a 6 aceitas. Esta é a última fase antes da primeira pu
 
 ## Tarefas
 
+### 7.0: Aplicar a identidade visual do guia de marca ao dashboard (D-27, urgente)
+
+O dashboard (Fase 4/5, já mergeado) nunca recebeu os tokens de `docs/brand/tokens.md` (ADR-0009).
+Hoje roda só com os padrões do Angular Material (`mat.$azure-palette`/`mat.$blue-palette`,
+tipografia `Roboto` nunca carregada de verdade), o que o usuário avaliou como "horrível" ao abrir
+o dashboard real pela primeira vez. Prioridade máxima nesta fase: nenhuma tarefa de divulgação
+visual (7.3, GIF) faz sentido com o tema atual.
+
+Escopo, confirmado por inspeção do código real:
+
+1. **Tema Material** (`src/NetApiFlow.Dashboard/ClientApp/src/styles.scss`): trocar
+   `mat.$azure-palette`/`mat.$blue-palette` pelos tokens de `docs/brand/tokens.md` (Obsidian no
+   escuro, Stage Light no claro, `--naf-flow-500`/`600`/`400` como primária). `theme-type:
+   color-scheme` já está certo, manter.
+2. **Tipografia**: `typography: Roboto` está declarado mas nenhuma fonte é carregada (nem CDN,
+   nem arquivo local). Por isso o navegador cai no serifado padrão. Embutir localmente Plus
+   Jakarta Sans, Inter e JetBrains Mono (`@font-face` com arquivo `.woff2` em `public/fonts/` ou
+   equivalente), **sem** depender de CDN do Google Fonts: o dashboard precisa funcionar sem
+   acesso à internet, atrás de CSP restritivo ou com o navegador do cliente final.
+3. **Cores do grafo** (`features/flow/graph/flow-graph.component.scss`): os seis estados já usam
+   variável CSS com fallback (ex.: `var(--flow-state-completed-fill, #e8f5e9)`, cor do Material,
+   não da marca). Definir essas variáveis no tema com os valores reais
+   (`--naf-success`/`warning`/`danger`/`idle` de `docs/brand/tokens.md`), sem mexer na lógica do
+   componente.
+4. **Ícones de estado de nó** (`shared/node-state-presentation.ts`): hoje são glifos Unicode
+   (`⏳`, `▶`, `✓`...). Trocar pelos SVGs reais de `docs/brand/node-states/` (mesmo mapeamento de
+   `NodeVisualState` já documentado em `tokens.md`).
+5. **`index.html`**: `<title>` genérico ("Dashboard") vira "NetApiFlow", e o favicon (hoje o
+   padrão do Angular CLI) vira o monograma de `docs/brand/logo-mark-dark.svg` (mesma fonte do
+   `docs/images/icon.png` do pacote NuGet).
+
+**Pronto quando:** `npm run lint`/`test:ci`/`build` continuam verdes, screenshot visual (claro e
+escuro) mostra as cores e tipografia da marca, sem nenhum glifo Unicode nem cor padrão do Material
+restando nas telas `/flow`, `/history`, `/components`.
+
+**Fora de escopo desta tarefa:** o bug funcional observado em `/runner` ("Failed to load the
+OpenAPI document") é separado, não é de estilo. Reportar à parte: `openApiUrl` do
+`runner.component.ts` aponta para `/openapi/v1.json` na raiz do host (absoluto, correto por
+design), então o 404/falha provável é o host de teste não ter `MapOpenApi()` configurado, não um
+bug do dashboard. Confirmar e, se for mesmo isso, não é algo para o NetApiFlow corrigir.
+
+### 7.0b: Redesenhar `/flow` como workspace denso (ADR-0010)
+
+Depois de ver o dashboard real com a tarefa 7.0 aplicada, o usuário pediu uma arquitetura de
+informação mais densa, descrita e decidida em ADR-0010. Segura a publicação da `0.1.0` até esta
+tarefa fechar.
+
+Escopo, por peça (nenhum contrato de API muda, nenhuma rota é removida):
+
+1. **Sidebar fixa** à esquerda, substituindo a barra de navegação horizontal atual, com um item
+   por rota existente (`/flow`, `/history`, `/components`, `/runner`).
+2. **Faixa de cartões de métrica** no topo de `/flow`: total de traces, sucesso, erros, latência
+   média, latência máxima, passos executados. Consome `GET /flow/api/metrics` (`TraceStats`,
+   já implementado desde a Fase 3, D-18).
+3. **Painel de ação** à esquerda de `/flow`: o mesmo formulário do Runner (extrair o formulário
+   de `runner.component.ts` para um componente compartilhado, usado nos dois lugares, para não
+   duplicar a lógica de montagem via OpenAPI). `/runner` continua existindo como rota própria.
+4. **Painel de detalhes** à direita: reaproveita `FlowDetailsPanelComponent` e `buildWaterfall`
+   (já implementados), só com novo estilo visual de lista com barra proporcional.
+5. **Feed de eventos ao vivo**: painel novo, consumindo `GET /stream` (SSE, já implementado),
+   mostrando o log cru de eventos conforme chegam.
+6. Grafo e replay (centro da tela) continuam a mesma lógica (`graph-builder`, já implementado),
+   só mudam de posição dentro do novo layout.
+
+**Pronto quando:** `/flow` mostra sidebar, cartões de métrica, painel de ação, grafo, painel de
+detalhes e feed de eventos juntos na mesma tela, sem quebrar nenhuma rota existente (`/history`,
+`/components`, `/runner` continuam acessíveis e funcionais por link direto). `npm run
+lint`/`test:ci`/`build` verdes.
+
 ### 7.1: Benchmark de overhead (risco R-05)
 
 Medir o custo de ter o NetApiFlow ligado vs. desligado (`Enabled = false`) vs. ausente, num
