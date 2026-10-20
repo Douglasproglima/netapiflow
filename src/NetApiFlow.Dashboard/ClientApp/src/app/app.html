@@ -1,2 +1,12 @@
-<h1>NetApiFlow {{ title() }}</h1>
-<router-outlet />
+<mat-toolbar class="app-shell__toolbar">
+  <h1 class="app-shell__title">NetApiFlow</h1>
+  <nav class="app-shell__nav">
+    <a routerLink="/flow" routerLinkActive="app-shell__link--active">Flow</a>
+    <a routerLink="/history" routerLinkActive="app-shell__link--active">History</a>
+    <a routerLink="/components" routerLinkActive="app-shell__link--active">Components</a>
+    <a routerLink="/runner" routerLinkActive="app-shell__link--active">Runner</a>
+  </nav>
+</mat-toolbar>
+<main class="app-shell__content">
+  <router-outlet />
+</main>
