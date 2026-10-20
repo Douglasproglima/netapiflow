@@ -12,7 +12,12 @@ internal sealed class FlowRecorder
     /// <summary>Maximum number of traces tracked in memory at the same time.</summary>
     internal const int MaxActiveTraces = 500;
 
+    /// <summary>Maximum number of recently-completed traces kept for immediate lookup before the persistence writer catches up.</summary>
+    internal const int MaxRecentlyCompleted = 500;
+
     private readonly ConcurrentDictionary<string, ActiveTrace> _activeTraces = new();
+    private readonly ConcurrentDictionary<string, FlowTraceDetail> _recentlyCompleted = new();
+    private readonly ConcurrentQueue<string> _recentlyCompletedOrder = new();
     private readonly NetApiFlowOptions _options;
     private long _droppedTraceCount;
     private long _droppedSpanCount;
@@ -81,6 +86,15 @@ internal sealed class FlowRecorder
         }
     }
 
+    /// <summary>Attaches an explicit tag (e.g. the resolved tenant) to an open trace.</summary>
+    public void SetTraceTag(string traceId, string key, string value)
+    {
+        if (_activeTraces.TryGetValue(traceId, out var trace))
+        {
+            trace.SetTag(key, value);
+        }
+    }
+
     /// <summary>Closes an open trace and returns its final consolidated state, or <see langword="null"/> if it was not tracked.</summary>
     public FlowTrace? CompleteTrace(string traceId, int? httpStatus, FlowStatus status, string? errorMessage)
     {
@@ -103,11 +117,24 @@ internal sealed class FlowRecorder
             SpanCount = trace.Spans.Count,
             Truncated = trace.Truncated,
             ErrorMessage = ErrorMessageSanitizer.Sanitize(errorMessage),
+            Tags = trace.Tags,
         };
 
+        RememberCompleted(result, trace.Spans);
         TraceCompleted?.Invoke(result);
         TraceReadyForPersistence?.Invoke(result, trace.Spans);
         return result;
+    }
+
+    private void RememberCompleted(FlowTrace trace, IReadOnlyList<FlowSpan> spans)
+    {
+        _recentlyCompleted[trace.TraceId] = new FlowTraceDetail { Trace = trace, Spans = spans };
+        _recentlyCompletedOrder.Enqueue(trace.TraceId);
+
+        while (_recentlyCompletedOrder.Count > MaxRecentlyCompleted && _recentlyCompletedOrder.TryDequeue(out var evictedTraceId))
+        {
+            _recentlyCompleted.TryRemove(evictedTraceId, out _);
+        }
     }
 
     public bool TryAddSpan(string traceId, FlowSpan span)
@@ -159,6 +186,21 @@ internal sealed class FlowRecorder
 
     public ActiveTrace? GetActiveTrace(string traceId) =>
         _activeTraces.TryGetValue(traceId, out var trace) ? trace : null;
+
+    /// <summary>Snapshot of every trace currently being recorded.</summary>
+    public IReadOnlyList<ActiveTrace> GetActiveTraces() => [.. _activeTraces.Values];
+
+    /// <summary>A trace that finished recently, kept in memory while the persistence writer catches up.</summary>
+    public FlowTraceDetail? GetRecentlyCompleted(string traceId) =>
+        _recentlyCompleted.TryGetValue(traceId, out var detail) ? detail : null;
+
+    /// <summary>Discards every in-flight and recently-completed trace. Used by <c>DELETE /traces</c>.</summary>
+    public void ClearActiveTraces()
+    {
+        _activeTraces.Clear();
+        _recentlyCompleted.Clear();
+        _recentlyCompletedOrder.Clear();
+    }
 
     public bool TryCompleteTrace(string traceId, out ActiveTrace? trace) =>
         _activeTraces.TryRemove(traceId, out trace);

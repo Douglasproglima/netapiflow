@@ -8,8 +8,8 @@ public interface ITraceStore
     /// <summary>Saves a completed trace with its spans.</summary>
     ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken);
 
-    /// <summary>Gets a consolidated trace by id, or <see langword="null"/> if not found.</summary>
-    ValueTask<FlowTrace?> GetAsync(string traceId, CancellationToken cancellationToken);
+    /// <summary>Gets a consolidated trace with its spans by id, or <see langword="null"/> if not found.</summary>
+    ValueTask<FlowTraceDetail?> GetAsync(string traceId, CancellationToken cancellationToken);
 
     /// <summary>Lists traces matching <paramref name="query"/>, paginated.</summary>
     ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken);
@@ -17,8 +17,11 @@ public interface ITraceStore
     /// <summary>Aggregated statistics per component/operation within <paramref name="query"/>'s time window.</summary>
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
 
-    /// <summary>Gets the last successful trace for an endpoint, used as the blueprint for "not executed" steps.</summary>
-    ValueTask<FlowTrace?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
+    /// <summary>Aggregated statistics across whole traces within <paramref name="query"/>'s time window.</summary>
+    ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+
+    /// <summary>Gets the last successful trace with its spans for an endpoint, used as the blueprint for "not executed" steps.</summary>
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
 
     /// <summary>Removes traces beyond <paramref name="policy"/>'s limits. Returns the number of traces removed.</summary>
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);

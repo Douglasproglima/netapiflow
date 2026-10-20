@@ -12,15 +12,24 @@ internal sealed class RetentionService(ITraceStore store, IOptions<NetApiFlowOpt
     {
         using var timer = new PeriodicTimer(Interval);
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        try
         {
-            var policy = new RetentionPolicy
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                MaxTraces = options.Value.Retention.MaxTraces,
-                MaxAge = options.Value.Retention.MaxAge,
-            };
+                var policy = new RetentionPolicy
+                {
+                    MaxTraces = options.Value.Retention.MaxTraces,
+                    MaxAge = options.Value.Retention.MaxAge,
+                };
 
-            await store.ApplyRetentionAsync(policy, stoppingToken);
+                await store.ApplyRetentionAsync(policy, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // PeriodicTimer.WaitForNextTickAsync throws instead of returning false when the
+            // supplied token (as opposed to the timer itself) is what caused the wait to end;
+            // that is the expected shape of a graceful host shutdown, not a failure.
         }
     }
 }

@@ -39,6 +39,9 @@ internal sealed partial class PersistenceWriter : BackgroundService
         _recorder.TraceReadyForPersistence += _onTraceReady;
     }
 
+    /// <summary>Raised after a trace is saved to the configured <see cref="ITraceStore"/>.</summary>
+    public event Action<FlowTrace>? TraceSaved;
+
     /// <summary>Number of traces discarded because the persistence queue was full.</summary>
     public long DroppedCount => Interlocked.Read(ref _droppedCount);
 
@@ -61,6 +64,7 @@ internal sealed partial class PersistenceWriter : BackgroundService
             try
             {
                 await _store.SaveAsync(trace, spans, stoppingToken);
+                TraceSaved?.Invoke(trace);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
