@@ -134,7 +134,23 @@ Seção `[0.1.0]` substituindo `[Unreleased]`, formato Keep a Changelog, listand
 
 **Pronto quando:** seção da versão presente, com data de release.
 
-### 7.7: `.github/workflows/release.yml`
+### 7.7: Pequenos ajustes de arquitetura do frontend (D-26)
+
+Achados de uma revisão de qualidade fora do ciclo normal de fase, sem gravidade suficiente para
+bloquear a Fase 4 (já aceita), mas que não devem acumular até a Fase 7:
+
+- Mover `NodeVisualState` (hoje em `features/flow/graph/graph-builder.ts`) para `core/models.ts`
+  ou outro módulo de `shared/`, e ajustar `graph-builder.ts` e
+  `shared/node-state-presentation.ts` para importar de lá. `shared/` não deve depender de um
+  tipo de dentro de `features/`.
+- Exportar a constante `GHOST_ID_PREFIX` de `graph-builder.ts` (ou expor um helper
+  `isGhostNodeId(id)`) e usá-la em `flow-page.component.ts`, que hoje duplica o mesmo literal
+  `'ghost-'` sem importar de lá.
+
+**Pronto quando:** os dois pontos corrigidos, `npm run lint` e `npm run test:ci` continuam
+verdes, sem mudança de comportamento visível (refactor puro).
+
+### 7.8: `.github/workflows/release.yml`
 
 Dispara em tag `v*.*.*`: empacota os 6 pacotes com a versão da tag
 (`/p:Version=${{ ... }}` extraído da tag), publica no nuget.org via **Trusted Publishing** (OIDC
