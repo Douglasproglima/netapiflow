@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NetApiFlow;
+using NetApiFlow.Dashboard;
+using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Marking;
 using SampleApi.Controllers.Application;
@@ -10,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 builder.Services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
+builder.Services.AddNetApiFlowDashboard();
 builder.Services.AddNetApiFlowEntityFrameworkCore();
 
 builder.Services.AddDbContext<SampleDbContext>((sp, options) =>
@@ -46,5 +49,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+app.UseNetApiFlowDashboard();
 
 app.Run();
