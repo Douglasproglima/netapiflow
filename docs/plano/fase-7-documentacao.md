@@ -45,6 +45,34 @@ OpenAPI document") é separado, não é de estilo. Reportar à parte: `openApiUr
 design), então o 404/falha provável é o host de teste não ter `MapOpenApi()` configurado, não um
 bug do dashboard. Confirmar e, se for mesmo isso, não é algo para o NetApiFlow corrigir.
 
+### 7.0b: Redesenhar `/flow` como workspace denso (ADR-0010)
+
+Depois de ver o dashboard real com a tarefa 7.0 aplicada, o usuário comparou com o
+[apiflow](https://github.com/joshuamaia/apiflow) e pediu uma arquitetura de informação mais
+densa, descrita e decidida em ADR-0010. Segura a publicação da `0.1.0` até esta tarefa fechar.
+
+Escopo, por peça (nenhum contrato de API muda, nenhuma rota é removida):
+
+1. **Sidebar fixa** à esquerda, substituindo a barra de navegação horizontal atual, com um item
+   por rota existente (`/flow`, `/history`, `/components`, `/runner`).
+2. **Faixa de cartões de métrica** no topo de `/flow`: total de traces, sucesso, erros, latência
+   média, latência máxima, passos executados. Consome `GET /flow/api/metrics` (`TraceStats`,
+   já implementado desde a Fase 3, D-18).
+3. **Painel de ação** à esquerda de `/flow`: o mesmo formulário do Runner (extrair o formulário
+   de `runner.component.ts` para um componente compartilhado, usado nos dois lugares, para não
+   duplicar a lógica de montagem via OpenAPI). `/runner` continua existindo como rota própria.
+4. **Painel de detalhes** à direita: reaproveita `FlowDetailsPanelComponent` e `buildWaterfall`
+   (já implementados), só com novo estilo visual de lista com barra proporcional.
+5. **Feed de eventos ao vivo**: painel novo, consumindo `GET /stream` (SSE, já implementado),
+   mostrando o log cru de eventos conforme chegam.
+6. Grafo e replay (centro da tela) continuam a mesma lógica (`graph-builder`, já implementado),
+   só mudam de posição dentro do novo layout.
+
+**Pronto quando:** `/flow` mostra sidebar, cartões de métrica, painel de ação, grafo, painel de
+detalhes e feed de eventos juntos na mesma tela, sem quebrar nenhuma rota existente (`/history`,
+`/components`, `/runner` continuam acessíveis e funcionais por link direto). `npm run
+lint`/`test:ci`/`build` verdes.
+
 ### 7.1: Benchmark de overhead (risco R-05)
 
 Medir o custo de ter o NetApiFlow ligado vs. desligado (`Enabled = false`) vs. ausente, num

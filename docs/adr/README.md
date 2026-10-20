@@ -16,4 +16,4 @@ antigo.
 | [ADR-0007](0007-nunca-capturar-payload.md) | Nunca capturar corpo, argumento, header ou SQL parametrizado | Aceito |
 | [ADR-0008](0008-ferramentas-de-teste.md) | Shouldly para asserções, NSubstitute para mocks | Aceito |
 | [ADR-0009](0009-identidade-visual-guia-de-marca.md) | Guia de marca v1 como referência canônica de identidade visual | Aceito |
-| [ADR-0010](0010-layout-de-workspace-unico.md) | Dashboard em workspace único, não mais uma rota por feature | Aceito |
+| [ADR-0010](0010-layout-de-workspace-unico.md) | `/flow` vira um workspace denso, as demais rotas continuam existindo | Aceito |
