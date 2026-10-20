@@ -15,3 +15,4 @@ antigo.
 | [ADR-0006](0006-dashboard-restrito-a-development.md) | Dashboard acessível só em Development por padrão | Aceito |
 | [ADR-0007](0007-nunca-capturar-payload.md) | Nunca capturar corpo, argumento, header ou SQL parametrizado | Aceito |
 | [ADR-0008](0008-ferramentas-de-teste.md) | Shouldly para asserções, NSubstitute para mocks | Aceito |
+| [ADR-0009](0009-identidade-visual-guia-de-marca.md) | Guia de marca v1 como referência canônica de identidade visual | Aceito |
