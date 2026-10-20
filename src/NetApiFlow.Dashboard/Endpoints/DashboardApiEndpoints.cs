@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Dashboard.Contracts;
 using NetApiFlow.Dashboard.Json;
+using NetApiFlow.Dashboard.Sse;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
 using NetApiFlow.Routing;
@@ -33,6 +34,7 @@ internal static class DashboardApiEndpoints
         group.MapGet("/endpoints", GetEndpoints);
         group.MapGet("/metrics", GetMetrics);
         group.MapGet("/metrics/components", GetComponentMetrics);
+        group.MapStream();
 
         return endpoints;
     }

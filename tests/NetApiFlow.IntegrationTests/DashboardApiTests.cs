@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
@@ -34,6 +35,7 @@ public class DashboardApiTests
                 {
                     services.AddRouting();
                     services.AddNetApiFlow();
+                    services.AddNetApiFlowDashboard();
                 });
                 webBuilder.Configure(app =>
                 {
@@ -365,6 +367,7 @@ public class DashboardApiTests
                 {
                     services.AddRouting();
                     services.AddNetApiFlow();
+                    services.AddNetApiFlowDashboard();
                 });
                 webBuilder.Configure(app =>
                 {
