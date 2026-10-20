@@ -455,9 +455,20 @@ autorização configurada (mesma regra do resto do dashboard, risco R-09).
 
 Server-Sent Events, contrato completo na seção 2 deste arquivo.
 
+### GET `/config`
+
+Acrescentada na Fase 4 (D-24): expõe ao frontend valores de `NetApiFlowOptions` que afetam
+apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
+
+```json
+{
+  "slowThresholdMicros": 250000
+}
+```
+
 ---
 
-Autorização vale para as dez rotas acima, sem exceção (ADR-0006): fora de
+Autorização vale para as onze rotas acima, sem exceção (ADR-0006): fora de
 `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
 `IDashboardAuthorizationFilter` configurado, toda rota responde `404`. Com um dos dois
 configurado e o usuário sem a claim exigida, `403` (risco R-09, mitigação na Fase 5).
