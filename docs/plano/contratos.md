@@ -145,6 +145,35 @@ responde `403`. Tudo que não está nesta lista (`DashboardAccessGate`,
 `DashboardIndexHtmlCache`, `DashboardEmbeddedFiles`, `MapNetApiFlowDashboardApi`) é `internal`.
 Formalizado na revisão da Fase 5.
 
+### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
+
+```csharp
+namespace NetApiFlow.Storage.PostgreSql;
+
+public static class NetApiFlowPostgreSqlServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlowPostgreSqlStorage(
+        this IServiceCollection services, string connectionString,
+        Action<PostgreSqlStorageOptions>? configure = null);
+}
+
+public sealed class PostgreSqlStorageOptions
+{
+    public string TablePrefix { get; set; } = "netapiflow_";
+}
+
+// NetApiFlow.Storage.SqlServer espelha a mesma forma: AddNetApiFlowSqlServerStorage(
+// this IServiceCollection, string connectionString, Action<SqlServerStorageOptions>?)
+// e SqlServerStorageOptions com o mesmo TablePrefix.
+```
+
+Chamar depois de `AddNetApiFlow(...)`: substitui o `ITraceStore` em memória pelo storage
+persistente (`services.Replace(...)`, singleton). `TablePrefix` é validado contra
+`^[A-Za-z_][A-Za-z0-9_]*$` antes de compor nome de tabela (identificador não é parametrizável em
+SQL); prefixo inválido lança `ArgumentException` na chamada de `Add...Storage`, não em tempo de
+query. Tudo que não está nesta lista (`PostgreSqlTraceStore`, `SqlServerTraceStore`,
+`*SchemaInitializer`, `*TableNames`) é `internal`. Formalizado na revisão da Fase 6.
+
 ### DTOs de apoio de `ITraceStore` (provisórios até a Fase 3)
 
 `PagedResult<T>`, `FlowTraceSummary`, `TraceQuery`, `ComponentStat`, `StatsQuery` e
