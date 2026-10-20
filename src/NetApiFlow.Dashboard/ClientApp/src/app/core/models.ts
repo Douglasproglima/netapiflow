@@ -101,9 +101,10 @@ export interface EndpointDescriptor {
   displayName: string;
 }
 
-/** GET /metrics */
+/** GET /metrics (D-30: `errorCount` is the raw count behind `errorRate`). */
 export interface MetricsSummary {
   totalTraces: number;
+  errorCount: number;
   errorRate: number;
   averageDurationMicros: number;
   p95DurationMicros: number;

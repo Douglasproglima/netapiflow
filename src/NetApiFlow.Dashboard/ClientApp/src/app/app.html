@@ -1,12 +1,89 @@
-<mat-toolbar class="app-shell__toolbar" color="primary">
-  <h1 class="app-shell__title">NetApiFlow</h1>
-  <nav class="app-shell__nav">
-    <a mat-button routerLink="/flow" routerLinkActive="app-shell__link--active">Flow</a>
-    <a mat-button routerLink="/history" routerLinkActive="app-shell__link--active">History</a>
-    <a mat-button routerLink="/components" routerLinkActive="app-shell__link--active">Components</a>
-    <a mat-button routerLink="/runner" routerLinkActive="app-shell__link--active">Runner</a>
-  </nav>
-</mat-toolbar>
-<main class="app-shell__content">
-  <router-outlet />
-</main>
+<mat-sidenav-container class="app-shell">
+  <mat-sidenav class="app-shell__sidenav" mode="side" opened disableClose>
+    <h1 class="app-shell__title">NetApiFlow</h1>
+    <mat-nav-list class="app-shell__nav">
+      <a
+        mat-list-item
+        routerLink="/flow"
+        routerLinkActive="app-shell__link--active"
+        class="app-shell__link"
+      >
+        <svg
+          matListItemIcon
+          class="app-shell__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <circle cx="6" cy="18" r="2.4" />
+          <circle cx="18" cy="6" r="2.4" />
+          <path d="M6 15.6 V10 a4 4 0 0 1 4-4 H15.6" stroke-linecap="round" />
+        </svg>
+        <span matListItemTitle>Flow</span>
+      </a>
+      <a
+        mat-list-item
+        routerLink="/history"
+        routerLinkActive="app-shell__link--active"
+        class="app-shell__link"
+      >
+        <svg
+          matListItemIcon
+          class="app-shell__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <circle cx="12" cy="12" r="8.4" />
+          <path d="M12 7.2 V12 L15.2 14.2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span matListItemTitle>History</span>
+      </a>
+      <a
+        mat-list-item
+        routerLink="/components"
+        routerLinkActive="app-shell__link--active"
+        class="app-shell__link"
+      >
+        <svg
+          matListItemIcon
+          class="app-shell__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <rect x="4" y="4" width="7" height="7" rx="1.4" />
+          <rect x="13" y="4" width="7" height="7" rx="1.4" />
+          <rect x="4" y="13" width="7" height="7" rx="1.4" />
+          <rect x="13" y="13" width="7" height="7" rx="1.4" />
+        </svg>
+        <span matListItemTitle>Components</span>
+      </a>
+      <a
+        mat-list-item
+        routerLink="/runner"
+        routerLinkActive="app-shell__link--active"
+        class="app-shell__link"
+      >
+        <svg
+          matListItemIcon
+          class="app-shell__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <path d="M6 4.5 L19 12 L6 19.5 Z" stroke-linejoin="round" />
+        </svg>
+        <span matListItemTitle>Runner</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="app-shell__content">
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

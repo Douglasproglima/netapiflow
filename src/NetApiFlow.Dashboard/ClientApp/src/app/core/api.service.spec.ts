@@ -128,6 +128,7 @@ describe('ApiService', () => {
   it('getMetrics omits from/to when not provided', () => {
     const summary: MetricsSummary = {
       totalTraces: 0,
+      errorCount: 0,
       errorRate: 0,
       averageDurationMicros: 0,
       p95DurationMicros: 0,

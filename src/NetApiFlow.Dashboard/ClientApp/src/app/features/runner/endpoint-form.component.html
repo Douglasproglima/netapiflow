@@ -1,0 +1,71 @@
+<section class="endpoint-form">
+  @if (loading()) {
+    <p class="endpoint-form__status" role="status">Loading…</p>
+  } @else if (loadError()) {
+    <p class="endpoint-form__status endpoint-form__status--error" role="alert">
+      {{ loadError() }}
+    </p>
+  } @else {
+    <div class="endpoint-form__layout">
+      <mat-card appearance="outlined" class="endpoint-form__endpoints-card">
+        <ul class="endpoint-form__endpoints">
+          @for (endpoint of endpoints(); track endpoint.method + ' ' + endpoint.path) {
+            <li>
+              <button
+                mat-button
+                type="button"
+                class="endpoint-form__endpoint"
+                (click)="selectEndpoint(endpoint.method, endpoint.path)"
+              >
+                <span class="endpoint-form__endpoint-method">{{ endpoint.method }}</span>
+                <span class="endpoint-form__endpoint-path">{{ endpoint.path }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      </mat-card>
+
+      @if (form(); as form) {
+        <mat-card appearance="outlined" class="endpoint-form__form-card">
+          <form class="endpoint-form__form" (submit)="$event.preventDefault(); send()">
+            <h2>{{ form.method }} {{ form.path }}</h2>
+
+            @for (field of form.fields; track field.name) {
+              <mat-form-field subscriptSizing="dynamic">
+                <mat-label>{{ field.name }} ({{ field.kind }})</mat-label>
+                @if (field.kind === 'body') {
+                  <textarea
+                    matInput
+                    [id]="'endpoint-form-field-' + field.name"
+                    [value]="fieldValue(field.name)"
+                    (input)="onFieldInput(field.name, $event)"
+                  ></textarea>
+                } @else {
+                  <input
+                    matInput
+                    type="text"
+                    [id]="'endpoint-form-field-' + field.name"
+                    [value]="fieldValue(field.name)"
+                    (input)="onFieldInput(field.name, $event)"
+                  />
+                }
+              </mat-form-field>
+            }
+
+            <button mat-flat-button type="submit" [disabled]="sending()">Send</button>
+
+            @if (sendError()) {
+              <p class="endpoint-form__status endpoint-form__status--error" role="alert">
+                {{ sendError() }}
+              </p>
+            }
+
+            @if (lastTraceId()) {
+              <p class="endpoint-form__trace-id">Trace: {{ lastTraceId() }}</p>
+            }
+          </form>
+        </mat-card>
+      }
+    </div>
+  }
+</section>

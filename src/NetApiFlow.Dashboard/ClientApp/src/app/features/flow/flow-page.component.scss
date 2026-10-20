@@ -1,48 +1,81 @@
-.flow-page {
+.flow-workspace {
   padding: 1rem;
   height: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
 }
 
-.flow-page__status {
+.flow-workspace__status {
   opacity: 0.8;
 }
 
-.flow-page__layout {
+.flow-workspace__body {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   gap: 1rem;
-  height: 100%;
-  min-width: 0;
 
-  @media (max-width: 720px) {
+  @media (max-width: 960px) {
     flex-direction: column;
   }
 }
 
-.flow-page__graph {
+.flow-workspace__action {
+  flex: 0 0 280px;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.flow-workspace__center {
   flex: 2 1 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.flow-page__details {
+.flow-workspace__replay-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flow-workspace__speed {
+  width: 5rem;
+}
+
+.flow-workspace__graph {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.flow-workspace__details {
   flex: 1 1 280px;
   min-width: 0;
-  overflow-x: auto;
+  overflow-y: auto;
 }
 
-.flow-page__live-card {
+.flow-workspace__live-card {
   padding: 0.5rem 1rem 1rem;
 }
 
-.flow-page__live-list {
+.flow-workspace__live-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.flow-page__live-item {
+.flow-workspace__live-item {
   display: flex;
   gap: 0.75rem;
   width: 100%;
   text-align: left;
+}
+
+.flow-workspace__feed {
+  flex: 0 0 180px;
+  min-height: 0;
 }

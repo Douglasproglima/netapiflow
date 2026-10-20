@@ -1,38 +1,34 @@
 :host {
-  display: flex;
-  flex-direction: column;
+  display: block;
   height: 100%;
 }
 
-.app-shell__toolbar {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+.app-shell {
+  height: 100%;
+}
+
+.app-shell__sidenav {
+  width: 220px;
+  padding: 1rem 0;
+  border-right: 1px solid var(--mat-sys-outline-variant);
 }
 
 .app-shell__title {
   font-size: 1.1rem;
-  margin: 0;
+  margin: 0 0 0.5rem 1rem;
 }
 
-.app-shell__nav {
-  display: flex;
-  gap: 0.25rem;
-  flex-wrap: wrap;
-
-  a {
-    opacity: 0.85;
-  }
+.app-shell__icon {
+  width: 20px;
+  height: 20px;
 }
 
 .app-shell__link--active {
-  opacity: 1;
   font-weight: 600;
-  text-decoration: underline;
+  background: var(--flow-state-waiting-fill);
 }
 
 .app-shell__content {
-  flex: 1 1 auto;
-  min-height: 0;
+  height: 100%;
   overflow-x: hidden;
 }

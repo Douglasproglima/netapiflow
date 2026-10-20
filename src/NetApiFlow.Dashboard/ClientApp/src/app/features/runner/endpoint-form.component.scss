@@ -1,58 +1,48 @@
-.runner {
-  padding: 1rem;
-}
-
-.runner__status {
+.endpoint-form__status {
   opacity: 0.8;
 }
 
-.runner__status--error {
+.endpoint-form__status--error {
   color: var(--flow-state-error-stroke, #e53935);
 }
 
-.runner__layout {
+.endpoint-form__layout {
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
   align-items: flex-start;
 }
 
-.runner__endpoints-card,
-.runner__form-card {
+.endpoint-form__endpoints-card,
+.endpoint-form__form-card {
   padding: 0.5rem 1rem 1rem;
 }
 
-.runner__endpoints {
+.endpoint-form__endpoints {
   list-style: none;
   margin: 0;
   padding: 0;
   min-width: 220px;
 }
 
-.runner__endpoint {
+.endpoint-form__endpoint {
   display: flex;
   gap: 0.5rem;
   width: 100%;
   text-align: left;
 }
 
-.runner__endpoint-method {
+.endpoint-form__endpoint-method {
   font-weight: 600;
 }
 
-.runner__form {
+.endpoint-form__form {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   min-width: 260px;
 }
 
-.runner__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.runner__trace-id {
-  font-family: monospace;
+.endpoint-form__trace-id {
+  font-family: 'JetBrains Mono', monospace;
 }

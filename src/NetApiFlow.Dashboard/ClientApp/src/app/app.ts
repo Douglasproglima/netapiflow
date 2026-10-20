@@ -1,11 +1,15 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatListModule } from '@angular/material/list';
 
-/** Shell: top nav linking the four feature routes, plus the router outlet (D-23). */
+/**
+ * Shell: fixed sidebar linking the four feature routes, plus the router outlet (D-23, ADR-0010).
+ * Replaces the earlier horizontal toolbar nav (tarefa 7.0b) — still real routing, just a
+ * different position and visual shape.
+ */
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatListModule],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',

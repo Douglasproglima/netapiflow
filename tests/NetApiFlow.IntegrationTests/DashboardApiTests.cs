@@ -285,6 +285,7 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("totalTraces").GetInt32().ShouldBe(2);
+        doc.RootElement.GetProperty("errorCount").GetInt32().ShouldBe(1);
         doc.RootElement.GetProperty("errorRate").GetDouble().ShouldBe(0.5);
         doc.RootElement.GetProperty("maxDurationMicros").GetInt64().ShouldBe(3_000);
     }
@@ -300,6 +301,7 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("totalTraces").GetInt32().ShouldBe(0);
+        doc.RootElement.GetProperty("errorCount").GetInt32().ShouldBe(0);
         doc.RootElement.GetProperty("errorRate").GetDouble().ShouldBe(0);
         doc.RootElement.GetProperty("averageDurationMicros").GetInt64().ShouldBe(0);
     }

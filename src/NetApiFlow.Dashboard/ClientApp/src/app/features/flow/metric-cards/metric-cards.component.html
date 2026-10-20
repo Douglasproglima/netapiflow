@@ -1,0 +1,14 @@
+@if (loading()) {
+  <p class="metric-cards__status" role="status">Loading…</p>
+} @else if (error()) {
+  <p class="metric-cards__status metric-cards__status--error" role="alert">{{ error() }}</p>
+} @else {
+  <div class="metric-cards">
+    @for (card of cards(); track card.label) {
+      <mat-card appearance="outlined" class="metric-cards__card">
+        <span class="metric-cards__value">{{ card.value }}</span>
+        <span class="metric-cards__label">{{ card.label }}</span>
+      </mat-card>
+    }
+  </div>
+}

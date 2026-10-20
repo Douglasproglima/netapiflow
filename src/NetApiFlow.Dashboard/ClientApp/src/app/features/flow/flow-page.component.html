@@ -1,41 +1,94 @@
-<section class="flow-page">
-  @if (trace(); as trace) {
-    <div class="flow-page__layout">
-      <app-flow-graph
-        class="flow-page__graph"
-        [nodes]="graph().nodes"
-        [edges]="graph().edges"
-        [selectedNodeId]="selectedNodeId()"
-        (nodeSelected)="onNodeSelected($event)"
-      />
+<section class="flow-workspace">
+  <app-metric-cards class="flow-workspace__metrics" />
+
+  <div class="flow-workspace__body">
+    <app-endpoint-form class="flow-workspace__action" (traceDispatched)="openTrace($event)" />
+
+    <div class="flow-workspace__center">
+      @if (trace(); as trace) {
+        <div class="flow-workspace__replay-bar">
+          <button mat-stroked-button type="button" (click)="toggleReplay()">
+            {{ isReplaying() ? 'Back to live' : 'Replay' }}
+          </button>
+          @if (isReplaying()) {
+            <button
+              mat-icon-button
+              type="button"
+              [attr.aria-label]="replayPlayer.state() === 'playing' ? 'Pause' : 'Play'"
+              (click)="
+                replayPlayer.state() === 'playing' ? replayPlayer.pause() : replayPlayer.play()
+              "
+            >
+              {{ replayPlayer.state() === 'playing' ? '⏸' : '▶' }}
+            </button>
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Restart"
+              (click)="replayPlayer.restart()"
+            >
+              ⏮
+            </button>
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Step forward"
+              (click)="replayPlayer.stepForward()"
+            >
+              ⏭
+            </button>
+            <mat-form-field subscriptSizing="dynamic" class="flow-workspace__speed">
+              <mat-label>Speed</mat-label>
+              <select matNativeControl (change)="onSpeedChange($event)">
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+                <option value="4">4x</option>
+              </select>
+            </mat-form-field>
+          }
+        </div>
+
+        <app-flow-graph
+          class="flow-workspace__graph"
+          [nodes]="graph().nodes"
+          [edges]="graph().edges"
+          [selectedNodeId]="selectedNodeId()"
+          (nodeSelected)="onNodeSelected($event)"
+        />
+      } @else if (liveTracesLoading()) {
+        <p class="flow-workspace__status" role="status">Loading…</p>
+      } @else if (liveTraces().length === 0) {
+        <p class="flow-workspace__status">No request is currently in progress.</p>
+      } @else {
+        <mat-card appearance="outlined" class="flow-workspace__live-card">
+          <ul class="flow-workspace__live-list">
+            @for (summary of liveTraces(); track summary.traceId) {
+              <li>
+                <button
+                  mat-button
+                  type="button"
+                  class="flow-workspace__live-item"
+                  (click)="openTrace(summary.traceId)"
+                >
+                  <span>{{ summary.method }}</span>
+                  <span>{{ summary.routeTemplate }}</span>
+                  <span>{{ summary.status }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        </mat-card>
+      }
+    </div>
+
+    @if (trace(); as trace) {
       <app-flow-details-panel
-        class="flow-page__details"
+        class="flow-workspace__details"
         [trace]="trace"
         [selectedSpan]="selectedSpanDetail()"
       />
-    </div>
-  } @else if (liveTracesLoading()) {
-    <p class="flow-page__status" role="status">Loading…</p>
-  } @else if (liveTraces().length === 0) {
-    <p class="flow-page__status">No request is currently in progress.</p>
-  } @else {
-    <mat-card appearance="outlined" class="flow-page__live-card">
-      <ul class="flow-page__live-list">
-        @for (summary of liveTraces(); track summary.traceId) {
-          <li>
-            <button
-              mat-button
-              type="button"
-              class="flow-page__live-item"
-              (click)="openTrace(summary.traceId)"
-            >
-              <span>{{ summary.method }}</span>
-              <span>{{ summary.routeTemplate }}</span>
-              <span>{{ summary.status }}</span>
-            </button>
-          </li>
-        }
-      </ul>
-    </mat-card>
-  }
+    }
+  </div>
+
+  <app-event-feed class="flow-workspace__feed" />
 </section>
