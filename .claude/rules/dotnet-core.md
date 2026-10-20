@@ -41,6 +41,10 @@ Violação desta tabela é bloqueante: não "ajustar depois". Teste de arquitetu
   middleware) é capturada e logada, nunca propagada para o código do usuário. Ver
   `.claude/rules/tracing.md`.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`, sem exceção.
+- **Comentário só quando o código sozinho não explica o porquê.** Nome de variável, método e
+  tipo bem escolhido substitui comentário que descreve o quê. Nunca comentar o óbvio. Antes de
+  escrever um comentário, perguntar: dá para tornar isso óbvio renomeando ou reestruturando em
+  vez de explicar? Se der, fazer isso em vez de comentar.
 
 ## Multi-targeting
 

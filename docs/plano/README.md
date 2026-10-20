@@ -23,12 +23,13 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 1 | Núcleo de captura | **Aceita e mergeada** (2026-10-19) | PR #2, CI verde nos 4 checks. 54 testes (49 unitários + 4 integração + 1 placeholder). `contratos.md` atualizado com `NetApiFlowOptions` e os DTOs provisórios de `ITraceStore` |
 | 2 | Formas de marcação | **Aceita e mergeada** (2026-10-19) | PR #3, CI verde nos 4 checks. 83 testes por TFM. `contratos.md` atualizado com `AddFlowTracked`/`DecorateFlowTracked`/`WithNetApiFlowTracking`/registros do MediatR e EF Core. R-01 e R-02 mitigados; D-17 registra a prova de Postgres via SQLite como aceita |
 | 3 | API do dashboard e SSE | **Aceita e mergeada** (2026-10-20) | PR #4, CI verde nos 4 checks. 107 testes por TFM. R-04 e R-10 mitigados. D-20 (ping de handshake, heartbeat diverge por TFM) e D-21 (`IFlowTenantResolver` conectado, tarefa 3.8) resolvidos |
-| 4 | Dashboard Angular | Planejada | Contrato REST da Fase 3 está congelado e implementado, pronto para o Angular consumir |
+| 4 | Dashboard Angular | Em revisão | PR #5 aberto (sem autorização prévia — corrigir isso na próxima). 71 testes Angular + testes .NET de SSE/dashboard, verdes. Tarefa 4.14 (D-24, `GET /config`) acrescentada, falta implementar. Verificação visual (tema, tela estreita) pendente |
 | 5 | Empacotamento | Planejada | Depende das Fases 1-4 |
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: a Executora lê `docs/plano/fase-4-dashboard-angular.md` e começa a Fase 4.
+Próximo passo: a Executora implementa a tarefa 4.14 (nova) na mesma branch/PR. A Planejadora
+faz a verificação visual (tema, tela estreita) antes do aceite final.
 
 ## Regra de avanço
 

@@ -133,6 +133,16 @@ execução referenciada, sem precisar navegar pelo histórico.
 **Pronto quando:** teste de rota confere que a URL com o parâmetro carrega o trace certo ao
 montar o componente.
 
+### 4.14: `GET /flow/api/config` e consumo real do `SlowThreshold` (D-24)
+
+Nova rota no backend (`src/NetApiFlow.Dashboard`), mesma regra de autorização das outras
+(ADR-0006). Frontend (`flow-page.component.ts`) troca a constante `SLOW_THRESHOLD_MICROS`
+hardcoded pelo valor real, buscado uma vez via `ApiService`.
+
+**Pronto quando:** teste de integração do backend confere o valor devolvido bate com
+`NetApiFlowOptions.SlowThreshold` configurado no host; spec do frontend confere que o estado
+"lento" usa o valor vindo da API, não mais a constante.
+
 ## Aceite da fase
 
 Critério da seção 13, Fase 4: `graph-builder` com testes cobrindo layout, os seis estados e etapa
