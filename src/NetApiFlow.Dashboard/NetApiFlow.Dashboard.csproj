@@ -59,6 +59,24 @@
   </Target>
 
   <!--
+    Guards risco R-08: the package must never ship without the UI, or with a stale one. Runs even
+    if BuildAngularClient's own `npm run build` reported success but produced nothing (e.g. an
+    `angular.json` change moving the output elsewhere) — the one failure mode npm's own exit code
+    can't catch.
+  -->
+  <Target Name="VerifyDashboardDistExists"
+          BeforeTargets="DispatchToInnerBuilds"
+          DependsOnTargets="BuildAngularClient"
+          Condition="'$(TargetFramework)' == ''">
+    <ItemGroup>
+      <_DashboardDistFiles Include="$(ClientAppDistDir)**\*" />
+    </ItemGroup>
+    <Error
+      Condition="'@(_DashboardDistFiles->Count())' == '0'"
+      Text="NetApiFlow.Dashboard: $(ClientAppDistDir) is missing or empty. The package must never ship without the Angular dashboard UI embedded (risco R-08). Run 'npm run build' in src/NetApiFlow.Dashboard/ClientApp and confirm it writes to dist/dashboard/browser." />
+  </Target>
+
+  <!--
     Embeds the compiled Angular output, per TargetFramework. Static (not inside a Target): dist/
     already exists by the time each inner per-TargetFramework build evaluates this project, since
     BuildAngularClient (outer, TargetFramework-less) runs before DispatchToInnerBuilds — and only a
