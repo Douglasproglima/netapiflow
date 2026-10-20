@@ -12,6 +12,10 @@ using SampleApi.MinimalMediatR.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#if NET10_0_OR_GREATER
+builder.Services.AddOpenApi();
+#endif
+
 builder.Services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
 builder.Services.AddNetApiFlowDashboard();
 builder.Services.AddNetApiFlowEntityFrameworkCore();
@@ -81,6 +85,9 @@ orders.MapGet("/{id:int}/slow", async (int id, IMediator mediator, CancellationT
 orders.MapGet("/parallel", async (int[] ids, IMediator mediator, CancellationToken cancellationToken) =>
     Results.Ok(await mediator.Send(new GetOrdersParallelQuery(ids), cancellationToken)));
 
+#if NET10_0_OR_GREATER
+app.MapOpenApi();
+#endif
 app.UseNetApiFlowDashboard();
 
 app.Run();

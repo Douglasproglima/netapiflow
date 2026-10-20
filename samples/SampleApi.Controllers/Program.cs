@@ -10,6 +10,9 @@ using SampleApi.Controllers.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+#if NET10_0_OR_GREATER
+builder.Services.AddOpenApi();
+#endif
 
 builder.Services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
 builder.Services.AddNetApiFlowDashboard();
@@ -49,6 +52,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+#if NET10_0_OR_GREATER
+app.MapOpenApi();
+#endif
 app.UseNetApiFlowDashboard();
 
 app.Run();
