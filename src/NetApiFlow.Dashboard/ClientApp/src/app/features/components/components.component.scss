@@ -1,0 +1,24 @@
+.components {
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.components__status {
+  opacity: 0.8;
+}
+
+.components__status--error {
+  color: var(--flow-state-error-stroke, #e53935);
+}
+
+.components__table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--flow-table-border, #ddd);
+  }
+}

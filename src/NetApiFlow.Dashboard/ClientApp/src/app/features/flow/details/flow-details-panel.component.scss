@@ -1,0 +1,65 @@
+.flow-details {
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.flow-details__fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+
+  dt {
+    font-weight: 600;
+    opacity: 0.75;
+  }
+
+  dd {
+    margin: 0;
+    word-break: break-word;
+  }
+}
+
+.flow-details__refs {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.flow-waterfall {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.flow-waterfall__row {
+  display: grid;
+  grid-template-columns: minmax(10ch, 20ch) 1fr minmax(6ch, max-content);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.flow-waterfall__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-waterfall__track {
+  position: relative;
+  height: 1rem;
+  background: var(--flow-waterfall-track, #eee);
+  border-radius: 2px;
+}
+
+.flow-waterfall__bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--flow-waterfall-bar, #1e88e5);
+}
+
+.flow-waterfall__bar[data-status='Error'] {
+  background: var(--flow-waterfall-bar-error, #e53935);
+}

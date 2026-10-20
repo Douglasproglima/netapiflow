@@ -1,0 +1,30 @@
+<svg #svg class="flow-graph" [attr.viewBox]="viewBox()">
+  <g #zoomLayer class="flow-graph__zoom-layer">
+    @for (edge of edges(); track edge.id) {
+      <path class="flow-graph__edge" [attr.d]="edgePath(edge)"></path>
+    }
+    @for (node of nodes(); track node.id) {
+      <g
+        class="flow-graph__node"
+        [class.flow-graph__node--selected]="node.id === selectedNodeId()"
+        [attr.data-state]="node.state"
+        [attr.transform]="nodeTransform(node)"
+        [attr.aria-label]="nodeAriaLabel(node)"
+        role="img"
+        (click)="onNodeClick(node)"
+      >
+        <rect
+          class="flow-graph__node-rect"
+          [attr.width]="node.width"
+          [attr.height]="node.height"
+        ></rect>
+        <text class="flow-graph__node-sequence" x="8" y="14">{{ node.sequence ?? '—' }}</text>
+        <text class="flow-graph__node-state" x="8" y="28">
+          {{ stateIcon(node) }} {{ stateLabel(node) }}
+        </text>
+        <text class="flow-graph__node-component" x="8" y="44">{{ node.component }}</text>
+        <text class="flow-graph__node-operation" x="8" y="58">{{ node.operation }}</text>
+      </g>
+    }
+  </g>
+</svg>

@@ -1,0 +1,48 @@
+.flow-page {
+  padding: 1rem;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.flow-page__status {
+  opacity: 0.8;
+}
+
+.flow-page__layout {
+  display: flex;
+  gap: 1rem;
+  height: 100%;
+  min-width: 0;
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+  }
+}
+
+.flow-page__graph {
+  flex: 2 1 0;
+  min-width: 0;
+}
+
+.flow-page__details {
+  flex: 1 1 280px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.flow-page__live-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.flow-page__live-item {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
