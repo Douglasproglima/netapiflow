@@ -1,0 +1,87 @@
+@if (selectedSpan(); as detail) {
+  <section class="flow-details" aria-label="Span details">
+    <h2>{{ detail.span.component }}.{{ detail.span.operation }}</h2>
+
+    <dl class="flow-details__fields">
+      <dt>Span id</dt>
+      <dd>{{ detail.span.spanId }}</dd>
+      <dt>Parent span id</dt>
+      <dd>{{ detail.span.parentSpanId ?? '—' }}</dd>
+      <dt>Trace id</dt>
+      <dd>{{ trace().traceId }}</dd>
+      <dt>Started at</dt>
+      <dd>{{ detail.span.startedAt }}</dd>
+      <dt>Ended at</dt>
+      <dd>{{ detail.span.endedAt ?? '—' }}</dd>
+      <dt>Duration</dt>
+      <dd>{{ formatDuration(detail.span.durationMicros) }}</dd>
+      <dt>Status</dt>
+      <dd>{{ detail.span.status }}</dd>
+      @if (detail.span.errorType) {
+        <dt>Error</dt>
+        <dd>{{ detail.span.errorType }}: {{ detail.span.errorMessage }}</dd>
+      }
+      <dt>Median duration (same operation)</dt>
+      <dd>{{ formatDuration(detail.medianDurationMicros) }}</dd>
+      <dt>Delta from median</dt>
+      <dd>{{ formatDelta(detail.deltaFromMedianMicros) }}</dd>
+    </dl>
+
+    @if (detail.ancestors.length > 0) {
+      <h3>Ancestors</h3>
+      <ol class="flow-details__refs">
+        @for (ancestor of detail.ancestors; track ancestor.spanId) {
+          <li>{{ ancestor.component }}.{{ ancestor.operation }}</li>
+        }
+      </ol>
+    }
+
+    @if (detail.children.length > 0) {
+      <h3>Children</h3>
+      <ul class="flow-details__refs">
+        @for (child of detail.children; track child.spanId) {
+          <li>{{ child.component }}.{{ child.operation }}</li>
+        }
+      </ul>
+    }
+  </section>
+} @else {
+  <section class="flow-details" aria-label="Request summary">
+    <h2>{{ trace().method }} {{ trace().routeTemplate }}</h2>
+
+    <dl class="flow-details__fields">
+      <dt>Trace id</dt>
+      <dd>{{ trace().traceId }}</dd>
+      <dt>HTTP status</dt>
+      <dd>{{ trace().httpStatus ?? '—' }}</dd>
+      <dt>Status</dt>
+      <dd>{{ trace().status }}</dd>
+      <dt>Started at</dt>
+      <dd>{{ trace().startedAt }}</dd>
+      <dt>Duration</dt>
+      <dd>{{ formatDuration(trace().durationMicros) }}</dd>
+      @if (trace().errorMessage) {
+        <dt>Error</dt>
+        <dd>{{ trace().errorMessage }}</dd>
+      }
+    </dl>
+
+    <h3>Waterfall</h3>
+    <div class="flow-waterfall">
+      @for (row of waterfall(); track row.spanId) {
+        <div class="flow-waterfall__row">
+          <span class="flow-waterfall__label">{{ row.component }}.{{ row.operation }}</span>
+          <div class="flow-waterfall__track">
+            <div
+              class="flow-waterfall__bar"
+              [attr.data-status]="row.status"
+              [style.margin-left.%]="row.offsetPercent"
+              [style.width.%]="row.widthPercent"
+            ></div>
+          </div>
+          <span class="flow-waterfall__duration">{{ formatDuration(row.durationMicros) }}</span>
+        </div>
+      }
+    </div>
+  </section>
+}
