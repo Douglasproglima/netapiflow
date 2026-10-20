@@ -16,4 +16,34 @@
     <None Include="..\..\docs\images\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <ClientAppDir>$(MSBuildProjectDirectory)\ClientApp\</ClientAppDir>
+    <ClientAppDistIndex>$(ClientAppDir)dist\dashboard\browser\index.html</ClientAppDistIndex>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ClientAppSourceFiles Include="$(ClientAppDir)src\**\*.*" />
+  </ItemGroup>
+
+  <!--
+    Runs once per `dotnet build`/`dotnet pack` invocation, not once per inner per-TargetFramework
+    build, since multi-targeting dispatches Build/Pack through an outer, TargetFramework-less pass.
+  -->
+  <Target Name="NpmInstallClientApp"
+          Condition="'$(TargetFramework)' == ''"
+          Inputs="$(ClientAppDir)package-lock.json"
+          Outputs="$(ClientAppDir)node_modules\.install-stamp">
+    <Exec Command="npm ci" WorkingDirectory="$(ClientAppDir)" />
+    <Touch Files="$(ClientAppDir)node_modules\.install-stamp" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="BuildAngularClient"
+          BeforeTargets="Build;Pack"
+          DependsOnTargets="NpmInstallClientApp"
+          Condition="'$(TargetFramework)' == ''"
+          Inputs="$(ClientAppDir)package-lock.json;@(ClientAppSourceFiles)"
+          Outputs="$(ClientAppDistIndex)">
+    <Exec Command="npm run build" WorkingDirectory="$(ClientAppDir)" />
+  </Target>
+
 </Project>
