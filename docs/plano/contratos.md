@@ -112,6 +112,39 @@ porque o EF Core não tem registro global de interceptor). Formalizado na revis�
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
 
+### `NetApiFlow.Dashboard`: superfície pública
+
+```csharp
+namespace NetApiFlow.Dashboard;
+
+public static class NetApiFlowDashboardServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlowDashboard(this IServiceCollection services);
+}
+
+namespace NetApiFlow.Dashboard.Endpoints;
+
+public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
+{
+    public static IEndpointConventionBuilder UseNetApiFlowDashboard(
+        this IEndpointRouteBuilder endpoints, string basePath = "/flow");
+}
+
+public interface IDashboardAuthorizationFilter
+{
+    ValueTask<bool> AuthorizeAsync(HttpContext context);
+}
+```
+
+`UseNetApiFlowDashboard` monta a API REST/SSE sob `{basePath}/api` e a UI Angular embutida sob
+`basePath`, com fallback de SPA. Devolve um `IEndpointConventionBuilder` para encadear
+`RequireAuthorization(...)`, que vale para as duas partes juntas (ADR-0006). Fora de
+`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IDashboardAuthorizationFilter`
+registrado no DI, toda rota do dashboard responde `404`; com um dos dois e a autorização negada,
+responde `403`. Tudo que não está nesta lista (`DashboardAccessGate`,
+`DashboardIndexHtmlCache`, `DashboardEmbeddedFiles`, `MapNetApiFlowDashboardApi`) é `internal`.
+Formalizado na revisão da Fase 5.
+
 ### DTOs de apoio de `ITraceStore` (provisórios até a Fase 3)
 
 `PagedResult<T>`, `FlowTraceSummary`, `TraceQuery`, `ComponentStat`, `StatsQuery` e

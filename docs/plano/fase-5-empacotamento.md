@@ -54,8 +54,11 @@ usuário sem a claim exigida, espera 403.
 Passo no `ci.yml` (ou um alvo MSBuith customizado chamado pelo `pack`) que falha explicitamente
 se `ClientApp/dist/` não existir ou estiver vazio no momento do `dotnet pack`.
 
-**Pronto quando:** remover `dist/` manualmente e rodar `dotnet pack` falha com uma mensagem clara
-(não um erro genérico de arquivo não encontrado).
+**Pronto quando:** apontar o build para um `dist/` que o `ng build` não escreve (ex.: variável de
+build sobrescrevendo o caminho de saída esperado) falha o `pack` com uma mensagem clara, não um
+erro genérico de arquivo não encontrado. Remover `dist/` manualmente **não** é esse cenário: a
+tarefa 5.1 já reconstrói o Angular sempre que `dist/` está ausente ou desatualizado, então apagar
+a pasta e rodar `dotnet pack` deve reconstruir e empacotar com sucesso (D-25).
 
 ### 5.6: Projeto de verificação fora da solução
 
