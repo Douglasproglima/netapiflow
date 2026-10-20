@@ -219,8 +219,18 @@ Regras do stream:
 - `eventId` é sequencial por processo (não reinicia por trace) e é o valor usado como
   `Last-Event-ID` na reconexão.
 - `event:` sempre presente, para o cliente filtrar sem desserializar o corpo.
-- Heartbeat `: ping` a cada 15 segundos, para o proxy intermediário não derrubar a conexão por
-  inatividade.
+- Heartbeat a cada 15 segundos, para o proxy intermediário não derrubar a conexão por
+  inatividade. **Formato diverge por TFM (D-20):** em `net8.0` é um comentário SSE puro
+  (`: ping`), fiel à letra deste contrato; em `net10.0`, `TypedResults.ServerSentEvents` só
+  expõe `SseItem<T>` (sempre com `data:`), então o heartbeat ali é um evento sintético
+  `event: ping` com `data: ""`. Efeito prático idêntico (mantém a conexão viva); o cliente deve
+  ignorar qualquer evento `ping`, nunca depender do formato exato.
+- **Ping de handshake (D-20, não previsto na versão original deste contrato):** a primeira coisa
+  que o servidor escreve, antes de qualquer evento real ou do primeiro heartbeat, é um evento
+  `event: ping` com `data: {}` e **sem `id:`**. Existe para forçar o flush dos headers HTTP assim
+  que a conexão abre; sem ele, nada chega ao cliente até o primeiro evento real ou o primeiro
+  heartbeat de 15s, o que inclui os próprios headers da resposta. O cliente deve tratá-lo como
+  qualquer evento `ping`: ignorar.
 - Buffer de replay circular de 1000 eventos (seção 6.7 da tabela de limites): reconexão com
   `Last-Event-ID` dentro da janela recebe o que perdeu; fora da janela, recebe só os eventos
   novos a partir da reconexão (sem erro, sem garantia de completude total, documentado como
