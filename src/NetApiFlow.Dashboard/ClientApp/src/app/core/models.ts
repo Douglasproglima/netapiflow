@@ -106,6 +106,11 @@ export interface MetricsSummary {
   maxDurationMicros: number;
 }
 
+/** GET /config (D-24). */
+export interface DashboardConfig {
+  slowThresholdMicros: number;
+}
+
 /** GET /metrics/components list item. */
 export interface ComponentStat {
   component: string;

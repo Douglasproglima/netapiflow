@@ -12,12 +12,6 @@ import { FlowDetailsPanelComponent } from './details/flow-details-panel.componen
 const GHOST_ID_PREFIX = 'ghost-';
 
 /**
- * No backend route exposes the configured SlowThreshold (docs/plano/contratos.md); this mirrors
- * NetApiFlowOptions' own default (250ms) until a future contract addition surfaces the real value.
- */
-const SLOW_THRESHOLD_MICROS = 250_000;
-
-/**
  * Default screen (`/flow`, D-23): with no `?trace=` query param, lists the traces currently in
  * progress; with one, tracks that trace live (LiveTracePlayerService, tarefa 4.7) and renders its
  * graph and details panel.
@@ -44,20 +38,22 @@ export class FlowPageComponent {
 
   readonly selectedNodeId = signal<string | null>(null);
   readonly selectedSpanDetail = signal<SpanDetail | null>(null);
+  private readonly slowThresholdMicros = signal<number | null>(null);
 
   readonly trace = this.livePlayer.trace;
   readonly graph = computed<GraphResult>(() => {
     const trace = this.trace();
-    return trace
-      ? buildGraph({
-          spans: trace.spans,
-          traceStatus: trace.status,
-          slowThresholdMicros: SLOW_THRESHOLD_MICROS,
-        })
+    const slowThresholdMicros = this.slowThresholdMicros();
+    return trace && slowThresholdMicros !== null
+      ? buildGraph({ spans: trace.spans, traceStatus: trace.status, slowThresholdMicros })
       : { nodes: [], edges: [] };
   });
 
   constructor() {
+    this.api
+      .getConfig()
+      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+
     effect(() => {
       const traceId = this.traceId();
       this.selectedNodeId.set(null);

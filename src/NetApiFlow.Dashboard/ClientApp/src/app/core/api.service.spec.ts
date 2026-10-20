@@ -163,6 +163,15 @@ describe('ApiService', () => {
     req.flush(null);
   });
 
+  it('getConfig hits /config', () => {
+    service
+      .getConfig()
+      .subscribe((result) => expect(result).toEqual({ slowThresholdMicros: 250_000 }));
+
+    const req = httpMock.expectOne('api/config');
+    req.flush({ slowThresholdMicros: 250_000 });
+  });
+
   it('callEndpoint sends a root-relative request, not prefixed by the dashboard base path', () => {
     service
       .callEndpoint('POST', '/api/orders/5', { customerName: 'Acme' })

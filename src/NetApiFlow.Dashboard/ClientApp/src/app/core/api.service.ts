@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   ComponentStat,
+  DashboardConfig,
   EndpointDescriptor,
   FlowTraceDetail,
   FlowTraceSummary,
@@ -70,6 +71,10 @@ export class ApiService {
 
   deleteTraces(): Observable<void> {
     return this.http.delete<void>(`${this.basePath}/traces`);
+  }
+
+  getConfig(): Observable<DashboardConfig> {
+    return this.http.get<DashboardConfig>(`${this.basePath}/config`);
   }
 
   /**

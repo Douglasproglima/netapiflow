@@ -81,6 +81,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     await fixture.whenStable();
 
@@ -92,6 +93,8 @@ describe('FlowPageComponent', () => {
     configure(null);
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
+
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
 
     const summaries: FlowTraceSummary[] = [
       {
@@ -110,5 +113,17 @@ describe('FlowPageComponent', () => {
 
     expect(fixture.componentInstance.liveTraces()).toEqual(summaries);
     expect(fixture.nativeElement.textContent).toContain('/api/orders');
+  });
+
+  it('marks a span as slow using the threshold fetched from GET /config, not a fixed constant', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 50 });
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.graph().nodes[0].state).toBe('slow');
   });
 });
