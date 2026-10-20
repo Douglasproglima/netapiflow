@@ -28,6 +28,7 @@
 }
 
 .flow-graph__node-sequence,
+.flow-graph__node-state,
 .flow-graph__node-component,
 .flow-graph__node-operation {
   font-size: 11px;
@@ -37,4 +38,37 @@
 
 .flow-graph__node-component {
   font-weight: 600;
+}
+
+// Color reinforces the state but is never the only signal: every state already renders a
+// distinct icon and text label (seção 7.2 do prompt), so this still works with colors removed.
+.flow-graph__node[data-state='waiting'] .flow-graph__node-rect {
+  fill: var(--flow-state-waiting-fill, #eceff1);
+  stroke: var(--flow-state-waiting-stroke, #90a4ae);
+}
+
+.flow-graph__node[data-state='running'] .flow-graph__node-rect {
+  fill: var(--flow-state-running-fill, #e3f2fd);
+  stroke: var(--flow-state-running-stroke, #1e88e5);
+}
+
+.flow-graph__node[data-state='completed'] .flow-graph__node-rect {
+  fill: var(--flow-state-completed-fill, #e8f5e9);
+  stroke: var(--flow-state-completed-stroke, #43a047);
+}
+
+.flow-graph__node[data-state='slow'] .flow-graph__node-rect {
+  fill: var(--flow-state-slow-fill, #fff8e1);
+  stroke: var(--flow-state-slow-stroke, #f9a825);
+}
+
+.flow-graph__node[data-state='error'] .flow-graph__node-rect {
+  fill: var(--flow-state-error-fill, #ffebee);
+  stroke: var(--flow-state-error-stroke, #e53935);
+}
+
+.flow-graph__node[data-state='not-executed'] .flow-graph__node-rect {
+  fill: var(--flow-state-not-executed-fill, #fafafa);
+  stroke: var(--flow-state-not-executed-stroke, #bdbdbd);
+  stroke-dasharray: 4 3;
 }

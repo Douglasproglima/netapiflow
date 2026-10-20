@@ -10,6 +10,7 @@ import {
 import { select } from 'd3-selection';
 import { zoom, zoomIdentity, D3ZoomEvent } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
+import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation';
 
 /**
  * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
@@ -77,5 +78,17 @@ export class FlowGraphComponent implements AfterViewInit {
 
   onNodeClick(node: GraphNode): void {
     this.nodeSelected.emit(node.id);
+  }
+
+  stateIcon(node: GraphNode): string {
+    return NODE_STATE_PRESENTATION[node.state].icon;
+  }
+
+  stateLabel(node: GraphNode): string {
+    return NODE_STATE_PRESENTATION[node.state].label;
+  }
+
+  nodeAriaLabel(node: GraphNode): string {
+    return `${node.component} ${node.operation}, ${this.stateLabel(node)}`;
   }
 }

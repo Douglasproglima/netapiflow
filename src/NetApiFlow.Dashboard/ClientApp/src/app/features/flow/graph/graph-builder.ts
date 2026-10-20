@@ -45,7 +45,7 @@ export interface GraphBuilderInput {
 }
 
 const NODE_WIDTH = 180;
-const NODE_HEIGHT = 56;
+const NODE_HEIGHT = 72;
 const GHOST_ID_PREFIX = 'ghost-';
 
 interface MergedNode {
