@@ -7,15 +7,25 @@ desta fase: `.claude/rules/frontend.md`.
 
 ## Tarefas
 
-### 4.1: Workspace
+### 4.1: Workspace, shell e roteamento (D-23)
 
 Angular 22, standalone, **zoneless** (`provideZonelessChangeDetection()`), Signals. Vitest como
 test runner (não Karma/Jasmine). ESLint + Prettier. `.nvmrc` fixando a versão do Node usada no CI
 (a confirmada localmente é compatível com Node 26, mas fixar a versão exata escolhida pela
 Executora).
 
-**Pronto quando:** `npm run lint`, `npm run test:ci` e `npm run build` verdes, com um componente
-placeholder só para provar que o build gera `dist/`.
+Shell e rotas fazem parte desta tarefa (achado na revisão: faltava no plano original, mas as
+tarefas 4.12 e 4.13 pressupõem que já existe). Uma rota por feature, espelhando a estrutura de
+pastas da seção 7.4 do prompt: `/flow` (padrão, tela principal, aceita `?trace=<traceId>` como
+**query string**, não segmento de rota — é assim que a seção 7.3 do prompt descreve, e é o que a
+tarefa 4.13 testa), `/history`, `/components`, `/runner`. Navegação lateral ou superior ligando
+as quatro. `PathLocationStrategy` padrão do Angular Router — o fallback de SPA que serve
+`index.html` para qualquer rota não resolvida é responsabilidade do middleware da Fase 5 (tarefa
+5.3), não desta tarefa.
+
+**Pronto quando:** `npm run lint`, `npm run test:ci` e `npm run build` verdes, com as quatro
+rotas navegáveis e um componente placeholder em cada uma, só para provar que o roteamento e o
+build (`dist/`) funcionam.
 
 ### 4.2: `core/`
 
@@ -117,7 +127,8 @@ em largura de tela estreita.
 
 ### 4.13: `?trace=<traceId>` na URL
 
-Abre diretamente a execução referenciada, sem precisar navegar pelo histórico.
+Query string da rota `/flow` (não segmento de rota, ver tarefa 4.1). Abre diretamente a
+execução referenciada, sem precisar navegar pelo histórico.
 
 **Pronto quando:** teste de rota confere que a URL com o parâmetro carrega o trace certo ao
 montar o componente.
