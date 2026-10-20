@@ -47,9 +47,9 @@ bug do dashboard. Confirmar e, se for mesmo isso, não é algo para o NetApiFlow
 
 ### 7.0b: Redesenhar `/flow` como workspace denso (ADR-0010)
 
-Depois de ver o dashboard real com a tarefa 7.0 aplicada, o usuário comparou com o
-[apiflow](https://github.com/joshuamaia/apiflow) e pediu uma arquitetura de informação mais
-densa, descrita e decidida em ADR-0010. Segura a publicação da `0.1.0` até esta tarefa fechar.
+Depois de ver o dashboard real com a tarefa 7.0 aplicada, o usuário pediu uma arquitetura de
+informação mais densa, descrita e decidida em ADR-0010. Segura a publicação da `0.1.0` até esta
+tarefa fechar.
 
 Escopo, por peça (nenhum contrato de API muda, nenhuma rota é removida):
 

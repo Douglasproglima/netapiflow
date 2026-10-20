@@ -9,14 +9,12 @@ A Fase 4 (D-23) decidiu uma rota por feature (`/flow`, `/history`, `/components`
 espelhando a estrutura de pastas `features/` da seção 7.4 do prompt. Isso já está implementado e
 mergeado.
 
-Ao ver o dashboard real, o usuário comparou com o
-[apiflow](https://github.com/joshuamaia/apiflow) (seção 1.1 do `netapiflow-prompt.md`, projeto
-que inspira a ideia do NetApiFlow, sem copiar código, arquivo ou asset dele) e pediu algo "elegante
-e funcional" como `docs/images/dashboard-error.png` daquele projeto. Analisando a captura (só a
-imagem, nenhum código ou arquivo foi acessado), o que a torna mais rica não é cor ou tipografia
-(isso já é a tarefa 7.0 em andamento). É a arquitetura de informação: tudo numa tela só, com
-cartões de métrica sempre visíveis no topo, painel de ação à esquerda, grafo com replay ao centro,
-painel de detalhes com lista de execução à direita, feed de eventos ao vivo embaixo.
+Ao ver o dashboard real, o usuário pediu algo mais "elegante e funcional", comparando com a
+densidade de informação de outros dashboards de observabilidade de mercado. O que torna esse tipo
+de tela mais rica não é cor ou tipografia (isso já é a tarefa 7.0 em andamento). É a arquitetura de
+informação: tudo numa tela só, com cartões de métrica sempre visíveis no topo, painel de ação à
+esquerda, grafo com replay ao centro, painel de detalhes com lista de execução à direita, feed de
+eventos ao vivo embaixo.
 
 O usuário decidiu segurar a publicação da `0.1.0` para fazer esse redesenho agora, em vez de
 tratá-lo como iniciativa de uma versão futura. Confirmou também que **todas as rotas continuam
