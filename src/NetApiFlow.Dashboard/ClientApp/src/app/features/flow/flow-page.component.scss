@@ -30,6 +30,10 @@
   overflow-x: auto;
 }
 
+.flow-page__live-card {
+  padding: 0.5rem 1rem 1rem;
+}
+
 .flow-page__live-list {
   list-style: none;
   margin: 0;
@@ -40,9 +44,5 @@
   display: flex;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.4rem 0.6rem;
   text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
 }

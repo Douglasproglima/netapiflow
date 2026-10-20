@@ -14,6 +14,12 @@
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.runner__endpoints-card,
+.runner__form-card {
+  padding: 0.5rem 1rem 1rem;
 }
 
 .runner__endpoints {
@@ -27,11 +33,7 @@
   display: flex;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.3rem 0.5rem;
   text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
 }
 
 .runner__endpoint-method {

@@ -1,38 +1,38 @@
 <section class="history">
   <form class="history__filters" aria-label="Filters">
-    <label>
-      Status
-      <select (change)="onStatusChange($event)">
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Status</mat-label>
+      <select matNativeControl (change)="onStatusChange($event)">
         <option value="">Any</option>
         <option value="Running">Running</option>
         <option value="Success">Success</option>
         <option value="Error">Error</option>
       </select>
-    </label>
-    <label>
-      Method
-      <input type="text" (change)="onMethodChange($event)" />
-    </label>
-    <label>
-      Route
-      <input type="text" (change)="onRouteChange($event)" />
-    </label>
-    <label>
-      Tenant
-      <input type="text" (change)="onTenantChange($event)" />
-    </label>
-    <label>
-      From
-      <input type="datetime-local" (change)="onFromChange($event)" />
-    </label>
-    <label>
-      To
-      <input type="datetime-local" (change)="onToChange($event)" />
-    </label>
-    <label>
-      Min duration (µs)
-      <input type="number" min="0" (change)="onMinDurationChange($event)" />
-    </label>
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Method</mat-label>
+      <input matInput type="text" (change)="onMethodChange($event)" />
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Route</mat-label>
+      <input matInput type="text" (change)="onRouteChange($event)" />
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Tenant</mat-label>
+      <input matInput type="text" (change)="onTenantChange($event)" />
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>From</mat-label>
+      <input matInput type="datetime-local" (change)="onFromChange($event)" />
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>To</mat-label>
+      <input matInput type="datetime-local" (change)="onToChange($event)" />
+    </mat-form-field>
+    <mat-form-field subscriptSizing="dynamic">
+      <mat-label>Min duration (µs)</mat-label>
+      <input matInput type="number" min="0" (change)="onMinDurationChange($event)" />
+    </mat-form-field>
   </form>
 
   @if (loading()) {
@@ -42,50 +42,54 @@
   } @else if (result() && result()!.items.length === 0) {
     <p class="history__status">No traces match these filters.</p>
   } @else if (result(); as page) {
-    <table class="history__table">
-      <thead>
-        <tr>
-          <th>Trace id</th>
-          <th>Method</th>
-          <th>Route</th>
-          <th>Status</th>
-          <th>HTTP status</th>
-          <th>Started at</th>
-          <th>Duration</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (trace of page.items; track trace.traceId) {
+    <mat-card appearance="outlined">
+      <table class="history__table">
+        <thead>
           <tr>
-            <td>{{ trace.traceId }}</td>
-            <td>{{ trace.method }}</td>
-            <td>{{ trace.routeTemplate }}</td>
-            <td>{{ trace.status }}</td>
-            <td>{{ trace.httpStatus ?? '—' }}</td>
-            <td>{{ trace.startedAt }}</td>
-            <td>{{ formatDuration(trace.durationMicros) }}</td>
+            <th>Trace id</th>
+            <th>Method</th>
+            <th>Route</th>
+            <th>Status</th>
+            <th>HTTP status</th>
+            <th>Started at</th>
+            <th>Duration</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (trace of page.items; track trace.traceId) {
+            <tr>
+              <td>{{ trace.traceId }}</td>
+              <td>{{ trace.method }}</td>
+              <td>{{ trace.routeTemplate }}</td>
+              <td>{{ trace.status }}</td>
+              <td>{{ trace.httpStatus ?? '—' }}</td>
+              <td>{{ trace.startedAt }}</td>
+              <td>{{ formatDuration(trace.durationMicros) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
 
-    <nav class="history__pagination" aria-label="Pagination">
-      <span>{{ page.totalCount }} total</span>
-      <button
-        type="button"
-        [disabled]="filters().page === 1"
-        (click)="setPage(filters().page! - 1)"
-      >
-        Previous
-      </button>
-      <span>Page {{ filters().page }}</span>
-      <button
-        type="button"
-        [disabled]="filters().page! * filters().pageSize! >= page.totalCount"
-        (click)="setPage(filters().page! + 1)"
-      >
-        Next
-      </button>
-    </nav>
+      <nav class="history__pagination" aria-label="Pagination">
+        <span>{{ page.totalCount }} total</span>
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="filters().page === 1"
+          (click)="setPage(filters().page! - 1)"
+        >
+          Previous
+        </button>
+        <span>Page {{ filters().page }}</span>
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="filters().page! * filters().pageSize! >= page.totalCount"
+          (click)="setPage(filters().page! + 1)"
+        >
+          Next
+        </button>
+      </nav>
+    </mat-card>
   }
 </section>

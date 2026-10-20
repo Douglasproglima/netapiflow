@@ -5,6 +5,10 @@
 
 export type FlowStatus = 'Running' | 'Success' | 'Error';
 
+/** The six visual states of seção 7.2 do prompt (D-26: lives in `core/`, not under `features/flow`). */
+export type NodeVisualState =
+  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed';
+
 export type ComponentType =
   'Endpoint' | 'Controller' | 'UseCase' | 'Service' | 'Repository' | 'Database' | 'Http' | 'Custom';
 

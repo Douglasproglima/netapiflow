@@ -11,6 +11,10 @@
   color: var(--flow-state-error-stroke, #e53935);
 }
 
+mat-card {
+  padding: 0.5rem 1rem 1rem;
+}
+
 .components__table {
   width: 100%;
   border-collapse: collapse;
@@ -19,6 +23,6 @@
   td {
     padding: 0.4rem 0.6rem;
     text-align: left;
-    border-bottom: 1px solid var(--flow-table-border, #ddd);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
 }

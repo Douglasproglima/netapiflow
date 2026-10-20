@@ -1,13 +1,5 @@
 import * as dagre from '@dagrejs/dagre';
-import { ComponentType, FlowSpan, FlowStatus } from '../../../core/models';
-
-/**
- * The six visual states of seção 7.2 do prompt. Ghost nodes (inferred from the blueprint, never
- * actually executed) are "waiting" while the trace is still running, "not-executed" once it has
- * concluded — there is no way to know a missing branch will never run until the trace is done.
- */
-export type NodeVisualState =
-  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed';
+import { ComponentType, FlowSpan, FlowStatus, NodeVisualState } from '../../../core/models';
 
 export interface GraphNode {
   id: string;
@@ -47,6 +39,11 @@ export interface GraphBuilderInput {
 const NODE_WIDTH = 180;
 const NODE_HEIGHT = 72;
 const GHOST_ID_PREFIX = 'ghost-';
+
+/** Ghost nodes (inferred from the blueprint, never actually executed) carry this id prefix. */
+export function isGhostNodeId(id: string): boolean {
+  return id.startsWith(GHOST_ID_PREFIX);
+}
 
 interface MergedNode {
   id: string;
@@ -121,6 +118,11 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
   return { nodes, edges };
 }
 
+/**
+ * Ghost nodes (inferred from the blueprint, never actually executed) are "waiting" while the
+ * trace is still running, "not-executed" once it has concluded — there is no way to know a
+ * missing branch will never run until the trace is done.
+ */
 function resolveState(node: MergedNode, input: GraphBuilderInput): NodeVisualState {
   if (node.status === null) {
     return input.traceStatus === 'Running' ? 'waiting' : 'not-executed';

@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
+import { MatCardModule } from '@angular/material/card';
 import { ApiService } from '../../core/api.service';
 import { FlowTraceSummary, SpanDetail } from '../../core/models';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
@@ -20,7 +21,7 @@ const GHOST_ID_PREFIX = 'ghost-';
   selector: 'app-flow-page',
   templateUrl: './flow-page.component.html',
   styleUrl: './flow-page.component.scss',
-  imports: [FlowGraphComponent, FlowDetailsPanelComponent],
+  imports: [FlowGraphComponent, FlowDetailsPanelComponent, MatCardModule],
   providers: [LiveTracePlayerService],
 })
 export class FlowPageComponent {

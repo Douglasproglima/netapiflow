@@ -1,4 +1,8 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { OpenApiDocument } from '../../core/models';
 import { LiveTracePlayerService } from '../flow/playback/live-trace-player.service';
@@ -15,6 +19,7 @@ import { buildEndpointForm, listOpenApiEndpoints } from './openapi-form';
   selector: 'app-runner',
   templateUrl: './runner.component.html',
   styleUrl: './runner.component.scss',
+  imports: [MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
   providers: [LiveTracePlayerService],
 })
 export class RunnerComponent {

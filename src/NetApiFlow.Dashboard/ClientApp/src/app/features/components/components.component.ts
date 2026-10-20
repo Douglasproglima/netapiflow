@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
 import { ApiService } from '../../core/api.service';
 import { ComponentStat } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
@@ -8,6 +9,7 @@ import { formatDurationMicros } from '../../shared/duration-format';
   selector: 'app-components',
   templateUrl: './components.component.html',
   styleUrl: './components.component.scss',
+  imports: [MatCardModule],
 })
 export class ComponentsComponent {
   private readonly api = inject(ApiService);

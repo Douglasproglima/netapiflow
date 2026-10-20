@@ -19,9 +19,15 @@
           [attr.height]="node.height"
         ></rect>
         <text class="flow-graph__node-sequence" x="8" y="14">{{ node.sequence ?? '—' }}</text>
-        <text class="flow-graph__node-state" x="8" y="28">
-          {{ stateIcon(node) }} {{ stateLabel(node) }}
-        </text>
+        <image
+          class="flow-graph__node-state-icon"
+          [attr.href]="stateIconSrc(node)"
+          x="8"
+          y="16"
+          width="12"
+          height="12"
+        ></image>
+        <text class="flow-graph__node-state" x="24" y="27">{{ stateLabel(node) }}</text>
         <text class="flow-graph__node-component" x="8" y="44">{{ node.component }}</text>
         <text class="flow-graph__node-operation" x="8" y="58">{{ node.operation }}</text>
       </g>

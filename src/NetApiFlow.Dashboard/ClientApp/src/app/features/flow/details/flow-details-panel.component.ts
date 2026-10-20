@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
 import { FlowTraceDetail, SpanDetail } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { buildWaterfall } from './waterfall';
@@ -12,6 +13,7 @@ import { buildWaterfall } from './waterfall';
   selector: 'app-flow-details-panel',
   templateUrl: './flow-details-panel.component.html',
   styleUrl: './flow-details-panel.component.scss',
+  imports: [MatCardModule],
 })
 export class FlowDetailsPanelComponent {
   readonly trace = input.required<FlowTraceDetail>();

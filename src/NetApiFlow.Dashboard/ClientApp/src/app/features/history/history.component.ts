@@ -1,4 +1,8 @@
 import { Component, effect, inject, signal } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { FlowStatus, PagedResult, FlowTraceSummary, TraceQuery } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
@@ -14,6 +18,7 @@ function inputValue(event: Event): string {
   selector: 'app-history',
   templateUrl: './history.component.html',
   styleUrl: './history.component.scss',
+  imports: [MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
 })
 export class HistoryComponent {
   private readonly api = inject(ApiService);

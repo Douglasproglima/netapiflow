@@ -80,8 +80,8 @@ export class FlowGraphComponent implements AfterViewInit {
     this.nodeSelected.emit(node.id);
   }
 
-  stateIcon(node: GraphNode): string {
-    return NODE_STATE_PRESENTATION[node.state].icon;
+  stateIconSrc(node: GraphNode): string {
+    return NODE_STATE_PRESENTATION[node.state].iconSrc;
   }
 
   stateLabel(node: GraphNode): string {

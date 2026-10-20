@@ -19,16 +19,23 @@
   } @else if (liveTraces().length === 0) {
     <p class="flow-page__status">No request is currently in progress.</p>
   } @else {
-    <ul class="flow-page__live-list">
-      @for (summary of liveTraces(); track summary.traceId) {
-        <li>
-          <button type="button" class="flow-page__live-item" (click)="openTrace(summary.traceId)">
-            <span>{{ summary.method }}</span>
-            <span>{{ summary.routeTemplate }}</span>
-            <span>{{ summary.status }}</span>
-          </button>
-        </li>
-      }
-    </ul>
+    <mat-card appearance="outlined" class="flow-page__live-card">
+      <ul class="flow-page__live-list">
+        @for (summary of liveTraces(); track summary.traceId) {
+          <li>
+            <button
+              mat-button
+              type="button"
+              class="flow-page__live-item"
+              (click)="openTrace(summary.traceId)"
+            >
+              <span>{{ summary.method }}</span>
+              <span>{{ summary.routeTemplate }}</span>
+              <span>{{ summary.status }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </mat-card>
   }
 </section>

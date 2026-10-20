@@ -1,5 +1,5 @@
 @if (selectedSpan(); as detail) {
-  <section class="flow-details" aria-label="Span details">
+  <mat-card appearance="outlined" class="flow-details" aria-label="Span details">
     <h2>{{ detail.span.component }}.{{ detail.span.operation }}</h2>
 
     <dl class="flow-details__fields">
@@ -44,9 +44,9 @@
         }
       </ul>
     }
-  </section>
+  </mat-card>
 } @else {
-  <section class="flow-details" aria-label="Request summary">
+  <mat-card appearance="outlined" class="flow-details" aria-label="Request summary">
     <h2>{{ trace().method }} {{ trace().routeTemplate }}</h2>
 
     <dl class="flow-details__fields">
@@ -83,5 +83,5 @@
         </div>
       }
     </div>
-  </section>
+  </mat-card>
 }
