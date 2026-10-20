@@ -24,12 +24,11 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 2 | Formas de marcação | **Aceita e mergeada** (2026-10-19) | PR #3, CI verde nos 4 checks. 83 testes por TFM. `contratos.md` atualizado com `AddFlowTracked`/`DecorateFlowTracked`/`WithNetApiFlowTracking`/registros do MediatR e EF Core. R-01 e R-02 mitigados; D-17 registra a prova de Postgres via SQLite como aceita |
 | 3 | API do dashboard e SSE | **Aceita e mergeada** (2026-10-20) | PR #4, CI verde nos 4 checks. 107 testes por TFM. R-04 e R-10 mitigados. D-20 (ping de handshake, heartbeat diverge por TFM) e D-21 (`IFlowTenantResolver` conectado, tarefa 3.8) resolvidos |
 | 4 | Dashboard Angular | **Aceita e mergeada** (2026-10-20) | PR #5, CI verde nos 4 checks. 73 testes Angular + testes .NET de SSE/dashboard/config. Tarefa 4.14 (D-24, `GET /config`) concluída. Verificação visual confirmada (tema claro e escuro limpos, formulário do histórico sem vazamento horizontal em viewport reduzida) |
-| 5 | Empacotamento | Revisada, aguardando merge | 6 commits, tarefas 5.1 a 5.6, verificados pela Planejadora. `dotnet build`/`test`/`format --verify-no-changes` verdes nos dois TFMs. Verificação da tarefa 5.6 rodada pessoalmente (`dotnet pack` + `dotnet test` em `tests/manual-verification`, 4 testes verdes). D-25 corrige o "pronto quando" da tarefa 5.5 |
+| 5 | Empacotamento | **Aceita e mergeada** (2026-10-20) | PR #8, CI verde nos 4 checks. Verificação da tarefa 5.6 rodada pessoalmente pela Planejadora (`dotnet pack` + `dotnet test` em `tests/manual-verification`, 4 testes verdes). PR #9 corrige o "pronto quando" da tarefa 5.5 (D-25) e congela a superfície pública de `NetApiFlow.Dashboard` em `contratos.md` |
 | 6 | Storages persistentes | Planejada | Pode rodar em paralelo com a Fase 4/5 depois da Fase 1 |
 | 7 | Documentação e release | Planejada | Última fase antes da `0.1.0` |
 
-Próximo passo: autorizar push e PR de `feature/fase-5-empacotamento`. Depois do merge, a Executora
-lê `docs/plano/fase-6-storages-persistentes.md` e começa a Fase 6.
+Próximo passo: a Executora lê `docs/plano/fase-6-storages-persistentes.md` e começa a Fase 6.
 
 ## Regra de avanço
 
