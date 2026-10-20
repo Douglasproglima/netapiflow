@@ -49,6 +49,14 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         {
             if (started)
             {
+                // A downstream exception-handler middleware may clear response headers (including
+                // the one set above) before producing its own error response, so it is re-applied
+                // here as long as nothing has been written to the response body yet.
+                if (!context.Response.HasStarted)
+                {
+                    context.Response.Headers[TraceIdHeaderName] = traceId;
+                }
+
                 var routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
                 if (routeTemplate is not null)
                 {

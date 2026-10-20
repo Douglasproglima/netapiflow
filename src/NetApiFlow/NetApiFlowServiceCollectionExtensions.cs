@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NetApiFlow.Configuration;
 using NetApiFlow.DependencyInjection;
 using NetApiFlow.Events;
 using NetApiFlow.Instrumentation;
+using NetApiFlow.Middleware;
 using NetApiFlow.Recording;
 using NetApiFlow.Storage;
 
@@ -39,6 +41,7 @@ public static class NetApiFlowServiceCollectionExtensions
         services.TryAddSingleton<ITraceStore>(sp => sp.GetRequiredService<InMemoryTraceStore>());
 
         services.AddSingleton<IStartupFilter, NetApiFlowStartupFilter>();
+        services.Configure<MvcOptions>(options => options.Filters.Add<FlowControllerActionFilter>());
         services.AddHostedService<PersistenceWriter>();
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();

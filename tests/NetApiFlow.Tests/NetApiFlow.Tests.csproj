@@ -15,6 +15,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.MediatR\NetApiFlow.MediatR.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 
 </Project>
