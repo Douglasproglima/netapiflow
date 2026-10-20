@@ -86,6 +86,15 @@ internal sealed class FlowRecorder
         }
     }
 
+    /// <summary>Attaches an explicit tag (e.g. the resolved tenant) to an open trace.</summary>
+    public void SetTraceTag(string traceId, string key, string value)
+    {
+        if (_activeTraces.TryGetValue(traceId, out var trace))
+        {
+            trace.SetTag(key, value);
+        }
+    }
+
     /// <summary>Closes an open trace and returns its final consolidated state, or <see langword="null"/> if it was not tracked.</summary>
     public FlowTrace? CompleteTrace(string traceId, int? httpStatus, FlowStatus status, string? errorMessage)
     {
@@ -108,6 +117,7 @@ internal sealed class FlowRecorder
             SpanCount = trace.Spans.Count,
             Truncated = trace.Truncated,
             ErrorMessage = ErrorMessageSanitizer.Sanitize(errorMessage),
+            Tags = trace.Tags,
         };
 
         RememberCompleted(result, trace.Spans);

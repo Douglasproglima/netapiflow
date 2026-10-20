@@ -7,7 +7,10 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
 {
     private readonly object _lock = new();
     private readonly List<FlowSpan> _spans = [];
+    private IReadOnlyDictionary<string, string> _tags = EmptyTags;
     private int _nextSequence;
+
+    private static readonly IReadOnlyDictionary<string, string> EmptyTags = new Dictionary<string, string>();
 
     public string TraceId { get; } = traceId;
 
@@ -18,6 +21,25 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
     public DateTime StartedAtUtc { get; } = startedAtUtc;
 
     public bool Truncated { get; private set; }
+
+    public IReadOnlyDictionary<string, string> Tags
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _tags;
+            }
+        }
+    }
+
+    public void SetTag(string key, string value)
+    {
+        lock (_lock)
+        {
+            _tags = new Dictionary<string, string>(_tags) { [key] = value };
+        }
+    }
 
     public IReadOnlyList<FlowSpan> Spans
     {
