@@ -46,6 +46,7 @@ public interface ITraceStore
     ValueTask<FlowTrace?> GetAsync(string traceId, CancellationToken cancellationToken);
     ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<FlowTrace?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
@@ -121,6 +122,26 @@ Cada um traz `/// <remarks>Provisional shape...</remarks>` no comentário XML. O
 definitivo (campo a campo, JSON de exemplo) continua sendo responsabilidade da tarefa 3.1 — a
 Fase 3 pode renomear ou reformar esses tipos sem que isso seja uma quebra de contrato desta
 seção, só uma substituição do que era provisório.
+
+`GetTraceStatsAsync` e `TraceStats` foram acrescentados a `ITraceStore` durante a tarefa 3.2
+(D-18 em `docs/plano/decisoes.md`): o contrato de `/metrics` precisa de agregado por trace
+inteiro (total, erros, média, p95, máximo), que não existe em `GetComponentStatsAsync`
+(agregado por componente/operação) nem dá para derivar dele de forma confiável. Mesmo padrão de
+`ComponentStat`: contagem bruta, não taxa pronta.
+
+```csharp
+public sealed record TraceStats
+{
+    public required int TotalTraces { get; init; }
+    public required int ErrorCount { get; init; }
+    public required long AverageDurationMicros { get; init; }
+    public required long P95DurationMicros { get; init; }
+    public required long MaxDurationMicros { get; init; }
+}
+```
+
+`errorRate` do payload de `/metrics` é calculado pela camada de API (`ErrorCount / TotalTraces`,
+`0` quando `TotalTraces` é `0`), não pelo `ITraceStore`.
 
 Notas de implementação, não normativas (a Executora decide o detalhe, mas não a forma pública
 acima):
