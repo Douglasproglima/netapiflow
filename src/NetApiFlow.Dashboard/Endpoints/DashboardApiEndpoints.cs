@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Dashboard.Contracts;
 using NetApiFlow.Dashboard.Json;
@@ -17,13 +15,13 @@ namespace NetApiFlow.Dashboard.Endpoints;
 /// <summary>Maps the eleven REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
 internal static class DashboardApiEndpoints
 {
-    public static IEndpointRouteBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
+    public static RouteGroupBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
     {
         var options = endpoints.ServiceProvider.GetRequiredService<IOptions<NetApiFlowOptions>>().Value;
         options.DashboardBasePath = basePath;
 
         var group = endpoints.MapGroup(basePath + "/api");
-        group.AddEndpointFilter(DevelopmentGateAsync);
+        group.AddEndpointFilter(DashboardAccessGate.EnforceAsync);
 
         group.MapGet("/traces", GetTraces);
         group.MapGet("/traces/live", GetLiveTraces);
@@ -37,25 +35,7 @@ internal static class DashboardApiEndpoints
         group.MapGet("/config", GetConfig);
         group.MapStream();
 
-        return endpoints;
-    }
-
-    /// <summary>
-    /// Outside <c>IHostEnvironment.IsDevelopment()</c>, every dashboard route 404s unless the host
-    /// configured <c>RequireAuthorization</c> on it (ADR-0006, risco R-09). When authorization
-    /// metadata is present, ASP.NET Core's own authorization middleware has already run and decided
-    /// 401/403 before this filter is reached, so there is nothing left to check here.
-    /// </summary>
-    private static async ValueTask<object?> DevelopmentGateAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
-    {
-        var environment = context.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
-        if (environment.IsDevelopment())
-        {
-            return await next(context);
-        }
-
-        var hasAuthorizationConfigured = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<IAuthorizeData>() is not null;
-        return hasAuthorizationConfigured ? await next(context) : Results.NotFound();
+        return group;
     }
 
     private static async Task<IResult> GetTraces(

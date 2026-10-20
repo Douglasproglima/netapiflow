@@ -13,7 +13,81 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Wires the GenerateEmbeddedFilesManifest build task (ManifestEmbeddedFileProvider's runtime type is already part of Microsoft.AspNetCore.App). -->
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\docs\images\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ClientAppDir>$(MSBuildProjectDirectory)\ClientApp\</ClientAppDir>
+    <ClientAppDistDir>$(ClientAppDir)dist\dashboard\browser\</ClientAppDistDir>
+    <ClientAppDistIndex>$(ClientAppDistDir)index.html</ClientAppDistIndex>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ClientAppSourceFiles Include="$(ClientAppDir)src\**\*.*" />
+  </ItemGroup>
+
+  <!--
+    Runs once per `dotnet build`/`dotnet pack` invocation, not once per inner per-TargetFramework
+    build, since multi-targeting dispatches Build/Pack through an outer, TargetFramework-less pass.
+  -->
+  <Target Name="NpmInstallClientApp"
+          Condition="'$(TargetFramework)' == ''"
+          Inputs="$(ClientAppDir)package-lock.json"
+          Outputs="$(ClientAppDir)node_modules\.install-stamp">
+    <Exec Command="npm ci" WorkingDirectory="$(ClientAppDir)" />
+    <Touch Files="$(ClientAppDir)node_modules\.install-stamp" AlwaysCreate="true" />
+  </Target>
+
+  <!--
+    Hooked before DispatchToInnerBuilds (not Build/Pack themselves): both Build and Pack depend on
+    DispatchToInnerBuilds, which runs every inner per-TargetFramework build (and their embedded
+    resource compilation) before a BeforeTargets="Build" hook would ever fire.
+  -->
+  <Target Name="BuildAngularClient"
+          BeforeTargets="DispatchToInnerBuilds"
+          DependsOnTargets="NpmInstallClientApp"
+          Condition="'$(TargetFramework)' == ''"
+          Inputs="$(ClientAppDir)package-lock.json;@(ClientAppSourceFiles)"
+          Outputs="$(ClientAppDistIndex)">
+    <Exec Command="npm run build" WorkingDirectory="$(ClientAppDir)" />
+  </Target>
+
+  <!--
+    Guards risco R-08: the package must never ship without the UI, or with a stale one. Runs even
+    if BuildAngularClient's own `npm run build` reported success but produced nothing (e.g. an
+    `angular.json` change moving the output elsewhere) — the one failure mode npm's own exit code
+    can't catch.
+  -->
+  <Target Name="VerifyDashboardDistExists"
+          BeforeTargets="DispatchToInnerBuilds"
+          DependsOnTargets="BuildAngularClient"
+          Condition="'$(TargetFramework)' == ''">
+    <ItemGroup>
+      <_DashboardDistFiles Include="$(ClientAppDistDir)**\*" />
+    </ItemGroup>
+    <Error
+      Condition="'@(_DashboardDistFiles->Count())' == '0'"
+      Text="NetApiFlow.Dashboard: $(ClientAppDistDir) is missing or empty. The package must never ship without the Angular dashboard UI embedded (risco R-08). Run 'npm run build' in src/NetApiFlow.Dashboard/ClientApp and confirm it writes to dist/dashboard/browser." />
+  </Target>
+
+  <!--
+    Embeds the compiled Angular output, per TargetFramework. Static (not inside a Target): dist/
+    already exists by the time each inner per-TargetFramework build evaluates this project, since
+    BuildAngularClient (outer, TargetFramework-less) runs before DispatchToInnerBuilds — and only a
+    static ItemGroup resolves %(Filename)/%(Extension) per item the way LogicalName needs; the same
+    Include inside a Target batches them all to the same, wrong, empty value. ManifestEmbeddedFileProvider
+    expects forward-slash-separated LogicalNames to resolve folder structure (root: "wwwroot").
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' != ''">
+    <EmbeddedResource Include="$(ClientAppDistDir)**\*">
+      <LogicalName>wwwroot/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>
