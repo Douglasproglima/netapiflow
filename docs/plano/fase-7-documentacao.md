@@ -73,6 +73,46 @@ detalhes e feed de eventos juntos na mesma tela, sem quebrar nenhuma rota existe
 `/components`, `/runner` continuam acessíveis e funcionais por link direto). `npm run
 lint`/`test:ci`/`build` verdes.
 
+### 7.0c: Correções achadas em verificação manual real (D-31)
+
+A tarefa 7.0b foi verificada pessoalmente num navegador real (Playwright, e depois pelo usuário
+direto no Chrome), contra o sample com dado real. Três problemas, nenhum pego pelos testes
+automatizados existentes:
+
+1. **Grafo sempre vazio com dado real** (bloqueante, achado pela Planejadora): `buildMergedTree`
+   (`graph-builder.ts`) procura a raiz da árvore com `span.parentSpanId === null`. Nenhum span
+   real tem esse valor: o span raiz (`Endpoint`/`Controller`) tem `parentSpanId` apontando para a
+   Activity do próprio ASP.NET Core, que não é `null` nem corresponde a nenhum `spanId` do
+   conjunto do NetApiFlow. `buildGraph` sempre devolve `{ nodes: [], edges: [] }`.
+   Confirmado com `GET /traces/{traceId}` real (5 spans, hierarquia correta) e inspeção do DOM
+   (`<svg class="flow-graph">` renderiza, mas vazio). Existe desde a implementação original da
+   Fase 4, não é regressão da 7.0b: nenhuma verificação anterior rodou o dashboard contra dado
+   real num navegador. Fix sugerido: detectar raiz como "span cujo `parentSpanId` não corresponde
+   a nenhum `spanId` do próprio conjunto" (`!spans.some(s => s.spanId === span.parentSpanId)`),
+   em vez de `=== null`.
+2. **SSE lança exceção não tratada ao cancelar** (bloqueante, achado pelo usuário): fechar a
+   conexão (navegar para outra rota, fechar a aba, EventSource reconectando) cancela o
+   `CancellationToken` da requisição, e `DashboardSseEndpoint.StreamEventsAsync` (linha 84) deixa
+   o `TaskCanceledException` subir sem capturar. Aparece como `fail` no log e na tela de erro de
+   desenvolvimento. Cancelamento é o fim normal de uma conexão SSE, não uma falha: a regra de
+   `.claude/rules/tracing.md` ("nunca propagar exceção da instrumentação") vale aqui também, por
+   mais que seja código de hospedagem do dashboard, não do núcleo de rastreamento.
+3. **Transbordo horizontal real** (achado pelo usuário): uma caixa do painel de ação fica com
+   scroll horizontal cortando o texto (`GET /flow/api/traces` cortado), overflow visual, não só
+   questão de gosto.
+4. **Distância visual grande do protótipo do Guia de Marca**: espaçamento, tipografia e
+   hierarquia hoje mais perto do padrão genérico do Angular Material do que do HTML do guia
+   (`G:\Meu Drive\Controle\2026\00 - Personal\00 - NetApiFlow\Designer System and UI`). Não é um
+   bug pontual, é um pedido de polimento: comparar lado a lado com o HTML do guia (espaçamento,
+   tamanho de fonte, raio de borda, elevação de card) e replicar de verdade, não só os tokens de
+   cor já aplicados na tarefa 7.0.
+
+**Pronto quando:** os itens 1 e 2 corrigidos com teste automatizado cobrindo o cenário
+(`graph-builder.spec.ts` com spans cujo root não tem `parentSpanId` nulo; teste de integração que
+cancela a conexão SSE e confirma que não vira `fail` no log). Item 3 corrigido. Item 4 com
+captura de tela comparando antes/depois ao lado do HTML do guia, revisada pela Planejadora antes
+de prosseguir para a tarefa 7.2 (GIF).
+
 ### 7.1: Benchmark de overhead (risco R-05)
 
 Medir o custo de ter o NetApiFlow ligado vs. desligado (`Enabled = false`) vs. ausente, num
