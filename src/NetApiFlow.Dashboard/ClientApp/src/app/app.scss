@@ -13,6 +13,7 @@
   padding: 0 1rem;
   height: 56px;
   border-bottom: 1px solid var(--naf-border);
+  min-width: 0;
 }
 
 .app-topbar__hamburger {
@@ -20,19 +21,32 @@
 }
 
 .app-topbar__title {
+  flex: none;
   margin: 0;
   font-family: var(--naf-font-display);
   font-weight: 700;
   font-size: 1.125rem;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .app-topbar__sub {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.8125rem;
   color: var(--naf-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // Guide seção 5.2: below 768px the topbar drops the subtitle entirely rather than truncate it.
+  @media (max-width: 767px) {
+    display: none;
+  }
 }
 
 .app-topbar__right {
+  flex: none;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -44,6 +58,11 @@
   font-size: 0.75rem;
   color: var(--naf-text-muted);
   white-space: nowrap;
+
+  // Guide seção 5.2: 1024-1199px already drops the text metadata, keeping only the connection chip.
+  @media (max-width: 1199px) {
+    display: none;
+  }
 }
 
 .app-shell {
@@ -52,6 +71,7 @@
 }
 
 .app-rail {
+  position: relative;
   width: 76px;
   display: flex;
   flex-direction: column;
@@ -60,6 +80,32 @@
   padding: 0.875rem 0;
   border-right: 1px solid var(--naf-border);
   background: var(--naf-bg);
+}
+
+.app-rail__close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
+}
+
+// Material's own backdrop for the overlay rail defaults to a low-opacity black that barely reads
+// against this dark theme; darken it so it's obvious the rail can be dismissed by tapping outside.
+::ng-deep .mat-drawer-backdrop.mat-drawer-shown {
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 .app-rail__logo {

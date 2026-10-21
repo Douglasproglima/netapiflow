@@ -126,6 +126,7 @@
 
 .flow-workspace__graph-header {
   flex: none;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -135,7 +136,12 @@
 
   h2 {
     margin: 0;
+    flex: none;
     white-space: nowrap;
+
+    @media (max-width: 767px) {
+      display: none;
+    }
   }
 }
 
@@ -146,6 +152,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  // Guide seção 5.2: below 768px only the verb badge and the replay/back-to-live button stay.
+  @media (max-width: 767px) {
+    display: none;
+  }
 }
 
 .flow-workspace__trace-id {
@@ -155,6 +166,10 @@
   font-size: 0.75rem;
   color: var(--naf-text-muted);
   white-space: nowrap;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
 }
 
 .flow-workspace__copy {
@@ -226,6 +241,10 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
+
+  @media (max-width: 767px) {
+    flex-wrap: wrap;
+  }
 }
 
 .flow-workspace__replay-mode {
@@ -324,7 +343,8 @@
     flex: 0 0 auto;
     max-width: none;
     width: 100%;
-    max-height: 640px;
+    height: 640px;
+    overflow: hidden;
   }
 }
 
