@@ -1,99 +1,577 @@
 <section class="history">
-  <form class="history__filters" [attr.aria-label]="'history.filtersAria' | t">
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.status' | t }}</mat-label>
-      <select matNativeControl (change)="onStatusChange($event)">
-        <option value="">{{ 'history.filter.status.any' | t }}</option>
-        <option value="Running">{{ 'history.filter.status.running' | t }}</option>
-        <option value="Success">{{ 'history.filter.status.success' | t }}</option>
-        <option value="Error">{{ 'history.filter.status.error' | t }}</option>
-      </select>
-    </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.method' | t }}</mat-label>
-      <input matInput type="text" (change)="onMethodChange($event)" />
-    </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.route' | t }}</mat-label>
-      <input matInput type="text" (change)="onRouteChange($event)" />
-    </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.tenant' | t }}</mat-label>
-      <input matInput type="text" (change)="onTenantChange($event)" />
-    </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.from' | t }}</mat-label>
-      <input matInput type="datetime-local" (change)="onFromChange($event)" />
-    </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.to' | t }}</mat-label>
-      <input matInput type="datetime-local" (change)="onToChange($event)" />
-    </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>{{ 'history.filter.minDuration' | t }}</mat-label>
-      <input matInput type="number" min="0" (change)="onMinDurationChange($event)" />
-    </mat-form-field>
-  </form>
+  <button
+    type="button"
+    class="naf-btn history__filter-toggle"
+    [attr.aria-expanded]="filtersOpen()"
+    (click)="toggleFiltersOpen()"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      width="16"
+      height="16"
+    >
+      <path d="M4 5h16l-6 7.5V19l-4-2v-4.5Z" />
+    </svg>
+    <span>{{ 'history.filtersAria' | t }}</span>
+    @if (activeFilterCount() > 0) {
+      <span class="history__count-badge">{{ activeFilterCount() }}</span>
+    }
+  </button>
 
-  @if (loading()) {
-    <p class="history__status" role="status">{{ 'history.loading' | t }}</p>
-  } @else if (error()) {
-    <p class="history__status history__status--error" role="alert">{{ error() | t }}</p>
-  } @else if (result() && result()!.items.length === 0) {
-    <p class="history__status">{{ 'history.empty' | t }}</p>
-  } @else if (result(); as page) {
-    <mat-card appearance="outlined">
-      <table class="history__table">
-        <thead>
-          <tr>
-            <th>{{ 'history.table.traceId' | t }}</th>
-            <th>{{ 'history.table.method' | t }}</th>
-            <th>{{ 'history.table.route' | t }}</th>
-            <th>{{ 'history.table.status' | t }}</th>
-            <th>{{ 'history.table.httpStatus' | t }}</th>
-            <th>{{ 'history.table.startedAt' | t }}</th>
-            <th>{{ 'history.table.duration' | t }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (trace of page.items; track trace.traceId) {
-            <tr>
-              <td>{{ trace.traceId }}</td>
-              <td>
-                <span class="naf-tag" [class]="methodTagClass(trace.method)">{{
-                  trace.method
-                }}</span>
-              </td>
-              <td>{{ trace.routeTemplate }}</td>
-              <td>{{ trace.status }}</td>
-              <td>{{ trace.httpStatus ?? '—' }}</td>
-              <td>{{ trace.startedAt }}</td>
-              <td>{{ formatDuration(trace.durationMicros) }}</td>
-            </tr>
+  <section
+    class="naf-card history__filters"
+    [class.history__filters--open]="filtersOpen()"
+    [attr.aria-label]="'history.filtersAria' | t"
+  >
+    <div class="history__row1">
+      <div class="history__field">
+        <label for="history-route">{{ 'history.filter.route.label' | t }}</label>
+        <div class="history__with-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            width="14"
+            height="14"
+          >
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
+          <input
+            id="history-route"
+            class="naf-ctl naf-ctl--mono"
+            type="text"
+            [value]="routeText()"
+            [attr.placeholder]="'history.filter.route.placeholder' | t"
+            (input)="onRouteInput($event)"
+          />
+        </div>
+      </div>
+
+      <div class="history__field">
+        <label for="history-tenant">{{ 'history.filter.tenant.label' | t }}</label>
+        <input
+          id="history-tenant"
+          class="naf-ctl"
+          type="text"
+          [value]="tenantText()"
+          [attr.placeholder]="'history.filter.tenant.placeholder' | t"
+          (input)="onTenantInput($event)"
+        />
+      </div>
+
+      <div class="history__field">
+        <span class="history__lbl" id="history-period-label">{{
+          'history.filter.period.label' | t
+        }}</span>
+        <div class="naf-seg" role="radiogroup" aria-labelledby="history-period-label">
+          @for (preset of periodPresets; track preset) {
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="activePeriod() === preset"
+              (click)="selectPeriodPreset(preset)"
+            >
+              {{ periodLabelKey(preset) | t }}
+            </button>
           }
-        </tbody>
-      </table>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="activePeriod() === 'custom'"
+            (click)="selectCustomPeriod()"
+          >
+            {{ 'history.filter.period.custom' | t }}
+          </button>
+        </div>
+      </div>
 
-      <nav class="history__pagination" [attr.aria-label]="'history.paginationAria' | t">
-        <span>{{ 'history.pagination.total' | t: { n: page.totalCount } }}</span>
-        <button
-          mat-stroked-button
-          type="button"
-          [disabled]="filters().page === 1"
-          (click)="setPage(filters().page! - 1)"
+      <button
+        type="button"
+        class="naf-btn"
+        [disabled]="activeFilterCount() === 0"
+        (click)="clearFilters()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          width="14"
+          height="14"
         >
-          {{ 'history.pagination.previous' | t }}
-        </button>
-        <span>{{ 'history.pagination.page' | t: { n: filters().page! } }}</span>
-        <button
-          mat-stroked-button
-          type="button"
-          [disabled]="filters().page! * filters().pageSize! >= page.totalCount"
-          (click)="setPage(filters().page! + 1)"
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+        @if (activeFilterCount() > 0) {
+          {{ 'history.filter.clear.count' | t: { count: activeFilterCount() } }}
+        } @else {
+          {{ 'history.filter.clear' | t }}
+        }
+      </button>
+    </div>
+
+    @if (activePeriod() === 'custom') {
+      <div class="history__row3">
+        <div class="history__field">
+          <label for="history-from">{{ 'history.filter.period.from' | t }}</label>
+          <input
+            id="history-from"
+            class="naf-ctl"
+            type="datetime-local"
+            [value]="customFrom()"
+            (change)="onCustomFromChange($event)"
+          />
+        </div>
+        <div class="history__field">
+          <label for="history-to">{{ 'history.filter.period.to' | t }}</label>
+          <input
+            id="history-to"
+            class="naf-ctl"
+            type="datetime-local"
+            [value]="customTo()"
+            (change)="onCustomToChange($event)"
+          />
+        </div>
+      </div>
+    }
+
+    <div class="history__row2">
+      <div class="history__field">
+        <span class="history__lbl" id="history-status-label">{{
+          'history.filter.status.label' | t
+        }}</span>
+        <div class="naf-seg" role="radiogroup" aria-labelledby="history-status-label">
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="!filters().status"
+            (click)="setStatus(null)"
+          >
+            {{ 'history.filter.status.all' | t }}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="filters().status === 'Success'"
+            (click)="setStatus('Success')"
+          >
+            <img src="node-states/completed.svg" alt="" width="14" height="14" />
+            {{ 'history.filter.status.success' | t }}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="filters().status === 'Error'"
+            (click)="setStatus('Error')"
+          >
+            <img src="node-states/error.svg" alt="" width="14" height="14" />
+            {{ 'history.filter.status.error' | t }}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="filters().status === 'Running'"
+            (click)="setStatus('Running')"
+          >
+            <img src="node-states/running.svg" alt="" width="14" height="14" />
+            {{ 'history.filter.status.running' | t }}
+          </button>
+        </div>
+      </div>
+
+      <div class="history__field">
+        <span class="history__lbl" id="history-method-label">{{
+          'history.filter.method.label' | t
+        }}</span>
+        <div
+          class="naf-seg history__seg--verbs"
+          role="radiogroup"
+          aria-labelledby="history-method-label"
         >
-          {{ 'history.pagination.next' | t }}
-        </button>
-      </nav>
-    </mat-card>
-  }
+          <button
+            type="button"
+            role="radio"
+            class="history__seg-text"
+            [attr.aria-checked]="!filters().method"
+            (click)="setMethod(null)"
+          >
+            {{ 'history.filter.method.all' | t }}
+          </button>
+          @for (method of methods; track method) {
+            <button
+              type="button"
+              role="radio"
+              [attr.data-method]="method"
+              [attr.aria-checked]="filters().method === method"
+              (click)="setMethod(method)"
+            >
+              {{ method }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="history__field">
+        <span class="history__lbl">{{ 'history.filter.slowOnly.label' | t }}</span>
+        <span class="history__toggle">
+          <button
+            type="button"
+            role="switch"
+            id="history-slow-only"
+            class="history__switch"
+            [attr.aria-checked]="slowOnly()"
+            [attr.aria-label]="'history.filter.slowOnly.label' | t"
+            (click)="toggleSlowOnly()"
+          >
+            <span class="sr-only">{{ 'history.filter.slowOnly.label' | t }}</span>
+          </button>
+          <label for="history-slow-only" class="naf-mono history__muted">
+            @if (slowThresholdMicros() !== null) {
+              {{
+                'history.filter.slowOnly.threshold'
+                  | t: { value: formatDuration(slowThresholdMicros()) }
+              }}
+            }
+          </label>
+        </span>
+      </div>
+
+      <div class="history__field">
+        <label for="history-min-duration">{{ 'history.filter.minDuration.label' | t }}</label>
+        <div class="history__with-suffix">
+          <input
+            id="history-min-duration"
+            class="naf-ctl naf-ctl--mono"
+            type="number"
+            min="0"
+            inputmode="numeric"
+            [value]="minDurationMsInput() ?? ''"
+            [disabled]="slowOnly()"
+            (change)="onMinDurationChange($event)"
+          />
+          <span>ms</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="naf-card history__results" [attr.aria-label]="'history.results.title' | t">
+    <div class="history__card-header">
+      <h2>{{ 'history.results.title' | t }}</h2>
+      @if (result(); as page) {
+        <span class="naf-mono history__muted history__results-count">
+          {{ 'history.results.count' | t: { n: page.totalCount } }}
+        </span>
+      }
+      <button
+        type="button"
+        class="naf-icon-btn history__card-header-end"
+        [attr.aria-label]="'history.results.refresh' | t"
+        (click)="retry()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          width="16"
+          height="16"
+        >
+          <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
+          <path d="M19.5 4.5v4h-4" />
+        </svg>
+      </button>
+    </div>
+
+    @switch (viewState()) {
+      @case ('loading') {
+        <div
+          class="history__skeleton"
+          role="status"
+          [attr.aria-label]="'history.state.loading' | t"
+        >
+          @for (row of [0, 1, 2, 3, 4, 5, 6, 7]; track row) {
+            <div class="history__skeleton-row">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          }
+        </div>
+      }
+      @case ('error') {
+        <div class="history__state" role="alert">
+          <div class="history__errbox">
+            <strong>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                width="18"
+                height="18"
+              >
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5v5.5M12 16.4v.1" />
+              </svg>
+              {{ 'history.state.error.title' | t }}
+            </strong>
+            <p>{{ errorMessage() }}</p>
+            <button type="button" class="naf-btn" (click)="retry()">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                width="14"
+                height="14"
+              >
+                <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
+                <path d="M19.5 4.5v4h-4" />
+              </svg>
+              {{ 'history.state.error.action' | t }}
+            </button>
+          </div>
+        </div>
+      }
+      @case ('empty-none') {
+        <div class="history__state">
+          <div class="history__state-tile history__state-tile--idle">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="22"
+              height="22"
+            >
+              <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+              <path d="M3.5 4v4.5H8" />
+              <path d="M12 7.5V12l3 2" />
+            </svg>
+          </div>
+          <strong>{{ 'history.state.empty.none.title' | t }}</strong>
+          <p>{{ 'history.state.empty.none.body' | t }}</p>
+          <a class="naf-btn naf-btn--primary" routerLink="/runner">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="14"
+              height="14"
+            >
+              <path d="M7 4.5v15l12-7.5Z" />
+            </svg>
+            {{ 'history.state.empty.none.action' | t }}
+          </a>
+        </div>
+      }
+      @case ('empty-filtered') {
+        <div class="history__state">
+          <div class="history__state-tile history__state-tile--flow">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="22"
+              height="22"
+            >
+              <path d="M4 5h16l-6 7.5V19l-4-2v-4.5Z" />
+            </svg>
+          </div>
+          <strong>{{ 'history.state.empty.filtered.title' | t }}</strong>
+          <p>{{ emptyFilteredBodyKey() | t: { count: activeFilterCount() } }}</p>
+          <button type="button" class="naf-btn" (click)="clearFilters()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              width="14"
+              height="14"
+            >
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+            {{ 'history.state.empty.filtered.action' | t }}
+          </button>
+        </div>
+      }
+      @case ('data') {
+        <div class="history__table-wrap">
+          <table class="history__table">
+            <thead>
+              <tr>
+                <th class="history__col-status">{{ 'history.table.status' | t }}</th>
+                <th class="history__col-method">{{ 'history.table.method' | t }}</th>
+                <th class="history__col-route">{{ 'history.table.route' | t }}</th>
+                <th class="history__col-started">{{ 'history.table.startedAt' | t }}</th>
+                <th class="history__col-duration history__col-duration--right">
+                  {{ 'history.table.duration' | t }}
+                </th>
+                <th class="history__col-trace">{{ 'history.table.trace' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (trace of result()!.items; track trace.traceId) {
+                <tr class="history__row">
+                  <td class="history__col-status">
+                    <span class="history__status-pill" [class]="rowStatusTintClass(trace)">
+                      <img
+                        [src]="rowStateIconSrc(trace)"
+                        [attr.alt]="rowStateLabelKey(trace) | t"
+                        width="14"
+                        height="14"
+                      />
+                      @if (trace.httpStatus !== null) {
+                        {{ trace.httpStatus }}
+                      }
+                    </span>
+                  </td>
+                  <td class="history__col-method">
+                    <span class="naf-tag" [class]="methodTagClass(trace.method)">{{
+                      trace.method
+                    }}</span>
+                  </td>
+                  <td class="history__col-route">
+                    <a
+                      class="history__row-link"
+                      [routerLink]="['/flow']"
+                      [queryParams]="{ trace: trace.traceId }"
+                      [attr.title]="trace.method + ' ' + trace.routeTemplate"
+                    >
+                      {{ trace.routeTemplate }}
+                    </a>
+                    @if (trace.truncated) {
+                      <span class="history__tag">{{ 'history.table.truncated' | t }}</span>
+                    }
+                  </td>
+                  <td
+                    class="history__col-started naf-mono"
+                    [attr.title]="startedAtFull(trace.startedAt)"
+                  >
+                    {{ startedAtShort(trace.startedAt) }}
+                  </td>
+                  <td
+                    class="history__col-duration history__col-duration--right naf-mono"
+                    [class.history__duration--slow]="isSlowDuration(trace.durationMicros)"
+                  >
+                    @if (trace.durationMicros === null) {
+                      <span class="history__muted">{{ 'history.row.running' | t }}</span>
+                    } @else {
+                      {{ formatDuration(trace.durationMicros) }}
+                    }
+                  </td>
+                  <td class="history__col-trace naf-mono history__muted">
+                    {{ shortTraceId(trace.traceId) }}
+                    <button
+                      type="button"
+                      class="history__copy"
+                      [attr.aria-label]="'history.row.copyTraceId' | t"
+                      (click)="copyTraceId(trace.traceId, $event)"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        width="14"
+                        height="14"
+                      >
+                        <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                        <path
+                          d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
+                        />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="history__foot">
+          <span class="naf-mono history__muted">
+            {{
+              'history.pagination.of'
+                | t: { from: pageRange().from, to: pageRange().to, total: pageRange().total }
+            }}
+          </span>
+          <span class="history__foot-end">
+            <label class="history__pagesize">
+              {{ 'history.pagination.pageSize' | t }}
+              <select (change)="setPageSize($event)">
+                @for (size of pageSizes; track size) {
+                  <option [value]="size" [selected]="filters().pageSize === size">
+                    {{ size }}
+                  </option>
+                }
+              </select>
+            </label>
+            <button
+              type="button"
+              class="naf-icon-btn"
+              [attr.aria-label]="'history.pagination.previous' | t"
+              [disabled]="(filters().page ?? 1) === 1"
+              (click)="setPage((filters().page ?? 1) - 1)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                width="16"
+                height="16"
+              >
+                <path d="m15 6-6 6 6 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="naf-icon-btn"
+              [attr.aria-label]="'history.pagination.next' | t"
+              [disabled]="!hasNextPage()"
+              (click)="setPage((filters().page ?? 1) + 1)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                width="16"
+                height="16"
+              >
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </button>
+          </span>
+        </div>
+      }
+    }
+  </section>
 </section>
