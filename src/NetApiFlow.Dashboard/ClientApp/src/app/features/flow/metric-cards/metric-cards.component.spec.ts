@@ -1,8 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
 import { MetricCardsComponent } from './metric-cards.component';
-import { ComponentStat, MetricsSummary } from '../../../core/models';
+import { ComponentStat, FlowEvent, MetricsSummary } from '../../../core/models';
+import { SseService } from '../../../core/sse.service';
 
 const SUMMARY: MetricsSummary = {
   totalTraces: 10,
@@ -36,12 +38,23 @@ const COMPONENT_STATS: ComponentStat[] = [
   },
 ];
 
+function fakeSseService() {
+  const events = new Subject<FlowEvent>();
+  return { events$: events.asObservable(), emit: (event: FlowEvent) => events.next(event) };
+}
+
 describe('MetricCardsComponent', () => {
   let httpMock: HttpTestingController;
+  let sse: ReturnType<typeof fakeSseService>;
 
   beforeEach(() => {
+    sse = fakeSseService();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: SseService, useValue: sse },
+      ],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -151,5 +164,32 @@ describe('MetricCardsComponent', () => {
 
     // pt-BR is the default language (D-35).
     expect(fixture.nativeElement.textContent).toContain('Falha ao carregar as métricas.');
+  });
+
+  it('re-fetches the metrics when a TraceCompleted event arrives (D-39)', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.cards().find((card) => card.icon === 'traces')?.value).toBe(
+      '10',
+    );
+
+    sse.emit({
+      eventId: 1,
+      type: 'TraceCompleted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:00:00Z',
+    });
+    httpMock.expectOne('api/metrics').flush({ ...SUMMARY, totalTraces: 11 });
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.cards().find((card) => card.icon === 'traces')?.value).toBe(
+      '11',
+    );
   });
 });

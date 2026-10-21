@@ -2,8 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+import { Subject } from 'rxjs';
 import { RecentExecutionsComponent } from './recent-executions.component';
-import { FlowTraceSummary, PagedResult } from '../../../core/models';
+import { FlowEvent, FlowTraceSummary, PagedResult } from '../../../core/models';
+import { SseService } from '../../../core/sse.service';
 
 const PAGE: PagedResult<FlowTraceSummary> = {
   totalCount: 1,
@@ -21,12 +23,24 @@ const PAGE: PagedResult<FlowTraceSummary> = {
   ],
 };
 
+function fakeSseService() {
+  const events = new Subject<FlowEvent>();
+  return { events$: events.asObservable(), emit: (event: FlowEvent) => events.next(event) };
+}
+
 describe('RecentExecutionsComponent', () => {
   let httpMock: HttpTestingController;
+  let sse: ReturnType<typeof fakeSseService>;
 
   beforeEach(() => {
+    sse = fakeSseService();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: SseService, useValue: sse },
+      ],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -106,5 +120,42 @@ describe('RecentExecutionsComponent', () => {
     expect(fixture.componentInstance.collapsed()).toBe(true);
     fixture.componentInstance.toggleCollapsed();
     expect(fixture.componentInstance.collapsed()).toBe(false);
+  });
+
+  it('re-fetches the list when a TraceCompleted event arrives (D-39)', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.traces()).toEqual(PAGE.items);
+
+    const secondPage: PagedResult<FlowTraceSummary> = {
+      totalCount: 2,
+      items: [
+        {
+          traceId: 't2',
+          method: 'POST',
+          routeTemplate: '/api/orders/{id}/confirm',
+          httpStatus: 500,
+          status: 'Error',
+          startedAt: '2026-01-01T00:01:00.000000Z',
+          durationMicros: 2_000,
+          truncated: false,
+        },
+        ...PAGE.items,
+      ],
+    };
+
+    sse.emit({
+      eventId: 1,
+      type: 'TraceCompleted',
+      traceId: 't2',
+      timestamp: '2026-01-01T00:01:00Z',
+    });
+    httpMock.expectOne(() => true).flush(secondPage);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.traces()).toEqual(secondPage.items);
   });
 });

@@ -1,5 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../../../core/api.service';
+import { SseService } from '../../../core/sse.service';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../../core/i18n/translations';
@@ -38,8 +39,15 @@ function splitDuration(formatted: string): { value: string; unit: string | null 
   styleUrl: './metric-cards.component.scss',
   imports: [TranslatePipe],
 })
-export class MetricCardsComponent {
+export class MetricCardsComponent implements OnDestroy {
   private readonly api = inject(ApiService);
+  private readonly sse = inject(SseService);
+  private readonly sseSubscription = this.sse.events$.subscribe((event) => {
+    if (event.type === 'TraceCompleted') {
+      this.loadMetrics();
+      this.loadComponentMetrics();
+    }
+  });
 
   readonly loading = signal(true);
   readonly error = signal<TranslationKey | null>(null);
@@ -113,6 +121,15 @@ export class MetricCardsComponent {
       .getConfig()
       .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
 
+    this.loadMetrics();
+    this.loadComponentMetrics();
+  }
+
+  ngOnDestroy(): void {
+    this.sseSubscription.unsubscribe();
+  }
+
+  private loadMetrics(): void {
     this.api.getMetrics({}).subscribe({
       next: (summary) => {
         this.totalTraces.set(summary.totalTraces);
@@ -126,7 +143,9 @@ export class MetricCardsComponent {
         this.loading.set(false);
       },
     });
+  }
 
+  private loadComponentMetrics(): void {
     this.api.getComponentMetrics({}).subscribe({
       next: (stats) => {
         const total = stats.reduce((sum, stat) => sum + stat.executionCount, 0);
