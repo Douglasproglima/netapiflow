@@ -71,7 +71,12 @@
 }
 
 .app-rail {
-  position: relative;
+  // No position here: Angular Material already sets `.mat-drawer`/`.app-rail` to
+  // `position: absolute` so it stretches to the sidenav container's full height. Declaring
+  // `position: relative` here (same specificity as Material's rule, but loaded after it)
+  // used to win the cascade and silently drop that absolute positioning, shrinking the rail
+  // to its own content height instead of the container's. It already is a positioning
+  // context for `.app-rail__close` without redeclaring it.
   width: 76px;
   display: flex;
   flex-direction: column;
