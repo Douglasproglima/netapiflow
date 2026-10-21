@@ -3,6 +3,7 @@ import { FlowTraceDetail, SpanDetail } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
 import { buildWaterfall } from './waterfall';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 /**
  * No span selected: request summary + waterfall (guide seção 6.6). A span selected: its full
@@ -13,7 +14,7 @@ import { buildWaterfall } from './waterfall';
   selector: 'app-flow-details-panel',
   templateUrl: './flow-details-panel.component.html',
   styleUrl: './flow-details-panel.component.scss',
-  imports: [],
+  imports: [TranslatePipe],
 })
 export class FlowDetailsPanelComponent {
   readonly trace = input.required<FlowTraceDetail>();

@@ -74,7 +74,8 @@ describe('FlowDetailsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
     expect(text).toContain('GET');
     expect(text).toContain('/api/orders/{id}');
-    expect(text).toContain('Steps');
+    // pt-BR is the default language (D-35).
+    expect(text).toContain('Etapas');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(1);
   });
 

@@ -4,9 +4,9 @@
   [class.recent-executions--collapsed]="collapsed()"
 >
   <div class="recent-executions__header">
-    <h3 class="recent-executions__title">Recent executions</h3>
+    <h3 class="recent-executions__title">{{ 'recent.title' | t }}</h3>
     <a class="recent-executions__view-all" routerLink="/history">
-      View all
+      {{ 'recent.viewAll' | t }}
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -22,7 +22,7 @@
       mat-icon-button
       type="button"
       class="recent-executions__toggle"
-      [attr.aria-label]="collapsed() ? 'Expand recent executions' : 'Collapse recent executions'"
+      [attr.aria-label]="(collapsed() ? 'recent.expandAria' : 'recent.collapseAria') | t"
       (click)="toggleCollapsed()"
     >
       <svg
@@ -40,13 +40,13 @@
   </div>
   @if (!collapsed()) {
     @if (loading()) {
-      <p class="recent-executions__status" role="status">Loading…</p>
+      <p class="recent-executions__status" role="status">{{ 'recent.loading' | t }}</p>
     } @else if (error()) {
       <p class="recent-executions__status recent-executions__status--error" role="alert">
-        {{ error() }}
+        {{ error() | t }}
       </p>
     } @else if (traces().length === 0) {
-      <p class="recent-executions__status">No traces recorded yet.</p>
+      <p class="recent-executions__status">{{ 'recent.empty' | t }}</p>
     } @else {
       <ul class="recent-executions__list">
         @for (trace of traces(); track trace.traceId) {

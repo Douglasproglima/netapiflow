@@ -1,6 +1,6 @@
 <mat-card appearance="outlined" class="event-feed" [class.event-feed--collapsed]="collapsed()">
   <div class="event-feed__header">
-    <h3 class="event-feed__title">Live events</h3>
+    <h3 class="event-feed__title">{{ 'events.title' | t }}</h3>
     <span
       class="naf-chip"
       [class.naf-chip--live]="connectionState() === 'open'"
@@ -9,18 +9,19 @@
     >
       <span class="naf-chip__dot"></span>
       {{
-        connectionState() === 'open'
-          ? 'Connected'
+        (connectionState() === 'open'
+          ? 'events.chip.connected'
           : connectionState() === 'connecting'
-            ? 'Reconnecting'
-            : 'Offline'
+            ? 'events.chip.reconnecting'
+            : 'events.chip.offline'
+        ) | t
       }}
     </span>
     <button
       mat-icon-button
       type="button"
       class="event-feed__toggle"
-      [attr.aria-label]="collapsed() ? 'Expand live events' : 'Collapse live events'"
+      [attr.aria-label]="(collapsed() ? 'events.expandAria' : 'events.collapseAria') | t"
       (click)="toggleCollapsed()"
     >
       <svg
@@ -49,7 +50,7 @@
         >
           <path d="M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12v.1" />
         </svg>
-        Waiting for events. Send a request from Try an endpoint or call your API.
+        {{ 'events.empty' | t }}
       </p>
     } @else {
       <ul class="event-feed__list" role="log" aria-live="off">

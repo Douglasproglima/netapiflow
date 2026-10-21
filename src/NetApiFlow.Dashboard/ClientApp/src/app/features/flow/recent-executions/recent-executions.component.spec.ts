@@ -71,7 +71,8 @@ describe('RecentExecutionsComponent', () => {
     httpMock.expectOne(() => true).flush({ totalCount: 0, items: [] });
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('No traces recorded yet.');
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain('Nenhum trace registrado ainda.');
   });
 
   it('shows the HTTP status code tinted by the trace status', async () => {

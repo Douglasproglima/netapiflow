@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   computed,
+  inject,
   input,
   output,
   viewChild,
@@ -13,6 +14,7 @@ import { GraphEdge, GraphNode } from './graph-builder';
 import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation';
 import { ComponentTypeIcon, componentTypeIcon } from '../../../shared/component-type-icon';
 import { formatDurationMicros } from '../../../shared/duration-format';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 /**
  * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
@@ -24,6 +26,8 @@ import { formatDurationMicros } from '../../../shared/duration-format';
   styleUrl: './flow-graph.component.scss',
 })
 export class FlowGraphComponent implements AfterViewInit {
+  private readonly language = inject(LanguageService);
+
   readonly nodes = input.required<GraphNode[]>();
   readonly edges = input.required<GraphEdge[]>();
   readonly selectedNodeId = input<string | null>(null);
@@ -91,7 +95,7 @@ export class FlowGraphComponent implements AfterViewInit {
   }
 
   stateLabel(node: GraphNode): string {
-    return NODE_STATE_PRESENTATION[node.state].label;
+    return this.language.translate(NODE_STATE_PRESENTATION[node.state].labelKey);
   }
 
   nodeAriaLabel(node: GraphNode): string {

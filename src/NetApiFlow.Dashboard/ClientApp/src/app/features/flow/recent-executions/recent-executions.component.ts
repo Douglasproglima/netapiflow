@@ -7,6 +7,9 @@ import { FlowTraceSummary } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
 import { statusTint, StatusTint } from '../../../shared/status-tint';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { LanguageService } from '../../../core/i18n/language.service';
+import { TranslationKey } from '../../../core/i18n/translations';
 
 const PAGE_SIZE = 8;
 
@@ -20,13 +23,14 @@ const PAGE_SIZE = 8;
   selector: 'app-recent-executions',
   templateUrl: './recent-executions.component.html',
   styleUrl: './recent-executions.component.scss',
-  imports: [MatCardModule, MatButtonModule, RouterLink],
+  imports: [MatCardModule, MatButtonModule, RouterLink, TranslatePipe],
 })
 export class RecentExecutionsComponent {
   private readonly api = inject(ApiService);
+  private readonly language = inject(LanguageService);
 
   readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
+  readonly error = signal<TranslationKey | null>(null);
   readonly traces = signal<FlowTraceSummary[]>([]);
   readonly collapsed = signal(false);
 
@@ -43,7 +47,7 @@ export class RecentExecutionsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load recent executions.');
+        this.error.set('recent.error');
         this.loading.set(false);
       },
     });
@@ -65,13 +69,15 @@ export class RecentExecutionsComponent {
   relativeTime(startedAt: string): string {
     const diffSeconds = Math.max(0, Math.floor((Date.now() - Date.parse(startedAt)) / 1000));
     if (diffSeconds < 5) {
-      return 'now';
+      return this.language.translate('recent.relativeTime.now');
     }
 
     if (diffSeconds < 60) {
-      return `${diffSeconds} s`;
+      return this.language.translate('recent.relativeTime.seconds', { n: diffSeconds });
     }
 
-    return `${Math.floor(diffSeconds / 60)} min`;
+    return this.language.translate('recent.relativeTime.minutes', {
+      n: Math.floor(diffSeconds / 60),
+    });
   }
 }

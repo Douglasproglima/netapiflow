@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { SseService } from '../../../core/sse.service';
 import { FlowEvent } from '../../../core/models';
 import { eventTypeTint, EventTypeTint } from '../../../shared/event-type-tint';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 const MAX_VISIBLE_EVENTS = 200;
 
@@ -18,7 +19,7 @@ const MAX_VISIBLE_EVENTS = 200;
   selector: 'app-event-feed',
   templateUrl: './event-feed.component.html',
   styleUrl: './event-feed.component.scss',
-  imports: [MatCardModule, MatButtonModule],
+  imports: [MatCardModule, MatButtonModule, TranslatePipe],
 })
 export class EventFeedComponent implements OnInit, OnDestroy {
   private readonly sse = inject(SseService);
