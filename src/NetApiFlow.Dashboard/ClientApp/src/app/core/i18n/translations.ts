@@ -65,7 +65,7 @@ const en = {
   'graph.title': 'Request path',
   'graph.backToLive': 'Back to live',
   'graph.replay': 'Replay',
-  'graph.copyTraceId': 'Copy trace id',
+  'graph.copyTraceId': 'Copy trace ID',
   'graph.errorOrigin': 'Error origin: {component} · HTTP {status} · {duration}',
   'graph.slowestStep': 'Slowest step: {component} · {duration}',
   'graph.empty.title': 'No request is currently in progress.',
@@ -87,9 +87,8 @@ const en = {
   'replay.positionAria': 'Replay position',
   'replay.speedAria': 'Playback speed',
   'replay.status.finished':
-    'Step {step}/{total} · finished with HTTP {status} · replaying recorded timestamps at {speed}×',
-  'replay.status.playing':
-    'Step {step}/{total} · playing · replaying recorded timestamps at {speed}×',
+    'Step {step}/{total} · finished with HTTP {status} · replaying at {speed}×',
+  'replay.status.playing': 'Step {step}/{total} · playing at {speed}×',
 
   'details.kpi.total': 'Total',
   'details.kpi.executed': 'Executed',
@@ -171,7 +170,7 @@ const en = {
   'history.loading': 'Loading…',
   'history.error': 'Failed to load traces.',
   'history.empty': 'No traces match these filters.',
-  'history.table.traceId': 'Trace id',
+  'history.table.traceId': 'Trace ID',
   'history.table.method': 'Method',
   'history.table.route': 'Route',
   'history.table.status': 'Status',
@@ -241,13 +240,14 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.openPanel': 'Testar um endpoint',
 
   'graph.title': 'Caminho da requisição',
-  'graph.backToLive': 'Voltar para o ao vivo',
-  'graph.replay': 'Reprise',
-  'graph.copyTraceId': 'Copiar id do trace',
+  'graph.backToLive': 'Voltar ao vivo',
+  'graph.replay': 'Replay',
+  'graph.copyTraceId': 'Copiar ID do trace',
   'graph.errorOrigin': 'Origem do erro: {component} · HTTP {status} · {duration}',
   'graph.slowestStep': 'Etapa mais lenta: {component} · {duration}',
   'graph.empty.title': 'Nenhuma requisição em andamento no momento.',
-  'graph.empty.hint': 'Envie uma requisição por "Testar um endpoint" ou chame sua API diretamente.',
+  'graph.empty.hint':
+    'Envie uma requisição usando "Testar um endpoint" ou chame sua API diretamente.',
   'graph.loading': 'Carregando…',
   'node.state.waiting': 'Aguardando',
   'node.state.running': 'Em execução',
@@ -256,7 +256,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.state.error': 'Erro',
   'node.state.notExecuted': 'Não executado',
 
-  'replay.chip.replay': 'REPRISE',
+  'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Reiniciar',
   'replay.previousStep': 'Etapa anterior',
   'replay.play': 'Reproduzir',
@@ -265,9 +265,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'replay.positionAria': 'Posição da reprodução',
   'replay.speedAria': 'Velocidade de reprodução',
   'replay.status.finished':
-    'Etapa {step}/{total} · concluída com HTTP {status} · reproduzindo marcações de tempo originais a {speed}×',
-  'replay.status.playing':
-    'Etapa {step}/{total} · em reprodução · reproduzindo marcações de tempo originais a {speed}×',
+    'Etapa {step}/{total} · concluída com HTTP {status} · replay a {speed}×',
+  'replay.status.playing': 'Etapa {step}/{total} · reproduzindo a {speed}×',
 
   'details.kpi.total': 'Total',
   'details.kpi.executed': 'Executadas',
@@ -311,7 +310,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'events.expandAria': 'Expandir eventos ao vivo',
   'events.collapseAria': 'Recolher eventos ao vivo',
   'events.empty':
-    'Aguardando eventos. Envie uma requisição por "Testar um endpoint" ou chame sua API diretamente.',
+    'Aguardando eventos. Envie uma requisição usando "Testar um endpoint" ou chame sua API diretamente.',
 
   'about.title': 'Sobre o NetApiFlow',
   'about.version': 'Versão',
@@ -349,7 +348,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'history.loading': 'Carregando…',
   'history.error': 'Falha ao carregar os traces.',
   'history.empty': 'Nenhum trace corresponde a estes filtros.',
-  'history.table.traceId': 'Id do trace',
+  'history.table.traceId': 'ID do trace',
   'history.table.method': 'Método',
   'history.table.route': 'Rota',
   'history.table.status': 'Status',
