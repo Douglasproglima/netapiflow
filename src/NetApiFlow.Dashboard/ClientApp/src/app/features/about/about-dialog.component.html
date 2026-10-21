@@ -1,0 +1,22 @@
+<h2 mat-dialog-title>About NetApiFlow</h2>
+<mat-dialog-content class="about-dialog__content">
+  <dl class="about-dialog__list">
+    <dt>Version</dt>
+    <dd>{{ version }}</dd>
+    <dt>License</dt>
+    <dd>MIT</dd>
+    <dt>Repository</dt>
+    <dd>
+      <a [href]="repositoryUrl" target="_blank" rel="noopener">{{ repositoryUrl }}</a>
+    </dd>
+  </dl>
+  <p class="about-dialog__credit">
+    Inspired by the idea behind
+    <a href="https://github.com/joshuamaia/apiflow" target="_blank" rel="noopener">apiflow</a>
+    (Spring Boot): visualizing a request's path through an API in real time. No code, file or asset
+    from that project was copied or ported.
+  </p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close type="button">Close</button>
+</mat-dialog-actions>

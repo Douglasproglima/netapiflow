@@ -17,15 +17,32 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  color: var(--mat-sys-tertiary);
+}
+
+.metric-cards__card--highlight {
+  color: var(--flow-state-error-stroke, #ef4444);
+}
+
+.metric-cards__icon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 0.25rem;
 }
 
 .metric-cards__value {
   font-size: 1.5rem;
   font-weight: 700;
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  color: var(--mat-sys-on-surface);
+}
+
+.metric-cards__card--highlight .metric-cards__value {
+  color: var(--flow-state-error-stroke, #ef4444);
 }
 
 .metric-cards__label {
   font-size: 0.8rem;
   opacity: 0.75;
+  color: var(--mat-sys-on-surface);
 }

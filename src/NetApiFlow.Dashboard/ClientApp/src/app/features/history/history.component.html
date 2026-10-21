@@ -60,7 +60,9 @@
             <tr>
               <td>{{ trace.traceId }}</td>
               <td>
-                <span class="naf-tag">{{ trace.method }}</span>
+                <span class="naf-tag" [class]="methodTagClass(trace.method)">{{
+                  trace.method
+                }}</span>
               </td>
               <td>{{ trace.routeTemplate }}</td>
               <td>{{ trace.status }}</td>

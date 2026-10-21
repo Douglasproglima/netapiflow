@@ -88,6 +88,9 @@ describe('FlowPageComponent', () => {
     });
     httpMock.expectOne('api/metrics/components').flush([]);
     httpMock.expectOne('/openapi/v1.json').flush({ paths: {} });
+    httpMock
+      .expectOne((request) => request.url === 'api/traces')
+      .flush({ totalCount: 0, items: [] });
   }
 
   it('loads the trace from the ?trace= query param on mount', async () => {

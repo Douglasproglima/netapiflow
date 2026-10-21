@@ -5,6 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { OpenApiDocument } from '../../core/models';
+import { httpMethodTagClass } from '../../shared/http-method-style';
 import { buildEndpointForm, listOpenApiEndpoints } from './openapi-form';
 
 /**
@@ -79,6 +80,10 @@ export class EndpointFormComponent {
   onFieldInput(name: string, event: Event): void {
     const target = event.target as HTMLInputElement | HTMLTextAreaElement;
     this.setFieldValue(name, target.value);
+  }
+
+  methodTagClass(method: string): string {
+    return httpMethodTagClass(method);
   }
 
   send(): void {

@@ -245,4 +245,32 @@ code,
   border: 1px solid var(--mat-sys-outline-variant);
   color: var(--mat-sys-on-surface-variant);
 }
+
+// Per-verb badge colors (brand guide, Seção 03): each HTTP method gets its own tint, not the
+// plain gray `.naf-tag` default — same low-alpha-fill-plus-solid-text recipe as the guide's own
+// "Verbos HTTP · badges" example.
+.naf-tag--get {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.14);
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.naf-tag--post {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.naf-tag--put,
+.naf-tag--patch {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.naf-tag--delete {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.35);
+}
 /* You can add global styles to this file, and also import other style files */

@@ -65,7 +65,7 @@
           Condition="'$(TargetFramework)' == ''"
           Inputs="$(ClientAppDir)package-lock.json;@(ClientAppSourceFiles)"
           Outputs="$(ClientAppDistIndex)">
-    <Exec Command="npm run build" WorkingDirectory="$(ClientAppDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(ClientAppDir)" EnvironmentVariables="NETAPIFLOW_VERSION=$(Version)" />
   </Target>
 
   <!--

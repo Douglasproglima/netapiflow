@@ -70,7 +70,9 @@
                   class="flow-workspace__live-item"
                   (click)="openTrace(summary.traceId)"
                 >
-                  <span class="naf-tag">{{ summary.method }}</span>
+                  <span class="naf-tag" [class]="methodTagClass(summary.method)">{{
+                    summary.method
+                  }}</span>
                   <span>{{ summary.routeTemplate }}</span>
                   <span>{{ summary.status }}</span>
                 </button>
@@ -90,5 +92,8 @@
     }
   </div>
 
-  <app-event-feed class="flow-workspace__feed" />
+  <div class="flow-workspace__footer">
+    <app-recent-executions class="flow-workspace__recent" (traceSelected)="openTrace($event)" />
+    <app-event-feed class="flow-workspace__feed" />
+  </div>
 </section>

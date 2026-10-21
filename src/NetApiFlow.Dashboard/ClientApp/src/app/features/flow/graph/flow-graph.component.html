@@ -28,7 +28,51 @@
           height="12"
         ></image>
         <text class="flow-graph__node-state" x="24" y="27">{{ stateLabel(node) }}</text>
-        <text class="flow-graph__node-component" x="8" y="44">{{ node.component }}</text>
+        <svg
+          class="flow-graph__node-type-icon"
+          x="8"
+          y="34"
+          width="12"
+          height="12"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+        >
+          @switch (typeIcon(node)) {
+            @case ('endpoint') {
+              <circle cx="8" cy="8" r="5.5" />
+              <circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none" />
+            }
+            @case ('controller') {
+              <rect x="2.5" y="3.5" width="11" height="9" rx="1.4" />
+              <path d="M2.5 8 H13.5" />
+            }
+            @case ('use-case') {
+              <ellipse cx="8" cy="8" rx="6" ry="4.4" />
+            }
+            @case ('service') {
+              <path d="M8 2 L13.2 5 V11 L8 14 L2.8 11 V5 Z" stroke-linejoin="round" />
+            }
+            @case ('repository') {
+              <rect x="2.5" y="3" width="11" height="4.2" rx="1" />
+              <rect x="2.5" y="8.8" width="11" height="4.2" rx="1" />
+            }
+            @case ('database') {
+              <ellipse cx="8" cy="4.2" rx="5.5" ry="2.2" />
+              <path d="M2.5 4.2 V11.8 C2.5 13 5 14 8 14 C11 14 13.5 13 13.5 11.8 V4.2" />
+              <path d="M2.5 8 C2.5 9.2 5 10.2 8 10.2 C11 10.2 13.5 9.2 13.5 8" />
+            }
+            @case ('http') {
+              <circle cx="8" cy="8" r="6" />
+              <path d="M8 2 V5 M8 11 V14 M2 8 H5 M11 8 H14" stroke-linecap="round" />
+            }
+            @case ('custom') {
+              <path d="M8 2 V14 M3 5 L13 11 M13 5 L3 11" stroke-linecap="round" />
+            }
+          }
+        </svg>
+        <text class="flow-graph__node-component" x="24" y="44">{{ node.component }}</text>
         <text class="flow-graph__node-operation" x="8" y="58">{{ node.operation }}</text>
       </g>
     }

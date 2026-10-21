@@ -59,13 +59,24 @@ describe('MetricCardsComponent', () => {
 
     const cards = fixture.componentInstance.cards();
     expect(cards).toEqual([
-      { label: 'Total traces', value: '10' },
-      { label: 'Success', value: '7' },
-      { label: 'Errors', value: '3' },
-      { label: 'Avg. latency', value: '21.5 ms' },
-      { label: 'Max. latency', value: '412.0 ms' },
-      { label: 'Steps executed', value: '50' },
+      { label: 'Total traces', value: '10', icon: 'traces', highlight: false },
+      { label: 'Success', value: '7', icon: 'success', highlight: false },
+      { label: 'Errors', value: '3', icon: 'errors', highlight: true },
+      { label: 'Avg. latency', value: '21.5 ms', icon: 'avg', highlight: false },
+      { label: 'Max. latency', value: '412.0 ms', icon: 'max', highlight: false },
+      { label: 'Steps executed', value: '50', icon: 'steps', highlight: false },
     ]);
+  });
+
+  it('does not highlight the errors card when there are no errors', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('api/metrics').flush({ ...SUMMARY, errorCount: 0, errorRate: 0 });
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    await fixture.whenStable();
+
+    const errorsCard = fixture.componentInstance.cards().find((card) => card.icon === 'errors');
+    expect(errorsCard?.highlight).toBe(false);
   });
 
   it('shows an explicit error state when GET /metrics fails', async () => {

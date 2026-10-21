@@ -11,6 +11,7 @@ import { select } from 'd3-selection';
 import { zoom, zoomIdentity, D3ZoomEvent } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
 import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation';
+import { ComponentTypeIcon, componentTypeIcon } from '../../../shared/component-type-icon';
 
 /**
  * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
@@ -82,6 +83,10 @@ export class FlowGraphComponent implements AfterViewInit {
 
   stateIconSrc(node: GraphNode): string {
     return NODE_STATE_PRESENTATION[node.state].iconSrc;
+  }
+
+  typeIcon(node: GraphNode): ComponentTypeIcon {
+    return componentTypeIcon(node.type);
   }
 
   stateLabel(node: GraphNode): string {

@@ -4,8 +4,11 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { map } from 'rxjs';
+import { DASHBOARD_VERSION } from './core/version';
+import { AboutDialogComponent } from './features/about/about-dialog.component';
 
 const NARROW_BREAKPOINT = '(max-width: 768px)';
 
@@ -30,7 +33,10 @@ const NARROW_BREAKPOINT = '(max-width: 768px)';
 })
 export class App {
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly dialog = inject(MatDialog);
   private readonly sidenav = viewChild.required(MatSidenav);
+
+  readonly version = DASHBOARD_VERSION;
 
   readonly isNarrow = toSignal(
     this.breakpointObserver.observe(NARROW_BREAKPOINT).pipe(map((state) => state.matches)),
@@ -45,5 +51,9 @@ export class App {
     if (this.isNarrow()) {
       this.sidenav().close();
     }
+  }
+
+  openAbout(): void {
+    this.dialog.open(AboutDialogComponent, { width: '420px' });
   }
 }

@@ -15,7 +15,9 @@ import { FlowGraphComponent } from './graph/flow-graph.component';
 import { FlowDetailsPanelComponent } from './details/flow-details-panel.component';
 import { MetricCardsComponent } from './metric-cards/metric-cards.component';
 import { EventFeedComponent } from './event-feed/event-feed.component';
+import { RecentExecutionsComponent } from './recent-executions/recent-executions.component';
 import { EndpointFormComponent } from '../runner/endpoint-form.component';
+import { httpMethodTagClass } from '../../shared/http-method-style';
 
 /**
  * Default screen (`/flow`, D-23): a dense workspace (ADR-0010) — metric cards always visible on
@@ -34,6 +36,7 @@ import { EndpointFormComponent } from '../runner/endpoint-form.component';
     FlowDetailsPanelComponent,
     MetricCardsComponent,
     EventFeedComponent,
+    RecentExecutionsComponent,
     EndpointFormComponent,
     MatCardModule,
     MatButtonModule,
@@ -99,6 +102,10 @@ export class FlowPageComponent {
         this.replayPlayer.load(trace);
       }
     });
+  }
+
+  methodTagClass(method: string): string {
+    return httpMethodTagClass(method);
   }
 
   openTrace(traceId: string): void {

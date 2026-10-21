@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { FlowStatus, PagedResult, FlowTraceSummary, TraceQuery } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
+import { httpMethodTagClass } from '../../shared/http-method-style';
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -84,6 +85,10 @@ export class HistoryComponent {
 
   formatDuration(micros: number | null): string {
     return formatDurationMicros(micros);
+  }
+
+  methodTagClass(method: string): string {
+    return httpMethodTagClass(method);
   }
 
   private applyFilter(patch: Partial<TraceQuery>): void {

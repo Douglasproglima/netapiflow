@@ -52,7 +52,10 @@
         width="28"
         height="28"
       />
-      <h1 class="app-shell__title">NetApiFlow</h1>
+      <div class="app-shell__brand-text">
+        <h1 class="app-shell__title">NetApiFlow</h1>
+        <span class="app-shell__version naf-eyebrow">v{{ version }}</span>
+      </div>
     </div>
     <mat-nav-list class="app-shell__nav">
       <a
@@ -137,6 +140,21 @@
         </svg>
         <span matListItemTitle>Runner</span>
       </a>
+      <button mat-list-item type="button" class="app-shell__link" (click)="openAbout()">
+        <svg
+          matListItemIcon
+          class="app-shell__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <circle cx="12" cy="12" r="8.4" />
+          <path d="M12 11 V16.5" stroke-linecap="round" />
+          <circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+        <span matListItemTitle>About</span>
+      </button>
     </mat-nav-list>
   </mat-sidenav>
 
