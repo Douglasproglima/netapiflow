@@ -63,22 +63,14 @@ describe('FlowGraphComponent', () => {
     expect(nodeElements.length).toBe(3);
     expect(edgeElements.length).toBe(2);
 
-    const sequenceByComponent = new Map<string, string>();
-    for (const nodeElement of Array.from(nodeElements)) {
-      const component = (nodeElement as Element).querySelector(
-        '.flow-graph__node-component',
-      )?.textContent;
-      const sequence = (nodeElement as Element).querySelector(
-        '.flow-graph__node-sequence',
-      )?.textContent;
-      if (component && sequence !== undefined) {
-        sequenceByComponent.set(component, sequence ?? '');
-      }
-    }
+    // The sequence pill renders on the incoming edge, not inside the node (guide seção 6.4) — the
+    // root has no incoming edge, so only the two non-root nodes get a pill.
+    const edgeSequenceElements = fixture.nativeElement.querySelectorAll(
+      '.flow-graph__edge-sequence text',
+    );
+    const sequenceTexts = Array.from(edgeSequenceElements).map((el) => (el as Element).textContent);
 
-    expect(sequenceByComponent.get('OrdersController')).toBe('0');
-    expect(sequenceByComponent.get('OrderService')).toBe('1');
-    expect(sequenceByComponent.get('OrderRepository')).toBe('2');
+    expect(sequenceTexts).toEqual(['#1', '#2']);
   });
 
   it('emits nodeSelected with the clicked node id', async () => {

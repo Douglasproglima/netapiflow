@@ -12,6 +12,7 @@ import { zoom, zoomIdentity, D3ZoomEvent } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
 import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation';
 import { ComponentTypeIcon, componentTypeIcon } from '../../../shared/component-type-icon';
+import { formatDurationMicros } from '../../../shared/duration-format';
 
 /**
  * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
@@ -94,6 +95,32 @@ export class FlowGraphComponent implements AfterViewInit {
   }
 
   nodeAriaLabel(node: GraphNode): string {
-    return `${node.component} ${node.operation}, ${this.stateLabel(node)}`;
+    const duration =
+      node.durationMicros === null ? '' : `, ${formatDurationMicros(node.durationMicros)}`;
+    return `${node.component}, ${node.operation}, ${this.stateLabel(node)}${duration}`;
+  }
+
+  nodeDuration(node: GraphNode): string {
+    return node.durationMicros === null ? '' : formatDurationMicros(node.durationMicros);
+  }
+
+  /** Edge color follows the target node's state (guide seção 6.4: "cor do estado do nó de destino"). */
+  nodeStateOf(nodeId: string): string {
+    return this.nodes().find((node) => node.id === nodeId)?.state ?? 'waiting';
+  }
+
+  /** The sequence pill renders on the incoming edge (guide seção 6.4), not inside the node itself. */
+  edgeSequence(edge: GraphEdge): number | null {
+    return this.nodes().find((node) => node.id === edge.targetId)?.sequence ?? null;
+  }
+
+  edgeMidpoint(edge: GraphEdge): { x: number; y: number } {
+    const points = edge.points;
+    if (points.length === 0) {
+      return { x: 0, y: 0 };
+    }
+
+    const mid = points[Math.floor(points.length / 2)];
+    return mid;
   }
 }

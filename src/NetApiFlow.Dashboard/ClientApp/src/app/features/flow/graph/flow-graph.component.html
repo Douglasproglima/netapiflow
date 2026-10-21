@@ -1,7 +1,22 @@
 <svg #svg class="flow-graph" [attr.viewBox]="viewBox()">
   <g #zoomLayer class="flow-graph__zoom-layer">
     @for (edge of edges(); track edge.id) {
-      <path class="flow-graph__edge" [attr.d]="edgePath(edge)"></path>
+      <path
+        class="flow-graph__edge"
+        [attr.data-state]="nodeStateOf(edge.targetId)"
+        [attr.d]="edgePath(edge)"
+      ></path>
+      @if (edgeSequence(edge); as sequence) {
+        <g
+          class="flow-graph__edge-sequence"
+          [attr.transform]="
+            'translate(' + (edgeMidpoint(edge).x - 13) + ' ' + (edgeMidpoint(edge).y - 8) + ')'
+          "
+        >
+          <rect width="26" height="16" rx="8"></rect>
+          <text x="13" y="11.5" text-anchor="middle">#{{ sequence }}</text>
+        </g>
+      }
     }
     @for (node of nodes(); track node.id) {
       <g
@@ -10,30 +25,37 @@
         [attr.data-state]="node.state"
         [attr.transform]="nodeTransform(node)"
         [attr.aria-label]="nodeAriaLabel(node)"
-        role="img"
+        tabindex="0"
+        role="button"
         (click)="onNodeClick(node)"
+        (keydown.enter)="onNodeClick(node)"
       >
+        <rect
+          class="flow-graph__node-ring"
+          x="-4"
+          y="-4"
+          [attr.width]="node.width + 8"
+          [attr.height]="node.height + 8"
+          rx="13"
+        ></rect>
         <rect
           class="flow-graph__node-rect"
           [attr.width]="node.width"
           [attr.height]="node.height"
         ></rect>
-        <text class="flow-graph__node-sequence" x="8" y="14">{{ node.sequence ?? '—' }}</text>
-        <image
-          class="flow-graph__node-state-icon"
-          [attr.href]="stateIconSrc(node)"
-          x="8"
-          y="16"
-          width="12"
-          height="12"
-        ></image>
-        <text class="flow-graph__node-state" x="24" y="27">{{ stateLabel(node) }}</text>
+        <rect
+          class="flow-graph__node-tint"
+          [attr.width]="node.width"
+          [attr.height]="node.height"
+          rx="10"
+        ></rect>
+        <rect class="flow-graph__node-icon-bg" x="10" y="16" width="28" height="28" rx="8"></rect>
         <svg
           class="flow-graph__node-type-icon"
-          x="8"
-          y="34"
-          width="12"
-          height="12"
+          x="16"
+          y="22"
+          width="16"
+          height="16"
           viewBox="0 0 16 16"
           fill="none"
           stroke="currentColor"
@@ -72,8 +94,30 @@
             }
           }
         </svg>
-        <text class="flow-graph__node-component" x="24" y="44">{{ node.component }}</text>
-        <text class="flow-graph__node-operation" x="8" y="58">{{ node.operation }}</text>
+        <text class="flow-graph__node-component" x="48" y="19">{{ node.component }}</text>
+        <image
+          class="flow-graph__node-state-icon"
+          [attr.href]="stateIconSrc(node)"
+          x="48"
+          y="21"
+          width="11"
+          height="11"
+        ></image>
+        <text x="63" y="31">
+          <tspan class="flow-graph__node-state">{{ stateLabel(node) }}</tspan>
+          <tspan class="flow-graph__node-type">&nbsp;&middot; {{ node.type }}</tspan>
+        </text>
+        <text class="flow-graph__node-operation" x="48" y="52">{{ node.operation }}</text>
+        @if (nodeDuration(node); as duration) {
+          <text
+            class="flow-graph__node-duration"
+            [attr.x]="node.width - 10"
+            y="52"
+            text-anchor="end"
+          >
+            {{ duration }}
+          </text>
+        }
       </g>
     }
   </g>

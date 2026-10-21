@@ -36,8 +36,8 @@ export interface GraphBuilderInput {
   blueprintSpans?: FlowSpan[];
 }
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 72;
+const NODE_WIDTH = 184;
+const NODE_HEIGHT = 60;
 const GHOST_ID_PREFIX = 'ghost-';
 
 /** Ghost nodes (inferred from the blueprint, never actually executed) carry this id prefix. */
@@ -69,7 +69,9 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
   }
 
   const layoutGraph = new dagre.graphlib.Graph();
-  layoutGraph.setGraph({ rankdir: 'TB', nodesep: 40, ranksep: 60 });
+  // rankdir 'LR' (guide seção 6.4): a left-to-right flow instead of a single vertical column is
+  // what turns a 10-step trace into a readable graph instead of one tall, scroll-only strip (D4).
+  layoutGraph.setGraph({ rankdir: 'LR', nodesep: 16, ranksep: 44, marginx: 24, marginy: 24 });
   layoutGraph.setDefaultEdgeLabel(() => ({}));
 
   const flatNodes: MergedNode[] = [];

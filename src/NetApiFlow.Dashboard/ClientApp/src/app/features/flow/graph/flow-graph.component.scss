@@ -3,72 +3,254 @@
   height: 100%;
   display: block;
   overflow: visible;
+  background-color: var(--naf-bg);
+  background-image: radial-gradient(var(--naf-grid-dot) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .flow-graph__edge {
   fill: none;
-  stroke: currentColor;
+  stroke: var(--naf-idle);
   stroke-width: 1.5;
-  opacity: 0.6;
+}
+
+.flow-graph__edge[data-state='running'] {
+  stroke: var(--naf-flow-text);
+}
+
+.flow-graph__edge[data-state='completed'] {
+  stroke: var(--naf-success);
+}
+
+.flow-graph__edge[data-state='slow'] {
+  stroke: var(--naf-warning);
+}
+
+.flow-graph__edge[data-state='error'] {
+  stroke: var(--naf-danger);
+}
+
+.flow-graph__edge[data-state='not-executed'] {
+  stroke-dasharray: 4 3;
+}
+
+.flow-graph__edge-sequence {
+  rect {
+    fill: var(--naf-surface-2);
+    stroke: var(--naf-border);
+  }
+
+  text {
+    fill: var(--naf-text-muted);
+    font-family: var(--naf-font-mono);
+    font-size: 10px;
+    font-weight: 500;
+  }
 }
 
 .flow-graph__node {
   cursor: pointer;
 }
 
+.flow-graph__node-ring {
+  fill: none;
+  stroke: var(--naf-focus);
+  stroke-width: 2;
+  opacity: 0;
+}
+
+.flow-graph__node:focus-visible .flow-graph__node-ring,
+.flow-graph__node--selected .flow-graph__node-ring {
+  opacity: 1;
+}
+
+.flow-graph__node:focus {
+  outline: none;
+}
+
 .flow-graph__node-rect {
-  fill: var(--flow-node-fill, #131722);
-  stroke: var(--flow-node-stroke, #232b3e);
+  fill: var(--naf-surface);
+  stroke: var(--naf-border);
   stroke-width: 1;
-  rx: 6;
+  rx: 10;
 }
 
-.flow-graph__node--selected .flow-graph__node-rect {
-  stroke-width: 3;
+// Guide seção 3.6: the node's own background is the state tint, not just its icon block.
+.flow-graph__node-tint {
+  stroke: none;
 }
 
-.flow-graph__node-sequence,
-.flow-graph__node-state,
-.flow-graph__node-component,
-.flow-graph__node-operation {
-  font-size: 11px;
-  fill: currentColor;
-  user-select: none;
+.flow-graph__node-icon-bg {
+  fill: var(--naf-idle-tint);
+  stroke: var(--naf-idle);
+  stroke-width: 0.75;
+}
+
+.flow-graph__node-type-icon {
+  color: var(--naf-idle);
 }
 
 .flow-graph__node-component {
+  font-size: 12px;
   font-weight: 600;
+  fill: var(--naf-text);
+  font-family: var(--naf-font-ui);
+  user-select: none;
+}
+
+.flow-graph__node-state {
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--naf-font-ui);
+  user-select: none;
+}
+
+.flow-graph__node-type {
+  font-size: 11px;
+  font-weight: 500;
+  fill: var(--naf-text-muted);
+  font-family: var(--naf-font-ui);
+  user-select: none;
+}
+
+.flow-graph__node-operation {
+  font-size: 10.5px;
+  fill: var(--naf-text-muted);
+  font-family: var(--naf-font-mono);
+  user-select: none;
+}
+
+.flow-graph__node-duration {
+  font-size: 10.5px;
+  font-weight: 500;
+  fill: var(--naf-text);
+  font-family: var(--naf-font-mono);
+  user-select: none;
 }
 
 // Color reinforces the state but is never the only signal: every state already renders a
 // distinct icon and text label (seção 7.2 do prompt), so this still works with colors removed.
-.flow-graph__node[data-state='waiting'] .flow-graph__node-rect {
-  fill: var(--flow-state-waiting-fill, rgba(100, 116, 139, 0.15));
-  stroke: var(--flow-state-waiting-stroke, #64748b);
+.flow-graph__node[data-state='waiting'] {
+  .flow-graph__node-tint,
+  .flow-graph__node-icon-bg {
+    fill: var(--naf-idle-tint);
+  }
+
+  .flow-graph__node-icon-bg {
+    stroke: var(--naf-idle);
+  }
+
+  .flow-graph__node-type-icon,
+  .flow-graph__node-state {
+    color: var(--naf-idle);
+    fill: var(--naf-idle);
+  }
 }
 
-.flow-graph__node[data-state='running'] .flow-graph__node-rect {
-  fill: var(--flow-state-running-fill, rgba(167, 139, 250, 0.15));
-  stroke: var(--flow-state-running-stroke, #a78bfa);
+.flow-graph__node[data-state='running'] {
+  .flow-graph__node-rect {
+    stroke: rgba(139, 92, 246, 0.55);
+  }
+
+  .flow-graph__node-tint,
+  .flow-graph__node-icon-bg {
+    fill: var(--naf-flow-tint);
+  }
+
+  .flow-graph__node-icon-bg {
+    stroke: var(--naf-flow-text);
+  }
+
+  .flow-graph__node-type-icon,
+  .flow-graph__node-state {
+    color: var(--naf-flow-text);
+    fill: var(--naf-flow-text);
+  }
 }
 
-.flow-graph__node[data-state='completed'] .flow-graph__node-rect {
-  fill: var(--flow-state-completed-fill, rgba(16, 185, 129, 0.15));
-  stroke: var(--flow-state-completed-stroke, #10b981);
+.flow-graph__node[data-state='completed'] {
+  .flow-graph__node-rect {
+    stroke: rgba(16, 185, 129, 0.45);
+  }
+
+  .flow-graph__node-tint,
+  .flow-graph__node-icon-bg {
+    fill: var(--naf-success-tint);
+  }
+
+  .flow-graph__node-icon-bg {
+    stroke: var(--naf-success);
+  }
+
+  .flow-graph__node-type-icon,
+  .flow-graph__node-state {
+    color: var(--naf-success);
+    fill: var(--naf-success);
+  }
 }
 
-.flow-graph__node[data-state='slow'] .flow-graph__node-rect {
-  fill: var(--flow-state-slow-fill, rgba(245, 158, 11, 0.15));
-  stroke: var(--flow-state-slow-stroke, #f59e0b);
+.flow-graph__node[data-state='slow'] {
+  .flow-graph__node-rect {
+    stroke: rgba(245, 158, 11, 0.55);
+  }
+
+  .flow-graph__node-tint,
+  .flow-graph__node-icon-bg {
+    fill: var(--naf-warning-tint);
+  }
+
+  .flow-graph__node-icon-bg {
+    stroke: var(--naf-warning);
+  }
+
+  .flow-graph__node-type-icon,
+  .flow-graph__node-state {
+    color: var(--naf-warning);
+    fill: var(--naf-warning);
+  }
 }
 
-.flow-graph__node[data-state='error'] .flow-graph__node-rect {
-  fill: var(--flow-state-error-fill, rgba(239, 68, 68, 0.15));
-  stroke: var(--flow-state-error-stroke, #ef4444);
+.flow-graph__node[data-state='error'] {
+  .flow-graph__node-rect {
+    stroke: rgba(239, 68, 68, 0.65);
+  }
+
+  .flow-graph__node-tint,
+  .flow-graph__node-icon-bg {
+    fill: var(--naf-danger-tint);
+  }
+
+  .flow-graph__node-icon-bg {
+    stroke: var(--naf-danger);
+  }
+
+  .flow-graph__node-type-icon,
+  .flow-graph__node-state {
+    color: var(--naf-danger);
+    fill: var(--naf-danger);
+  }
 }
 
-.flow-graph__node[data-state='not-executed'] .flow-graph__node-rect {
-  fill: var(--flow-state-not-executed-fill, rgba(100, 116, 139, 0.1));
-  stroke: var(--flow-state-not-executed-stroke, #64748b);
-  stroke-dasharray: 4 3;
+.flow-graph__node[data-state='not-executed'] {
+  opacity: 0.6;
+
+  .flow-graph__node-rect {
+    stroke: var(--naf-idle);
+    stroke-dasharray: 4 3;
+  }
+
+  .flow-graph__node-tint {
+    fill: transparent;
+  }
+
+  .flow-graph__node-icon-bg {
+    fill: transparent;
+    stroke: var(--naf-idle);
+  }
+
+  .flow-graph__node-type-icon,
+  .flow-graph__node-state {
+    color: var(--naf-idle);
+    fill: var(--naf-idle);
+  }
 }
