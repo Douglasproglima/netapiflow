@@ -59,7 +59,9 @@
           @for (trace of page.items; track trace.traceId) {
             <tr>
               <td>{{ trace.traceId }}</td>
-              <td>{{ trace.method }}</td>
+              <td>
+                <span class="naf-tag">{{ trace.method }}</span>
+              </td>
               <td>{{ trace.routeTemplate }}</td>
               <td>{{ trace.status }}</td>
               <td>{{ trace.httpStatus ?? '—' }}</td>

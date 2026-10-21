@@ -63,6 +63,29 @@ html {
   --mat-sys-error: #ef4444;
   --mat-sys-on-error: #ffffff;
 
+  // Card and button recipe from the brand guide (D-31, tarefa 7.0c): radius-lg (18px) cards,
+  // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
+  // just its stock color palette.
+  --mat-card-elevated-container-shape: 18px;
+  --mat-card-outlined-container-shape: 18px;
+  --mat-card-filled-container-shape: 18px;
+  --mat-card-elevated-container-color: rgba(19, 23, 34, 0.72);
+  --mat-card-outlined-container-color: rgba(19, 23, 34, 0.72);
+  --mat-card-outlined-outline-color: var(--mat-sys-outline-variant);
+  --mat-button-filled-container-height: 44px;
+  --mat-button-outlined-container-height: 44px;
+  --mat-button-protected-container-height: 44px;
+  --mat-button-tonal-container-height: 44px;
+  --mat-button-filled-container-shape: 12px;
+  --mat-button-outlined-container-shape: 12px;
+  --mat-button-protected-container-shape: 12px;
+  --mat-button-tonal-container-shape: 12px;
+  --mat-button-filled-label-text-weight: 600;
+  --mat-button-outlined-label-text-weight: 600;
+  --mat-button-protected-label-text-weight: 600;
+  --mat-button-tonal-label-text-weight: 600;
+  --mat-button-text-label-text-weight: 600;
+
   // Node states (`shared/node-state-presentation.ts`, `features/flow/graph`), fallback values
   // already used by `flow-graph.component.scss`/`flow-details-panel.component.scss`.
   --flow-node-fill: #131722;
@@ -98,6 +121,10 @@ html {
     --mat-sys-outline-variant: #64748b;
     --mat-sys-error: #b91c1c;
     --mat-sys-on-error: #ffffff;
+
+    --mat-card-elevated-container-color: rgba(241, 245, 249, 0.72);
+    --mat-card-outlined-container-color: rgba(241, 245, 249, 0.72);
+    --mat-card-outlined-outline-color: #e2e8f0;
 
     --flow-node-fill: #f1f5f9;
     --flow-node-stroke: #64748b;
@@ -136,14 +163,67 @@ body {
   height: 100%;
 }
 
+// Card recipe continued: Material has no system token for blur or padding, so these apply as
+// plain CSS directly on the rendered class. `.mat-mdc-card` is Material's own DOM class, stable
+// across the appearance="outlined"/"raised" variants used throughout the dashboard.
+.mat-mdc-card {
+  padding: 1.75rem; // radius-lg's companion spacing in the brand guide: space-7-ish, rounded to 28px
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+// Heading scale (brand guide, Seção 03), scaled down from the guide's own marketing/hero sizes
+// to what a dense dashboard's panel and section titles actually need.
 h1,
 h2,
 h3 {
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 code,
 .runner__trace-id {
   font-family: 'JetBrains Mono', monospace;
+}
+
+// "Eyebrow"/"tag" label conventions from the brand guide: a small uppercase mono label (eyebrow)
+// and a pill-shaped badge with a border (tag) — used for HTTP method/status indicators instead of
+// plain text, matching the guide's own badge recipe for exactly this kind of short status chip.
+.naf-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mat-sys-tertiary);
+  margin: 0;
+}
+
+.naf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 999px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface-variant);
 }
 /* You can add global styles to this file, and also import other style files */
