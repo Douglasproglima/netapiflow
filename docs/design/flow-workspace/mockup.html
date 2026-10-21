@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetApiFlow · /flow workspace mockup</title>
+<!-- Mockup only. The real dashboard embeds these fonts locally (task 7.0), never from a CDN. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ───────────── Tokens (docs/brand/tokens.md + derived tints, guide section 3) ───────────── */
+:root{
+  --naf-bg:#090B10; --naf-surface:#131722; --naf-surface-2:#1A2030;
+  --naf-border:#232B3E; --naf-border-strong:#2E3850;
+  --naf-text:#F8FAFC; --naf-text-muted:#94A3B8;
+  --naf-flow-fill:#8B5CF6; --naf-flow-text:#A78BFA; --naf-flow-button:#7C3AED;
+  --naf-success:#10B981; --naf-warning:#F59E0B; --naf-danger:#EF4444; --naf-idle:#64748B;
+  --naf-flow-tint:rgba(139,92,246,.14); --naf-success-tint:rgba(16,185,129,.12);
+  --naf-warning-tint:rgba(245,158,11,.12); --naf-danger-tint:rgba(239,68,68,.12);
+  --naf-idle-tint:rgba(100,116,139,.14); --naf-focus:#8B5CF6;
+  --naf-grid-dot:rgba(148,163,184,.12);
+  --f-display:'Plus Jakarta Sans',system-ui,sans-serif;
+  --f-ui:Inter,system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:8px; --r-md:12px; --r-lg:18px;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --naf-bg:#FFFFFF; --naf-surface:#F1F5F9; --naf-surface-2:#E2E8F0;
+  --naf-border:#E2E8F0; --naf-border-strong:#64748B;
+  --naf-text:#0F172A; --naf-text-muted:#475569;
+  --naf-flow-fill:#6D28D9; --naf-flow-text:#6D28D9; --naf-flow-button:#6D28D9;
+  --naf-success:#047857; --naf-warning:#B45309; --naf-danger:#B91C1C; --naf-idle:#64748B;
+  --naf-flow-tint:rgba(109,40,217,.10); --naf-success-tint:rgba(4,120,87,.10);
+  --naf-warning-tint:rgba(180,83,9,.10); --naf-danger-tint:rgba(185,28,28,.10);
+  --naf-idle-tint:rgba(100,116,139,.12); --naf-focus:#6D28D9;
+  --naf-grid-dot:rgba(71,85,105,.14);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --naf-bg:#FFFFFF; --naf-surface:#F1F5F9; --naf-surface-2:#E2E8F0;
+    --naf-border:#E2E8F0; --naf-border-strong:#64748B;
+    --naf-text:#0F172A; --naf-text-muted:#475569;
+    --naf-flow-fill:#6D28D9; --naf-flow-text:#6D28D9; --naf-flow-button:#6D28D9;
+    --naf-success:#047857; --naf-warning:#B45309; --naf-danger:#B91C1C; --naf-idle:#64748B;
+    --naf-flow-tint:rgba(109,40,217,.10); --naf-success-tint:rgba(4,120,87,.10);
+    --naf-warning-tint:rgba(180,83,9,.10); --naf-danger-tint:rgba(185,28,28,.10);
+    --naf-idle-tint:rgba(100,116,139,.12); --naf-focus:#6D28D9;
+    --naf-grid-dot:rgba(71,85,105,.14);
+    color-scheme:light;
+  }
+}
+
+/* ───────────── Base ───────────── */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--naf-bg);color:var(--naf-text);font:400 13px/20px var(--f-ui);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--naf-focus);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--naf-text-muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.roadmap{font:600 10px/14px var(--f-mono);letter-spacing:.06em;color:var(--naf-text-muted);border:1px dashed var(--naf-border-strong);border-radius:999px;padding:1px 7px;white-space:nowrap}
+
+/* ───────────── Shell ───────────── */
+.app{display:grid;grid-template-columns:76px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;border-right:1px solid var(--naf-border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;background:var(--naf-bg);z-index:30}
+.rail-logo{display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:14px;text-decoration:none;color:inherit}
+.rail-logo span{font:500 10px/12px var(--f-mono);color:var(--naf-text-muted)}
+.nav-item{width:60px;min-height:56px;border-radius:var(--r-md);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--naf-text-muted);text-decoration:none;font:500 11px/14px var(--f-ui);border:0;background:none}
+.nav-item svg.i{width:20px;height:20px}
+.nav-item:hover{background:var(--naf-surface-2);color:var(--naf-text)}
+.nav-item[aria-current="page"]{background:var(--naf-flow-tint);color:var(--naf-text)}
+.nav-item[aria-current="page"] svg{color:var(--naf-flow-text)}
+.rail-spacer{flex:1}
+.rail-divider{width:40px;height:1px;background:var(--naf-border);margin:6px 0}
+
+.topbar{position:sticky;top:0;z-index:20;height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--naf-border);background:var(--naf-bg)}
+.topbar h1{margin:0;font:700 18px/24px var(--f-display);letter-spacing:-.01em}
+.topbar .sub{font-size:13px;color:var(--naf-text-muted)}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:16px;flex-wrap:nowrap}
+.meta{display:flex;align-items:center;gap:6px;font:400 12px/16px var(--f-mono);color:var(--naf-text-muted);white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font:600 12px/16px var(--f-ui);white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.live{background:var(--naf-success-tint);color:var(--naf-success)}
+.icon-btn{width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--naf-border);background:var(--naf-surface);display:inline-grid;place-items:center;color:var(--naf-text-muted)}
+.icon-btn:hover{color:var(--naf-text);background:var(--naf-surface-2)}
+.btn{height:36px;padding:0 14px;border-radius:var(--r-sm);border:1px solid var(--naf-border);background:var(--naf-surface);display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13px;white-space:nowrap}
+.btn:hover{background:var(--naf-surface-2)}
+.btn-primary{background:var(--naf-flow-button);border-color:transparent;color:#fff}
+.btn-primary:hover{filter:brightness(1.08);background:var(--naf-flow-button)}
+.hamburger,.open-action{display:none}
+
+/* ───────────── Content grid (guide section 5) ───────────── */
+.content{padding:16px;display:flex;flex-direction:column;gap:16px}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.6fr);gap:16px}
+.work{display:grid;grid-template-columns:300px minmax(0,1fr) 360px;gap:16px;height:clamp(560px,calc(100vh - 56px - 88px - 300px - 64px),760px)}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:300px}
+.card{background:var(--naf-surface);border:1px solid var(--naf-border);border-radius:var(--r-lg);min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.card-h{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 16px;border-bottom:1px solid var(--naf-border);flex:none}
+.card-h h2{margin:0;font:600 14px/20px var(--f-ui);white-space:nowrap}
+.card-h .end{margin-left:auto;display:flex;align-items:center;gap:8px}
+.scroll{overflow:auto;min-height:0}
+.link{color:var(--naf-flow-text);font-weight:600;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.link:hover{text-decoration:underline}
+
+/* Metric cards */
+.metric{background:var(--naf-surface);border:1px solid var(--naf-border);border-radius:var(--r-md);height:88px;padding:16px;display:flex;align-items:center;gap:12px;min-width:0}
+.metric .tile{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none}
+.metric .tile svg.i{width:20px;height:20px}
+.metric .v{font:700 24px/28px var(--f-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.metric .v small{font:600 15px var(--f-display);color:var(--naf-text-muted);margin-left:2px}
+.metric .l{font:500 12px/16px var(--f-ui);color:var(--naf-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric.danger{border-color:rgba(239,68,68,.45)}
+.metric.spark{border-style:dashed;flex-direction:column;align-items:stretch;gap:4px;padding:12px 16px}
+.t-flow{background:var(--naf-flow-tint);color:var(--naf-flow-text)}
+.t-success{background:var(--naf-success-tint);color:var(--naf-success)}
+.t-danger{background:var(--naf-danger-tint);color:var(--naf-danger)}
+.t-warning{background:var(--naf-warning-tint);color:var(--naf-warning)}
+.t-idle{background:var(--naf-idle-tint);color:var(--naf-idle)}
+
+/* HTTP verb badge (guide 3.5) */
+.verb{display:inline-flex;align-items:center;justify-content:center;width:56px;height:22px;border-radius:6px;font:600 11px/16px var(--f-mono);letter-spacing:.04em;flex:none}
+.verb.GET{background:var(--naf-flow-tint);color:var(--naf-flow-text)}
+.verb.POST{background:var(--naf-success-tint);color:var(--naf-success)}
+.verb.PUT,.verb.PATCH{background:var(--naf-warning-tint);color:var(--naf-warning)}
+.verb.DELETE{background:var(--naf-danger-tint);color:var(--naf-danger)}
+
+/* Action panel (guide 6.3) */
+.action .intro{padding:12px 16px 0;font-size:12px;line-height:18px;color:var(--naf-text-muted)}
+.tabs{display:flex;gap:4px;padding:12px 16px 0}
+.tab{height:30px;padding:0 12px;border-radius:var(--r-sm);border:1px solid transparent;background:none;font-weight:600;font-size:12px;color:var(--naf-text-muted);display:inline-flex;align-items:center;gap:6px}
+.tab[aria-selected="true"]{background:var(--naf-flow-tint);color:var(--naf-flow-text)}
+.search{margin:12px 16px 8px;position:relative}
+.search input{width:100%;height:36px;border-radius:var(--r-sm);border:1px solid var(--naf-border);background:var(--naf-bg);padding:0 12px 0 34px;font-size:13px}
+.search svg{position:absolute;left:11px;top:10px;color:var(--naf-text-muted)}
+.ep-list{list-style:none;margin:0;padding:0 8px 8px;max-height:30%;overflow:auto;flex:none}
+.ep{width:100%;min-height:36px;display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;align-items:center;padding:6px 8px;border-radius:10px;border:1px solid transparent;background:none;text-align:left}
+.ep:hover{background:var(--naf-surface-2)}
+.ep[aria-pressed="true"]{background:var(--naf-flow-tint);border-color:rgba(139,92,246,.45)}
+.ep .path{font:400 12px/16px var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hidden-note{margin:0 16px 8px;font-size:11px;line-height:16px;color:var(--naf-text-muted);display:flex;gap:6px;align-items:center}
+.form{border-top:1px solid var(--naf-border);padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;overflow:auto;flex:1;min-height:0}
+.form-h{display:flex;align-items:center;gap:8px;min-width:0}
+.form-h .path{font:500 12px var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font:500 12px/16px var(--f-ui);color:var(--naf-text-muted)}
+.field label b{font:500 11px var(--f-mono);color:var(--naf-text-muted);margin-left:6px;font-weight:400}
+.field input,.field textarea{border:1px solid var(--naf-border);background:var(--naf-bg);border-radius:var(--r-sm);padding:0 12px;height:36px}
+.field textarea{height:96px;padding:10px 12px;font:400 12px/18px var(--f-mono);resize:vertical}
+.send{height:40px;width:100%;justify-content:center}
+
+/* Graph card (guide 6.4) */
+.flow-h .route{font:500 13px var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.flow-h .tid{font:400 12px var(--f-mono);color:var(--naf-text-muted);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.copy{border:0;background:none;color:var(--naf-text-muted);padding:4px;border-radius:6px;display:inline-grid;place-items:center}
+.copy:hover{color:var(--naf-text);background:var(--naf-surface-2)}
+.banner{margin:12px 16px 0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--naf-danger-tint);border:1px solid rgba(239,68,68,.55);color:var(--naf-danger);font:600 13px/18px var(--f-ui);flex:none;text-align:left;width:calc(100% - 32px)}
+.banner .muted{font-weight:500}
+.canvas{position:relative;flex:1;min-height:0;margin-top:12px;border-top:1px solid var(--naf-border);background-color:var(--naf-bg);background-image:radial-gradient(var(--naf-grid-dot) 1px,transparent 1px);background-size:20px 20px;overflow:auto}
+.canvas svg.graph{display:block}
+.node{cursor:pointer}
+.node:focus{outline:none}
+.node:focus-visible .ring,.node.selected .ring{stroke:var(--naf-focus);stroke-width:2;opacity:1}
+.legend,.zoom{position:absolute;bottom:12px;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:var(--naf-surface);border:1px dashed var(--naf-border-strong);font-size:11px;color:var(--naf-text-muted)}
+.legend{left:12px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.legend svg{width:12px;height:12px}
+.zoom{right:12px;gap:6px}
+.zoom button{width:28px;height:28px;border-radius:6px;border:0;background:none;color:var(--naf-text-muted);display:grid;place-items:center}
+.zoom button:hover{background:var(--naf-surface-2);color:var(--naf-text)}
+
+/* Replay bar (guide 6.5) */
+.replay{flex:none;border-top:1px solid var(--naf-border);padding:10px 16px 10px;display:flex;flex-direction:column;gap:6px}
+.replay-row{display:flex;align-items:center;gap:10px}
+.mode{font:600 11px/16px var(--f-mono);letter-spacing:.08em;padding:4px 10px;border-radius:999px;background:var(--naf-flow-tint);color:var(--naf-flow-text);display:inline-flex;align-items:center;gap:6px}
+.play{width:40px;height:40px;border-radius:50%;border:0;background:var(--naf-flow-button);color:#fff;display:grid;place-items:center;flex:none}
+.range{flex:1;min-width:80px;accent-color:var(--naf-flow-fill);height:4px}
+.speed{display:inline-flex;border:1px solid var(--naf-border);border-radius:var(--r-sm);overflow:hidden;flex:none}
+.speed button{height:34px;padding:0 10px;border:0;background:none;font:500 12px var(--f-mono);color:var(--naf-text-muted)}
+.speed button+button{border-left:1px solid var(--naf-border)}
+.speed button[aria-checked="true"]{background:var(--naf-flow-tint);color:var(--naf-flow-text)}
+.replay-status{font:400 12px/16px var(--f-mono);color:var(--naf-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Details (guide 6.6) */
+.details .block{padding:14px 16px;border-bottom:1px solid var(--naf-border)}
+.details .head{display:flex;align-items:center;gap:8px;min-width:0}
+.details .head .route{font:500 14px var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip.err{background:var(--naf-danger-tint);color:var(--naf-danger)}
+.chip.neutral{background:var(--naf-idle-tint);color:var(--naf-text-muted);font-weight:500;font-family:var(--f-mono)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px}
+.kpis div+div{border-left:1px solid var(--naf-border);padding-left:12px}
+.kpis b{display:block;font:700 20px/26px var(--f-display);font-variant-numeric:tabular-nums}
+.kpis span{font-size:12px;color:var(--naf-text-muted)}
+.errbox{margin-top:14px;padding:12px;border-radius:10px;background:var(--naf-danger-tint);border:1px solid rgba(239,68,68,.45)}
+.errbox b{display:flex;align-items:center;gap:8px;color:var(--naf-danger);font:600 13px/18px var(--f-ui)}
+.errbox p{margin:6px 0 0;font-size:13px;line-height:19px}
+dl.meta-dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;margin:0}
+dl.meta-dl dt{font-size:12px;color:var(--naf-text-muted)}
+dl.meta-dl dd{margin:0;font:400 12px/20px var(--f-mono);display:flex;align-items:center;gap:4px;min-width:0}
+dl.meta-dl dd span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.section-label{font:500 11px/16px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--naf-text-muted);padding:14px 16px 6px}
+.section-label em{font-style:normal;text-transform:none;letter-spacing:0;font-family:var(--f-ui)}
+.steps{list-style:none;margin:0;padding:0 8px 12px}
+.step{width:100%;display:grid;grid-template-columns:20px minmax(0,1fr) 92px 60px;gap:8px;align-items:center;height:32px;padding:0 8px;border-radius:8px;border:0;background:none;text-align:left}
+.step:hover{background:var(--naf-surface-2)}
+.step.sel{background:var(--naf-flow-tint)}
+.step .n{font:400 11px var(--f-mono);color:var(--naf-text-muted);text-align:right}
+.step .c{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.step .c svg{width:12px;height:12px}
+.step .c.skipped{color:var(--naf-text-muted)}
+.track{position:relative;height:6px;border-radius:3px;background:var(--naf-surface-2)}
+.track i{position:absolute;top:0;bottom:0;border-radius:3px;min-width:2px}
+.step .d{font:400 12px var(--f-mono);text-align:right;white-space:nowrap}
+
+/* Recent executions (guide 6.7) */
+.runs{list-style:none;margin:0;padding:6px 8px 8px}
+.run{width:100%;display:grid;grid-template-columns:64px 56px minmax(0,1fr) 72px 56px;gap:10px;align-items:center;height:40px;padding:0 10px;border-radius:10px;border:1px solid transparent;background:none;text-align:left}
+.run:hover{background:var(--naf-surface-2)}
+.run.sel{background:var(--naf-flow-tint);border-color:rgba(139,92,246,.4)}
+.run .st{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--f-mono)}
+.run .st svg{width:14px;height:14px}
+.run .r{font:400 12px var(--f-mono);display:flex;align-items:center;gap:8px;min-width:0}
+.run .r span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font:500 11px/16px var(--f-mono);padding:1px 7px;border-radius:999px;background:var(--naf-idle-tint);color:var(--naf-text-muted);white-space:nowrap;flex:none}
+.run .du{font:400 12px var(--f-mono);text-align:right;white-space:nowrap}
+.run .ago{font-size:12px;color:var(--naf-text-muted);text-align:right;white-space:nowrap}
+
+/* Live events (guide 6.8) */
+.events{list-style:none;margin:0;padding:6px 16px 10px;font:400 12px/28px var(--f-mono)}
+.events li{display:grid;grid-template-columns:44px 136px minmax(0,1fr) 72px;gap:10px;white-space:nowrap}
+.events li span{overflow:hidden;text-overflow:ellipsis}
+.ev-flow{color:var(--naf-flow-text)} .ev-ok{color:var(--naf-success)} .ev-fail{color:var(--naf-danger)} .ev-muted{color:var(--naf-text-muted)}
+
+/* Drawer for the action panel below 1600px (guide 5.2) */
+.scrim{display:none}
+@media (max-width:1599px){
+  .work{grid-template-columns:minmax(0,1fr) 360px}
+  .open-action{display:inline-flex}
+  .action{position:fixed;top:56px;bottom:16px;left:92px;width:340px;z-index:40;transform:translateX(calc(-100% - 120px));transition:transform .2s ease;box-shadow:0 0 0 1px var(--naf-border)}
+  .action{visibility:hidden}
+  body.action-open .action{transform:none;visibility:visible}
+  body.action-open .scrim{display:block;position:fixed;inset:56px 0 0 76px;background:rgba(9,11,16,.55);z-index:35}
+  .metrics{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,minmax(0,1fr))}
+  .metric.spark{display:none}
+}
+@media (max-width:1199px){ .work{grid-template-columns:minmax(0,1fr) 320px} .metrics{grid-template-columns:repeat(3,minmax(0,1fr))} .topbar .meta.hide-md{display:none} }
+@media (max-width:1023px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .2s ease}
+  .rail{visibility:hidden}
+  body.rail-open .rail{transform:none;visibility:visible}
+  .hamburger{display:inline-grid}
+  .action{left:16px}
+  body.action-open .scrim{inset:56px 0 0 0}
+  .work{grid-template-columns:minmax(0,1fr);height:auto}
+  .flow{height:560px}
+  .details{max-height:640px}
+  .bottom{grid-template-columns:minmax(0,1fr);height:auto}
+  .bottom .card{height:300px}
+}
+@media (max-width:767px){
+  .content{padding:12px;gap:12px}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .topbar .sub,.topbar .meta{display:none}
+  .open-action span{display:none}
+  .action{left:12px;right:12px;width:auto}
+  .flow{height:520px}
+  .legend{display:none}
+  .flow-h .tid,.flow-h .route{display:none}
+  .flow-h .end .btn span{display:none}
+  .speed button{padding:0 7px}
+  .replay-row{flex-wrap:wrap}
+  .run{grid-template-columns:56px 56px minmax(0,1fr);height:auto;padding:8px 10px;row-gap:2px}
+  .run .du,.run .ago{grid-column:auto;text-align:left}
+  .events li{grid-template-columns:40px minmax(0,1fr);line-height:20px;padding:4px 0}
+  .events li span:nth-child(3){grid-column:1 / -1}
+  .events li span:nth-child(4){display:none}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+@keyframes pulse{50%{opacity:.45}}
+.pulse{animation:pulse 1.2s ease-in-out infinite}
+</style>
+</head>
+<body>
+
+<!-- ───────────── Icon sprite ───────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Component type icons, 16x16 (guide section 4) -->
+  <symbol id="t-Endpoint" viewBox="0 0 16 16"><path d="M1.5 8H8.5M6 5.5 8.5 8 6 10.5"/><circle cx="12" cy="8" r="2.5"/></symbol>
+  <symbol id="t-Controller" viewBox="0 0 16 16"><path d="M8 1.8 14.2 8 8 14.2 1.8 8Z"/><circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="t-UseCase" viewBox="0 0 16 16"><circle cx="3.5" cy="12" r="2"/><circle cx="12.5" cy="4" r="2"/><path d="M4.8 10.3C6 7 8 5.2 10.4 4.5"/></symbol>
+  <symbol id="t-Service" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.4"/><path d="M8 1.8v2.1M8 12.1v2.1M1.8 8h2.1M12.1 8h2.1M3.6 3.6l1.5 1.5M10.9 10.9l1.5 1.5M3.6 12.4l1.5-1.5M10.9 5.1l1.5-1.5"/></symbol>
+  <symbol id="t-Repository" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M5 6h6M5 8.5h6M5 11h3.5"/></symbol>
+  <symbol id="t-Database" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="5.5" ry="2"/><path d="M2.5 4v8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2V4M2.5 8c0 1.1 2.5 2 5.5 2s5.5-.9 5.5-2"/></symbol>
+  <symbol id="t-Http" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><ellipse cx="8" cy="8" rx="2.6" ry="6"/><path d="M2 8h12"/></symbol>
+  <symbol id="t-Custom" viewBox="0 0 16 16"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3"/><rect x="6" y="6" width="4" height="4" rx="1"/></symbol>
+  <!-- Node state icons, 16x16 (docs/brand/node-states) -->
+  <symbol id="s-waiting" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 5v3.2l2 1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="s-running" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="1.8"/><path d="M8 1.8A6.2 6.2 0 0 1 14.2 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="s-completed" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.8 8.2 7 10.3l4.2-4.5" fill="none" style="stroke:var(--naf-bg)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="s-slow" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 4.2v4.2l2.6 1.4" fill="none" style="stroke:var(--naf-bg)" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="s-error" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" fill="none" style="stroke:var(--naf-bg)" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="s-skipped" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2.2"/><path d="M4.5 11.5l7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <!-- UI icons, 24x24 -->
+  <symbol id="u-flow" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h3.5M11 12 16.6 7.2M11 12l5.6 4.8"/></symbol>
+  <symbol id="u-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3.5 4v4.5H8"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="u-components" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+  <symbol id="u-runner" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5Z"/></symbol>
+  <symbol id="u-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></symbol>
+  <symbol id="u-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="u-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="u-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="u-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+  <symbol id="u-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5Z" fill="currentColor"/></symbol>
+  <symbol id="u-restart" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/></symbol>
+  <symbol id="u-prev" viewBox="0 0 24 24"><path d="M6.5 5.5v13M18 6l-8.5 6 8.5 6Z"/></symbol>
+  <symbol id="u-next" viewBox="0 0 24 24"><path d="M17.5 5.5v13M6 6l8.5 6L6 18Z"/></symbol>
+  <symbol id="u-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="u-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="u-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
+  <symbol id="u-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="u-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="u-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.4v.1"/></symbol>
+  <symbol id="u-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c5 0 8.5 4.5 9.5 6a15 15 0 0 1-2.7 3.2M6.5 7.6C4.4 9 3 11 2.5 12c1 1.5 4.5 6 9.5 6 1.6 0 3-.4 4.3-1"/></symbol>
+  <!-- Metric icons, 24x24 -->
+  <symbol id="m-traces" viewBox="0 0 24 24"><path d="M12 3.5 21 8l-9 4.5L3 8Z"/><path d="M3 12l9 4.5 9-4.5M3 16l9 4.5 9-4.5"/></symbol>
+  <symbol id="m-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.2 2.6 2.6 5-5.4"/></symbol>
+  <symbol id="m-err" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m9 9 6 6M15 9l-6 6"/></symbol>
+  <symbol id="m-avg" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.5 1.5M10 3.5h4M12 3.5v3"/></symbol>
+  <symbol id="m-max" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 16.5V10.5M9.5 13l2.5-2.5 2.5 2.5M10 3.5h4M12 3.5v3"/></symbol>
+  <symbol id="m-steps" viewBox="0 0 24 24"><rect x="3" y="3.5" width="6" height="5" rx="1.5"/><rect x="9" y="9.5" width="6" height="5" rx="1.5"/><rect x="15" y="15.5" width="6" height="5" rx="1.5"/><path d="M6 8.5V12h3M12 14.5V18h3"/></symbol>
+</svg>
+
+<div class="app">
+  <!-- ───────────── Rail (guide 6.1) ───────────── -->
+  <nav class="rail" aria-label="Main">
+    <a class="rail-logo" href="#" aria-label="NetApiFlow, version 0.1.0">
+      <svg width="36" height="36" viewBox="0 0 200 200" aria-hidden="true"><rect x="6" y="6" width="188" height="188" rx="44" fill="var(--naf-surface)" stroke="var(--naf-border)" stroke-width="5"/><path d="M56 144V56l88 88V56" fill="none" stroke="var(--naf-flow-fill)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="144" r="18" fill="var(--naf-flow-fill)"/><circle cx="144" cy="56" r="18" fill="var(--naf-success)"/></svg>
+      <span>v0.1.0</span>
+    </a>
+    <a class="nav-item" href="#" aria-current="page"><svg class="i"><use href="#u-flow"/></svg>Flow</a>
+    <a class="nav-item" href="#"><svg class="i"><use href="#u-history"/></svg>History</a>
+    <a class="nav-item" href="#"><svg class="i"><use href="#u-components"/></svg>Components</a>
+    <a class="nav-item" href="#"><svg class="i"><use href="#u-runner"/></svg>Runner</a>
+    <div class="rail-spacer"></div>
+    <div class="rail-divider"></div>
+    <button class="nav-item" type="button"><svg class="i"><use href="#u-info"/></svg>About</button>
+  </nav>
+
+  <div>
+    <!-- ───────────── Topbar (guide 6.1) ───────────── -->
+    <header class="topbar">
+      <button class="icon-btn hamburger" type="button" aria-label="Open navigation" onclick="document.body.classList.toggle('rail-open')"><svg class="i" style="width:20px;height:20px"><use href="#u-menu"/></svg></button>
+      <h1>Flow</h1>
+      <span class="sub">Live request paths</span>
+      <div class="right">
+        <button class="btn open-action" type="button" onclick="document.body.classList.toggle('action-open')"><svg class="i"><use href="#u-runner"/></svg><span>Try an endpoint</span></button>
+        <span class="meta hide-md"><svg class="i t-flow" style="background:none"><use href="#s-running"/></svg>1 in progress</span>
+        <span class="meta hide-md"><svg class="i" style="color:var(--naf-warning)"><use href="#s-slow"/></svg>slow threshold 250 ms</span>
+        <span class="chip live"><span class="dot"></span>Live</span>
+        <button class="icon-btn" type="button" aria-label="Toggle theme (mockup only)" title="Toggle theme (mockup only)" onclick="toggleTheme()"><svg class="i"><use href="#u-sun"/></svg></button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- ───────────── Metric cards (guide 6.2) ───────────── -->
+      <section class="metrics" aria-label="Summary metrics">
+        <div class="metric"><div class="tile t-flow"><svg class="i"><use href="#m-traces"/></svg></div><div><div class="v">24</div><div class="l">Traces</div></div></div>
+        <div class="metric"><div class="tile t-success"><svg class="i"><use href="#m-ok"/></svg></div><div><div class="v">19</div><div class="l">Successful</div></div></div>
+        <div class="metric danger"><div class="tile t-danger"><svg class="i"><use href="#m-err"/></svg></div><div><div class="v" style="color:var(--naf-danger)">5</div><div class="l">Errors</div></div></div>
+        <div class="metric"><div class="tile t-warning"><svg class="i"><use href="#m-avg"/></svg></div><div><div class="v">312.7<small>ms</small></div><div class="l">Avg latency</div></div></div>
+        <div class="metric"><div class="tile t-warning"><svg class="i"><use href="#m-max"/></svg></div><div><div class="v">1.52<small>s</small></div><div class="l">Max latency</div></div></div>
+        <div class="metric"><div class="tile t-flow"><svg class="i"><use href="#m-steps"/></svg></div><div><div class="v">214</div><div class="l">Steps executed</div></div></div>
+        <div class="metric spark" aria-label="Latency sparkline, roadmap 0.2.0">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="l">Latency · last 24</span><span class="roadmap">0.2.0 · D-32</span></div>
+          <svg viewBox="0 0 220 40" preserveAspectRatio="none" style="width:100%;height:40px" aria-hidden="true"><path d="M0 34 L18 33 L30 26 L42 33 L60 34 L76 31 L90 12 L100 33 L120 34 L134 30 L146 33 L160 6 L172 33 L190 34 L206 30 L220 33" fill="none" stroke="var(--naf-flow-fill)" stroke-width="1.75" stroke-linejoin="round"/><path d="M0 12H220" stroke="var(--naf-warning)" stroke-dasharray="3 3" stroke-width="1"/></svg>
+        </div>
+      </section>
+
+      <!-- ───────────── Work row (guide 5.1) ───────────── -->
+      <section class="work">
+        <!-- Action panel (guide 6.3) -->
+        <aside class="card action" aria-label="Try an endpoint">
+          <div class="card-h"><h2>Try an endpoint</h2><span class="end"><span class="roadmap" title="Scenarios tab is roadmap D-32">tabs 0.2.0</span></span></div>
+          <p class="intro" style="margin:0">Sends a real request to your API. The graph follows it live.</p>
+          <div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">Custom</button><button class="tab" role="tab" aria-selected="false">Scenarios</button></div>
+          <div class="search"><svg class="i"><use href="#u-search"/></svg><label class="sr" for="ep-filter">Filter endpoints</label><input id="ep-filter" placeholder="Filter by route"></div>
+          <ul class="ep-list" id="ep-list"></ul>
+          <p class="hidden-note"><svg class="i"><use href="#u-eye-off"/></svg>3 dashboard routes (/flow/api/*) hidden</p>
+          <form class="form" onsubmit="return false">
+            <div class="form-h"><span class="verb POST">POST</span><span class="path">/api/orders/{id:int}/confirm</span></div>
+            <div class="field"><label for="f-id">id<b>path · int</b></label><input id="f-id" value="42" class="mono"></div>
+            <div class="field"><label for="f-body">body<b>application/json</b></label><textarea id="f-body">{
+  "paymentMethod": "card"
+}</textarea></div>
+            <button class="btn btn-primary send" type="submit"><svg class="i"><use href="#u-play"/></svg>Send request</button>
+          </form>
+        </aside>
+
+        <!-- Graph card (guide 6.4 + 6.5) -->
+        <section class="card flow" aria-label="Request path">
+          <div class="card-h flow-h">
+            <h2>Request path</h2>
+            <span class="verb POST">POST</span>
+            <span class="route">/api/orders/{id:int}/confirm</span>
+            <span class="tid">7f3ac21e…<button class="copy" type="button" aria-label="Copy trace id"><svg class="i" style="width:14px;height:14px"><use href="#u-copy"/></svg></button></span>
+            <span class="end"><button class="btn" type="button" style="height:32px"><svg class="i"><use href="#u-back"/></svg><span>Back to live</span></button></span>
+          </div>
+          <button class="banner" type="button" onclick="selectNode('n7')"><svg class="i" style="width:18px;height:18px"><use href="#u-alert"/></svg>Error origin: InventoryService<span class="muted">· HTTP 409 · 1.28 s</span></button>
+          <div class="canvas" id="canvas">
+            <svg class="graph" id="graph" role="group" aria-label="Request flow graph"></svg>
+            <div class="legend" aria-label="Legend, roadmap 0.2.0">
+              <span style="color:var(--naf-idle)"><svg><use href="#s-waiting"/></svg><b class="muted" style="font-weight:500">Waiting</b></span>
+              <span style="color:var(--naf-flow-text)"><svg><use href="#s-running"/></svg><b class="muted" style="font-weight:500">Running</b></span>
+              <span style="color:var(--naf-success)"><svg><use href="#s-completed"/></svg><b class="muted" style="font-weight:500">Completed</b></span>
+              <span style="color:var(--naf-warning)"><svg><use href="#s-slow"/></svg><b class="muted" style="font-weight:500">Slow</b></span>
+              <span style="color:var(--naf-danger)"><svg><use href="#s-error"/></svg><b class="muted" style="font-weight:500">Error</b></span>
+              <span style="color:var(--naf-idle)"><svg><use href="#s-skipped"/></svg><b class="muted" style="font-weight:500">Not executed</b></span>
+              <span class="roadmap">0.2.0</span>
+            </div>
+            <div class="zoom" aria-label="Zoom, roadmap 0.2.0">
+              <button type="button" aria-label="Zoom in"><svg class="i"><use href="#u-plus"/></svg></button>
+              <span class="mono" id="zoom-pct">100%</span>
+              <button type="button" aria-label="Zoom out"><svg class="i"><use href="#u-minus"/></svg></button>
+              <button type="button" aria-label="Fit to screen"><svg class="i"><use href="#u-fit"/></svg></button>
+              <span class="roadmap">0.2.0</span>
+            </div>
+          </div>
+          <div class="replay">
+            <div class="replay-row">
+              <span class="mode">REPLAY</span>
+              <button class="icon-btn" type="button" aria-label="Restart"><svg class="i"><use href="#u-restart"/></svg></button>
+              <button class="icon-btn" type="button" aria-label="Previous step"><svg class="i"><use href="#u-prev"/></svg></button>
+              <button class="play" type="button" aria-label="Play"><svg class="i" style="width:18px;height:18px;stroke:none"><use href="#u-play"/></svg></button>
+              <button class="icon-btn" type="button" aria-label="Next step"><svg class="i"><use href="#u-next"/></svg></button>
+              <input class="range" type="range" min="0" max="10" value="10" aria-label="Replay position">
+              <div class="speed" role="radiogroup" aria-label="Playback speed">
+                <button role="radio" aria-checked="false">0.25×</button><button role="radio" aria-checked="false">0.5×</button><button role="radio" aria-checked="true">1×</button><button role="radio" aria-checked="false">2×</button><button role="radio" aria-checked="false">4×</button>
+              </div>
+            </div>
+            <div class="replay-status">Step 10/10 · finished with HTTP 409 · replaying recorded timestamps at 1×</div>
+          </div>
+        </section>
+
+        <!-- Details (guide 6.6) -->
+        <aside class="card details" aria-label="Trace details">
+          <div class="scroll">
+            <div class="block">
+              <div class="head"><span class="verb POST">POST</span><span class="route">/api/orders/{id:int}/confirm</span></div>
+              <div class="chips"><span class="chip err"><svg class="i" style="width:14px;height:14px"><use href="#s-error"/></svg>HTTP 409</span><span class="chip neutral">tenant: acme</span></div>
+              <div class="kpis">
+                <div><b>1.28 s</b><span>Total</span></div>
+                <div><b>7</b><span>Executed</span></div>
+                <div><b>3</b><span>Not executed</span></div>
+              </div>
+              <div class="errbox">
+                <b><svg class="i" style="width:16px;height:16px"><use href="#u-alert"/></svg>Failed at InventoryService.ReserveAsync()</b>
+                <p>StockReservationException: Reservation window expired for order 42.</p>
+              </div>
+            </div>
+            <div class="block">
+              <dl class="meta-dl">
+                <dt>Trace ID</dt><dd><span>7f3ac21e9b4d4c0e8a1f5d2bc21e0a77</span><button class="copy" type="button" aria-label="Copy trace id"><svg class="i" style="width:14px;height:14px"><use href="#u-copy"/></svg></button></dd>
+                <dt>Started</dt><dd title="2026-10-20 17:05:37.821 local"><span>17:05:37.821</span></dd>
+                <dt>Finished</dt><dd title="2026-10-20 17:05:39.101 local"><span>17:05:39.101</span></dd>
+              </dl>
+            </div>
+            <div class="section-label">Steps · <em>select one to inspect</em></div>
+            <ul class="steps" id="steps"></ul>
+          </div>
+        </aside>
+      </section>
+
+      <!-- ───────────── Bottom row (guide 6.7 + 6.8) ───────────── -->
+      <section class="bottom">
+        <section class="card" aria-label="Recent executions">
+          <div class="card-h"><h2>Recent executions</h2><span class="end"><a class="link" href="#">View all<svg class="i" style="width:14px;height:14px"><use href="#u-arrow"/></svg></a></span></div>
+          <div class="scroll"><ul class="runs" id="runs"></ul></div>
+        </section>
+        <section class="card" aria-label="Live events">
+          <div class="card-h"><h2>Live events</h2><span class="end"><span class="chip live"><span class="dot"></span>Connected</span></span></div>
+          <div class="scroll"><ul class="events" id="events" role="log" aria-live="off"></ul></div>
+        </section>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="scrim" onclick="document.body.classList.remove('action-open')"></div>
+
+<script>
+/* Illustrative data only. Shapes mirror docs/plano/contratos.md (FlowSpan, FlowTraceSummary, FlowEvent). */
+const STATE = {
+  completed:{c:'var(--naf-success)', tint:'var(--naf-success-tint)', b:'rgba(16,185,129,.45)', label:'Completed'},
+  slow:{c:'var(--naf-warning)', tint:'var(--naf-warning-tint)', b:'rgba(245,158,11,.55)', label:'Slow'},
+  error:{c:'var(--naf-danger)', tint:'var(--naf-danger-tint)', b:'rgba(239,68,68,.65)', label:'Error'},
+  running:{c:'var(--naf-flow-text)', tint:'var(--naf-flow-tint)', b:'rgba(139,92,246,.55)', label:'Running'},
+  waiting:{c:'var(--naf-idle)', tint:'var(--naf-surface)', b:'var(--naf-border)', label:'Waiting'},
+  skipped:{c:'var(--naf-idle)', tint:'transparent', b:'var(--naf-idle)', label:'Not executed'}
+};
+const W = 200, H = 60, COL = 240, X0 = 24;
+const nodes = [
+  {id:'n1', seq:1, comp:'OrdersController', op:'Confirm()', type:'Controller', st:'error', dur:'1.28 s', col:0, y:138},
+  {id:'n2', seq:2, comp:'ConfirmOrderHandler', op:'Handle()', type:'UseCase', st:'error', dur:'1.27 s', col:1, y:138, parent:'n1'},
+  {id:'n3', seq:3, comp:'OrderService', op:'GetAsync()', type:'Service', st:'completed', dur:'2.20 ms', col:2, y:24, parent:'n2'},
+  {id:'n4', seq:4, comp:'OrderRepository', op:'FindAsync()', type:'Repository', st:'completed', dur:'1.90 ms', col:3, y:24, parent:'n3'},
+  {id:'n5', seq:5, comp:'PostgreSQL', op:'SELECT orders', type:'Database', st:'completed', dur:'1.18 ms', col:4, y:24, parent:'n4'},
+  {id:'n6', seq:6, comp:'PaymentService', op:'ChargeAsync()', type:'Http', st:'slow', dur:'842 ms', col:2, y:100, parent:'n2'},
+  {id:'n7', seq:7, comp:'InventoryService', op:'ReserveAsync()', type:'Service', st:'error', origin:true, dur:'427 ms', col:2, y:176, parent:'n2'},
+  {id:'n8', seq:8, comp:'InventoryRepository', op:'UpdateStockAsync()', type:'Repository', st:'skipped', dur:'n/a', col:3, y:176, parent:'n7'},
+  {id:'n9', seq:9, comp:'PostgreSQL', op:'UPDATE stock', type:'Database', st:'skipped', dur:'n/a', col:4, y:176, parent:'n8'},
+  {id:'n10', seq:10, comp:'NotificationService', op:'SendAsync()', type:'Custom', st:'skipped', dur:'n/a', col:2, y:252, parent:'n2'}
+];
+const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+const cut = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+const esc = s => s.replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+
+function renderGraph(){
+  const svg = document.getElementById('graph');
+  const gw = X0*2 + COL*4 + W, gh = 336;
+  const avail = document.getElementById('canvas').clientWidth - 8;
+  // Fit to the card, clamped between 0.85 and 1 so node text stays legible; beyond that, pan (guide 6.4).
+  const scale = Math.max(0.85, Math.min(1, avail / gw));
+  document.getElementById('zoom-pct').textContent = Math.round(scale*100) + '%';
+  svg.setAttribute('viewBox', `0 0 ${gw} ${gh}`);
+  svg.setAttribute('width', gw*scale); svg.setAttribute('height', gh*scale);
+  let edges = '', labels = '', body = '';
+  for (const n of nodes){
+    n.x = X0 + n.col*COL;
+    if (!n.parent) continue;
+    const p = byId[n.parent], s = STATE[n.st];
+    const x1 = p.x + W, y1 = p.y + H/2, x2 = n.x - 6, y2 = n.y + H/2, mx = (x1 + x2)/2;
+    const dash = n.st === 'skipped' ? ' stroke-dasharray="4 3"' : '';
+    edges += `<path d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}" fill="none" style="stroke:${s.c}" stroke-width="1.5"${dash} marker-end="url(#ah-${n.st})"/>`;
+    const lx = mx, ly = (y1 + y2)/2;
+    labels += `<g transform="translate(${lx-13} ${ly-8})"><rect width="26" height="16" rx="8" style="fill:var(--naf-surface-2);stroke:var(--naf-border)"/><text x="13" y="11.5" text-anchor="middle" style="fill:var(--naf-text-muted);font:500 10px var(--f-mono)">#${n.seq}</text></g>`;
+  }
+  for (const n of nodes){
+    const s = STATE[n.st], skipped = n.st === 'skipped';
+    const dash = skipped ? ' stroke-dasharray="4 3"' : '';
+    const bw = n.origin ? 2 : 1;
+    body += `<g class="node" id="${n.id}" tabindex="0" role="button" aria-label="${esc(n.comp)}, ${esc(n.op)}, ${s.label}, ${n.dur}" transform="translate(${n.x} ${n.y})" onclick="selectNode('${n.id}')" onkeydown="if(event.key==='Enter')selectNode('${n.id}')">
+      <rect class="ring" x="-4" y="-4" width="${W+8}" height="${H+8}" rx="13" fill="none" opacity="0"/>
+      <rect width="${W}" height="${H}" rx="10" style="fill:var(--naf-surface);stroke:${s.b}" stroke-width="${bw}"${dash}/>
+      <rect width="${W}" height="${H}" rx="10" style="fill:${s.tint}" stroke="none"/>
+      <g opacity="${skipped ? .6 : 1}">
+        <rect x="10" y="16" width="28" height="28" rx="8" style="fill:${skipped ? 'var(--naf-idle-tint)' : s.tint};stroke:${s.b}" stroke-width=".75"/>
+        <svg x="16" y="22" width="16" height="16" style="color:${s.c}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#t-${n.type}"/></svg>
+        <text x="48" y="19" style="fill:var(--naf-text);font:600 12px var(--f-ui)">${esc(cut(n.comp,20))}</text>
+        <svg x="48" y="27" width="11" height="11" style="color:${s.c}"><use href="#s-${n.st}"/></svg>
+        <text x="63" y="36" style="font:500 11px var(--f-ui)"><tspan style="fill:${s.c}">${s.label}</tspan>${(s.label + n.type).length <= 20 ? `<tspan style="fill:var(--naf-text-muted)"> · ${n.type}</tspan>` : ''}</text>
+        <text x="48" y="52" style="fill:var(--naf-text-muted);font:400 10.5px var(--f-mono)">${esc(cut(n.op,15))}</text>
+        <text x="${W-10}" y="52" text-anchor="end" style="fill:var(--naf-text);font:500 10.5px var(--f-mono)">${skipped ? '' : n.dur}</text>
+      </g>
+    </g>`;
+  }
+  const marker = st => `<marker id="ah-${st}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 8 4 0 8Z" style="fill:${STATE[st].c}"/></marker>`;
+  svg.innerHTML = `<defs>${Object.keys(STATE).map(marker).join('')}</defs>${edges}${labels}${body}`;
+}
+
+/* Execution order with waterfall offsets: left/width are % of the trace duration. */
+const steps = [
+  ['n1',0,100],['n2',0.3,99.2],['n3',0.6,0.4],['n4',0.7,0.3],['n5',0.75,0.2],
+  ['n6',1.2,65.8],['n7',67.1,33.3],['n8',null],['n9',null],['n10',null]
+];
+function renderSteps(){
+  document.getElementById('steps').innerHTML = steps.map(([id,l,w]) => {
+    const n = byId[id], s = STATE[n.st], skipped = l === null;
+    const bar = skipped ? '' : `<i style="left:${l}%;width:${w}%;background:${s.c}"></i>`;
+    return `<li><button class="step" type="button" data-id="${id}" onclick="selectNode('${id}')">
+      <span class="n">${n.seq}</span>
+      <span class="c${skipped ? ' skipped' : ''}"><svg style="color:${s.c}"><use href="#s-${n.st}"/></svg><span style="overflow:hidden;text-overflow:ellipsis">${esc(n.comp)}</span></span>
+      <span class="track"${skipped ? ' style="background:none;border:1px dashed var(--naf-border)"' : ''}>${bar}</span>
+      <span class="d"${skipped ? ' style="color:var(--naf-text-muted)"' : ''}>${skipped ? 'skipped' : n.dur}</span>
+    </button></li>`;
+  }).join('');
+}
+
+const endpoints = [
+  ['GET','/api/orders/{id:int}'],['POST','/api/orders/{id:int}/confirm'],['GET','/api/orders/{id:int}/slow'],
+  ['GET','/api/orders/parallel'],['PUT','/api/orders/{id:int}'],['PATCH','/api/orders/{id:int}/address'],
+  ['DELETE','/api/orders/{id:int}'],['GET','/api/customers/{customerId:guid}/orders/history']
+];
+function renderEndpoints(){
+  document.getElementById('ep-list').innerHTML = endpoints.map(([m,p],i) =>
+    `<li><button class="ep" type="button" aria-pressed="${i===1}" title="${m} ${p}"><span class="verb ${m}">${m}</span><span class="path">${p}</span></button></li>`).join('');
+}
+
+const runs = [
+  ['error','409','POST','/api/orders/{id:int}/confirm','acme','1.28 s','now',true,'warn'],
+  ['completed','200','GET','/api/orders/{id:int}',null,'8.60 ms','12 s'],
+  ['completed','200','GET','/api/orders/{id:int}/slow',null,'1.52 s','40 s',false,'warn'],
+  ['completed','200','GET','/api/orders/parallel',null,'133.4 ms','1 min'],
+  ['completed','204','DELETE','/api/orders/{id:int}',null,'12.1 ms','2 min'],
+  ['completed','200','PUT','/api/orders/{id:int}','acme','91.0 ms','3 min'],
+  ['error','500','GET','/api/customers/{customerId:guid}/orders/history',null,'64.3 ms','5 min']
+];
+function renderRuns(){
+  document.getElementById('runs').innerHTML = runs.map(([st,code,m,r,tag,du,ago,sel,warn]) => {
+    const s = STATE[st];
+    return `<li><button class="run${sel ? ' sel' : ''}" type="button">
+      <span class="st" style="color:${s.c}"><svg><use href="#s-${st}"/></svg>${code}</span>
+      <span class="verb ${m}">${m}</span>
+      <span class="r"><span>${r}</span>${tag ? `<em class="tag" style="font-style:normal">${tag}</em>` : ''}</span>
+      <span class="du"${warn ? ' style="color:var(--naf-warning)"' : ''}>${du}</span>
+      <span class="ago">${ago}</span>
+    </button></li>`;
+  }).join('');
+}
+
+const events = [
+  [118,'TracePersisted','ev-muted','POST /api/orders/{id:int}/confirm · 409'],
+  [117,'TraceCompleted','ev-ok','POST /api/orders/{id:int}/confirm → 409 · 1.28 s'],
+  [116,'SpanFailed','ev-fail','OrdersController.Confirm · 1.28 s'],
+  [115,'SpanFailed','ev-fail','ConfirmOrderHandler.Handle · 1.27 s'],
+  [114,'SpanFailed','ev-fail','InventoryService.ReserveAsync · 427 ms'],
+  [113,'SpanStarted','ev-flow','InventoryService.ReserveAsync'],
+  [112,'SpanCompleted','ev-ok','PaymentService.ChargeAsync · 842 ms'],
+  [111,'SpanStarted','ev-flow','PaymentService.ChargeAsync'],
+  [110,'SpanCompleted','ev-ok','PostgreSQL SELECT orders · 1.18 ms'],
+  [109,'SpanCompleted','ev-ok','OrderRepository.FindAsync · 1.90 ms'],
+  [108,'SpanStarted','ev-flow','PostgreSQL SELECT orders'],
+  [107,'TraceStarted','ev-flow','POST /api/orders/{id:int}/confirm']
+];
+function renderEvents(){
+  document.getElementById('events').innerHTML = events.map(([id,t,cls,d]) =>
+    `<li><span class="ev-muted">#${id}</span><span class="${cls}">${t}</span><span>${d}</span><span class="ev-muted">7f3ac21e</span></li>`).join('');
+}
+
+function selectNode(id){
+  document.querySelectorAll('.node').forEach(g => g.classList.toggle('selected', g.id === id));
+  document.querySelectorAll('.step').forEach(b => b.classList.toggle('sel', b.dataset.id === id));
+}
+function toggleTheme(){
+  const r = document.documentElement;
+  const dark = r.dataset.theme ? r.dataset.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark';
+}
+renderGraph(); addEventListener('resize', renderGraph); renderSteps(); renderEndpoints(); renderRuns(); renderEvents(); selectNode('n7');
+</script>
+</body>
+</html>
