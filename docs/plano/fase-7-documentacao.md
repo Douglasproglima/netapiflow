@@ -156,6 +156,14 @@ verbo) com captura de tela comparando antes/depois em pelo menos duas larguras d
 e tela estreita) ao lado do HTML do guia, revisada pela Planejadora antes de prosseguir para a
 tarefa 7.2 (GIF).
 
+**Nota à parte, fora do escopo de 7.0c:** a Executora já implementou e a Planejadora já verificou o
+roadmap pós `0.1.0` de i18n e tema manual (ADR-0011, D-35, D-36), mais um pedido de compactação do
+bundle Angular, feito à parte. Achado e fechado nesse meio tempo: D-37 (alternador de tema não
+funcionava) e D-38 (fechamento de D-37, mais o resultado da compactação). Nenhum dos dois é
+critério de aceite desta tarefa nem da Fase 7: continuam roadmap pós `0.1.0` por classificação
+explícita do usuário (D-35, D-36). Registrado aqui só para não parecer trabalho esquecido numa
+leitura futura deste arquivo.
+
 ### 7.1: Benchmark de overhead (risco R-05)
 
 Medir o custo de ter o NetApiFlow ligado vs. desligado (`Enabled = false`) vs. ausente, num
