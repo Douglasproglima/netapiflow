@@ -140,7 +140,22 @@
         } @else if (liveTracesLoading()) {
           <p class="flow-workspace__status" role="status">Loading…</p>
         } @else if (liveTraces().length === 0) {
-          <p class="flow-workspace__status">No request is currently in progress.</p>
+          <div class="flow-workspace__empty">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              width="28"
+              height="28"
+            >
+              <path d="M4 12 H9 L11 6 L14 18 L16 12 H20" />
+            </svg>
+            <p>No request is currently in progress.</p>
+            <p class="flow-workspace__empty-hint">
+              Send a request from "Try an endpoint" or call your API directly.
+            </p>
+          </div>
         } @else {
           <ul class="flow-workspace__live-list">
             @for (summary of liveTraces(); track summary.traceId) {

@@ -260,6 +260,39 @@
   margin-top: 0.75rem;
   border-top: 1px solid var(--naf-border);
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+
+  // The graph is the only child that needs to actually fill the canvas; the empty-state message
+  // and the live-request list size to their own content and let flex's default auto-margins
+  // (set on .flow-workspace__empty itself) center them instead.
+  > app-flow-graph {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.flow-workspace__empty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--naf-text-muted);
+
+  svg {
+    opacity: 0.6;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.flow-workspace__empty-hint {
+  font-size: 0.8125rem;
 }
 
 .flow-workspace__replay {
