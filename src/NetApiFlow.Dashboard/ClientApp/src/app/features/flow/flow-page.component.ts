@@ -2,10 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { ApiService } from '../../core/api.service';
 import { FlowTraceSummary, SpanDetail } from '../../core/models';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
@@ -18,6 +15,9 @@ import { EventFeedComponent } from './event-feed/event-feed.component';
 import { RecentExecutionsComponent } from './recent-executions/recent-executions.component';
 import { EndpointFormComponent } from '../runner/endpoint-form.component';
 import { httpMethodTagClass } from '../../shared/http-method-style';
+import { formatDurationMicros } from '../../shared/duration-format';
+
+export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
 /**
  * Default screen (`/flow`, D-23): a dense workspace (ADR-0010) — metric cards always visible on
@@ -38,10 +38,7 @@ import { httpMethodTagClass } from '../../shared/http-method-style';
     EventFeedComponent,
     RecentExecutionsComponent,
     EndpointFormComponent,
-    MatCardModule,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
   ],
   providers: [LiveTracePlayerService, ReplayPlayerService],
 })
@@ -104,8 +101,59 @@ export class FlowPageComponent {
     });
   }
 
+  readonly replaySpeeds = REPLAY_SPEEDS;
+
+  readonly errorOrigin = computed(() => {
+    const trace = this.trace();
+    return trace?.status === 'Error'
+      ? (trace.spans.find((span) => span.isErrorOrigin) ?? null)
+      : null;
+  });
+
+  readonly slowestStep = computed(() => {
+    const trace = this.trace();
+    const threshold = this.slowThresholdMicros();
+    if (!trace || trace.status === 'Error' || threshold === null) {
+      return null;
+    }
+
+    return (
+      trace.spans
+        .filter((span) => (span.durationMicros ?? 0) >= threshold)
+        .sort((a, b) => (b.durationMicros ?? 0) - (a.durationMicros ?? 0))[0] ?? null
+    );
+  });
+
+  readonly replayStatusLine = computed(() => {
+    const trace = this.trace();
+    if (!trace) {
+      return '';
+    }
+
+    const total = this.replayPlayer.totalSteps();
+    const current = Math.min(this.replayPlayer.stepIndex(), total);
+    const progress = `Step ${current}/${total}`;
+    const outcome =
+      this.replayPlayer.state() === 'finished'
+        ? `finished with HTTP ${trace.httpStatus ?? '—'}`
+        : 'playing';
+    return `${progress} · ${outcome} · replaying recorded timestamps at ${this.replayPlayer.speed()}×`;
+  });
+
   methodTagClass(method: string): string {
     return httpMethodTagClass(method);
+  }
+
+  shortTraceId(traceId: string): string {
+    return traceId.length > 8 ? `${traceId.slice(0, 8)}…` : traceId;
+  }
+
+  formatDuration(micros: number | null): string {
+    return formatDurationMicros(micros);
+  }
+
+  copyTraceId(traceId: string): void {
+    void navigator.clipboard?.writeText(traceId);
   }
 
   openTrace(traceId: string): void {
@@ -136,9 +184,13 @@ export class FlowPageComponent {
     }
   }
 
-  onSpeedChange(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
-    this.replayPlayer.setSpeed(value);
+  setSpeed(speed: number): void {
+    this.replayPlayer.setSpeed(speed);
+  }
+
+  onSeek(event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+    this.replayPlayer.seek(value);
   }
 
   private loadLiveTraces(): void {
