@@ -18,6 +18,11 @@
 
 .app-topbar__hamburger {
   flex: none;
+
+  // The rail is always docked open at this width and up (S1): there's nothing to toggle.
+  @media (min-width: 1024px) {
+    display: none;
+  }
 }
 
 .app-topbar__title {
@@ -118,7 +123,7 @@
   // used to win the cascade and silently drop that absolute positioning, shrinking the rail
   // to its own content height instead of the container's. It already is a positioning
   // context for `.app-rail__close` without redeclaring it.
-  width: 76px;
+  width: 84px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -126,6 +131,9 @@
   padding: 0.875rem 0;
   border-right: 1px solid var(--naf-border);
   background: var(--naf-bg);
+  // Material 3's default sidenav shape rounds the container's leading corners; the rail is flush
+  // against the topbar and the page edge, so it must stay perfectly square (S2).
+  border-radius: 0;
 }
 
 .app-rail__close {
@@ -211,7 +219,7 @@
 }
 
 .app-rail__item {
-  width: 60px;
+  width: 76px;
   min-height: 56px;
   border-radius: var(--naf-radius-md);
   display: flex;
@@ -229,19 +237,17 @@
   background: none;
   cursor: pointer;
 
-  // "Components" is the longest label (10 chars) and, at this size, is wider than the item
-  // itself. align-items: center sizes a flex item to its own content by default, so without an
-  // explicit width the label never actually wraps or centers against the item — it just renders
-  // at its full natural width, off-center. A midword wrap ("Componen"/"ts") read worse than a
-  // clean single-line truncation, so this clips with an ellipsis instead of wrapping.
+  // align-items: center sizes a flex item to its own content by default, so without an explicit
+  // width the label never actually wraps or centers against the item — it just renders at its
+  // full natural width, off-center. The rail label never truncates (S3): it stays on one line
+  // whenever the 76px item is wide enough, and only wraps to a second centered line otherwise.
   span {
     display: block;
     width: 100%;
     text-align: center;
     line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
   &:hover {

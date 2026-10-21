@@ -89,7 +89,7 @@ describe('FlowDetailsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
     expect(text).toContain('OrdersController.Get');
     expect(text).toContain('OrderService.GetAsync');
-    expect(text).toContain('+20.0 ms');
+    expect(text).toContain('+20 ms');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(0);
   });
 });

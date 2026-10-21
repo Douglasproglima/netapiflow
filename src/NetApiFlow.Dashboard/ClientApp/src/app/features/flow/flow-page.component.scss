@@ -37,7 +37,7 @@
 }
 
 // Below 1600px (guide seção 5.2) the action panel leaves the grid and becomes a drawer, opened by
-// the "Try an endpoint" button rendered in its place. The rail is 76px wide down to 1024px, so the
+// the "Try an endpoint" button rendered in its place. The rail is 84px wide down to 1024px, so the
 // drawer starts just past it; below 1024px the rail is itself an overlay drawer (closed by
 // default), so the action drawer can start flush with the edge.
 .flow-workspace__body--drawer {
@@ -45,7 +45,7 @@
     position: fixed;
     top: 56px;
     bottom: 1rem;
-    left: 92px;
+    left: 100px;
     width: 340px;
     max-width: 340px;
     z-index: 40;
@@ -74,7 +74,7 @@
 
 .flow-workspace__scrim {
   position: fixed;
-  inset: 56px 0 0 92px;
+  inset: 56px 0 0 100px;
   // Against this near-black theme, a semi-transparent dark scrim over an already-dark page barely
   // reads as "something changed" — push it darker so the drawer unmistakably reads as an overlay.
   background: rgba(0, 0, 0, 0.75);
@@ -91,8 +91,8 @@
 .flow-workspace__action-close {
   position: fixed;
   top: 68px;
-  // 92px drawer offset + 340px drawer width - 44px to sit just inside its right edge.
-  left: 388px;
+  // 100px drawer offset + 340px drawer width - 44px to sit just inside its right edge.
+  left: 396px;
   width: 32px;
   height: 32px;
   border-radius: 999px;

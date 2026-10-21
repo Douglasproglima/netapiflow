@@ -19,11 +19,10 @@ import { ThemeService } from './core/theme.service';
 const NARROW_BREAKPOINT = '(max-width: 1023px)';
 
 /**
- * Shell: a 76px icon+label rail, plus a topbar with the current page's title, live-request
- * metadata and the SSE connection chip. The hamburger is a traditional show/hide toggle at every
- * width (D-34): below 1024px the rail is an overlay on top of the content; at 1024px and up it's
- * docked side-by-side, and closing it simply collapses it to 0 width so the content reclaims that
- * space, same as any standard sidebar.
+ * Shell: an 84px icon+label rail, plus a topbar with the current page's title, live-request
+ * metadata and the SSE connection chip. Below 1024px the rail is an overlay on top of the
+ * content, toggled by the topbar hamburger; at 1024px and up it's always docked open and the
+ * hamburger is hidden, since there's nothing left to toggle.
  */
 @Component({
   imports: [

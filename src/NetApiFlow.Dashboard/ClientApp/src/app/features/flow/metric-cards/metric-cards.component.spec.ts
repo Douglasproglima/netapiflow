@@ -111,7 +111,7 @@ describe('MetricCardsComponent', () => {
       },
       {
         labelKey: 'metrics.maxLatency',
-        value: '412.0',
+        value: '412',
         valueUnit: 'ms',
         icon: 'max',
         tint: 'warning',
