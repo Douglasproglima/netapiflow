@@ -10,8 +10,24 @@ import { RunnerComponent } from './features/runner/runner.component';
  */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'flow' },
-  { path: 'flow', component: FlowPageComponent },
-  { path: 'history', component: HistoryComponent },
-  { path: 'components', component: ComponentsComponent },
-  { path: 'runner', component: RunnerComponent },
+  {
+    path: 'flow',
+    component: FlowPageComponent,
+    data: { title: 'Flow', subtitle: 'Live request paths' },
+  },
+  {
+    path: 'history',
+    component: HistoryComponent,
+    data: { title: 'History', subtitle: 'Past executions' },
+  },
+  {
+    path: 'components',
+    component: ComponentsComponent,
+    data: { title: 'Components', subtitle: 'Latency by component' },
+  },
+  {
+    path: 'runner',
+    component: RunnerComponent,
+    data: { title: 'Runner', subtitle: 'Try an endpoint' },
+  },
 ];

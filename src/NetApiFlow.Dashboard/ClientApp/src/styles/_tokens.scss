@@ -1,0 +1,61 @@
+// Dashboard design tokens (docs/design/flow-workspace/guide.md, seção 3). Every component reads
+// `var(--naf-*)`; no component `.scss` uses a hex literal directly (checklist, guide seção 10).
+:root {
+  --naf-bg: #090b10;
+  --naf-surface: #131722;
+  --naf-surface-2: #1a2030;
+  --naf-border: #232b3e;
+  --naf-border-strong: #2e3850;
+  --naf-text: #f8fafc;
+  --naf-text-muted: #94a3b8;
+
+  --naf-flow-fill: #8b5cf6;
+  --naf-flow-text: #a78bfa;
+  --naf-flow-button: #7c3aed;
+  --naf-success: #10b981;
+  --naf-warning: #f59e0b;
+  --naf-danger: #ef4444;
+  --naf-idle: #64748b;
+
+  --naf-flow-tint: rgba(139, 92, 246, 0.14);
+  --naf-success-tint: rgba(16, 185, 129, 0.12);
+  --naf-warning-tint: rgba(245, 158, 11, 0.12);
+  --naf-danger-tint: rgba(239, 68, 68, 0.12);
+  --naf-idle-tint: rgba(100, 116, 139, 0.14);
+  --naf-focus: #8b5cf6;
+  --naf-grid-dot: rgba(148, 163, 184, 0.12);
+
+  --naf-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --naf-font-ui: 'Inter', system-ui, sans-serif;
+  --naf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --naf-radius-sm: 8px;
+  --naf-radius-md: 12px;
+  --naf-radius-lg: 18px;
+
+  @media (prefers-color-scheme: light) {
+    --naf-bg: #ffffff;
+    --naf-surface: #f1f5f9;
+    --naf-surface-2: #e2e8f0;
+    --naf-border: #e2e8f0;
+    --naf-border-strong: #64748b;
+    --naf-text: #0f172a;
+    --naf-text-muted: #475569;
+
+    --naf-flow-fill: #6d28d9;
+    --naf-flow-text: #6d28d9;
+    --naf-flow-button: #6d28d9;
+    --naf-success: #047857;
+    --naf-warning: #b45309;
+    --naf-danger: #b91c1c;
+    --naf-idle: #64748b;
+
+    --naf-flow-tint: rgba(109, 40, 217, 0.1);
+    --naf-success-tint: rgba(4, 120, 87, 0.1);
+    --naf-warning-tint: rgba(180, 83, 9, 0.1);
+    --naf-danger-tint: rgba(185, 28, 28, 0.1);
+    --naf-idle-tint: rgba(100, 116, 139, 0.12);
+    --naf-focus: #6d28d9;
+    --naf-grid-dot: rgba(71, 85, 105, 0.14);
+  }
+}

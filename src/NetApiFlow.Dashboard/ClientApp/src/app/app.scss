@@ -1,29 +1,49 @@
+// Shell (docs/design/flow-workspace/guide.md, seção 6.1).
 :host {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.app-shell__topbar {
+.app-topbar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0 0.75rem;
+  padding: 0 1rem;
   height: 56px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  border-bottom: 1px solid var(--naf-border);
 }
 
-.app-shell__topbar-title {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  font-size: 0.95rem;
+.app-topbar__hamburger {
+  flex: none;
 }
 
-.app-shell__version {
+.app-topbar__title {
+  margin: 0;
+  font-family: var(--naf-font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+
+.app-topbar__sub {
+  font-size: 0.8125rem;
+  color: var(--naf-text-muted);
+}
+
+.app-topbar__right {
   margin-left: auto;
-  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-topbar__meta {
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+  white-space: nowrap;
 }
 
 .app-shell {
@@ -31,40 +51,87 @@
   min-height: 0;
 }
 
-.app-shell__sidenav {
-  width: 220px;
-  padding: 1rem 0;
-  border-right: 1px solid var(--mat-sys-outline-variant);
+.app-rail {
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.875rem 0;
+  border-right: 1px solid var(--naf-border);
+  background: var(--naf-bg);
 }
 
-// The brand guide ships one monogram per theme (fixed colors baked into each SVG, not
-// currentColor), so both are always in the DOM and prefers-color-scheme just picks which shows —
-// the same no-JS technique used for the favicon-equivalent asset everywhere else in the app.
-.app-shell__logo--light {
+.app-rail__logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.875rem;
+  text-decoration: none;
+  color: var(--naf-text-muted);
+  font-size: 0.625rem;
+}
+
+.app-rail__logo-mark--light {
   display: none;
 }
 
 @media (prefers-color-scheme: light) {
-  .app-shell__logo--dark {
+  .app-rail__logo-mark--dark {
     display: none;
   }
 
-  .app-shell__logo--light {
+  .app-rail__logo-mark--light {
     display: inline;
   }
 }
 
-.app-shell__icon {
-  width: 20px;
-  height: 20px;
+.app-rail__item {
+  width: 60px;
+  min-height: 56px;
+  border-radius: var(--naf-radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  color: var(--naf-text-muted);
+  text-decoration: none;
+  font-family: var(--naf-font-ui);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  border: 0;
+  background: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+    color: var(--naf-text);
+  }
 }
 
-.app-shell__link--active {
-  font-weight: 600;
-  background: var(--flow-state-waiting-fill);
+.app-rail__item--active {
+  background: var(--naf-flow-tint);
+  color: var(--naf-text);
+
+  svg {
+    color: var(--naf-flow-text);
+  }
 }
 
-.app-shell__content {
+.app-rail__spacer {
+  flex: 1;
+}
+
+.app-rail__divider {
+  width: 40px;
+  height: 1px;
+  background: var(--naf-border);
+  margin: 0.375rem 0;
+}
+
+.app-content {
   height: 100%;
   overflow-x: hidden;
 }

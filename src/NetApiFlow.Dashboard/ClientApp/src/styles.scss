@@ -4,6 +4,7 @@
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+@use 'styles/tokens';
 
 // Brand typeface, embedded locally as variable fonts (one file covers every weight below) so the
 // dashboard renders its real typography without a Google Fonts request: it has to work offline,
@@ -232,45 +233,86 @@ code,
   margin: 0;
 }
 
+// HTTP verb badge (docs/design/flow-workspace/guide.md, seção 3.5): fixed 56px width, centered
+// mono text, so the badge column never pushes the route column around (fixes D1).
 .naf-tag {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  font-family: 'JetBrains Mono', monospace;
+  justify-content: center;
+  width: 56px;
+  height: 22px;
+  flex: none;
+  font-family: var(--naf-font-mono);
   font-size: 0.6875rem;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.3125rem 0.625rem;
-  border-radius: 999px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  color: var(--mat-sys-on-surface-variant);
+  border-radius: 6px;
+  color: var(--naf-text-muted);
+  background: var(--naf-idle-tint);
 }
 
-// Per-verb badge colors (brand guide, Seção 03): each HTTP method gets its own tint, not the
-// plain gray `.naf-tag` default — same low-alpha-fill-plus-solid-text recipe as the guide's own
-// "Verbos HTTP · badges" example.
 .naf-tag--get {
-  color: #a78bfa;
-  background: rgba(167, 139, 250, 0.14);
-  border-color: rgba(167, 139, 250, 0.35);
+  color: var(--naf-flow-text);
+  background: var(--naf-flow-tint);
 }
 
 .naf-tag--post {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(16, 185, 129, 0.35);
+  color: var(--naf-success);
+  background: var(--naf-success-tint);
 }
 
 .naf-tag--put,
 .naf-tag--patch {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.35);
+  color: var(--naf-warning);
+  background: var(--naf-warning-tint);
 }
 
 .naf-tag--delete {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.14);
-  border-color: rgba(239, 68, 68, 0.35);
+  color: var(--naf-danger);
+  background: var(--naf-danger-tint);
+}
+
+// Connection/status chip (guide seção 6.1, 6.8): a colored dot plus text, three states shared by
+// the topbar and the live events feed.
+.naf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 24px;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  font-family: var(--naf-font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--naf-text-muted);
+  background: var(--naf-idle-tint);
+}
+
+.naf-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.naf-chip--live {
+  color: var(--naf-success);
+  background: var(--naf-success-tint);
+}
+
+.naf-chip--warning {
+  color: var(--naf-warning);
+  background: var(--naf-warning-tint);
+}
+
+.naf-chip--danger {
+  color: var(--naf-danger);
+  background: var(--naf-danger-tint);
+}
+
+.naf-mono {
+  font-family: var(--naf-font-mono);
 }
 /* You can add global styles to this file, and also import other style files */
