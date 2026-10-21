@@ -10,7 +10,8 @@
   margin-bottom: 1rem;
 
   mat-form-field {
-    width: 11rem;
+    flex: 1 1 11rem;
+    min-width: 11rem;
   }
 }
 
