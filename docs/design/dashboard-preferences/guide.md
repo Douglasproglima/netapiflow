@@ -89,12 +89,12 @@ usado em `app-rail__item` para `title="Flow"` etc., ver `app.html` atual).
 
 ## 4. Seletor de idioma
 
-ADR-0011 pede "mesmo padrão visual do seletor PT/EN já usado no site de marketing
-(`netapiflow-site`)". Este repositório não tem acesso ao código do `netapiflow-site` a partir
-daqui: a Executora, ao implementar, deve conferir visualmente contra esse site antes de divergir do
-que segue. Na ausência dessa referência, o padrão abaixo reaproveita o mesmo componente visual que
-o guia `flow-workspace` já usa para a velocidade do replay (seção 6.5: grupo segmentado,
-`role="radiogroup"`), por já ser um padrão aprovado neste produto:
+**Decidido pela Planejadora**: manter o padrão abaixo (grupo segmentado, mesmo visual do seletor
+de velocidade do replay), não copiar o estilo do site de marketing (`netapiflow-site`), que usa
+pílula com fundo neutro, sem destaque de cor. São telas diferentes propositalmente: o site é
+página de marketing, o dashboard é ferramenta densa com seu próprio vocabulário visual já
+estabelecido (o mesmo grupo segmentado do seletor de velocidade, seção 6.5). Consistência interna
+do dashboard pesa mais que igualar as duas superfícies do produto:
 
 - Grupo segmentado de dois botões, altura 36 (mesma altura do `icon-btn` ao lado), raio 8, borda
   `--naf-border`, divisória vertical `--naf-border` entre os dois.
@@ -257,7 +257,7 @@ e `events.empty` abaixo), porque é o nome literal de um botão da tela, não um
 
 | Chave | en | pt-BR |
 |---|---|---|
-| replay.chip.replay | REPLAY | REPRISE |
+| replay.chip.replay | REPLAY | REPLAY |
 | replay.restart | Restart | Reiniciar |
 | replay.previousStep | Previous step | Etapa anterior |
 | replay.play | Play | Reproduzir |
@@ -267,10 +267,8 @@ e `events.empty` abaixo), porque é o nome literal de um botão da tela, não um
 | replay.speedAria | Playback speed | Velocidade de reprodução |
 | replay.status | Step {step}/{total} · finished with HTTP {status} · replaying recorded timestamps at {speed}× | Etapa {step}/{total} · concluída com HTTP {status} · reproduzindo marcações de tempo originais a {speed}× |
 
-`REPLAY` vira `REPRISE` (termo já usado em pt-BR para "repetição/replay" em contexto de mídia e
-diagnóstico; curto o bastante para a mesma pill de 11 px mono). Se soar estranho para o usuário na
-revisão visual, segunda opção é manter `REPLAY` sem tradução, como `Offline` em 6.1. Decisão final
-na revisão do mockup (seção 8).
+**Decidido pela Planejadora**: `REPLAY` não traduz, mesmo critério de `Offline` em 6.1 (termo
+técnico já consagrado em português, tradução soaria estranha).
 
 ### 6.6 Painel de detalhes
 
@@ -458,20 +456,23 @@ Reaproveita o mesmo `endpoint-form` do painel de ação (seção 6.3): mesmas ch
 
 ---
 
-## 8. Escopo e o que falta confirmar antes da implementação
+## 8. Escopo, já com as três pendências decididas
 
 **Entra nesta fase (quando o usuário abrir):** os dois controles (seção 2-4), o dicionário
 completo (seção 6), `lang` dinâmico (seção 7).
 
-**Precisa de confirmação visual da Planejadora/usuário antes de implementar** (ver mockup, seção
-9):
+As três pendências de confirmação visual foram decididas pela Planejadora, depois de rodar o
+mockup de verdade (Playwright, interação real com os dois controles):
 
-1. Seletor de idioma (seção 4): o padrão aqui é uma aproximação do segmentado já usado no replay,
-   porque este guia não tem acesso ao `netapiflow-site` para copiar o padrão exato que o ADR-0011
-   pede. Conferir lado a lado com o site antes de liberar para implementação.
-2. Rótulo `REPLAY` → `REPRISE` (seção 6.5): confirmar se soa natural ou se fica em inglês mesmo.
-3. Ordem idioma-antes-de-tema na topbar (seção 2): reversível sem custo se a revisão preferir o
-   oposto.
+1. **Seletor de idioma** (seção 4): mantém o grupo segmentado já especificado, não copia o estilo
+   do site de marketing. Resolvido depois de comparar os dois de verdade.
+2. **Rótulo do replay** (seção 6.5): `REPLAY` não traduz.
+3. **Ordem idioma-antes-de-tema na topbar** (seção 2): confirmada como está.
+
+Achado durante a verificação, corrigir na implementação real: no mockup, `recent.relativeTime.now`
+("now"/"agora") não troca de idioma na tabela de execuções recentes, apesar de o dicionário
+(seção 6.7) já prever a tradução. Falha só do mockup de referência, não da especificação; a
+implementação real precisa aplicar o dicionário nesse campo também.
 
 **Não é deste guia, seria roadmap futuro se pedido:** detectar idioma por `Accept-Language`,
 quarto idioma além de pt-BR/en, tradução de conteúdo gerado dinamicamente pelo usuário (corpo de
