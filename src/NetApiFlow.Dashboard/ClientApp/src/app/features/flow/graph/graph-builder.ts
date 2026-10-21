@@ -1,5 +1,6 @@
 import * as dagre from '@dagrejs/dagre';
 import { ComponentType, FlowSpan, FlowStatus, NodeVisualState } from '../../../core/models';
+import { formatDurationMicros } from '../../../shared/duration-format';
 
 export interface GraphNode {
   id: string;
@@ -37,8 +38,37 @@ export interface GraphBuilderInput {
 }
 
 const NODE_WIDTH = 184;
+const NODE_MAX_WIDTH = 320;
 const NODE_HEIGHT = 60;
+const NODE_LEFT_INSET_PX = 48;
+const NODE_RIGHT_MARGIN_PX = 10;
+const NODE_DURATION_GAP_PX = 8;
+// Both labels are rendered at a fixed font size (flow-graph.component.scss), so an average
+// advance width per character is enough to size the card without measuring real text — the
+// component name is proportional sans-serif, the operation/duration pair is monospace.
+const COMPONENT_CHAR_WIDTH_PX = 6.8;
+const MONO_CHAR_WIDTH_PX = 6.3;
 const GHOST_ID_PREFIX = 'ghost-';
+
+/**
+ * A node this wide fits its component name and its operation + duration pair without
+ * truncating either (D-34: a fixed card width used to force "/api/orders/{id:int}" and its
+ * duration to overlap). Capped at `NODE_MAX_WIDTH` so one pathologically long route can't blow
+ * up the whole graph's layout; `nodeOperationLabel` in the SVG component still truncates with an
+ * ellipsis for whatever doesn't fit past that cap.
+ */
+function nodeWidthFor(component: string, operation: string, durationMicros: number | null): number {
+  const durationLabel = durationMicros === null ? '' : formatDurationMicros(durationMicros);
+  const operationAndDurationWidth =
+    NODE_LEFT_INSET_PX +
+    operation.length * MONO_CHAR_WIDTH_PX +
+    (durationLabel ? NODE_DURATION_GAP_PX + durationLabel.length * MONO_CHAR_WIDTH_PX : 0) +
+    NODE_RIGHT_MARGIN_PX;
+  const componentWidth =
+    NODE_LEFT_INSET_PX + component.length * COMPONENT_CHAR_WIDTH_PX + NODE_RIGHT_MARGIN_PX;
+
+  return Math.min(NODE_MAX_WIDTH, Math.max(NODE_WIDTH, operationAndDurationWidth, componentWidth));
+}
 
 /** Ghost nodes (inferred from the blueprint, never actually executed) carry this id prefix. */
 export function isGhostNodeId(id: string): boolean {
@@ -79,7 +109,10 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
 
   const visit = (node: MergedNode, parentId: string | null): void => {
     flatNodes.push(node);
-    layoutGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    layoutGraph.setNode(node.id, {
+      width: nodeWidthFor(node.component, node.operation, node.durationMicros),
+      height: NODE_HEIGHT,
+    });
     if (parentId !== null) {
       layoutGraph.setEdge(parentId, node.id);
       flatEdges.push({ parentId, childId: node.id });
