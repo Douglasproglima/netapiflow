@@ -252,4 +252,50 @@ describe('FlowGraphComponent', () => {
 
     expect(observedSignatures.size).toBe(6);
   });
+
+  it('resets pan/zoom when the node set changes, instead of leaving a stale transform that paints content outside the canvas', async () => {
+    const liveSpans: FlowSpan[] = [
+      span({ spanId: 'a', parentSpanId: null, sequence: 0, component: 'A', operation: 'Op' }),
+      span({ spanId: 'b', parentSpanId: 'a', sequence: 1, component: 'B', operation: 'Op' }),
+      span({ spanId: 'c', parentSpanId: 'b', sequence: 2, component: 'C', operation: 'Op' }),
+    ];
+    const liveGraph = buildGraph({
+      spans: liveSpans,
+      traceStatus: 'Success',
+      slowThresholdMicros: 250_000,
+    });
+
+    const fixture = TestBed.createComponent(FlowGraphComponent);
+    fixture.componentRef.setInput('nodes', liveGraph.nodes);
+    fixture.componentRef.setInput('edges', liveGraph.edges);
+    await fixture.whenStable();
+
+    const svg: SVGSVGElement = fixture.nativeElement.querySelector('.flow-graph');
+    const zoomLayer: SVGGElement = fixture.nativeElement.querySelector('.flow-graph__zoom-layer');
+
+    svg.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaY: -100,
+        clientX: 10,
+        clientY: 10,
+      }),
+    );
+    await fixture.whenStable();
+
+    expect(zoomLayer.getAttribute('transform')).not.toBe('translate(0,0) scale(1)');
+
+    const replaySpans: FlowSpan[] = [liveSpans[0]];
+    const replayGraph = buildGraph({
+      spans: replaySpans,
+      traceStatus: 'Running',
+      slowThresholdMicros: 250_000,
+    });
+    fixture.componentRef.setInput('nodes', replayGraph.nodes);
+    fixture.componentRef.setInput('edges', replayGraph.edges);
+    await fixture.whenStable();
+
+    expect(zoomLayer.getAttribute('transform')).toBe('translate(0,0) scale(1)');
+  });
 });

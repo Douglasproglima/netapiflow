@@ -3,13 +3,14 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   output,
   viewChild,
 } from '@angular/core';
-import { select } from 'd3-selection';
-import { zoom, zoomIdentity, D3ZoomEvent } from 'd3-zoom';
+import { select, Selection } from 'd3-selection';
+import { zoom, zoomIdentity, D3ZoomEvent, ZoomBehavior } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
 import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation';
 import { ComponentTypeIcon, componentTypeIcon } from '../../../shared/component-type-icon';
@@ -49,6 +50,24 @@ export class FlowGraphComponent implements AfterViewInit {
   });
 
   private zoomInitialized = false;
+  private svgSelection: Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+  private zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> | null = null;
+
+  constructor() {
+    // The viewBox's own coordinate space changes whenever the node set does (switching into/out
+    // of replay, a replay step revealing more nodes): a zoom/pan transform computed for the
+    // previous viewBox no longer lines up with the new one, and with `overflow: visible` on the
+    // SVG (needed so sequence pills and the selection ring aren't clipped), that mismatch painted
+    // content outside the canvas instead of just looking wrong inside it — the parent's
+    // `overflow: auto` then grew a scrollbar to reach it. Resetting to identity whenever the
+    // viewBox changes keeps the transform always valid for the content it's actually zooming.
+    effect(() => {
+      this.viewBox();
+      if (this.svgSelection && this.zoomBehavior) {
+        this.svgSelection.call(this.zoomBehavior.transform, zoomIdentity);
+      }
+    });
+  }
 
   ngAfterViewInit(): void {
     if (this.zoomInitialized) {
@@ -65,7 +84,9 @@ export class FlowGraphComponent implements AfterViewInit {
         select(zoomLayerElement).attr('transform', event.transform.toString());
       });
 
-    select(svgElement).call(behavior).call(behavior.transform, zoomIdentity);
+    this.svgSelection = select(svgElement);
+    this.zoomBehavior = behavior;
+    this.svgSelection.call(behavior).call(behavior.transform, zoomIdentity);
   }
 
   nodeTransform(node: GraphNode): string {
