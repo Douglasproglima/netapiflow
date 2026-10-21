@@ -18,7 +18,13 @@
   display: flex;
   gap: 1rem;
 
+  // Below 1024px, center/details stack with their own fixed heights instead of sharing the row's
+  // height (guide seção 5.2). They can't shrink, so this container must stop being shrinkable too
+  // (flex: 0 0 auto instead of 1 1 auto/min-height: 0) — otherwise the flex algorithm collapses it
+  // below its children's real height, and the footer below ends up positioned over the overflow.
   @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    min-height: auto;
     flex-direction: column;
     height: auto;
   }
