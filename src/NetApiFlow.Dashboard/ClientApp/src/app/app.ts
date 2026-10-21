@@ -19,7 +19,8 @@ const NARROW_BREAKPOINT = '(max-width: 1023px)';
  * 1024px and up (ADR-0010 asks for "icon + label"; stacking them instead of a wide sidebar
  * returns the extra width to the graph, D13), plus a topbar with the current page's title,
  * live-request metadata and the SSE connection chip. Below 1024px the rail becomes an overlay
- * drawer, opened by the topbar hamburger.
+ * drawer, opened by the topbar hamburger. At 1024px and up the same hamburger instead collapses
+ * the rail to icon-only, for whoever wants the extra width back on an already-wide screen (D-34).
  */
 @Component({
   imports: [RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatButtonModule],
@@ -43,6 +44,9 @@ export class App implements OnInit, OnDestroy {
   );
 
   readonly sidenavOpened = signal(false);
+
+  /** Desktop-only: the hamburger also collapses the rail to icon-only (D-34). */
+  readonly railExpanded = signal(true);
 
   readonly pageTitle = toSignal(
     this.router.events.pipe(
@@ -89,6 +93,17 @@ export class App implements OnInit, OnDestroy {
 
   toggleSidenav(): void {
     this.sidenavOpened.update((opened) => !opened);
+  }
+
+  /** Below 1024px the hamburger opens/closes the overlay drawer; at desktop widths it instead
+   * collapses the fixed rail down to icon-only, since the drawer there is always "open" (mode
+   * 'side'). */
+  toggleHamburger(): void {
+    if (this.isNarrow()) {
+      this.toggleSidenav();
+    } else {
+      this.railExpanded.update((expanded) => !expanded);
+    }
   }
 
   closeSidenavIfNarrow(): void {

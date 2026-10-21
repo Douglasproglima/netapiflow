@@ -80,6 +80,22 @@
   padding: 0.875rem 0;
   border-right: 1px solid var(--naf-border);
   background: var(--naf-bg);
+  transition: width 0.15s ease;
+}
+
+// Desktop-only icon-only mode, toggled by the topbar hamburger (D-34): the label row and the
+// version text disappear, leaving just the icon column at a narrower width.
+.app-rail--collapsed {
+  width: 56px;
+
+  .app-rail__item span,
+  .app-rail__logo .naf-mono {
+    display: none;
+  }
+
+  .app-rail__item {
+    min-height: 44px;
+  }
 }
 
 .app-rail__close {
@@ -155,14 +171,16 @@
   // "Components" is the longest label (10 chars) and, at this size, is wider than the item
   // itself. align-items: center sizes a flex item to its own content by default, so without an
   // explicit width the label never actually wraps or centers against the item — it just renders
-  // at its full natural width, off-center. Forcing it to the item's own width is what lets
-  // overflow-wrap actually kick in and centers it correctly either way.
+  // at its full natural width, off-center. A midword wrap ("Componen"/"ts") read worse than a
+  // clean single-line truncation, so this clips with an ellipsis instead of wrapping.
   span {
     display: block;
     width: 100%;
     text-align: center;
     line-height: 1.1;
-    overflow-wrap: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &:hover {

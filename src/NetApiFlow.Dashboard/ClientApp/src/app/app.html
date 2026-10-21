@@ -1,24 +1,22 @@
 <header class="app-topbar">
-  @if (isNarrow()) {
-    <button
-      mat-icon-button
-      type="button"
-      aria-label="Open navigation"
-      class="app-topbar__hamburger"
-      (click)="toggleSidenav()"
+  <button
+    mat-icon-button
+    type="button"
+    [attr.aria-label]="isNarrow() ? 'Open navigation' : 'Toggle navigation labels'"
+    class="app-topbar__hamburger"
+    (click)="toggleHamburger()"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      width="20"
+      height="20"
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        width="20"
-        height="20"
-      >
-        <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
-      </svg>
-    </button>
-  }
+      <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
+    </svg>
+  </button>
   <h1 class="app-topbar__title">{{ pageTitle() }}</h1>
   <span class="app-topbar__sub">{{ pageSubtitle() }}</span>
   <div class="app-topbar__right">
@@ -47,6 +45,7 @@
 <mat-sidenav-container class="app-shell">
   <mat-sidenav
     class="app-rail"
+    [class.app-rail--collapsed]="!isNarrow() && !railExpanded()"
     [mode]="isNarrow() ? 'over' : 'side'"
     [opened]="isNarrow() ? sidenavOpened() : true"
     [disableClose]="!isNarrow()"
@@ -96,6 +95,7 @@
       routerLink="/flow"
       routerLinkActive="app-rail__item--active"
       [routerLinkActiveOptions]="{ exact: false }"
+      title="Flow"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -119,6 +119,7 @@
       class="app-rail__item"
       routerLink="/history"
       routerLinkActive="app-rail__item--active"
+      title="History"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -141,6 +142,7 @@
       class="app-rail__item"
       routerLink="/components"
       routerLinkActive="app-rail__item--active"
+      title="Components"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -164,6 +166,7 @@
       class="app-rail__item"
       routerLink="/runner"
       routerLinkActive="app-rail__item--active"
+      title="Runner"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -182,7 +185,7 @@
     </a>
     <div class="app-rail__spacer"></div>
     <div class="app-rail__divider"></div>
-    <button class="app-rail__item" type="button" (click)="openAbout()">
+    <button class="app-rail__item" type="button" title="About" (click)="openAbout()">
       <svg
         viewBox="0 0 24 24"
         fill="none"
