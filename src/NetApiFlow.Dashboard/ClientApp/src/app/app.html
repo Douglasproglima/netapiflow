@@ -1,12 +1,66 @@
+@if (isNarrow()) {
+  <div class="app-shell__topbar">
+    <button mat-icon-button type="button" aria-label="Toggle navigation" (click)="toggleSidenav()">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        width="22"
+        height="22"
+      >
+        <path d="M4 7 H20 M4 12 H20 M4 17 H20" stroke-linecap="round" />
+      </svg>
+    </button>
+    <img
+      class="app-shell__logo app-shell__logo--dark"
+      src="logo-mark-dark.svg"
+      alt=""
+      width="22"
+      height="22"
+    />
+    <img
+      class="app-shell__logo app-shell__logo--light"
+      src="logo-mark-light.svg"
+      alt=""
+      width="22"
+      height="22"
+    />
+    <span class="app-shell__topbar-title">NetApiFlow</span>
+  </div>
+}
+
 <mat-sidenav-container class="app-shell">
-  <mat-sidenav class="app-shell__sidenav" mode="side" opened disableClose>
-    <h1 class="app-shell__title">NetApiFlow</h1>
+  <mat-sidenav
+    class="app-shell__sidenav"
+    [mode]="isNarrow() ? 'over' : 'side'"
+    [opened]="!isNarrow()"
+    [disableClose]="!isNarrow()"
+  >
+    <div class="app-shell__brand">
+      <img
+        class="app-shell__logo app-shell__logo--dark"
+        src="logo-mark-dark.svg"
+        alt=""
+        width="28"
+        height="28"
+      />
+      <img
+        class="app-shell__logo app-shell__logo--light"
+        src="logo-mark-light.svg"
+        alt=""
+        width="28"
+        height="28"
+      />
+      <h1 class="app-shell__title">NetApiFlow</h1>
+    </div>
     <mat-nav-list class="app-shell__nav">
       <a
         mat-list-item
         routerLink="/flow"
         routerLinkActive="app-shell__link--active"
         class="app-shell__link"
+        (click)="closeSidenavIfNarrow()"
       >
         <svg
           matListItemIcon
@@ -27,6 +81,7 @@
         routerLink="/history"
         routerLinkActive="app-shell__link--active"
         class="app-shell__link"
+        (click)="closeSidenavIfNarrow()"
       >
         <svg
           matListItemIcon
@@ -46,6 +101,7 @@
         routerLink="/components"
         routerLinkActive="app-shell__link--active"
         class="app-shell__link"
+        (click)="closeSidenavIfNarrow()"
       >
         <svg
           matListItemIcon
@@ -67,6 +123,7 @@
         routerLink="/runner"
         routerLinkActive="app-shell__link--active"
         class="app-shell__link"
+        (click)="closeSidenavIfNarrow()"
       >
         <svg
           matListItemIcon

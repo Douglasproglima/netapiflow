@@ -1,10 +1,29 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
+.app-shell__topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.75rem;
+  height: 56px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.app-shell__topbar-title {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+}
+
 .app-shell {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .app-shell__sidenav {
@@ -13,9 +32,33 @@
   border-right: 1px solid var(--mat-sys-outline-variant);
 }
 
+.app-shell__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.5rem 1rem;
+}
+
 .app-shell__title {
   font-size: 1.1rem;
-  margin: 0 0 0.5rem 1rem;
+  margin: 0;
+}
+
+// The brand guide ships one monogram per theme (fixed colors baked into each SVG, not
+// currentColor), so both are always in the DOM and prefers-color-scheme just picks which shows —
+// the same no-JS technique used for the favicon-equivalent asset everywhere else in the app.
+.app-shell__logo--light {
+  display: none;
+}
+
+@media (prefers-color-scheme: light) {
+  .app-shell__logo--dark {
+    display: none;
+  }
+
+  .app-shell__logo--light {
+    display: inline;
+  }
 }
 
 .app-shell__icon {

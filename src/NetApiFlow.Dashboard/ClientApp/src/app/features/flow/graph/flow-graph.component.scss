@@ -17,8 +17,8 @@
 }
 
 .flow-graph__node-rect {
-  fill: var(--flow-node-fill, #e0e0e0);
-  stroke: var(--flow-node-stroke, #757575);
+  fill: var(--flow-node-fill, #131722);
+  stroke: var(--flow-node-stroke, #232b3e);
   stroke-width: 1;
   rx: 6;
 }
@@ -43,32 +43,32 @@
 // Color reinforces the state but is never the only signal: every state already renders a
 // distinct icon and text label (seção 7.2 do prompt), so this still works with colors removed.
 .flow-graph__node[data-state='waiting'] .flow-graph__node-rect {
-  fill: var(--flow-state-waiting-fill, #eceff1);
-  stroke: var(--flow-state-waiting-stroke, #90a4ae);
+  fill: var(--flow-state-waiting-fill, rgba(100, 116, 139, 0.15));
+  stroke: var(--flow-state-waiting-stroke, #64748b);
 }
 
 .flow-graph__node[data-state='running'] .flow-graph__node-rect {
-  fill: var(--flow-state-running-fill, #e3f2fd);
-  stroke: var(--flow-state-running-stroke, #1e88e5);
+  fill: var(--flow-state-running-fill, rgba(167, 139, 250, 0.15));
+  stroke: var(--flow-state-running-stroke, #a78bfa);
 }
 
 .flow-graph__node[data-state='completed'] .flow-graph__node-rect {
-  fill: var(--flow-state-completed-fill, #e8f5e9);
-  stroke: var(--flow-state-completed-stroke, #43a047);
+  fill: var(--flow-state-completed-fill, rgba(16, 185, 129, 0.15));
+  stroke: var(--flow-state-completed-stroke, #10b981);
 }
 
 .flow-graph__node[data-state='slow'] .flow-graph__node-rect {
-  fill: var(--flow-state-slow-fill, #fff8e1);
-  stroke: var(--flow-state-slow-stroke, #f9a825);
+  fill: var(--flow-state-slow-fill, rgba(245, 158, 11, 0.15));
+  stroke: var(--flow-state-slow-stroke, #f59e0b);
 }
 
 .flow-graph__node[data-state='error'] .flow-graph__node-rect {
-  fill: var(--flow-state-error-fill, #ffebee);
-  stroke: var(--flow-state-error-stroke, #e53935);
+  fill: var(--flow-state-error-fill, rgba(239, 68, 68, 0.15));
+  stroke: var(--flow-state-error-stroke, #ef4444);
 }
 
 .flow-graph__node[data-state='not-executed'] .flow-graph__node-rect {
-  fill: var(--flow-state-not-executed-fill, #fafafa);
-  stroke: var(--flow-state-not-executed-stroke, #bdbdbd);
+  fill: var(--flow-state-not-executed-fill, rgba(100, 116, 139, 0.1));
+  stroke: var(--flow-state-not-executed-stroke, #64748b);
   stroke-dasharray: 4 3;
 }

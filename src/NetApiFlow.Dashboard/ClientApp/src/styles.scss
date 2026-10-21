@@ -86,6 +86,18 @@ html {
   --mat-button-tonal-label-text-weight: 600;
   --mat-button-text-label-text-weight: 600;
 
+  // Palette audit (D-31, item 4): --mat-sys-primary (flow-600, #7C3AED) is correctly the filled
+  // button's background, exactly as docs/brand/tokens.md names it ("Botão primário"). But
+  // Material also used it, by default, as the plain *text* color of unfilled buttons (mat-button,
+  // mat-stroked-button) — the endpoint list, pagination, nav links. tokens.md has a dedicated
+  // token for text/links on a dark surface, flow-400 (#A78BFA), lighter than flow-600 precisely
+  // because a saturated button-strength purple reads poorly as plain text. Overriding these two
+  // roles independently is what the audit found wrong: every unfilled button showed flow-600,
+  // the button-background shade, where the brand guide specifies flow-400 for text.
+  --mat-button-text-label-text-color: #a78bfa;
+  --mat-button-outlined-label-text-color: #a78bfa;
+  --mat-button-protected-label-text-color: #a78bfa;
+
   // Node states (`shared/node-state-presentation.ts`, `features/flow/graph`), fallback values
   // already used by `flow-graph.component.scss`/`flow-details-panel.component.scss`.
   --flow-node-fill: #131722;
@@ -111,6 +123,13 @@ html {
     --mat-sys-on-primary: #ffffff;
     --mat-sys-tertiary: #6d28d9;
     --mat-sys-on-tertiary: #ffffff;
+
+    // Stage Light has no separate "button" vs "text" shade of purple the way Obsidian's
+    // flow-600/flow-400 split does — Flow 700 is already the AAA-compliant token for both
+    // (docs/brand/tokens.md). Reset back to it, undoing the dark-mode override above.
+    --mat-button-text-label-text-color: #6d28d9;
+    --mat-button-outlined-label-text-color: #6d28d9;
+    --mat-button-protected-label-text-color: #6d28d9;
     --mat-sys-background: #ffffff;
     --mat-sys-on-background: #0f172a;
     --mat-sys-surface: #f1f5f9;

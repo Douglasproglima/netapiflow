@@ -3,7 +3,7 @@
 }
 
 .endpoint-form__status--error {
-  color: var(--flow-state-error-stroke, #e53935);
+  color: var(--flow-state-error-stroke, #ef4444);
 }
 
 .endpoint-form__layout {
@@ -17,13 +17,12 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  min-width: 220px;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 .endpoint-form__endpoint {
   display: flex;
+  align-items: flex-start;
   gap: 0.5rem;
   width: 100%;
   min-width: 0;
@@ -38,9 +37,11 @@
 .endpoint-form__endpoint-path {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  // Wraps instead of truncating: a narrow action panel (280px, tarefa 7.0b) is often not wide
+  // enough for a full path, and cutting it with an ellipsis just trades a visible scrollbar for
+  // hidden, unreadable text — the actual complaint (D-31, item 3) was never about the scrollbar
+  // itself, it was that the path became unreadable.
+  overflow-wrap: anywhere;
 }
 
 .endpoint-form__form {

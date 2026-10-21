@@ -48,7 +48,7 @@
 .flow-waterfall__track {
   position: relative;
   height: 1rem;
-  background: var(--flow-waterfall-track, #eee);
+  background: var(--flow-waterfall-track, #232b3e);
   border-radius: 2px;
 }
 
@@ -57,9 +57,9 @@
   top: 0;
   height: 100%;
   border-radius: 2px;
-  background: var(--flow-waterfall-bar, #1e88e5);
+  background: var(--flow-waterfall-bar, #8b5cf6);
 }
 
 .flow-waterfall__bar[data-status='Error'] {
-  background: var(--flow-waterfall-bar-error, #e53935);
+  background: var(--flow-waterfall-bar-error, #ef4444);
 }
