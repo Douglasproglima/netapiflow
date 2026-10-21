@@ -142,6 +142,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
+  padding: 0.25rem;
   color: var(--naf-text-muted);
   text-decoration: none;
   font-family: var(--naf-font-ui);
@@ -150,6 +151,19 @@
   border: 0;
   background: none;
   cursor: pointer;
+
+  // "Components" is the longest label (10 chars) and, at this size, is wider than the item
+  // itself. align-items: center sizes a flex item to its own content by default, so without an
+  // explicit width the label never actually wraps or centers against the item — it just renders
+  // at its full natural width, off-center. Forcing it to the item's own width is what lets
+  // overflow-wrap actually kick in and centers it correctly either way.
+  span {
+    display: block;
+    width: 100%;
+    text-align: center;
+    line-height: 1.1;
+    overflow-wrap: break-word;
+  }
 
   &:hover {
     background: var(--naf-surface-2);
