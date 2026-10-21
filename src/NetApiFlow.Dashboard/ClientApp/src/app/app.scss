@@ -170,11 +170,42 @@
 }
 
 @media (prefers-color-scheme: light) {
+  // `:host-context(S)` is true if ANY ancestor matches `S`, not specifically `<html>` — so the
+  // argument has to pin down the element itself (`html:not(...)`, not a bare `:not(...)`), or
+  // it would trivially match through some other ancestor (e.g. `<body>`) that never carries
+  // `data-theme` either way.
+  :host-context(html:not([data-theme])) {
+    .app-rail__logo-mark--dark {
+      display: none;
+    }
+
+    .app-rail__logo-mark--light {
+      display: inline;
+    }
+  }
+}
+
+// Manual override (D-36): same switch as the media query above, but driven by the `data-theme`
+// attribute the theme toggle writes, so it wins over the OS preference once set.
+// `:host-context` is required here (instead of plain `:root`) because this is a component
+// stylesheet: Angular's emulated encapsulation would otherwise scope a bare `:root` selector with
+// this component's own content attribute, which the real `<html>` element never carries.
+:host-context([data-theme='light']) {
   .app-rail__logo-mark--dark {
     display: none;
   }
 
   .app-rail__logo-mark--light {
+    display: inline;
+  }
+}
+
+:host-context([data-theme='dark']) {
+  .app-rail__logo-mark--light {
+    display: none;
+  }
+
+  .app-rail__logo-mark--dark {
     display: inline;
   }
 }

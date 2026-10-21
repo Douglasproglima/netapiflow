@@ -184,10 +184,12 @@ html {
 
 html[data-theme='light'] {
   @include naf-mat-theme-light;
+  color-scheme: light;
 }
 
 html[data-theme='dark'] {
   @include naf-mat-theme-dark;
+  color-scheme: dark;
 }
 
 body {
