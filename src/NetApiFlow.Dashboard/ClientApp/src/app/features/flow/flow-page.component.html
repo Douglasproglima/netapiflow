@@ -226,6 +226,9 @@
         class="flow-workspace__details"
         [trace]="trace"
         [selectedSpan]="selectedSpanDetail()"
+        [slowThresholdMicros]="slowThresholdMicros() ?? 0"
+        [notExecutedCount]="notExecutedCount()"
+        (backToSummary)="backToSummary()"
       />
     }
   </div>

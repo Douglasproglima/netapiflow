@@ -58,7 +58,7 @@ export class FlowPageComponent {
 
   readonly selectedNodeId = signal<string | null>(null);
   readonly selectedSpanDetail = signal<SpanDetail | null>(null);
-  private readonly slowThresholdMicros = signal<number | null>(null);
+  readonly slowThresholdMicros = signal<number | null>(null);
 
   readonly isReplaying = signal(false);
 
@@ -102,6 +102,10 @@ export class FlowPageComponent {
   }
 
   readonly replaySpeeds = REPLAY_SPEEDS;
+
+  readonly notExecutedCount = computed(
+    () => this.graph().nodes.filter((node) => node.state === 'not-executed').length,
+  );
 
   readonly errorOrigin = computed(() => {
     const trace = this.trace();
@@ -170,6 +174,11 @@ export class FlowPageComponent {
     }
 
     this.api.getSpan(traceId, nodeId).subscribe((detail) => this.selectedSpanDetail.set(detail));
+  }
+
+  backToSummary(): void {
+    this.selectedNodeId.set(null);
+    this.selectedSpanDetail.set(null);
   }
 
   toggleReplay(): void {

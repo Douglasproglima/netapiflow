@@ -130,15 +130,28 @@ function resolveState(node: MergedNode, input: GraphBuilderInput): NodeVisualSta
     return input.traceStatus === 'Running' ? 'waiting' : 'not-executed';
   }
 
-  if (node.status === 'Error') {
+  return stateFromSpanStatus(node.status, node.durationMicros, input.slowThresholdMicros);
+}
+
+/**
+ * Shared with the waterfall (`details/waterfall.ts`, guide seção 6.6): a real span's visual state
+ * depends only on its own status/duration and the slow threshold, regardless of whether it's
+ * reached through the graph or the details panel.
+ */
+export function stateFromSpanStatus(
+  status: FlowStatus,
+  durationMicros: number | null,
+  slowThresholdMicros: number,
+): NodeVisualState {
+  if (status === 'Error') {
     return 'error';
   }
 
-  if (node.status === 'Running') {
+  if (status === 'Running') {
     return 'running';
   }
 
-  if (node.durationMicros !== null && node.durationMicros >= input.slowThresholdMicros) {
+  if (durationMicros !== null && durationMicros >= slowThresholdMicros) {
     return 'slow';
   }
 
