@@ -104,6 +104,31 @@ export class FlowGraphComponent implements AfterViewInit {
     return node.durationMicros === null ? '' : formatDurationMicros(node.durationMicros);
   }
 
+  // `.flow-graph__node-operation` is 10.5px monospace, so every character has the same advance
+  // width — no need for canvas-based text measurement to decide where it would overlap the
+  // duration label that shares its baseline.
+  private static readonly MONO_CHAR_WIDTH_PX = 6.3;
+  private static readonly NODE_LEFT_INSET_PX = 48;
+  private static readonly NODE_RIGHT_MARGIN_PX = 10;
+  private static readonly DURATION_GAP_PX = 8;
+
+  nodeOperationLabel(node: GraphNode): string {
+    const duration = this.nodeDuration(node);
+    const durationWidth = duration
+      ? duration.length * FlowGraphComponent.MONO_CHAR_WIDTH_PX + FlowGraphComponent.DURATION_GAP_PX
+      : 0;
+    const availablePx =
+      node.width -
+      FlowGraphComponent.NODE_LEFT_INSET_PX -
+      FlowGraphComponent.NODE_RIGHT_MARGIN_PX -
+      durationWidth;
+    const maxChars = Math.max(4, Math.floor(availablePx / FlowGraphComponent.MONO_CHAR_WIDTH_PX));
+
+    return node.operation.length <= maxChars
+      ? node.operation
+      : `${node.operation.slice(0, maxChars - 1)}…`;
+  }
+
   /** Edge color follows the target node's state (guide seção 6.4: "cor do estado do nó de destino"). */
   nodeStateOf(nodeId: string): string {
     return this.nodes().find((node) => node.id === nodeId)?.state ?? 'waiting';

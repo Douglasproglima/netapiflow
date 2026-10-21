@@ -107,7 +107,7 @@
           <tspan class="flow-graph__node-state">{{ stateLabel(node) }}</tspan>
           <tspan class="flow-graph__node-type">&nbsp;&middot; {{ node.type }}</tspan>
         </text>
-        <text class="flow-graph__node-operation" x="48" y="52">{{ node.operation }}</text>
+        <text class="flow-graph__node-operation" x="48" y="52">{{ nodeOperationLabel(node) }}</text>
         @if (nodeDuration(node); as duration) {
           <text
             class="flow-graph__node-duration"
