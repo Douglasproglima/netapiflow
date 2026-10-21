@@ -23,17 +23,29 @@
   margin: 0;
   padding: 0;
   min-width: 220px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .endpoint-form__endpoint {
   display: flex;
   gap: 0.5rem;
   width: 100%;
+  min-width: 0;
   text-align: left;
 }
 
 .endpoint-form__endpoint-method {
+  flex: 0 0 auto;
   font-weight: 600;
+}
+
+.endpoint-form__endpoint-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .endpoint-form__form {

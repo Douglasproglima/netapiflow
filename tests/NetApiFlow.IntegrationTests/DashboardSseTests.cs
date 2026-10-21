@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.Dashboard.Sse;
@@ -29,7 +30,7 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class DashboardSseTests
 {
-    private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync()
+    private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync(RecordingLoggerProvider? loggerProvider = null)
     {
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -37,6 +38,11 @@ public class DashboardSseTests
                 webBuilder.UseKestrel();
                 webBuilder.UseUrls("http://127.0.0.1:0");
                 webBuilder.UseEnvironment(Environments.Development);
+                if (loggerProvider is not null)
+                {
+                    webBuilder.ConfigureLogging(logging => logging.AddProvider(loggerProvider));
+                }
+
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
@@ -325,5 +331,55 @@ public class DashboardSseTests
         }
 
         subscription.Reader.Count.ShouldBeLessThanOrEqualTo(SseBroadcaster.PerClientQueueCapacity);
+    }
+
+    [Fact]
+    public async Task Stream_ClientDisconnects_NeverLogsAnUnhandledException()
+    {
+        // D-31: cancellation (closing the tab, navigating away, EventSource reconnecting) is the
+        // normal end of an SSE connection, not a failure. Before the fix, the net10.0 writer let
+        // the resulting OperationCanceledException propagate out of the request, surfacing as an
+        // "unhandled exception" error log and a dev-mode error response.
+        using var loggerProvider = new RecordingLoggerProvider();
+        var (host, client) = await CreateHostAsync(loggerProvider);
+        using var _host = host;
+        using var _client = client;
+
+        var (response, reader) = await ConnectAsync(client);
+        reader.ShouldNotBeNull();
+
+        response.Dispose(); // the client disconnects mid-stream, cancelling the server's request
+
+        // Give the server a moment to observe the cancellation and wind the request down.
+        await Task.Delay(TimeSpan.FromSeconds(3));
+
+        // Scoped to "unhandled exception" (the hosting layer's own wording for exactly this
+        // symptom), not every Error-level entry: an unrelated BackgroundService can log its own
+        // cancellation noise during host teardown, which isn't what this test is about.
+        loggerProvider.Entries.ShouldNotContain(entry =>
+            entry.Level >= LogLevel.Error && entry.Message.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class RecordingLoggerProvider : ILoggerProvider
+    {
+        private readonly System.Collections.Concurrent.ConcurrentBag<(LogLevel Level, string Message)> _entries = [];
+
+        public IReadOnlyCollection<(LogLevel Level, string Message)> Entries => _entries;
+
+        public ILogger CreateLogger(string categoryName) => new RecordingLogger(_entries);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class RecordingLogger(System.Collections.Concurrent.ConcurrentBag<(LogLevel Level, string Message)> entries) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+                entries.Add((logLevel, formatter(state, exception)));
+        }
     }
 }

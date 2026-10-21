@@ -42,6 +42,35 @@ internal static class DashboardSseEndpoint
     private static long? ParseLastEventId(Microsoft.Extensions.Primitives.StringValues header) =>
         long.TryParse(header, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : null;
 
+    // Cancellation (closing the tab, navigating away, EventSource's own reconnect) is the normal
+    // end of an SSE connection, not a failure (.claude/rules/tracing.md: never let instrumentation
+    // propagate an exception, and the same holds for the dashboard's own hosting code). Shared by
+    // both TFM writers below, returning a sentinel `false` instead of throwing, so the connection
+    // winds down through the exact same path already used for a closed channel/stopped timer.
+    private static async Task<bool> WaitForHeartbeatAsync(PeriodicTimer heartbeat, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await heartbeat.WaitForNextTickAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    private static async Task<bool> WaitToReadAsync(System.Threading.Channels.ChannelReader<FlowEvent> reader, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await reader.WaitToReadAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
 #if NET10_0_OR_GREATER
     private static Microsoft.AspNetCore.Http.HttpResults.ServerSentEventsResult<string> WriteStream(HttpContext context, SseSubscription subscription) =>
         TypedResults.ServerSentEvents(StreamEventsAsync(subscription, context.RequestAborted));
@@ -62,26 +91,26 @@ internal static class DashboardSseEndpoint
         // PeriodicTimer.WaitForNextTickAsync does not support a second overlapping call while a
         // previous one is still pending, so the pending call is only ever replaced once it has
         // actually completed, never recreated every loop iteration.
-        var heartbeatTask = heartbeat.WaitForNextTickAsync(cancellationToken).AsTask();
+        var heartbeatTask = WaitForHeartbeatAsync(heartbeat, cancellationToken);
 
         while (true)
         {
-            var readTask = reader.WaitToReadAsync(cancellationToken).AsTask();
+            var readTask = WaitToReadAsync(reader, cancellationToken);
             var completed = await Task.WhenAny(readTask, heartbeatTask);
 
             if (completed == heartbeatTask)
             {
-                if (!heartbeatTask.Result)
+                if (!await heartbeatTask)
                 {
                     yield break;
                 }
 
                 yield return new System.Net.ServerSentEvents.SseItem<string>(string.Empty, "ping");
-                heartbeatTask = heartbeat.WaitForNextTickAsync(cancellationToken).AsTask();
+                heartbeatTask = WaitForHeartbeatAsync(heartbeat, cancellationToken);
                 continue;
             }
 
-            if (!readTask.Result)
+            if (!await readTask)
             {
                 yield break;
             }
@@ -125,27 +154,27 @@ internal static class DashboardSseEndpoint
                 // PeriodicTimer.WaitForNextTickAsync does not support a second overlapping call
                 // while a previous one is still pending, so the pending call is only ever
                 // replaced once it has actually completed, never recreated every loop iteration.
-                var heartbeatTask = heartbeat.WaitForNextTickAsync(cancellationToken).AsTask();
+                var heartbeatTask = WaitForHeartbeatAsync(heartbeat, cancellationToken);
 
                 while (true)
                 {
-                    var readTask = reader.WaitToReadAsync(cancellationToken).AsTask();
+                    var readTask = WaitToReadAsync(reader, cancellationToken);
                     var completed = await Task.WhenAny(readTask, heartbeatTask);
 
                     if (completed == heartbeatTask)
                     {
-                        if (!heartbeatTask.Result)
+                        if (!await heartbeatTask)
                         {
                             return;
                         }
 
                         await response.WriteAsync(": ping\n\n", cancellationToken);
                         await response.Body.FlushAsync(cancellationToken);
-                        heartbeatTask = heartbeat.WaitForNextTickAsync(cancellationToken).AsTask();
+                        heartbeatTask = WaitForHeartbeatAsync(heartbeat, cancellationToken);
                         continue;
                     }
 
-                    if (!readTask.Result)
+                    if (!await readTask)
                     {
                         return;
                     }
@@ -156,9 +185,12 @@ internal static class DashboardSseEndpoint
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
             {
-                // Client disconnected; nothing left to write.
+                // Client disconnected; nothing left to write. The concrete exception type varies
+                // with the OS and transport (OperationCanceledException, ConnectionResetException,
+                // IOException) — what matters is that the request was already cancelled, not what
+                // the write call happened to throw because of it.
             }
         }
 

@@ -84,6 +84,35 @@ describe('buildGraph', () => {
     expect(byId['leaf'].sequence).toBe(2);
   });
 
+  it('finds the root even when its parentSpanId is a dangling, non-null ambient id (D-31)', () => {
+    // Real data shape: the root span's parentSpanId points at ASP.NET Core's own Activity, which
+    // is never one of NetApiFlow's own spans — not `null` as the earlier synthetic fixtures above
+    // always assumed.
+    const spans: FlowSpan[] = [
+      span({
+        spanId: 'root',
+        parentSpanId: '55aa63b602cd359e',
+        sequence: 0,
+        component: 'OrdersController',
+        operation: 'Get',
+      }),
+      span({
+        spanId: 'mid',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'OrderService',
+        operation: 'GetAsync',
+      }),
+    ];
+
+    const result = buildGraph(input({ spans }));
+
+    expect(result.nodes.map((n) => n.id).sort()).toEqual(['mid', 'root']);
+    expect(result.edges).toContainEqual(
+      expect.objectContaining({ sourceId: 'root', targetId: 'mid' }),
+    );
+  });
+
   it('marks a successful span under the slow threshold as completed', () => {
     const spans = [
       span({

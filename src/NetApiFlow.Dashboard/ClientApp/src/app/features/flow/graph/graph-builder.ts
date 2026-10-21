@@ -158,12 +158,24 @@ function buildChildrenByParent(spans: FlowSpan[]): Map<string | null, FlowSpan[]
   return byParent;
 }
 
+/**
+ * A span is the trace's root when its `parentSpanId` is `null`, or when it doesn't match any
+ * `spanId` in the same set — the backend normalizes a true root to `null` (docs/plano/contratos.md),
+ * but this stays robust even against a non-conforming store that leaves a dangling ambient parent
+ * id (e.g. the host framework's own Activity) instead.
+ */
+function findRoot(spans: FlowSpan[]): FlowSpan | undefined {
+  return spans.find(
+    (span) => span.parentSpanId === null || !spans.some((s) => s.spanId === span.parentSpanId),
+  );
+}
+
 function buildMergedTree(input: GraphBuilderInput): MergedNode | null {
   const realChildrenByParent = buildChildrenByParent(input.spans);
   const blueprintChildrenByParent = buildChildrenByParent(input.blueprintSpans ?? []);
 
-  const realRoot = input.spans.find((span) => span.parentSpanId === null);
-  const blueprintRoot = (input.blueprintSpans ?? []).find((span) => span.parentSpanId === null);
+  const realRoot = findRoot(input.spans);
+  const blueprintRoot = findRoot(input.blueprintSpans ?? []);
 
   if (realRoot) {
     return mergeNode(realRoot, realChildrenByParent, blueprintRoot, blueprintChildrenByParent);
