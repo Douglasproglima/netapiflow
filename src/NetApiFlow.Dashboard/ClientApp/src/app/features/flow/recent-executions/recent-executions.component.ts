@@ -1,5 +1,6 @@
 import { Component, inject, output, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../../core/api.service';
 import { FlowTraceSummary } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
@@ -17,7 +18,7 @@ const PAGE_SIZE = 8;
   selector: 'app-recent-executions',
   templateUrl: './recent-executions.component.html',
   styleUrl: './recent-executions.component.scss',
-  imports: [MatCardModule],
+  imports: [MatCardModule, MatButtonModule],
 })
 export class RecentExecutionsComponent {
   private readonly api = inject(ApiService);
@@ -25,8 +26,13 @@ export class RecentExecutionsComponent {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly traces = signal<FlowTraceSummary[]>([]);
+  readonly collapsed = signal(false);
 
   readonly traceSelected = output<string>();
+
+  toggleCollapsed(): void {
+    this.collapsed.update((collapsed) => !collapsed);
+  }
 
   constructor() {
     this.api.getTraces({ page: 1, pageSize: PAGE_SIZE }).subscribe({

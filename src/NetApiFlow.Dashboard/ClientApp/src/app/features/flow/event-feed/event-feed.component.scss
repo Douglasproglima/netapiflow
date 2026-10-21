@@ -4,8 +4,29 @@
   overflow-y: auto;
 }
 
-.event-feed__title {
+.event-feed--collapsed {
+  height: auto;
+  overflow-y: visible;
+}
+
+.event-feed__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 0 0 0.5rem;
+}
+
+.event-feed__title {
+  margin: 0;
+}
+
+.event-feed__toggle {
+  flex: 0 0 auto;
+}
+
+.event-feed__chevron--collapsed {
+  transform: rotate(-90deg);
 }
 
 .event-feed__status {

@@ -55,4 +55,25 @@ describe('EventFeedComponent', () => {
     fixture.destroy();
     expect(fakeSse.disconnect).toHaveBeenCalledTimes(1);
   });
+
+  it('toggles collapsed state', () => {
+    const fakeSse = {
+      events$: new Subject<FlowEvent>().asObservable(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: SseService, useValue: fakeSse }],
+    });
+
+    const fixture = TestBed.createComponent(EventFeedComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.collapsed()).toBe(false);
+    fixture.componentInstance.toggleCollapsed();
+    expect(fixture.componentInstance.collapsed()).toBe(true);
+    fixture.componentInstance.toggleCollapsed();
+    expect(fixture.componentInstance.collapsed()).toBe(false);
+  });
 });

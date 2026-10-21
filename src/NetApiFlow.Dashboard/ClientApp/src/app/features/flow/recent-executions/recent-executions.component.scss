@@ -4,8 +4,29 @@
   overflow-y: auto;
 }
 
-.recent-executions__title {
+.recent-executions--collapsed {
+  height: auto;
+  overflow-y: visible;
+}
+
+.recent-executions__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 0 0 0.5rem;
+}
+
+.recent-executions__title {
+  margin: 0;
+}
+
+.recent-executions__toggle {
+  flex: 0 0 auto;
+}
+
+.recent-executions__chevron--collapsed {
+  transform: rotate(-90deg);
 }
 
 .recent-executions__status {

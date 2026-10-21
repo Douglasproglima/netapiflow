@@ -1,33 +1,60 @@
-<mat-card appearance="outlined" class="recent-executions">
-  <h3 class="recent-executions__title">Recent executions</h3>
-  @if (loading()) {
-    <p class="recent-executions__status" role="status">Loading…</p>
-  } @else if (error()) {
-    <p class="recent-executions__status recent-executions__status--error" role="alert">
-      {{ error() }}
-    </p>
-  } @else if (traces().length === 0) {
-    <p class="recent-executions__status">No traces recorded yet.</p>
-  } @else {
-    <ul class="recent-executions__list">
-      @for (trace of traces(); track trace.traceId) {
-        <li>
-          <button
-            type="button"
-            class="recent-executions__item"
-            (click)="traceSelected.emit(trace.traceId)"
-          >
-            <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
-            <span class="recent-executions__route">{{ trace.routeTemplate }}</span>
-            <span class="recent-executions__status-text" [attr.data-status]="trace.status">{{
-              trace.status
-            }}</span>
-            <span class="recent-executions__duration">{{
-              formatDuration(trace.durationMicros)
-            }}</span>
-          </button>
-        </li>
-      }
-    </ul>
+<mat-card
+  appearance="outlined"
+  class="recent-executions"
+  [class.recent-executions--collapsed]="collapsed()"
+>
+  <div class="recent-executions__header">
+    <h3 class="recent-executions__title">Recent executions</h3>
+    <button
+      mat-icon-button
+      type="button"
+      class="recent-executions__toggle"
+      [attr.aria-label]="collapsed() ? 'Expand recent executions' : 'Collapse recent executions'"
+      (click)="toggleCollapsed()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        width="18"
+        height="18"
+        [class.recent-executions__chevron--collapsed]="collapsed()"
+      >
+        <path d="M6 9 L12 15 L18 9" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+  </div>
+  @if (!collapsed()) {
+    @if (loading()) {
+      <p class="recent-executions__status" role="status">Loading…</p>
+    } @else if (error()) {
+      <p class="recent-executions__status recent-executions__status--error" role="alert">
+        {{ error() }}
+      </p>
+    } @else if (traces().length === 0) {
+      <p class="recent-executions__status">No traces recorded yet.</p>
+    } @else {
+      <ul class="recent-executions__list">
+        @for (trace of traces(); track trace.traceId) {
+          <li>
+            <button
+              type="button"
+              class="recent-executions__item"
+              (click)="traceSelected.emit(trace.traceId)"
+            >
+              <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
+              <span class="recent-executions__route">{{ trace.routeTemplate }}</span>
+              <span class="recent-executions__status-text" [attr.data-status]="trace.status">{{
+                trace.status
+              }}</span>
+              <span class="recent-executions__duration">{{
+                formatDuration(trace.durationMicros)
+              }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
   }
 </mat-card>

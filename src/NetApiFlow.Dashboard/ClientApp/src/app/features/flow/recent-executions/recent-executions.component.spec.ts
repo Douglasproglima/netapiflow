@@ -72,4 +72,17 @@ describe('RecentExecutionsComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('No traces recorded yet.');
   });
+
+  it('toggles collapsed state', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.collapsed()).toBe(false);
+    fixture.componentInstance.toggleCollapsed();
+    expect(fixture.componentInstance.collapsed()).toBe(true);
+    fixture.componentInstance.toggleCollapsed();
+    expect(fixture.componentInstance.collapsed()).toBe(false);
+  });
 });

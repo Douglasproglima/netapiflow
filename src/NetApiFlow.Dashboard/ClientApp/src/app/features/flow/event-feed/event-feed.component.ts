@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { SseService } from '../../../core/sse.service';
 import { FlowEvent } from '../../../core/models';
 
@@ -16,13 +17,18 @@ const MAX_VISIBLE_EVENTS = 200;
   selector: 'app-event-feed',
   templateUrl: './event-feed.component.html',
   styleUrl: './event-feed.component.scss',
-  imports: [MatCardModule],
+  imports: [MatCardModule, MatButtonModule],
 })
 export class EventFeedComponent implements OnInit, OnDestroy {
   private readonly sse = inject(SseService);
   private subscription = this.sse.events$.subscribe((event) => this.onEvent(event));
 
   readonly events = signal<FlowEvent[]>([]);
+  readonly collapsed = signal(false);
+
+  toggleCollapsed(): void {
+    this.collapsed.update((collapsed) => !collapsed);
+  }
 
   ngOnInit(): void {
     this.sse.connect();
