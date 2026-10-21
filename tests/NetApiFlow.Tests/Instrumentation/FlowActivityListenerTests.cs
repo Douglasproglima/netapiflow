@@ -73,6 +73,47 @@ public class FlowActivityListenerTests
     }
 
     [Fact]
+    public void OnActivityStarted_RootSpan_RecordsNullParentEvenWithAnAmbientNonFlowParentActivity()
+    {
+        // `root` mimics ASP.NET Core's own request Activity: a real ambient parent, but never
+        // recorded as a NetApiFlow span (different ActivitySource, not listened to). The contract
+        // (docs/plano/contratos.md) requires the trace's root span to report `parentSpanId: null`
+        // regardless, so the frontend's root-detection (`parentSpanId === null`) always finds one.
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+
+        using (NetApiFlow.Step("OrdersController", "Get", ComponentType.Controller))
+        {
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.ParentSpanId.ShouldBeNull();
+    }
+
+    [Fact]
+    public void OnActivityStarted_NestedSpan_RecordsTheRealNetApiFlowParent()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+
+        using (NetApiFlow.Step("Outer", "Op", ComponentType.Service))
+        {
+            using (NetApiFlow.Step("Inner", "Op", ComponentType.Repository))
+            {
+            }
+        }
+
+        var spans = recorder.GetActiveTrace(traceId)!.Spans;
+        var outer = spans.Single(s => s.Component == "Outer");
+        var inner = spans.Single(s => s.Component == "Inner");
+
+        outer.ParentSpanId.ShouldBeNull();
+        inner.ParentSpanId.ShouldBe(outer.SpanId);
+    }
+
+    [Fact]
     public void ActivityStopped_WhenDescendantSpanErrors_MarksAncestorsErrorWithoutIsErrorOrigin()
     {
         var (recorder, subject, traceId, root) = Arrange();
