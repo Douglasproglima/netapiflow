@@ -96,34 +96,29 @@ describe('App', () => {
     expect(compiled.querySelector('a[href="/runner"]')).toBeTruthy();
   });
 
-  it('docks the rail open on a wide viewport, with the hamburger also present', async () => {
+  it('docks the rail open by default on a wide viewport, with the hamburger also present', async () => {
     const { fixture } = setup(false);
     await fixture.whenStable();
     flushShellRequests();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.isNarrow()).toBe(false);
+    expect(fixture.componentInstance.sidenavOpened()).toBe(true);
     expect(fixture.nativeElement.querySelector('.app-topbar__hamburger')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.app-rail')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.app-rail--collapsed')).toBeNull();
   });
 
-  it('collapses the rail to icon-only via the hamburger on a wide viewport', async () => {
+  it('fully hides and reopens the rail via the hamburger on a wide viewport', async () => {
     const { fixture } = setup(false);
     await fixture.whenStable();
     flushShellRequests();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.railExpanded()).toBe(true);
-    fixture.componentInstance.toggleHamburger();
-    await fixture.whenStable();
-    expect(fixture.componentInstance.railExpanded()).toBe(false);
-
-    expect(fixture.nativeElement.querySelector('.app-rail--collapsed')).not.toBeNull();
-
-    fixture.componentInstance.toggleHamburger();
-    await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('.app-rail--collapsed')).toBeNull();
+    expect(fixture.componentInstance.sidenavOpened()).toBe(true);
+    fixture.componentInstance.toggleSidenav();
+    expect(fixture.componentInstance.sidenavOpened()).toBe(false);
+    fixture.componentInstance.toggleSidenav();
+    expect(fixture.componentInstance.sidenavOpened()).toBe(true);
   });
 
   it('switches to an overlay rail, closed by default, below the breakpoint', async () => {
@@ -147,9 +142,9 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.sidenavOpened()).toBe(false);
-    fixture.componentInstance.toggleHamburger();
+    fixture.componentInstance.toggleSidenav();
     expect(fixture.componentInstance.sidenavOpened()).toBe(true);
-    fixture.componentInstance.toggleHamburger();
+    fixture.componentInstance.toggleSidenav();
     expect(fixture.componentInstance.sidenavOpened()).toBe(false);
   });
 

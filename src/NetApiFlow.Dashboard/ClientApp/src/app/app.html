@@ -2,9 +2,9 @@
   <button
     mat-icon-button
     type="button"
-    [attr.aria-label]="isNarrow() ? 'Open navigation' : 'Toggle navigation labels'"
+    [attr.aria-label]="sidenavOpened() ? 'Close navigation' : 'Open navigation'"
     class="app-topbar__hamburger"
-    (click)="toggleHamburger()"
+    (click)="toggleSidenav()"
   >
     <svg
       viewBox="0 0 24 24"
@@ -45,9 +45,8 @@
 <mat-sidenav-container class="app-shell">
   <mat-sidenav
     class="app-rail"
-    [class.app-rail--collapsed]="!isNarrow() && !railExpanded()"
     [mode]="isNarrow() ? 'over' : 'side'"
-    [opened]="isNarrow() ? sidenavOpened() : true"
+    [opened]="sidenavOpened()"
     [disableClose]="!isNarrow()"
   >
     @if (isNarrow()) {

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -15,12 +15,11 @@ import { formatDurationMicros } from './shared/duration-format';
 const NARROW_BREAKPOINT = '(max-width: 1023px)';
 
 /**
- * Shell (docs/design/flow-workspace/guide.md, seção 6.1): a 76px icon rail, always visible at
- * 1024px and up (ADR-0010 asks for "icon + label"; stacking them instead of a wide sidebar
- * returns the extra width to the graph, D13), plus a topbar with the current page's title,
- * live-request metadata and the SSE connection chip. Below 1024px the rail becomes an overlay
- * drawer, opened by the topbar hamburger. At 1024px and up the same hamburger instead collapses
- * the rail to icon-only, for whoever wants the extra width back on an already-wide screen (D-34).
+ * Shell: a 76px icon+label rail, plus a topbar with the current page's title, live-request
+ * metadata and the SSE connection chip. The hamburger is a traditional show/hide toggle at every
+ * width (D-34): below 1024px the rail is an overlay on top of the content; at 1024px and up it's
+ * docked side-by-side, and closing it simply collapses it to 0 width so the content reclaims that
+ * space, same as any standard sidebar.
  */
 @Component({
   imports: [RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatButtonModule],
@@ -43,10 +42,7 @@ export class App implements OnInit, OnDestroy {
     { initialValue: false },
   );
 
-  readonly sidenavOpened = signal(false);
-
-  /** Desktop-only: the hamburger also collapses the rail to icon-only (D-34). */
-  readonly railExpanded = signal(true);
+  readonly sidenavOpened = signal(true);
 
   readonly pageTitle = toSignal(
     this.router.events.pipe(
@@ -68,6 +64,14 @@ export class App implements OnInit, OnDestroy {
 
   readonly slowThresholdLabel = signal<string | null>(null);
   readonly inProgressCount = signal(0);
+
+  constructor() {
+    // Open by default on a wide screen, closed by default below 1024px — but only when crossing
+    // the breakpoint, so a manual toggle isn't immediately overridden on the next resize tick.
+    effect(() => {
+      this.sidenavOpened.set(!this.isNarrow());
+    });
+  }
 
   ngOnInit(): void {
     this.sse.connect();
@@ -93,17 +97,6 @@ export class App implements OnInit, OnDestroy {
 
   toggleSidenav(): void {
     this.sidenavOpened.update((opened) => !opened);
-  }
-
-  /** Below 1024px the hamburger opens/closes the overlay drawer; at desktop widths it instead
-   * collapses the fixed rail down to icon-only, since the drawer there is always "open" (mode
-   * 'side'). */
-  toggleHamburger(): void {
-    if (this.isNarrow()) {
-      this.toggleSidenav();
-    } else {
-      this.railExpanded.update((expanded) => !expanded);
-    }
   }
 
   closeSidenavIfNarrow(): void {

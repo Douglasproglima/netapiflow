@@ -80,22 +80,6 @@
   padding: 0.875rem 0;
   border-right: 1px solid var(--naf-border);
   background: var(--naf-bg);
-  transition: width 0.15s ease;
-}
-
-// Desktop-only icon-only mode, toggled by the topbar hamburger (D-34): the label row and the
-// version text disappear, leaving just the icon column at a narrower width.
-.app-rail--collapsed {
-  width: 56px;
-
-  .app-rail__item span,
-  .app-rail__logo .naf-mono {
-    display: none;
-  }
-
-  .app-rail__item {
-    min-height: 44px;
-  }
 }
 
 .app-rail__close {
