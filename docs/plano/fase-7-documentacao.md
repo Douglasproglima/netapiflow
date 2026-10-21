@@ -105,13 +105,25 @@ automatizados existentes:
    (`G:\Meu Drive\Controle\2026\00 - Personal\00 - NetApiFlow\Designer System and UI`). Não é um
    bug pontual, é um pedido de polimento: comparar lado a lado com o HTML do guia (espaçamento,
    tamanho de fonte, raio de borda, elevação de card) e replicar de verdade, não só os tokens de
-   cor já aplicados na tarefa 7.0.
+   cor já aplicados na tarefa 7.0. Dentro deste item, confirmado pelo usuário como parte do
+   pacote de produção antes de considerar o dashboard pronto para `v1`:
+   - **Logo real na sidebar**: hoje só o texto "NetApiFlow", sem o monograma de
+     `docs/brand/logo-mark-dark.svg` (o mesmo usado no favicon e no `icon.png` do pacote NuGet).
+   - **Paleta de cores**: conferir cada cor usada hoje contra `docs/brand/tokens.md`
+     componente a componente, não só a troca inicial de tema feita na tarefa 7.0 (achado real:
+     telas como o painel de ação ainda usam roxo de tom diferente do `--naf-flow-500` oficial em
+     alguns estados, sinal de que a troca não foi 100% nos componentes novos da 7.0b).
+   - **Responsividade**: a sidebar fixa (`mat-sidenav mode="side"`) não tem comportamento para
+     tela estreita (tablet, celular). Precisa de um breakpoint que recolha a sidebar.
+   - **Menu hambúrguer**: para abrir/fechar a sidebar em tela estreita, consequência direta do
+     item de responsividade acima (não faz sentido ter um sem o outro).
 
 **Pronto quando:** os itens 1 e 2 corrigidos com teste automatizado cobrindo o cenário
 (`graph-builder.spec.ts` com spans cujo root não tem `parentSpanId` nulo; teste de integração que
-cancela a conexão SSE e confirma que não vira `fail` no log). Item 3 corrigido. Item 4 com
-captura de tela comparando antes/depois ao lado do HTML do guia, revisada pela Planejadora antes
-de prosseguir para a tarefa 7.2 (GIF).
+cancela a conexão SSE e confirma que não vira `fail` no log). Item 3 corrigido. Item 4 (incluindo
+logo, paleta, responsividade e menu hambúrguer) com captura de tela comparando antes/depois em
+pelo menos duas larguras de tela (desktop e tela estreita) ao lado do HTML do guia, revisada pela
+Planejadora antes de prosseguir para a tarefa 7.2 (GIF).
 
 ### 7.1: Benchmark de overhead (risco R-05)
 
