@@ -3,46 +3,109 @@
 }
 
 .metric-cards__status--error {
-  color: var(--flow-state-error-stroke, #ef4444);
+  color: var(--naf-danger);
 }
 
 .metric-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 1199px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .metric-cards__card {
-  padding: 0.75rem 1rem;
+  background: var(--naf-surface);
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-md);
+  height: 88px;
+  padding: 1rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  color: var(--mat-sys-tertiary);
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .metric-cards__card--highlight {
-  color: var(--flow-state-error-stroke, #ef4444);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.metric-cards__tile {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.metric-cards__tile--flow {
+  background: var(--naf-flow-tint);
+  color: var(--naf-flow-text);
+}
+
+.metric-cards__tile--success {
+  background: var(--naf-success-tint);
+  color: var(--naf-success);
+}
+
+.metric-cards__tile--warning {
+  background: var(--naf-warning-tint);
+  color: var(--naf-warning);
+}
+
+.metric-cards__tile--danger {
+  background: var(--naf-danger-tint);
+  color: var(--naf-danger);
+}
+
+.metric-cards__tile--idle {
+  background: var(--naf-idle-tint);
+  color: var(--naf-idle);
 }
 
 .metric-cards__icon {
   width: 20px;
   height: 20px;
-  margin-bottom: 0.25rem;
+}
+
+.metric-cards__text {
+  min-width: 0;
 }
 
 .metric-cards__value {
+  font-family: var(--naf-font-display);
   font-size: 1.5rem;
+  line-height: 1.75rem;
   font-weight: 700;
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+  color: var(--naf-text);
+  white-space: nowrap;
+
+  small {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--naf-text-muted);
+    margin-left: 0.125rem;
+  }
 }
 
 .metric-cards__card--highlight .metric-cards__value {
-  color: var(--flow-state-error-stroke, #ef4444);
+  color: var(--naf-danger);
 }
 
 .metric-cards__label {
-  font-size: 0.8rem;
-  opacity: 0.75;
-  color: var(--mat-sys-on-surface);
+  font-family: var(--naf-font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--naf-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

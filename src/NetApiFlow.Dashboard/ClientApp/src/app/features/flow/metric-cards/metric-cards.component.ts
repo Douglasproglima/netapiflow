@@ -1,29 +1,40 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
 import { ApiService } from '../../../core/api.service';
 import { formatDurationMicros } from '../../../shared/duration-format';
 
 export type MetricCardIcon = 'traces' | 'success' | 'errors' | 'avg' | 'max' | 'steps';
+export type MetricCardTint = 'flow' | 'success' | 'warning' | 'danger' | 'idle';
 
 interface MetricCard {
   readonly label: string;
   readonly value: string;
+  readonly valueUnit: string | null;
   readonly icon: MetricCardIcon;
+  readonly tint: MetricCardTint;
   /** True when the value itself is noteworthy (e.g. errors > 0) and should stand out in color. */
   readonly highlight: boolean;
 }
 
+/** Splits a formatted duration like `"98.1 ms"` into its number and unit, so the unit can render smaller/muted. */
+function splitDuration(formatted: string): { value: string; unit: string | null } {
+  const spaceIndex = formatted.indexOf(' ');
+  return spaceIndex < 0
+    ? { value: formatted, unit: null }
+    : { value: formatted.slice(0, spaceIndex), unit: formatted.slice(spaceIndex + 1) };
+}
+
 /**
- * The metric strip at the top of the `/flow` workspace (ADR-0010): total traces, success, errors,
- * average/max latency and steps executed. `GET /metrics` already has every count but steps
- * executed, which is the sum of `executionCount` across `GET /metrics/components` (D-30) — a
- * legitimate derivation from data already exposed, not a new contract.
+ * The metric strip at the top of the `/flow` workspace (ADR-0010, guide seção 6.2): total traces,
+ * success, errors, average/max latency and steps executed. `GET /metrics` already has every count
+ * but steps executed, which is the sum of `executionCount` across `GET /metrics/components`
+ * (D-30) — a legitimate derivation from data already exposed, not a new contract. The latency
+ * tiles switch to the warning tint when the value is at or above `GET /config`'s slow threshold.
  */
 @Component({
   selector: 'app-metric-cards',
   templateUrl: './metric-cards.component.html',
   styleUrl: './metric-cards.component.scss',
-  imports: [MatCardModule],
+  imports: [],
 })
 export class MetricCardsComponent {
   private readonly api = inject(ApiService);
@@ -36,42 +47,70 @@ export class MetricCardsComponent {
   private readonly averageDurationMicros = signal(0);
   private readonly maxDurationMicros = signal(0);
   private readonly stepsExecuted = signal(0);
+  private readonly slowThresholdMicros = signal(Infinity);
 
-  readonly cards = computed<MetricCard[]>(() => [
-    { label: 'Total traces', value: String(this.totalTraces()), icon: 'traces', highlight: false },
-    {
-      label: 'Success',
-      value: String(this.totalTraces() - this.errorCount()),
-      icon: 'success',
-      highlight: false,
-    },
-    {
-      label: 'Errors',
-      value: String(this.errorCount()),
-      icon: 'errors',
-      highlight: this.errorCount() > 0,
-    },
-    {
-      label: 'Avg. latency',
-      value: formatDurationMicros(this.averageDurationMicros()),
-      icon: 'avg',
-      highlight: false,
-    },
-    {
-      label: 'Max. latency',
-      value: formatDurationMicros(this.maxDurationMicros()),
-      icon: 'max',
-      highlight: false,
-    },
-    {
-      label: 'Steps executed',
-      value: String(this.stepsExecuted()),
-      icon: 'steps',
-      highlight: false,
-    },
-  ]);
+  readonly cards = computed<MetricCard[]>(() => {
+    const threshold = this.slowThresholdMicros();
+    const avg = splitDuration(formatDurationMicros(this.averageDurationMicros()));
+    const max = splitDuration(formatDurationMicros(this.maxDurationMicros()));
+
+    return [
+      {
+        label: 'Traces',
+        value: String(this.totalTraces()),
+        valueUnit: null,
+        icon: 'traces',
+        tint: 'flow',
+        highlight: false,
+      },
+      {
+        label: 'Successful',
+        value: String(this.totalTraces() - this.errorCount()),
+        valueUnit: null,
+        icon: 'success',
+        tint: 'success',
+        highlight: false,
+      },
+      {
+        label: 'Errors',
+        value: String(this.errorCount()),
+        valueUnit: null,
+        icon: 'errors',
+        tint: this.errorCount() > 0 ? 'danger' : 'idle',
+        highlight: this.errorCount() > 0,
+      },
+      {
+        label: 'Avg latency',
+        value: avg.value,
+        valueUnit: avg.unit,
+        icon: 'avg',
+        tint: this.averageDurationMicros() >= threshold ? 'warning' : 'flow',
+        highlight: false,
+      },
+      {
+        label: 'Max latency',
+        value: max.value,
+        valueUnit: max.unit,
+        icon: 'max',
+        tint: this.maxDurationMicros() >= threshold ? 'warning' : 'flow',
+        highlight: false,
+      },
+      {
+        label: 'Steps executed',
+        value: String(this.stepsExecuted()),
+        valueUnit: null,
+        icon: 'steps',
+        tint: 'flow',
+        highlight: false,
+      },
+    ];
+  });
 
   constructor() {
+    this.api
+      .getConfig()
+      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+
     this.api.getMetrics({}).subscribe({
       next: (summary) => {
         this.totalTraces.set(summary.totalTraces);

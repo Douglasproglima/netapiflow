@@ -76,6 +76,13 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
+  /** Both FlowPageComponent and the metric cards (ADR-0010) read GET /config independently. */
+  function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
+    for (const request of httpMock.match('api/config')) {
+      request.flush({ slowThresholdMicros, version: '0.1.0' });
+    }
+  }
+
   /** The workspace's metric cards and action panel (ADR-0010) fire their own requests on mount. */
   function flushWorkspaceChildRequests(): void {
     httpMock.expectOne('api/metrics').flush({
@@ -98,7 +105,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
+    flushAllConfigRequests();
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
@@ -112,7 +119,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
+    flushAllConfigRequests();
 
     const summaries: FlowTraceSummary[] = [
       {
@@ -139,7 +146,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 50, version: '0.1.0' });
+    flushAllConfigRequests(50);
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
@@ -152,7 +159,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
+    flushAllConfigRequests();
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
