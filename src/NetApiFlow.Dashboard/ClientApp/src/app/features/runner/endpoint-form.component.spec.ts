@@ -62,7 +62,20 @@ describe('EndpointFormComponent', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Failed to load the OpenAPI document.');
+    expect(fixture.nativeElement.textContent).toContain('Could not load the OpenAPI document.');
+  });
+
+  it('filters the endpoint list by route', async () => {
+    const fixture = TestBed.createComponent(EndpointFormComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.setRouteFilter('orders');
+    expect(fixture.componentInstance.endpoints()).toHaveLength(1);
+
+    fixture.componentInstance.setRouteFilter('nothing-matches');
+    expect(fixture.componentInstance.endpoints()).toHaveLength(0);
   });
 
   it('dispatches the filled form and emits the returned trace id', async () => {

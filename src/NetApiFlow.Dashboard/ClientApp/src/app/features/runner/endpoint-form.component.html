@@ -1,75 +1,116 @@
 <section class="endpoint-form">
+  <div class="endpoint-form__header">
+    <h2>Try an endpoint</h2>
+    <p class="endpoint-form__intro">Sends a real request to your API. The graph follows it live.</p>
+  </div>
+
   @if (loading()) {
     <p class="endpoint-form__status" role="status">Loading…</p>
   } @else if (loadError()) {
-    <p class="endpoint-form__status endpoint-form__status--error" role="alert">
-      {{ loadError() }}
-    </p>
+    <div class="endpoint-form__status endpoint-form__status--error" role="alert">
+      <p>{{ loadError() }}</p>
+      <p class="endpoint-form__status-hint">Check that the host calls MapOpenApi().</p>
+    </div>
   } @else {
-    <div class="endpoint-form__layout">
-      <mat-card appearance="outlined" class="endpoint-form__endpoints-card">
+    <div class="endpoint-form__search">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        width="16"
+        height="16"
+      >
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m16 16 4 4" />
+      </svg>
+      <label class="endpoint-form__search-label" for="endpoint-form-filter">Filter endpoints</label>
+      <input
+        id="endpoint-form-filter"
+        type="text"
+        placeholder="Filter by route"
+        [value]="routeFilter()"
+        (input)="setRouteFilter($any($event.target).value)"
+      />
+    </div>
+
+    <div class="endpoint-form__list-wrapper">
+      @if (endpoints().length === 0) {
+        <p class="endpoint-form__status">No endpoints found.</p>
+      } @else {
         <ul class="endpoint-form__endpoints">
           @for (endpoint of endpoints(); track endpoint.method + ' ' + endpoint.path) {
             <li>
               <button
-                mat-button
                 type="button"
                 class="endpoint-form__endpoint"
+                [class.endpoint-form__endpoint--selected]="
+                  selected()?.method === endpoint.method && selected()?.path === endpoint.path
+                "
+                [attr.title]="endpoint.method + ' ' + endpoint.path"
                 (click)="selectEndpoint(endpoint.method, endpoint.path)"
               >
-                <span
-                  class="endpoint-form__endpoint-method naf-tag"
-                  [class]="methodTagClass(endpoint.method)"
-                  >{{ endpoint.method }}</span
-                >
+                <span class="naf-tag" [class]="methodTagClass(endpoint.method)">{{
+                  endpoint.method
+                }}</span>
                 <span class="endpoint-form__endpoint-path">{{ endpoint.path }}</span>
               </button>
             </li>
           }
         </ul>
-      </mat-card>
-
-      @if (form(); as form) {
-        <mat-card appearance="outlined" class="endpoint-form__form-card">
-          <form class="endpoint-form__form" (submit)="$event.preventDefault(); send()">
-            <h2>{{ form.method }} {{ form.path }}</h2>
-
-            @for (field of form.fields; track field.name) {
-              <mat-form-field subscriptSizing="dynamic">
-                <mat-label>{{ field.name }} ({{ field.kind }})</mat-label>
-                @if (field.kind === 'body') {
-                  <textarea
-                    matInput
-                    [id]="'endpoint-form-field-' + field.name"
-                    [value]="fieldValue(field.name)"
-                    (input)="onFieldInput(field.name, $event)"
-                  ></textarea>
-                } @else {
-                  <input
-                    matInput
-                    type="text"
-                    [id]="'endpoint-form-field-' + field.name"
-                    [value]="fieldValue(field.name)"
-                    (input)="onFieldInput(field.name, $event)"
-                  />
-                }
-              </mat-form-field>
-            }
-
-            <button mat-flat-button type="submit" [disabled]="sending()">Send</button>
-
-            @if (sendError()) {
-              <p class="endpoint-form__status endpoint-form__status--error" role="alert">
-                {{ sendError() }}
-              </p>
-            }
-
-            @if (lastTraceId()) {
-              <p class="endpoint-form__trace-id">Trace: {{ lastTraceId() }}</p>
-            }
-          </form>
-        </mat-card>
       }
     </div>
+
+    @if (hiddenDashboardRouteCount() > 0) {
+      <p class="endpoint-form__hidden-note">
+        {{ hiddenDashboardRouteCount() }} dashboard
+        {{ hiddenDashboardRouteCount() === 1 ? 'route' : 'routes' }} hidden
+      </p>
+    }
+
+    @if (form(); as form) {
+      <form class="endpoint-form__form" (submit)="$event.preventDefault(); send()">
+        <div class="endpoint-form__form-header">
+          <span class="naf-tag" [class]="methodTagClass(form.method)">{{ form.method }}</span>
+          <span class="endpoint-form__form-path">{{ form.path }}</span>
+        </div>
+
+        @for (field of form.fields; track field.name) {
+          <div class="endpoint-form__field">
+            <label [for]="'endpoint-form-field-' + field.name"
+              >{{ field.name }}<b>{{ field.kind }} · {{ field.type }}</b></label
+            >
+            @if (field.kind === 'body') {
+              <textarea
+                [id]="'endpoint-form-field-' + field.name"
+                [value]="fieldValue(field.name)"
+                (input)="onFieldInput(field.name, $event)"
+              ></textarea>
+            } @else {
+              <input
+                type="text"
+                [id]="'endpoint-form-field-' + field.name"
+                [value]="fieldValue(field.name)"
+                (input)="onFieldInput(field.name, $event)"
+              />
+            }
+          </div>
+        }
+
+        <button mat-flat-button type="submit" class="endpoint-form__send" [disabled]="sending()">
+          Send request
+        </button>
+
+        @if (sendError()) {
+          <p class="endpoint-form__status endpoint-form__status--error" role="alert">
+            {{ sendError() }}
+          </p>
+        }
+
+        @if (lastTraceId()) {
+          <p class="endpoint-form__trace-id">Trace: {{ lastTraceId() }}</p>
+        }
+      </form>
+    }
   }
 </section>

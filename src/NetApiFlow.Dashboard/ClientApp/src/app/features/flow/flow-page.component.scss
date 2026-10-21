@@ -24,11 +24,10 @@
 }
 
 .flow-workspace__action {
-  flex: 0 0 280px;
+  flex: 0 0 300px;
   min-width: 0;
-  max-width: 280px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  max-width: 300px;
+  min-height: 0;
 }
 
 .flow-workspace__center {
@@ -55,7 +54,8 @@
 }
 
 .flow-workspace__details {
-  flex: 1 1 280px;
+  flex: 0 0 360px;
+  max-width: 360px;
   min-width: 0;
   overflow-y: auto;
 }

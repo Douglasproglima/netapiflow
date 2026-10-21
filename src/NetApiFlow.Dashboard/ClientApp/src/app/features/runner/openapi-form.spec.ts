@@ -1,4 +1,4 @@
-import { buildEndpointForm, listOpenApiEndpoints } from './openapi-form';
+import { buildEndpointForm, listOpenApiEndpoints, partitionDashboardRoutes } from './openapi-form';
 import { OpenApiDocument } from '../../core/models';
 
 const DOC: OpenApiDocument = {
@@ -56,6 +56,32 @@ describe('listOpenApiEndpoints', () => {
 
   it('returns an empty list when the document has no paths', () => {
     expect(listOpenApiEndpoints({})).toEqual([]);
+  });
+});
+
+describe('partitionDashboardRoutes', () => {
+  const endpoints = listOpenApiEndpoints({
+    paths: {
+      '/api/orders': { get: {} },
+      '/flow/api/traces': { get: {}, delete: {} },
+      '/flow/api/config': { get: {} },
+    },
+  });
+
+  it('hides every route under the dashboard base path and reports how many were hidden', () => {
+    const { visible, hiddenCount } = partitionDashboardRoutes(endpoints, '/flow');
+
+    expect(visible).toEqual([
+      { method: 'GET', path: '/api/orders', operationId: null, summary: null },
+    ]);
+    expect(hiddenCount).toBe(3);
+  });
+
+  it('keeps every route when the dashboard is mounted somewhere that matches none of them', () => {
+    const { visible, hiddenCount } = partitionDashboardRoutes(endpoints, '/internal/flow');
+
+    expect(visible).toHaveLength(endpoints.length);
+    expect(hiddenCount).toBe(0);
   });
 });
 

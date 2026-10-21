@@ -1,45 +1,61 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { OpenApiDocument } from '../../core/models';
 import { httpMethodTagClass } from '../../shared/http-method-style';
-import { buildEndpointForm, listOpenApiEndpoints } from './openapi-form';
+import { buildEndpointForm, listOpenApiEndpoints, partitionDashboardRoutes } from './openapi-form';
 
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
  * path/query parameters and JSON body, and dispatch it. Shared by the `/runner` route and the
- * `/flow` workspace's action panel (ADR-0010): it only emits the dispatched trace id, leaving
- * what to do with it (track it inline, navigate to it) to whichever page embeds it. `openApiUrl`
- * is root-relative on purpose: the host's OpenAPI document and the endpoints it describes live at
- * the application root, which is unrelated to wherever the dashboard itself is mounted (unlike
- * ApiService's own relative URLs).
+ * `/flow` workspace's action panel (ADR-0010, guide seção 6.3): it only emits the dispatched
+ * trace id, leaving what to do with it (track it inline, navigate to it) to whichever page embeds
+ * it. `openApiUrl` is root-relative on purpose: the host's OpenAPI document and the endpoints it
+ * describes live at the application root, which is unrelated to wherever the dashboard itself is
+ * mounted (unlike `ApiService`'s own relative URLs). The dashboard's own `{basePath}/api/*` routes
+ * (e.g. `DELETE /flow/api/traces`, D2) are read from the page's own `<base href>` and hidden by
+ * default, since the host's OpenAPI document picks them up alongside the user's real endpoints.
  */
 @Component({
   selector: 'app-endpoint-form',
   templateUrl: './endpoint-form.component.html',
   styleUrl: './endpoint-form.component.scss',
-  imports: [MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [MatButtonModule],
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
+  private readonly document = inject(DOCUMENT);
 
   readonly openApiUrl = input<string>('/openapi/v1.json');
   readonly traceDispatched = output<string>();
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
-  private readonly document = signal<OpenApiDocument | null>(null);
+  private readonly openApiDocument = signal<OpenApiDocument | null>(null);
+
+  readonly routeFilter = signal('');
+  private readonly dashboardBasePath = new URL(this.document.baseURI).pathname.replace(/\/$/, '');
+
+  private readonly endpointsPartition = computed(() => {
+    const doc = this.openApiDocument();
+    const endpoints = doc ? listOpenApiEndpoints(doc) : [];
+    return partitionDashboardRoutes(endpoints, this.dashboardBasePath);
+  });
+
+  readonly hiddenDashboardRouteCount = computed(() => this.endpointsPartition().hiddenCount);
+
   readonly endpoints = computed(() => {
-    const doc = this.document();
-    return doc ? listOpenApiEndpoints(doc) : [];
+    const filter = this.routeFilter().trim().toLowerCase();
+    const visible = this.endpointsPartition().visible;
+    return filter
+      ? visible.filter((endpoint) => endpoint.path.toLowerCase().includes(filter))
+      : visible;
   });
 
   readonly selected = signal<{ method: string; path: string } | null>(null);
   readonly form = computed(() => {
-    const doc = this.document();
+    const doc = this.openApiDocument();
     const selected = this.selected();
     return doc && selected ? buildEndpointForm(doc, selected.method, selected.path) : null;
   });
@@ -52,14 +68,18 @@ export class EndpointFormComponent {
   constructor() {
     this.api.loadOpenApiDocument(this.openApiUrl()).subscribe({
       next: (doc) => {
-        this.document.set(doc);
+        this.openApiDocument.set(doc);
         this.loading.set(false);
       },
       error: () => {
-        this.loadError.set('Failed to load the OpenAPI document.');
+        this.loadError.set('Could not load the OpenAPI document.');
         this.loading.set(false);
       },
     });
+  }
+
+  setRouteFilter(value: string): void {
+    this.routeFilter.set(value);
   }
 
   selectEndpoint(method: string, path: string): void {
