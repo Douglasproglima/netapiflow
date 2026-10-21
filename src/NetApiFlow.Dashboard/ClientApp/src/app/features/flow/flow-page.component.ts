@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { map } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
@@ -46,8 +47,25 @@ export class FlowPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
   readonly livePlayer = inject(LiveTracePlayerService);
   readonly replayPlayer = inject(ReplayPlayerService);
+
+  /** Below 1600px the action panel leaves the grid and becomes a drawer (guide seção 5.2). */
+  readonly isActionDrawer = toSignal(
+    this.breakpointObserver.observe('(max-width: 1599px)').pipe(map((state) => state.matches)),
+    { initialValue: false },
+  );
+
+  readonly actionDrawerOpen = signal(false);
+
+  toggleActionDrawer(): void {
+    this.actionDrawerOpen.update((open) => !open);
+  }
+
+  closeActionDrawer(): void {
+    this.actionDrawerOpen.set(false);
+  }
 
   readonly traceId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('trace'))), {
     initialValue: this.route.snapshot.queryParamMap.get('trace'),

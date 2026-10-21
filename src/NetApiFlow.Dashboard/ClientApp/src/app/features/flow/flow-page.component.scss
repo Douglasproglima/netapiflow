@@ -18,8 +18,9 @@
   display: flex;
   gap: 1rem;
 
-  @media (max-width: 960px) {
+  @media (max-width: 1023px) {
     flex-direction: column;
+    height: auto;
   }
 }
 
@@ -28,6 +29,78 @@
   min-width: 0;
   max-width: 300px;
   min-height: 0;
+}
+
+// Below 1600px (guide seção 5.2) the action panel leaves the grid and becomes a drawer, opened by
+// the "Try an endpoint" button rendered in its place. The rail is 76px wide down to 1024px, so the
+// drawer starts just past it; below 1024px the rail is itself an overlay drawer (closed by
+// default), so the action drawer can start flush with the edge.
+.flow-workspace__body--drawer {
+  .flow-workspace__action {
+    position: fixed;
+    top: 56px;
+    bottom: 1rem;
+    left: 92px;
+    width: 340px;
+    max-width: 340px;
+    z-index: 40;
+    visibility: hidden;
+    transform: translateX(calc(-100% - 120px));
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 0 1px var(--naf-border);
+
+    @media (max-width: 1023px) {
+      left: 1rem;
+    }
+
+    @media (max-width: 767px) {
+      left: 0.75rem;
+      right: 0.75rem;
+      width: auto;
+      max-width: none;
+    }
+  }
+
+  .flow-workspace__action--open {
+    visibility: visible;
+    transform: none;
+  }
+}
+
+.flow-workspace__scrim {
+  position: fixed;
+  inset: 56px 0 0 92px;
+  background: rgba(9, 11, 16, 0.55);
+  z-index: 35;
+  border: 0;
+  padding: 0;
+  cursor: default;
+
+  @media (max-width: 1023px) {
+    inset: 56px 0 0 0;
+  }
+}
+
+.flow-workspace__open-action {
+  flex: none;
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 36px;
+  padding: 0 0.875rem;
+  border-radius: var(--naf-radius-sm);
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+  }
 }
 
 .flow-workspace__center {
@@ -40,6 +113,15 @@
   border: 1px solid var(--naf-border);
   border-radius: var(--naf-radius-lg);
   overflow: hidden;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    height: 560px;
+  }
+
+  @media (max-width: 767px) {
+    height: 520px;
+  }
 }
 
 .flow-workspace__graph-header {
@@ -181,7 +263,7 @@
   border-radius: 50%;
   border: 0;
   background: var(--naf-flow-button);
-  color: #fff;
+  color: white;
   display: inline-grid;
   place-items: center;
   flex: none;
@@ -237,6 +319,13 @@
   max-width: 360px;
   min-width: 0;
   min-height: 0;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    max-width: none;
+    width: 100%;
+    max-height: 640px;
+  }
 }
 
 .flow-workspace__live-list {
@@ -259,7 +348,8 @@
   align-items: flex-start;
   gap: 1rem;
 
-  @media (max-width: 960px) {
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
     flex-direction: column;
   }
 }
@@ -269,4 +359,10 @@
   flex: 1 1 0;
   min-width: 0;
   min-height: 0;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 300px;
+  }
 }

@@ -1,10 +1,37 @@
 <section class="flow-workspace">
   <app-metric-cards class="flow-workspace__metrics" />
 
-  <div class="flow-workspace__body">
-    <app-endpoint-form class="flow-workspace__action" (traceDispatched)="openTrace($event)" />
+  <div class="flow-workspace__body" [class.flow-workspace__body--drawer]="isActionDrawer()">
+    <app-endpoint-form
+      class="flow-workspace__action"
+      [class.flow-workspace__action--open]="actionDrawerOpen()"
+      (traceDispatched)="openTrace($event); closeActionDrawer()"
+    />
+    @if (isActionDrawer() && actionDrawerOpen()) {
+      <button
+        type="button"
+        class="flow-workspace__scrim"
+        aria-label="Close the action panel"
+        (click)="closeActionDrawer()"
+      ></button>
+    }
 
     <div class="flow-workspace__center">
+      @if (isActionDrawer()) {
+        <button type="button" class="flow-workspace__open-action" (click)="toggleActionDrawer()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            width="16"
+            height="16"
+          >
+            <path d="M7 4.5v15l12-7.5Z" />
+          </svg>
+          Try an endpoint
+        </button>
+      }
       @if (trace(); as trace) {
         <div class="flow-workspace__graph-header">
           <h2>Request path</h2>

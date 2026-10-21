@@ -177,4 +177,20 @@ describe('FlowPageComponent', () => {
     expect(fixture.componentInstance.isReplaying()).toBe(false);
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
   });
+
+  it('toggles and closes the action drawer', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
+    fixture.componentInstance.toggleActionDrawer();
+    expect(fixture.componentInstance.actionDrawerOpen()).toBe(true);
+    fixture.componentInstance.closeActionDrawer();
+    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
+  });
 });
