@@ -2,7 +2,7 @@
   <button
     mat-icon-button
     type="button"
-    [attr.aria-label]="sidenavOpened() ? 'Close navigation' : 'Open navigation'"
+    [attr.aria-label]="(sidenavOpened() ? 'topbar.hamburger.close' : 'topbar.hamburger.open') | t"
     class="app-topbar__hamburger"
     (click)="toggleSidenav()"
   >
@@ -17,13 +17,65 @@
       <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round" />
     </svg>
   </button>
-  <h1 class="app-topbar__title">{{ pageTitle() }}</h1>
-  <span class="app-topbar__sub">{{ pageSubtitle() }}</span>
+  <h1 class="app-topbar__title">{{ pageTitle() | t }}</h1>
+  <span class="app-topbar__sub">{{ pageSubtitle() | t }}</span>
   <div class="app-topbar__right">
-    <span class="app-topbar__meta">{{ inProgressCount() }} in progress</span>
-    @if (slowThresholdLabel(); as label) {
-      <span class="app-topbar__meta">{{ label }}</span>
+    <span class="app-topbar__meta">{{
+      'topbar.inProgress' | t: { count: inProgressCount() }
+    }}</span>
+    @if (slowThresholdValue(); as value) {
+      <span class="app-topbar__meta">{{ 'topbar.slowThreshold' | t: { value } }}</span>
     }
+    <!-- Language selector (guide dashboard-preferences, seção 4): segmented control, mesmo padrão
+         visual do seletor de velocidade do replay. -->
+    <div class="app-topbar__lang" role="radiogroup" [attr.aria-label]="'language.selectorAria' | t">
+      <button
+        type="button"
+        role="radio"
+        lang="pt-BR"
+        [attr.aria-checked]="activeLanguage() === 'pt-BR'"
+        (click)="setLanguage('pt-BR')"
+      >
+        PT
+      </button>
+      <button
+        type="button"
+        role="radio"
+        lang="en"
+        [attr.aria-checked]="activeLanguage() === 'en'"
+        (click)="setLanguage('en')"
+      >
+        EN
+      </button>
+    </div>
+    <!-- Theme toggle (guide dashboard-preferences, seção 3): ícone sol/lua conforme o tema ativo. -->
+    <button
+      mat-icon-button
+      type="button"
+      class="app-topbar__theme"
+      [attr.aria-label]="themeToggleLabel() | t"
+      [attr.title]="themeToggleLabel() | t"
+      (click)="toggleTheme()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        width="20"
+        height="20"
+      >
+        @if (isDarkTheme()) {
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"
+            stroke-linecap="round"
+          />
+        } @else {
+          <path d="M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2Z" />
+        }
+      </svg>
+    </button>
     <span
       class="naf-chip"
       [class.naf-chip--live]="connectionState() === 'open'"
@@ -32,11 +84,12 @@
     >
       <span class="naf-chip__dot"></span>
       {{
-        connectionState() === 'open'
-          ? 'Live'
+        (connectionState() === 'open'
+          ? 'chip.connection.live'
           : connectionState() === 'connecting'
-            ? 'Reconnecting'
-            : 'Offline'
+            ? 'chip.connection.reconnecting'
+            : 'chip.connection.offline'
+        ) | t
       }}
     </span>
   </div>
@@ -53,7 +106,7 @@
       <button
         type="button"
         class="app-rail__close"
-        aria-label="Close navigation"
+        [attr.aria-label]="'rail.close' | t"
         (click)="toggleSidenav()"
       >
         <svg
@@ -71,7 +124,7 @@
     <a
       class="app-rail__logo"
       routerLink="/flow"
-      [attr.aria-label]="'NetApiFlow, version ' + version"
+      [attr.aria-label]="'rail.logoAria' | t: { version }"
     >
       <img
         class="app-rail__logo-mark app-rail__logo-mark--dark"
@@ -94,7 +147,7 @@
       routerLink="/flow"
       routerLinkActive="app-rail__item--active"
       [routerLinkActiveOptions]="{ exact: false }"
-      title="Flow"
+      [attr.title]="'nav.flow' | t"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -112,13 +165,13 @@
         <circle cx="19" cy="18" r="2.5" />
         <path d="M7.5 12h3.5M11 12 16.6 7.2M11 12l5.6 4.8" />
       </svg>
-      <span>Flow</span>
+      <span>{{ 'nav.flow' | t }}</span>
     </a>
     <a
       class="app-rail__item"
       routerLink="/history"
       routerLinkActive="app-rail__item--active"
-      title="History"
+      [attr.title]="'nav.history' | t"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -135,13 +188,13 @@
         <path d="M3.5 4v4.5H8" />
         <path d="M12 7.5V12l3 2" />
       </svg>
-      <span>History</span>
+      <span>{{ 'nav.history' | t }}</span>
     </a>
     <a
       class="app-rail__item"
       routerLink="/components"
       routerLinkActive="app-rail__item--active"
-      title="Components"
+      [attr.title]="'nav.components' | t"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -159,13 +212,13 @@
         <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
         <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
       </svg>
-      <span>Components</span>
+      <span>{{ 'nav.components' | t }}</span>
     </a>
     <a
       class="app-rail__item"
       routerLink="/runner"
       routerLinkActive="app-rail__item--active"
-      title="Runner"
+      [attr.title]="'nav.runner' | t"
       (click)="closeSidenavIfNarrow()"
     >
       <svg
@@ -180,11 +233,16 @@
       >
         <path d="M7 4.5v15l12-7.5Z" />
       </svg>
-      <span>Runner</span>
+      <span>{{ 'nav.runner' | t }}</span>
     </a>
     <div class="app-rail__spacer"></div>
     <div class="app-rail__divider"></div>
-    <button class="app-rail__item" type="button" title="About" (click)="openAbout()">
+    <button
+      class="app-rail__item"
+      type="button"
+      [attr.title]="'nav.about' | t"
+      (click)="openAbout()"
+    >
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -198,7 +256,7 @@
         <circle cx="12" cy="12" r="8.5" />
         <path d="M12 11v5.5M12 7.6v.1" />
       </svg>
-      <span>About</span>
+      <span>{{ 'nav.about' | t }}</span>
     </button>
   </mat-sidenav>
 

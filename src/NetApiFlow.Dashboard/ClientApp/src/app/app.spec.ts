@@ -8,24 +8,26 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { App } from './app';
 import { SseService } from './core/sse.service';
 import { FlowEvent } from './core/models';
+import { ThemeService } from './core/theme.service';
 
 @Component({ selector: 'app-stub', template: '' })
 class StubPageComponent {}
 
+// `data.title`/`data.subtitle` are translation keys (see app.routes.ts), not literal text.
 const TEST_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'flow' },
   {
     path: 'flow',
     component: StubPageComponent,
-    data: { title: 'Flow', subtitle: 'Live request paths' },
+    data: { title: 'nav.flow', subtitle: 'topbar.subtitle.flow' },
   },
   {
     path: 'history',
     component: StubPageComponent,
-    data: { title: 'History', subtitle: 'Past executions' },
+    data: { title: 'nav.history', subtitle: 'topbar.subtitle.history' },
   },
-  { path: 'components', component: StubPageComponent, data: { title: 'Components' } },
-  { path: 'runner', component: StubPageComponent, data: { title: 'Runner' } },
+  { path: 'components', component: StubPageComponent, data: { title: 'nav.components' } },
+  { path: 'runner', component: StubPageComponent, data: { title: 'nav.runner' } },
 ];
 
 function fakeBreakpointObserver(initiallyNarrow: boolean) {
@@ -45,10 +47,15 @@ function fakeSseService() {
   };
 }
 
+function fakeThemeService() {
+  return { isDark: signal(true), toggle: vi.fn() };
+}
+
 describe('App', () => {
   let httpMock: HttpTestingController;
 
   function setup(initiallyNarrow: boolean) {
+    localStorage.clear(); // isolate LanguageService's default (pt-BR, D-35) across tests
     const { fake, emitNarrow } = fakeBreakpointObserver(initiallyNarrow);
     TestBed.configureTestingModule({
       imports: [App],
@@ -58,6 +65,7 @@ describe('App', () => {
         provideHttpClientTesting(),
         { provide: BreakpointObserver, useValue: fake },
         { provide: SseService, useValue: fakeSseService() },
+        { provide: ThemeService, useValue: fakeThemeService() },
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
@@ -89,7 +97,8 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.app-topbar__title')?.textContent).toContain('Flow');
+    // pt-BR is the default language (D-35), so the title renders translated, not the raw "Flow".
+    expect(compiled.querySelector('.app-topbar__title')?.textContent).toContain('Fluxo');
     expect(compiled.querySelector('a[href="/flow"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/history"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/components"]')).toBeTruthy();
@@ -146,6 +155,36 @@ describe('App', () => {
     expect(fixture.componentInstance.sidenavOpened()).toBe(true);
     fixture.componentInstance.toggleSidenav();
     expect(fixture.componentInstance.sidenavOpened()).toBe(false);
+  });
+
+  it('defaults to pt-BR and re-translates the shell when the language toggle is used', async () => {
+    const { fixture } = setup(false);
+    await TestBed.inject(Router).navigateByUrl('/flow');
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(fixture.componentInstance.activeLanguage()).toBe('pt-BR');
+    expect(compiled.querySelector('.app-topbar__title')?.textContent).toContain('Fluxo');
+
+    fixture.componentInstance.setLanguage('en');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.activeLanguage()).toBe('en');
+    expect(compiled.querySelector('.app-topbar__title')?.textContent).toContain('Flow');
+  });
+
+  it('toggles the theme via the injected ThemeService', async () => {
+    const { fixture } = setup(false);
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleTheme();
+
+    expect(TestBed.inject(ThemeService).toggle).toHaveBeenCalled();
   });
 
   it('shows the in-progress count fetched from GET /traces/live', async () => {

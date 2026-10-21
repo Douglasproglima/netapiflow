@@ -11,6 +11,10 @@ import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ApiService } from './core/api.service';
 import { SseService } from './core/sse.service';
 import { formatDurationMicros } from './shared/duration-format';
+import { LanguageService } from './core/i18n/language.service';
+import { TranslatePipe } from './core/i18n/translate.pipe';
+import { SupportedLanguage, TranslationKey } from './core/i18n/translations';
+import { ThemeService } from './core/theme.service';
 
 const NARROW_BREAKPOINT = '(max-width: 1023px)';
 
@@ -22,7 +26,14 @@ const NARROW_BREAKPOINT = '(max-width: 1023px)';
  * space, same as any standard sidebar.
  */
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatButtonModule],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MatSidenavModule,
+    MatButtonModule,
+    TranslatePipe,
+  ],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',
@@ -33,9 +44,13 @@ export class App implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly api = inject(ApiService);
   private readonly sse = inject(SseService);
+  private readonly language = inject(LanguageService);
+  private readonly theme = inject(ThemeService);
 
   readonly version = DASHBOARD_VERSION;
   readonly connectionState = this.sse.state;
+  readonly activeLanguage = this.language.language;
+  readonly isDarkTheme = this.theme.isDark;
 
   readonly isNarrow = toSignal(
     this.breakpointObserver.observe(NARROW_BREAKPOINT).pipe(map((state) => state.matches)),
@@ -44,25 +59,27 @@ export class App implements OnInit, OnDestroy {
 
   readonly sidenavOpened = signal(true);
 
+  // Route `data.title`/`data.subtitle` are translation keys (app.routes.ts), looked up through
+  // the `t` pipe in the template, not literal text (ADR-0011).
   readonly pageTitle = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       startWith(null),
-      map(() => this.currentRouteData()['title'] as string | undefined),
+      map(() => this.currentRouteData()['title'] as TranslationKey | undefined),
     ),
-    { initialValue: this.currentRouteData()['title'] as string | undefined },
+    { initialValue: this.currentRouteData()['title'] as TranslationKey | undefined },
   );
 
   readonly pageSubtitle = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       startWith(null),
-      map(() => this.currentRouteData()['subtitle'] as string | undefined),
+      map(() => this.currentRouteData()['subtitle'] as TranslationKey | undefined),
     ),
-    { initialValue: this.currentRouteData()['subtitle'] as string | undefined },
+    { initialValue: this.currentRouteData()['subtitle'] as TranslationKey | undefined },
   );
 
-  readonly slowThresholdLabel = signal<string | null>(null);
+  readonly slowThresholdValue = signal<string | null>(null);
   readonly inProgressCount = signal(0);
 
   constructor() {
@@ -70,6 +87,12 @@ export class App implements OnInit, OnDestroy {
     // the breakpoint, so a manual toggle isn't immediately overridden on the next resize tick.
     effect(() => {
       this.sidenavOpened.set(!this.isNarrow());
+    });
+
+    // `lang` follows the active language so assistive tech applies the right pronunciation
+    // (guide dashboard-preferences, section 7).
+    effect(() => {
+      document.documentElement.lang = this.activeLanguage();
     });
   }
 
@@ -79,9 +102,7 @@ export class App implements OnInit, OnDestroy {
       .getConfig()
       .subscribe(
         (config) =>
-          void this.slowThresholdLabel.set(
-            `slow threshold ${formatDurationMicros(config.slowThresholdMicros)}`,
-          ),
+          void this.slowThresholdValue.set(formatDurationMicros(config.slowThresholdMicros)),
       );
     this.refreshInProgressCount();
     this.sse.events$.subscribe((event) => {
@@ -107,6 +128,18 @@ export class App implements OnInit, OnDestroy {
 
   openAbout(): void {
     this.dialog.open(AboutDialogComponent, { width: '460px', maxWidth: '90vw' });
+  }
+
+  setLanguage(language: SupportedLanguage): void {
+    this.language.setLanguage(language);
+  }
+
+  toggleTheme(): void {
+    this.theme.toggle();
+  }
+
+  themeToggleLabel(): TranslationKey {
+    return this.isDarkTheme() ? 'theme.toggle.toLight' : 'theme.toggle.toDark';
   }
 
   private refreshInProgressCount(): void {

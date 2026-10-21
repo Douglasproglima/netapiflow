@@ -65,6 +65,47 @@
   }
 }
 
+// Language selector (docs/design/dashboard-preferences/guide.md, seção 4): same segmented-control
+// pattern as the replay speed group (flow-workspace guide, seção 6.5).
+.app-topbar__lang {
+  flex: none;
+  display: inline-flex;
+  height: 36px;
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-sm);
+  overflow: hidden;
+
+  button {
+    height: 100%;
+    padding: 0 0.75rem;
+    border: 0;
+    background: none;
+    font-family: var(--naf-font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    color: var(--naf-text-muted);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--naf-surface-2);
+    }
+
+    &[aria-checked='true'] {
+      background: var(--naf-flow-tint);
+      color: var(--naf-flow-text);
+    }
+
+    & + button {
+      border-left: 1px solid var(--naf-border);
+    }
+  }
+}
+
+.app-topbar__theme {
+  flex: none;
+}
+
 .app-shell {
   flex: 1 1 auto;
   min-height: 0;
