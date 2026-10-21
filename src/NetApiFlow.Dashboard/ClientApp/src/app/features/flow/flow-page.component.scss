@@ -76,7 +76,9 @@
 .flow-workspace__scrim {
   position: fixed;
   inset: 56px 0 0 92px;
-  background: rgba(9, 11, 16, 0.55);
+  // Against this near-black theme, a semi-transparent dark scrim over an already-dark page barely
+  // reads as "something changed" — push it darker so the drawer unmistakably reads as an overlay.
+  background: rgba(0, 0, 0, 0.75);
   z-index: 35;
   border: 0;
   padding: 0;
@@ -84,6 +86,32 @@
 
   @media (max-width: 1023px) {
     inset: 56px 0 0 0;
+  }
+}
+
+.flow-workspace__action-close {
+  position: fixed;
+  top: 68px;
+  // 92px drawer offset + 340px drawer width - 44px to sit just inside its right edge.
+  left: 388px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface-2);
+  color: var(--naf-text);
+  display: grid;
+  place-items: center;
+  z-index: 41;
+  cursor: pointer;
+
+  @media (max-width: 1023px) {
+    left: auto;
+    right: 1.5rem;
+  }
+
+  @media (max-width: 767px) {
+    right: 1.25rem;
   }
 }
 
