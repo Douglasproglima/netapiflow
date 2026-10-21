@@ -529,9 +529,14 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
 
 ```json
 {
-  "slowThresholdMicros": 250000
+  "slowThresholdMicros": 250000,
+  "version": "0.1.0"
 }
 ```
+
+`version` (D-33) é lido de `AssemblyInformationalVersionAttribute` do assembly `NetApiFlow`, o
+mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do dashboard (tarefa
+7.0c, item 4).
 
 ---
 

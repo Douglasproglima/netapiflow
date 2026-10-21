@@ -103,9 +103,13 @@ automatizados existentes:
 4. **Distância visual grande do protótipo do Guia de Marca**: espaçamento, tipografia e
    hierarquia hoje mais perto do padrão genérico do Angular Material do que do HTML do guia
    (`G:\Meu Drive\Controle\2026\00 - Personal\00 - NetApiFlow\Designer System and UI`). Não é um
-   bug pontual, é um pedido de polimento: comparar lado a lado com o HTML do guia (espaçamento,
-   tamanho de fonte, raio de borda, elevação de card) e replicar de verdade, não só os tokens de
-   cor já aplicados na tarefa 7.0. Dentro deste item, confirmado pelo usuário como parte do
+   bug pontual, é um pedido de polimento. **Especificação completa e normativa deste item**:
+   `docs/design/flow-workspace/guide.md` (tokens, layout, breakpoints, componente a componente,
+   critérios de aceite em checklist) e `docs/design/flow-workspace/mockup.html` (referência
+   visual navegável, abrir no navegador e comparar lado a lado com o dashboard rodando). As
+   duas decisões que o guia deixava em aberto já foram resolvidas pela Planejadora (D-33, seção 9
+   do próprio guia). O que o guia marca como "roadmap D-32" (zoom, legenda, sparkline, aba de
+   cenários) não entra nesta tarefa. Dentro deste item, confirmado pelo usuário como parte do
    pacote de produção antes de considerar o dashboard pronto para `v1`:
    - **Logo real na sidebar**: hoje só o texto "NetApiFlow", sem o monograma de
      `docs/brand/logo-mark-dark.svg` (o mesmo usado no favicon e no `icon.png` do pacote NuGet).
