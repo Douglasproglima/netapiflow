@@ -168,10 +168,6 @@ describe('FlowPageComponent', () => {
 
     fixture.componentInstance.toggleReplay();
     expect(fixture.componentInstance.isReplaying()).toBe(true);
-
-    // D-39/replay bug: entering replay used to drop every node until the first step played,
-    // leaving the canvas blank. The full trace is already known, so it renders as the blueprint
-    // from the first frame, with not-yet-revealed steps showing as not-executed ghosts.
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
     expect(fixture.componentInstance.graph().nodes[0].state).toBe('not-executed');
 

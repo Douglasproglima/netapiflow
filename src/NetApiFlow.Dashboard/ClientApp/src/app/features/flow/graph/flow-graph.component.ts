@@ -54,13 +54,6 @@ export class FlowGraphComponent implements AfterViewInit {
   private zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> | null = null;
 
   constructor() {
-    // The viewBox's own coordinate space changes whenever the node set does (switching into/out
-    // of replay, a replay step revealing more nodes): a zoom/pan transform computed for the
-    // previous viewBox no longer lines up with the new one, and with `overflow: visible` on the
-    // SVG (needed so sequence pills and the selection ring aren't clipped), that mismatch painted
-    // content outside the canvas instead of just looking wrong inside it — the parent's
-    // `overflow: auto` then grew a scrollbar to reach it. Resetting to identity whenever the
-    // viewBox changes keeps the transform always valid for the content it's actually zooming.
     effect(() => {
       this.viewBox();
       if (this.svgSelection && this.zoomBehavior) {
