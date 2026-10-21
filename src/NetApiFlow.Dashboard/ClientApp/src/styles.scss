@@ -30,25 +30,12 @@
   font-display: swap;
 }
 
-html {
-  height: 100%;
-  @include mat.theme(
-    (
-      color: (
-        theme-type: color-scheme,
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
-      ),
-      typography: 'Inter, -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif',
-      density: 0,
-    )
-  );
-
-  // Brand tokens (docs/brand/tokens.md, ADR-0009): Obsidian (dark, principal) below, Stage Light
-  // (claro) inside the media query. Overriding Material's own --mat-sys-* system variables after
-  // `mat.theme()` runs is the documented way to apply exact brand colors without regenerating a
-  // full M3 tonal palette (https://material.angular.dev/guide/system-variables) — the palette
-  // above only supplies the roles this file doesn't override.
+// Brand tokens (docs/brand/tokens.md, ADR-0009), as the --mat-sys-*/--mat-card-*/--flow-*
+// variables every mat-* component and the graph/waterfall actually read. Mixins so the same
+// values can apply unconditionally (dark, the default), behind `prefers-color-scheme` (no saved
+// preference), and behind the manual `data-theme` attribute the theme toggle writes (D-36) —
+// without triplicating every declaration by hand.
+@mixin naf-mat-theme-dark {
   --mat-sys-primary: #7c3aed;
   --mat-sys-on-primary: #ffffff;
   --mat-sys-tertiary: #8b5cf6;
@@ -64,40 +51,19 @@ html {
   --mat-sys-error: #ef4444;
   --mat-sys-on-error: #ffffff;
 
-  // Card and button recipe from the brand guide (D-31, tarefa 7.0c): radius-lg (18px) cards,
-  // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
-  // just its stock color palette.
-  --mat-card-elevated-container-shape: 18px;
-  --mat-card-outlined-container-shape: 18px;
-  --mat-card-filled-container-shape: 18px;
-  --mat-card-elevated-container-color: rgba(19, 23, 34, 0.72);
-  --mat-card-outlined-container-color: rgba(19, 23, 34, 0.72);
-  --mat-card-outlined-outline-color: var(--mat-sys-outline-variant);
-  --mat-button-filled-container-height: 44px;
-  --mat-button-outlined-container-height: 44px;
-  --mat-button-protected-container-height: 44px;
-  --mat-button-tonal-container-height: 44px;
-  --mat-button-filled-container-shape: 12px;
-  --mat-button-outlined-container-shape: 12px;
-  --mat-button-protected-container-shape: 12px;
-  --mat-button-tonal-container-shape: 12px;
-  --mat-button-filled-label-text-weight: 600;
-  --mat-button-outlined-label-text-weight: 600;
-  --mat-button-protected-label-text-weight: 600;
-  --mat-button-tonal-label-text-weight: 600;
-  --mat-button-text-label-text-weight: 600;
-
   // Palette audit (D-31, item 4): --mat-sys-primary (flow-600, #7C3AED) is correctly the filled
   // button's background, exactly as docs/brand/tokens.md names it ("Botão primário"). But
   // Material also used it, by default, as the plain *text* color of unfilled buttons (mat-button,
   // mat-stroked-button) — the endpoint list, pagination, nav links. tokens.md has a dedicated
   // token for text/links on a dark surface, flow-400 (#A78BFA), lighter than flow-600 precisely
-  // because a saturated button-strength purple reads poorly as plain text. Overriding these two
-  // roles independently is what the audit found wrong: every unfilled button showed flow-600,
-  // the button-background shade, where the brand guide specifies flow-400 for text.
+  // because a saturated button-strength purple reads poorly as plain text.
   --mat-button-text-label-text-color: #a78bfa;
   --mat-button-outlined-label-text-color: #a78bfa;
   --mat-button-protected-label-text-color: #a78bfa;
+
+  --mat-card-elevated-container-color: rgba(19, 23, 34, 0.72);
+  --mat-card-outlined-container-color: rgba(19, 23, 34, 0.72);
+  --mat-card-outlined-outline-color: var(--mat-sys-outline-variant);
 
   // Node states (`shared/node-state-presentation.ts`, `features/flow/graph`), fallback values
   // already used by `flow-graph.component.scss`/`flow-details-panel.component.scss`.
@@ -118,52 +84,110 @@ html {
   --flow-waterfall-track: #232b3e;
   --flow-waterfall-bar: #8b5cf6;
   --flow-waterfall-bar-error: #ef4444;
+}
+
+@mixin naf-mat-theme-light {
+  --mat-sys-primary: #6d28d9;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-tertiary: #6d28d9;
+  --mat-sys-on-tertiary: #ffffff;
+
+  // Stage Light has no separate "button" vs "text" shade of purple the way Obsidian's
+  // flow-600/flow-400 split does — Flow 700 is already the AAA-compliant token for both
+  // (docs/brand/tokens.md). Reset back to it, undoing the dark-mode override above.
+  --mat-button-text-label-text-color: #6d28d9;
+  --mat-button-outlined-label-text-color: #6d28d9;
+  --mat-button-protected-label-text-color: #6d28d9;
+  --mat-sys-background: #ffffff;
+  --mat-sys-on-background: #0f172a;
+  --mat-sys-surface: #f1f5f9;
+  --mat-sys-on-surface: #0f172a;
+  --mat-sys-surface-variant: #f1f5f9;
+  --mat-sys-on-surface-variant: #64748b;
+  --mat-sys-outline: #64748b;
+  --mat-sys-outline-variant: #64748b;
+  --mat-sys-error: #b91c1c;
+  --mat-sys-on-error: #ffffff;
+
+  --mat-card-elevated-container-color: rgba(241, 245, 249, 0.72);
+  --mat-card-outlined-container-color: rgba(241, 245, 249, 0.72);
+  --mat-card-outlined-outline-color: #e2e8f0;
+
+  --flow-node-fill: #f1f5f9;
+  --flow-node-stroke: #64748b;
+  --flow-state-waiting-fill: color-mix(in srgb, #64748b 12%, transparent);
+  --flow-state-waiting-stroke: #64748b;
+  --flow-state-running-fill: color-mix(in srgb, #6d28d9 12%, transparent);
+  --flow-state-running-stroke: #6d28d9;
+  --flow-state-completed-fill: color-mix(in srgb, #047857 12%, transparent);
+  --flow-state-completed-stroke: #047857;
+  --flow-state-slow-fill: color-mix(in srgb, #b45309 12%, transparent);
+  --flow-state-slow-stroke: #b45309;
+  --flow-state-error-fill: color-mix(in srgb, #b91c1c 12%, transparent);
+  --flow-state-error-stroke: #b91c1c;
+  --flow-state-not-executed-fill: color-mix(in srgb, #64748b 8%, transparent);
+  --flow-state-not-executed-stroke: #64748b;
+  --flow-waterfall-track: #e2e8f0;
+  --flow-waterfall-bar: #6d28d9;
+  --flow-waterfall-bar-error: #b91c1c;
+}
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        theme-type: color-scheme,
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: 'Inter, -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif',
+      density: 0,
+    )
+  );
+
+  // Obsidian (dark, principal) is the default; Stage Light applies behind the OS preference
+  // (no saved choice) or, explicitly, behind the manual `data-theme` attribute the theme toggle
+  // writes (D-36), which always wins over the OS preference once set. Overriding Material's own
+  // --mat-sys-* system variables after `mat.theme()` runs is the documented way to apply exact
+  // brand colors without regenerating a full M3 tonal palette
+  // (https://material.angular.dev/guide/system-variables) — the palette above only supplies the
+  // roles this file doesn't override.
+  @include naf-mat-theme-dark;
+
+  // Card and button recipe from the brand guide (D-31, tarefa 7.0c): radius-lg (18px) cards,
+  // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
+  // just its stock color palette. Shape/sizing doesn't change between themes.
+  --mat-card-elevated-container-shape: 18px;
+  --mat-card-outlined-container-shape: 18px;
+  --mat-card-filled-container-shape: 18px;
+  --mat-button-filled-container-height: 44px;
+  --mat-button-outlined-container-height: 44px;
+  --mat-button-protected-container-height: 44px;
+  --mat-button-tonal-container-height: 44px;
+  --mat-button-filled-container-shape: 12px;
+  --mat-button-outlined-container-shape: 12px;
+  --mat-button-protected-container-shape: 12px;
+  --mat-button-tonal-container-shape: 12px;
+  --mat-button-filled-label-text-weight: 600;
+  --mat-button-outlined-label-text-weight: 600;
+  --mat-button-protected-label-text-weight: 600;
+  --mat-button-tonal-label-text-weight: 600;
+  --mat-button-text-label-text-weight: 600;
 
   @media (prefers-color-scheme: light) {
-    --mat-sys-primary: #6d28d9;
-    --mat-sys-on-primary: #ffffff;
-    --mat-sys-tertiary: #6d28d9;
-    --mat-sys-on-tertiary: #ffffff;
-
-    // Stage Light has no separate "button" vs "text" shade of purple the way Obsidian's
-    // flow-600/flow-400 split does — Flow 700 is already the AAA-compliant token for both
-    // (docs/brand/tokens.md). Reset back to it, undoing the dark-mode override above.
-    --mat-button-text-label-text-color: #6d28d9;
-    --mat-button-outlined-label-text-color: #6d28d9;
-    --mat-button-protected-label-text-color: #6d28d9;
-    --mat-sys-background: #ffffff;
-    --mat-sys-on-background: #0f172a;
-    --mat-sys-surface: #f1f5f9;
-    --mat-sys-on-surface: #0f172a;
-    --mat-sys-surface-variant: #f1f5f9;
-    --mat-sys-on-surface-variant: #64748b;
-    --mat-sys-outline: #64748b;
-    --mat-sys-outline-variant: #64748b;
-    --mat-sys-error: #b91c1c;
-    --mat-sys-on-error: #ffffff;
-
-    --mat-card-elevated-container-color: rgba(241, 245, 249, 0.72);
-    --mat-card-outlined-container-color: rgba(241, 245, 249, 0.72);
-    --mat-card-outlined-outline-color: #e2e8f0;
-
-    --flow-node-fill: #f1f5f9;
-    --flow-node-stroke: #64748b;
-    --flow-state-waiting-fill: color-mix(in srgb, #64748b 12%, transparent);
-    --flow-state-waiting-stroke: #64748b;
-    --flow-state-running-fill: color-mix(in srgb, #6d28d9 12%, transparent);
-    --flow-state-running-stroke: #6d28d9;
-    --flow-state-completed-fill: color-mix(in srgb, #047857 12%, transparent);
-    --flow-state-completed-stroke: #047857;
-    --flow-state-slow-fill: color-mix(in srgb, #b45309 12%, transparent);
-    --flow-state-slow-stroke: #b45309;
-    --flow-state-error-fill: color-mix(in srgb, #b91c1c 12%, transparent);
-    --flow-state-error-stroke: #b91c1c;
-    --flow-state-not-executed-fill: color-mix(in srgb, #64748b 8%, transparent);
-    --flow-state-not-executed-stroke: #64748b;
-    --flow-waterfall-track: #e2e8f0;
-    --flow-waterfall-bar: #6d28d9;
-    --flow-waterfall-bar-error: #b91c1c;
+    &:not([data-theme='dark']) {
+      @include naf-mat-theme-light;
+    }
   }
+}
+
+html[data-theme='light'] {
+  @include naf-mat-theme-light;
+}
+
+html[data-theme='dark'] {
+  @include naf-mat-theme-dark;
 }
 
 body {
