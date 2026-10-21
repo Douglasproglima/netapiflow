@@ -1,10 +1,12 @@
 import { Component, inject, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../../core/api.service';
 import { FlowTraceSummary } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
+import { statusTint, StatusTint } from '../../../shared/status-tint';
 
 const PAGE_SIZE = 8;
 
@@ -18,7 +20,7 @@ const PAGE_SIZE = 8;
   selector: 'app-recent-executions',
   templateUrl: './recent-executions.component.html',
   styleUrl: './recent-executions.component.scss',
-  imports: [MatCardModule, MatButtonModule],
+  imports: [MatCardModule, MatButtonModule, RouterLink],
 })
 export class RecentExecutionsComponent {
   private readonly api = inject(ApiService);
@@ -53,5 +55,23 @@ export class RecentExecutionsComponent {
 
   formatDuration(micros: number | null): string {
     return formatDurationMicros(micros);
+  }
+
+  statusTint(trace: FlowTraceSummary): StatusTint {
+    return statusTint(trace.status);
+  }
+
+  /** `now` / `56 s` / `12 min`, relative to render time (guide seção 6.7); the ISO stays in `title`. */
+  relativeTime(startedAt: string): string {
+    const diffSeconds = Math.max(0, Math.floor((Date.now() - Date.parse(startedAt)) / 1000));
+    if (diffSeconds < 5) {
+      return 'now';
+    }
+
+    if (diffSeconds < 60) {
+      return `${diffSeconds} s`;
+    }
+
+    return `${Math.floor(diffSeconds / 60)} min`;
   }
 }

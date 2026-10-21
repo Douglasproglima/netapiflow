@@ -3,6 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { SseService } from '../../../core/sse.service';
 import { FlowEvent } from '../../../core/models';
+import { eventTypeTint, EventTypeTint } from '../../../shared/event-type-tint';
 
 const MAX_VISIBLE_EVENTS = 200;
 
@@ -25,6 +26,7 @@ export class EventFeedComponent implements OnInit, OnDestroy {
 
   readonly events = signal<FlowEvent[]>([]);
   readonly collapsed = signal(false);
+  readonly connectionState = this.sse.state;
 
   toggleCollapsed(): void {
     this.collapsed.update((collapsed) => !collapsed);
@@ -46,5 +48,13 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   eventLabel(event: FlowEvent): string {
     const span = event.span;
     return span ? `${span.component}.${span.operation}` : event.traceId;
+  }
+
+  eventTint(event: FlowEvent): EventTypeTint {
+    return eventTypeTint(event.type);
+  }
+
+  shortTraceId(traceId: string): string {
+    return traceId.length > 8 ? traceId.slice(0, 8) : traceId;
   }
 }

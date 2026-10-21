@@ -36,6 +36,7 @@ describe('EventFeedComponent', () => {
       events$: events$.asObservable(),
       connect: vi.fn(),
       disconnect: vi.fn(),
+      state: () => 'open' as const,
     };
 
     TestBed.configureTestingModule({
@@ -61,6 +62,7 @@ describe('EventFeedComponent', () => {
       events$: new Subject<FlowEvent>().asObservable(),
       connect: vi.fn(),
       disconnect: vi.fn(),
+      state: () => 'open' as const,
     };
 
     TestBed.configureTestingModule({

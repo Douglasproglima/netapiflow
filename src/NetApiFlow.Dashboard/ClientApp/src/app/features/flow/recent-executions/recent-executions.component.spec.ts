@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import { RecentExecutionsComponent } from './recent-executions.component';
 import { FlowTraceSummary, PagedResult } from '../../../core/models';
 
@@ -25,7 +26,7 @@ describe('RecentExecutionsComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -71,6 +72,26 @@ describe('RecentExecutionsComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('No traces recorded yet.');
+  });
+
+  it('shows the HTTP status code tinted by the trace status', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    const status = fixture.nativeElement.querySelector('.recent-executions__status-text');
+    expect(status.textContent).toContain('200');
+    expect(status.className).toContain('recent-executions__status-text--success');
+  });
+
+  it('links "View all" to /history', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('a[href="/history"]')).toBeTruthy();
   });
 
   it('toggles collapsed state', async () => {
