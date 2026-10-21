@@ -17,6 +17,8 @@ import { RecentExecutionsComponent } from './recent-executions/recent-executions
 import { EndpointFormComponent } from '../runner/endpoint-form.component';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import { formatDurationMicros } from '../../shared/duration-format';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { LanguageService } from '../../core/i18n/language.service';
 
 export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
@@ -40,6 +42,7 @@ export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
     RecentExecutionsComponent,
     EndpointFormComponent,
     MatButtonModule,
+    TranslatePipe,
   ],
   providers: [LiveTracePlayerService, ReplayPlayerService],
 })
@@ -48,6 +51,7 @@ export class FlowPageComponent {
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly language = inject(LanguageService);
   readonly livePlayer = inject(LiveTracePlayerService);
   readonly replayPlayer = inject(ReplayPlayerService);
 
@@ -153,13 +157,17 @@ export class FlowPageComponent {
     }
 
     const total = this.replayPlayer.totalSteps();
-    const current = Math.min(this.replayPlayer.stepIndex(), total);
-    const progress = `Step ${current}/${total}`;
-    const outcome =
-      this.replayPlayer.state() === 'finished'
-        ? `finished with HTTP ${trace.httpStatus ?? '—'}`
-        : 'playing';
-    return `${progress} · ${outcome} · replaying recorded timestamps at ${this.replayPlayer.speed()}×`;
+    const step = Math.min(this.replayPlayer.stepIndex(), total);
+    const speed = this.replayPlayer.speed();
+
+    return this.replayPlayer.state() === 'finished'
+      ? this.language.translate('replay.status.finished', {
+          step,
+          total,
+          status: trace.httpStatus ?? '—',
+          speed,
+        })
+      : this.language.translate('replay.status.playing', { step, total, speed });
   });
 
   methodTagClass(method: string): string {

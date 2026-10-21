@@ -65,7 +65,7 @@ describe('MetricCardsComponent', () => {
     const cards = fixture.componentInstance.cards();
     expect(cards).toEqual([
       {
-        label: 'Traces',
+        labelKey: 'metrics.traces',
         value: '10',
         valueUnit: null,
         icon: 'traces',
@@ -73,7 +73,7 @@ describe('MetricCardsComponent', () => {
         highlight: false,
       },
       {
-        label: 'Successful',
+        labelKey: 'metrics.successful',
         value: '7',
         valueUnit: null,
         icon: 'success',
@@ -81,7 +81,7 @@ describe('MetricCardsComponent', () => {
         highlight: false,
       },
       {
-        label: 'Errors',
+        labelKey: 'metrics.errors',
         value: '3',
         valueUnit: null,
         icon: 'errors',
@@ -89,7 +89,7 @@ describe('MetricCardsComponent', () => {
         highlight: true,
       },
       {
-        label: 'Avg latency',
+        labelKey: 'metrics.avgLatency',
         value: '21.5',
         valueUnit: 'ms',
         icon: 'avg',
@@ -97,7 +97,7 @@ describe('MetricCardsComponent', () => {
         highlight: false,
       },
       {
-        label: 'Max latency',
+        labelKey: 'metrics.maxLatency',
         value: '412.0',
         valueUnit: 'ms',
         icon: 'max',
@@ -105,7 +105,7 @@ describe('MetricCardsComponent', () => {
         highlight: false,
       },
       {
-        label: 'Steps executed',
+        labelKey: 'metrics.stepsExecuted',
         value: '50',
         valueUnit: null,
         icon: 'steps',
@@ -149,6 +149,7 @@ describe('MetricCardsComponent', () => {
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Failed to load metrics.');
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain('Falha ao carregar as métricas.');
   });
 });

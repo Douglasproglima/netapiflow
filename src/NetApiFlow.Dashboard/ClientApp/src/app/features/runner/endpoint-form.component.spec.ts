@@ -62,7 +62,10 @@ describe('EndpointFormComponent', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Could not load the OpenAPI document.');
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain(
+      'Não foi possível carregar o documento OpenAPI.',
+    );
   });
 
   it('filters the endpoint list by route', async () => {

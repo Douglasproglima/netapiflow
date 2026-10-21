@@ -59,9 +59,12 @@ const en = {
   'action.invalidJson': 'Body is not valid JSON.',
   'action.requestFailed': 'Request failed.',
   'action.traceConfirmation': 'Trace: {traceId}',
+  'action.closePanel': 'Close the action panel',
+  'action.openPanel': 'Try an endpoint',
 
   'graph.title': 'Request path',
   'graph.backToLive': 'Back to live',
+  'graph.replay': 'Replay',
   'graph.copyTraceId': 'Copy trace id',
   'graph.errorOrigin': 'Error origin: {component} · HTTP {status} · {duration}',
   'graph.slowestStep': 'Slowest step: {component} · {duration}',
@@ -83,8 +86,10 @@ const en = {
   'replay.nextStep': 'Next step',
   'replay.positionAria': 'Replay position',
   'replay.speedAria': 'Playback speed',
-  'replay.status':
+  'replay.status.finished':
     'Step {step}/{total} · finished with HTTP {status} · replaying recorded timestamps at {speed}×',
+  'replay.status.playing':
+    'Step {step}/{total} · playing · replaying recorded timestamps at {speed}×',
 
   'details.kpi.total': 'Total',
   'details.kpi.executed': 'Executed',
@@ -231,9 +236,12 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.invalidJson': 'O corpo não é um JSON válido.',
   'action.requestFailed': 'A requisição falhou.',
   'action.traceConfirmation': 'Trace: {traceId}',
+  'action.closePanel': 'Fechar o painel de ação',
+  'action.openPanel': 'Testar um endpoint',
 
   'graph.title': 'Caminho da requisição',
   'graph.backToLive': 'Voltar para o ao vivo',
+  'graph.replay': 'Reprise',
   'graph.copyTraceId': 'Copiar id do trace',
   'graph.errorOrigin': 'Origem do erro: {component} · HTTP {status} · {duration}',
   'graph.slowestStep': 'Etapa mais lenta: {component} · {duration}',
@@ -255,8 +263,10 @@ const ptBr: Record<keyof typeof en, string> = {
   'replay.nextStep': 'Próxima etapa',
   'replay.positionAria': 'Posição da reprodução',
   'replay.speedAria': 'Velocidade de reprodução',
-  'replay.status':
+  'replay.status.finished':
     'Etapa {step}/{total} · concluída com HTTP {status} · reproduzindo marcações de tempo originais a {speed}×',
+  'replay.status.playing':
+    'Etapa {step}/{total} · em reprodução · reproduzindo marcações de tempo originais a {speed}×',
 
   'details.kpi.total': 'Total',
   'details.kpi.executed': 'Executadas',

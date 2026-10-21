@@ -1,15 +1,15 @@
 <section class="endpoint-form">
   <div class="endpoint-form__header">
-    <h2>Try an endpoint</h2>
-    <p class="endpoint-form__intro">Sends a real request to your API. The graph follows it live.</p>
+    <h2>{{ 'action.title' | t }}</h2>
+    <p class="endpoint-form__intro">{{ 'action.intro' | t }}</p>
   </div>
 
   @if (loading()) {
-    <p class="endpoint-form__status" role="status">Loading…</p>
+    <p class="endpoint-form__status" role="status">{{ 'action.loading' | t }}</p>
   } @else if (loadError()) {
     <div class="endpoint-form__status endpoint-form__status--error" role="alert">
-      <p>{{ loadError() }}</p>
-      <p class="endpoint-form__status-hint">Check that the host calls MapOpenApi().</p>
+      <p>{{ loadError() | t }}</p>
+      <p class="endpoint-form__status-hint">{{ 'action.openApiError.hint' | t }}</p>
     </div>
   } @else {
     <div class="endpoint-form__search">
@@ -24,11 +24,13 @@
         <circle cx="11" cy="11" r="6.5" />
         <path d="m16 16 4 4" />
       </svg>
-      <label class="endpoint-form__search-label" for="endpoint-form-filter">Filter endpoints</label>
+      <label class="endpoint-form__search-label" for="endpoint-form-filter">{{
+        'action.filterAria' | t
+      }}</label>
       <input
         id="endpoint-form-filter"
         type="text"
-        placeholder="Filter by route"
+        [attr.placeholder]="'action.filterPlaceholder' | t"
         [value]="routeFilter()"
         (input)="setRouteFilter($any($event.target).value)"
       />
@@ -36,7 +38,7 @@
 
     <div class="endpoint-form__list-wrapper">
       @if (endpoints().length === 0) {
-        <p class="endpoint-form__status">No endpoints found.</p>
+        <p class="endpoint-form__status">{{ 'action.noEndpoints' | t }}</p>
       } @else {
         <ul class="endpoint-form__endpoints">
           @for (endpoint of endpoints(); track endpoint.method + ' ' + endpoint.path) {
@@ -63,8 +65,10 @@
 
     @if (hiddenDashboardRouteCount() > 0) {
       <p class="endpoint-form__hidden-note">
-        {{ hiddenDashboardRouteCount() }} dashboard
-        {{ hiddenDashboardRouteCount() === 1 ? 'route' : 'routes' }} hidden
+        {{
+          hiddenRoutesNoteKey()
+            | t: { count: hiddenDashboardRouteCount(), prefix: hiddenDashboardRoutePrefix }
+        }}
       </p>
     }
 
@@ -78,7 +82,7 @@
         @for (field of form.fields; track field.name) {
           <div class="endpoint-form__field">
             <label [for]="'endpoint-form-field-' + field.name"
-              >{{ field.name }}<b>{{ field.kind }} · {{ field.type }}</b></label
+              >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
             >
             @if (field.kind === 'body') {
               <textarea
@@ -98,17 +102,17 @@
         }
 
         <button mat-flat-button type="submit" class="endpoint-form__send" [disabled]="sending()">
-          Send request
+          {{ 'action.send' | t }}
         </button>
 
         @if (sendError()) {
           <p class="endpoint-form__status endpoint-form__status--error" role="alert">
-            {{ sendError() }}
+            {{ sendError() | t }}
           </p>
         }
 
-        @if (lastTraceId()) {
-          <p class="endpoint-form__trace-id">Trace: {{ lastTraceId() }}</p>
+        @if (lastTraceId(); as traceId) {
+          <p class="endpoint-form__trace-id">{{ 'action.traceConfirmation' | t: { traceId } }}</p>
         }
       </form>
     }

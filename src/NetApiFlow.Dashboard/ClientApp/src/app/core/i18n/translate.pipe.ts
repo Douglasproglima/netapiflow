@@ -12,7 +12,10 @@ import { TranslationKey } from './translations';
 export class TranslatePipe implements PipeTransform {
   private readonly language = inject(LanguageService);
 
-  transform(key: TranslationKey | undefined, values?: Record<string, string | number>): string {
+  transform(
+    key: TranslationKey | null | undefined,
+    values?: Record<string, string | number>,
+  ): string {
     return key ? this.language.translate(key, values) : '';
   }
 }

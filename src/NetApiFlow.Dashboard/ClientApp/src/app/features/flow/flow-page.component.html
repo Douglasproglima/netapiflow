@@ -11,13 +11,13 @@
       <button
         type="button"
         class="flow-workspace__scrim"
-        aria-label="Close the action panel"
+        [attr.aria-label]="'action.closePanel' | t"
         (click)="closeActionDrawer()"
       ></button>
       <button
         type="button"
         class="flow-workspace__action-close"
-        aria-label="Close the action panel"
+        [attr.aria-label]="'action.closePanel' | t"
         (click)="closeActionDrawer()"
       >
         <svg
@@ -46,12 +46,12 @@
           >
             <path d="M7 4.5v15l12-7.5Z" />
           </svg>
-          Try an endpoint
+          {{ 'action.openPanel' | t }}
         </button>
       }
       @if (trace(); as trace) {
         <div class="flow-workspace__graph-header">
-          <h2>Request path</h2>
+          <h2>{{ 'graph.title' | t }}</h2>
           <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
           <span class="flow-workspace__route">{{ trace.routeTemplate }}</span>
           <span class="flow-workspace__trace-id naf-mono"
@@ -59,7 +59,7 @@
             <button
               type="button"
               class="flow-workspace__copy"
-              aria-label="Copy trace id"
+              [attr.aria-label]="'graph.copyTraceId' | t"
               (click)="copyTraceId(trace.traceId)"
             >
               <svg
@@ -79,7 +79,7 @@
           </span>
           <span class="flow-workspace__graph-header-end">
             <button mat-stroked-button type="button" (click)="toggleReplay()">
-              {{ isReplaying() ? 'Back to live' : 'Replay' }}
+              {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
             </button>
           </span>
         </div>
@@ -101,10 +101,15 @@
               <circle cx="12" cy="12" r="8.5" />
               <path d="M12 7.5v5.5M12 16.4v.1" />
             </svg>
-            Error origin: {{ origin.component }}
-            <span class="naf-mono"
-              >· HTTP {{ trace.httpStatus }} · {{ formatDuration(trace.durationMicros) }}</span
-            >
+            {{
+              'graph.errorOrigin'
+                | t
+                  : {
+                      component: origin.component,
+                      status: trace.httpStatus ?? '—',
+                      duration: formatDuration(trace.durationMicros),
+                    }
+            }}
           </button>
         } @else if (slowestStep(); as step) {
           <button
@@ -123,8 +128,10 @@
               <circle cx="12" cy="12" r="7" />
               <path d="M12 8v4l2.5 1.5" />
             </svg>
-            Slowest step: {{ step.component }}
-            <span class="naf-mono">· {{ formatDuration(step.durationMicros) }}</span>
+            {{
+              'graph.slowestStep'
+                | t: { component: step.component, duration: formatDuration(step.durationMicros) }
+            }}
           </button>
         }
       }
@@ -138,7 +145,7 @@
             (nodeSelected)="onNodeSelected($event)"
           />
         } @else if (liveTracesLoading()) {
-          <p class="flow-workspace__status" role="status">Loading…</p>
+          <p class="flow-workspace__status" role="status">{{ 'graph.loading' | t }}</p>
         } @else if (liveTraces().length === 0) {
           <div class="flow-workspace__empty">
             <svg
@@ -151,10 +158,8 @@
             >
               <path d="M4 12 H9 L11 6 L14 18 L16 12 H20" />
             </svg>
-            <p>No request is currently in progress.</p>
-            <p class="flow-workspace__empty-hint">
-              Send a request from "Try an endpoint" or call your API directly.
-            </p>
+            <p>{{ 'graph.empty.title' | t }}</p>
+            <p class="flow-workspace__empty-hint">{{ 'graph.empty.hint' | t }}</p>
           </div>
         } @else {
           <ul class="flow-workspace__live-list">
@@ -180,11 +185,11 @@
       @if (isReplaying()) {
         <div class="flow-workspace__replay">
           <div class="flow-workspace__replay-row">
-            <span class="naf-mono flow-workspace__replay-mode">REPLAY</span>
+            <span class="naf-mono flow-workspace__replay-mode">{{ 'replay.chip.replay' | t }}</span>
             <button
               type="button"
               class="flow-workspace__replay-icon-btn"
-              aria-label="Restart"
+              [attr.aria-label]="'replay.restart' | t"
               (click)="replayPlayer.restart()"
             >
               <svg
@@ -202,7 +207,7 @@
             <button
               type="button"
               class="flow-workspace__replay-icon-btn"
-              aria-label="Previous step"
+              [attr.aria-label]="'replay.previousStep' | t"
               (click)="replayPlayer.stepBackward()"
             >
               <svg
@@ -219,7 +224,9 @@
             <button
               type="button"
               class="flow-workspace__replay-play"
-              [attr.aria-label]="replayPlayer.state() === 'playing' ? 'Pause' : 'Play'"
+              [attr.aria-label]="
+                (replayPlayer.state() === 'playing' ? 'replay.pause' : 'replay.play') | t
+              "
               (click)="
                 replayPlayer.state() === 'playing' ? replayPlayer.pause() : replayPlayer.play()
               "
@@ -237,7 +244,7 @@
             <button
               type="button"
               class="flow-workspace__replay-icon-btn"
-              aria-label="Next step"
+              [attr.aria-label]="'replay.nextStep' | t"
               (click)="replayPlayer.stepForward()"
             >
               <svg
@@ -257,10 +264,14 @@
               min="0"
               [max]="replayPlayer.totalSteps()"
               [value]="replayPlayer.stepIndex()"
-              aria-label="Replay position"
+              [attr.aria-label]="'replay.positionAria' | t"
               (input)="onSeek($event)"
             />
-            <div class="flow-workspace__speed" role="radiogroup" aria-label="Playback speed">
+            <div
+              class="flow-workspace__speed"
+              role="radiogroup"
+              [attr.aria-label]="'replay.speedAria' | t"
+            >
               @for (speed of replaySpeeds; track speed) {
                 <button
                   type="button"

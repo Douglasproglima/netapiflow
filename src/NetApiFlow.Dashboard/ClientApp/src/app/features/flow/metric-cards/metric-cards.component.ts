@@ -1,12 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../../../core/api.service';
 import { formatDurationMicros } from '../../../shared/duration-format';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { TranslationKey } from '../../../core/i18n/translations';
 
 export type MetricCardIcon = 'traces' | 'success' | 'errors' | 'avg' | 'max' | 'steps';
 export type MetricCardTint = 'flow' | 'success' | 'warning' | 'danger' | 'idle';
 
 interface MetricCard {
-  readonly label: string;
+  readonly labelKey: TranslationKey;
   readonly value: string;
   readonly valueUnit: string | null;
   readonly icon: MetricCardIcon;
@@ -34,13 +36,13 @@ function splitDuration(formatted: string): { value: string; unit: string | null 
   selector: 'app-metric-cards',
   templateUrl: './metric-cards.component.html',
   styleUrl: './metric-cards.component.scss',
-  imports: [],
+  imports: [TranslatePipe],
 })
 export class MetricCardsComponent {
   private readonly api = inject(ApiService);
 
   readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
+  readonly error = signal<TranslationKey | null>(null);
 
   private readonly totalTraces = signal(0);
   private readonly errorCount = signal(0);
@@ -56,7 +58,7 @@ export class MetricCardsComponent {
 
     return [
       {
-        label: 'Traces',
+        labelKey: 'metrics.traces',
         value: String(this.totalTraces()),
         valueUnit: null,
         icon: 'traces',
@@ -64,7 +66,7 @@ export class MetricCardsComponent {
         highlight: false,
       },
       {
-        label: 'Successful',
+        labelKey: 'metrics.successful',
         value: String(this.totalTraces() - this.errorCount()),
         valueUnit: null,
         icon: 'success',
@@ -72,7 +74,7 @@ export class MetricCardsComponent {
         highlight: false,
       },
       {
-        label: 'Errors',
+        labelKey: 'metrics.errors',
         value: String(this.errorCount()),
         valueUnit: null,
         icon: 'errors',
@@ -80,7 +82,7 @@ export class MetricCardsComponent {
         highlight: this.errorCount() > 0,
       },
       {
-        label: 'Avg latency',
+        labelKey: 'metrics.avgLatency',
         value: avg.value,
         valueUnit: avg.unit,
         icon: 'avg',
@@ -88,7 +90,7 @@ export class MetricCardsComponent {
         highlight: false,
       },
       {
-        label: 'Max latency',
+        labelKey: 'metrics.maxLatency',
         value: max.value,
         valueUnit: max.unit,
         icon: 'max',
@@ -96,7 +98,7 @@ export class MetricCardsComponent {
         highlight: false,
       },
       {
-        label: 'Steps executed',
+        labelKey: 'metrics.stepsExecuted',
         value: String(this.stepsExecuted()),
         valueUnit: null,
         icon: 'steps',
@@ -120,7 +122,7 @@ export class MetricCardsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load metrics.');
+        this.error.set('metrics.error');
         this.loading.set(false);
       },
     });

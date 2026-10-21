@@ -4,7 +4,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { OpenApiDocument } from '../../core/models';
 import { httpMethodTagClass } from '../../shared/http-method-style';
-import { buildEndpointForm, listOpenApiEndpoints, partitionDashboardRoutes } from './openapi-form';
+import {
+  buildEndpointForm,
+  FormFieldKind,
+  listOpenApiEndpoints,
+  partitionDashboardRoutes,
+} from './openapi-form';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { TranslationKey } from '../../core/i18n/translations';
 
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
@@ -21,7 +28,7 @@ import { buildEndpointForm, listOpenApiEndpoints, partitionDashboardRoutes } fro
   selector: 'app-endpoint-form',
   templateUrl: './endpoint-form.component.html',
   styleUrl: './endpoint-form.component.scss',
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, TranslatePipe],
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
@@ -31,7 +38,7 @@ export class EndpointFormComponent {
   readonly traceDispatched = output<string>();
 
   readonly loading = signal(true);
-  readonly loadError = signal<string | null>(null);
+  readonly loadError = signal<TranslationKey | null>(null);
   private readonly openApiDocument = signal<OpenApiDocument | null>(null);
 
   readonly routeFilter = signal('');
@@ -44,6 +51,17 @@ export class EndpointFormComponent {
   });
 
   readonly hiddenDashboardRouteCount = computed(() => this.endpointsPartition().hiddenCount);
+  readonly hiddenDashboardRoutePrefix = `${this.dashboardBasePath}/`;
+
+  hiddenRoutesNoteKey(): TranslationKey {
+    return this.hiddenDashboardRouteCount() === 1
+      ? 'action.hiddenRoutesNote.one'
+      : 'action.hiddenRoutesNote.many';
+  }
+
+  fieldKindKey(kind: FormFieldKind): TranslationKey {
+    return `action.field.kind.${kind}`;
+  }
 
   readonly endpoints = computed(() => {
     const filter = this.routeFilter().trim().toLowerCase();
@@ -62,7 +80,7 @@ export class EndpointFormComponent {
 
   readonly fieldValues = signal<Record<string, string>>({});
   readonly sending = signal(false);
-  readonly sendError = signal<string | null>(null);
+  readonly sendError = signal<TranslationKey | null>(null);
   readonly lastTraceId = signal<string | null>(null);
 
   constructor() {
@@ -72,7 +90,7 @@ export class EndpointFormComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.loadError.set('Could not load the OpenAPI document.');
+        this.loadError.set('action.openApiError.title');
         this.loading.set(false);
       },
     });
@@ -126,7 +144,7 @@ export class EndpointFormComponent {
         try {
           body = raw ? JSON.parse(raw) : undefined;
         } catch {
-          this.sendError.set('Body is not valid JSON.');
+          this.sendError.set('action.invalidJson');
           return;
         }
       }
@@ -147,7 +165,7 @@ export class EndpointFormComponent {
       },
       error: () => {
         this.sending.set(false);
-        this.sendError.set('Request failed.');
+        this.sendError.set('action.requestFailed');
       },
     });
   }
