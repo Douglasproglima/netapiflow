@@ -139,8 +139,9 @@ const en = {
   'about.version': 'Version',
   'about.license': 'License',
   'about.repository': 'Repository',
-  'about.credit':
-    "Inspired by the idea behind apiflow (Spring Boot): visualizing a request's path through an API in real time. No code, file or asset from that project was copied or ported.",
+  'about.creditPrefix': 'Inspired by the idea behind',
+  'about.creditSuffix':
+    "(Spring Boot): visualizing a request's path through an API in real time. No code, file or asset from that project was copied or ported.",
   'about.close': 'Close',
 
   'components.loading': 'Loading…',
@@ -316,8 +317,9 @@ const ptBr: Record<keyof typeof en, string> = {
   'about.version': 'Versão',
   'about.license': 'Licença',
   'about.repository': 'Repositório',
-  'about.credit':
-    'Inspirado na ideia por trás do apiflow (Spring Boot): visualizar em tempo real o caminho de uma requisição dentro de uma API. Nenhum código, arquivo ou recurso daquele projeto foi copiado ou portado.',
+  'about.creditPrefix': 'Inspirado na ideia por trás do',
+  'about.creditSuffix':
+    '(Spring Boot): visualizar em tempo real o caminho de uma requisição dentro de uma API. Nenhum código, arquivo ou recurso daquele projeto foi copiado ou portado.',
   'about.close': 'Fechar',
 
   'components.loading': 'Carregando…',

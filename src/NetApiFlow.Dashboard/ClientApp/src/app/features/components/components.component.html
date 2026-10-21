@@ -1,23 +1,23 @@
 <section class="components">
   @if (loading()) {
-    <p class="components__status" role="status">Loading…</p>
+    <p class="components__status" role="status">{{ 'components.loading' | t }}</p>
   } @else if (error()) {
-    <p class="components__status components__status--error" role="alert">{{ error() }}</p>
+    <p class="components__status components__status--error" role="alert">{{ error() | t }}</p>
   } @else if (stats().length === 0) {
-    <p class="components__status">No component metrics recorded yet.</p>
+    <p class="components__status">{{ 'components.empty' | t }}</p>
   } @else {
     <mat-card appearance="outlined">
       <table class="components__table">
         <thead>
           <tr>
-            <th>Component</th>
-            <th>Operation</th>
-            <th>Executions</th>
-            <th>Errors</th>
-            <th>Median</th>
-            <th>Average</th>
-            <th>p95</th>
-            <th>Max</th>
+            <th>{{ 'components.table.component' | t }}</th>
+            <th>{{ 'components.table.operation' | t }}</th>
+            <th>{{ 'components.table.executions' | t }}</th>
+            <th>{{ 'components.table.errors' | t }}</th>
+            <th>{{ 'components.table.median' | t }}</th>
+            <th>{{ 'components.table.average' | t }}</th>
+            <th>{{ 'components.table.p95' | t }}</th>
+            <th>{{ 'components.table.max' | t }}</th>
           </tr>
         </thead>
         <tbody>

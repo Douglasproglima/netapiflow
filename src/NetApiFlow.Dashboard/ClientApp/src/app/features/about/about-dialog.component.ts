@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { DASHBOARD_VERSION } from '../../core/version';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 const REPOSITORY_URL = 'https://github.com/Douglasproglima/netapiflow';
 
@@ -13,7 +14,7 @@ const REPOSITORY_URL = 'https://github.com/Douglasproglima/netapiflow';
   selector: 'app-about-dialog',
   templateUrl: './about-dialog.component.html',
   styleUrl: './about-dialog.component.scss',
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule, TranslatePipe],
 })
 export class AboutDialogComponent {
   readonly version = DASHBOARD_VERSION;

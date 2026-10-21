@@ -1,58 +1,58 @@
 <section class="history">
-  <form class="history__filters" aria-label="Filters">
+  <form class="history__filters" [attr.aria-label]="'history.filtersAria' | t">
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>Status</mat-label>
+      <mat-label>{{ 'history.filter.status' | t }}</mat-label>
       <select matNativeControl (change)="onStatusChange($event)">
-        <option value="">Any</option>
-        <option value="Running">Running</option>
-        <option value="Success">Success</option>
-        <option value="Error">Error</option>
+        <option value="">{{ 'history.filter.status.any' | t }}</option>
+        <option value="Running">{{ 'history.filter.status.running' | t }}</option>
+        <option value="Success">{{ 'history.filter.status.success' | t }}</option>
+        <option value="Error">{{ 'history.filter.status.error' | t }}</option>
       </select>
     </mat-form-field>
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>Method</mat-label>
+      <mat-label>{{ 'history.filter.method' | t }}</mat-label>
       <input matInput type="text" (change)="onMethodChange($event)" />
     </mat-form-field>
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>Route</mat-label>
+      <mat-label>{{ 'history.filter.route' | t }}</mat-label>
       <input matInput type="text" (change)="onRouteChange($event)" />
     </mat-form-field>
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>Tenant</mat-label>
+      <mat-label>{{ 'history.filter.tenant' | t }}</mat-label>
       <input matInput type="text" (change)="onTenantChange($event)" />
     </mat-form-field>
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>From</mat-label>
+      <mat-label>{{ 'history.filter.from' | t }}</mat-label>
       <input matInput type="datetime-local" (change)="onFromChange($event)" />
     </mat-form-field>
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>To</mat-label>
+      <mat-label>{{ 'history.filter.to' | t }}</mat-label>
       <input matInput type="datetime-local" (change)="onToChange($event)" />
     </mat-form-field>
     <mat-form-field subscriptSizing="dynamic">
-      <mat-label>Min duration (µs)</mat-label>
+      <mat-label>{{ 'history.filter.minDuration' | t }}</mat-label>
       <input matInput type="number" min="0" (change)="onMinDurationChange($event)" />
     </mat-form-field>
   </form>
 
   @if (loading()) {
-    <p class="history__status" role="status">Loading…</p>
+    <p class="history__status" role="status">{{ 'history.loading' | t }}</p>
   } @else if (error()) {
-    <p class="history__status history__status--error" role="alert">{{ error() }}</p>
+    <p class="history__status history__status--error" role="alert">{{ error() | t }}</p>
   } @else if (result() && result()!.items.length === 0) {
-    <p class="history__status">No traces match these filters.</p>
+    <p class="history__status">{{ 'history.empty' | t }}</p>
   } @else if (result(); as page) {
     <mat-card appearance="outlined">
       <table class="history__table">
         <thead>
           <tr>
-            <th>Trace id</th>
-            <th>Method</th>
-            <th>Route</th>
-            <th>Status</th>
-            <th>HTTP status</th>
-            <th>Started at</th>
-            <th>Duration</th>
+            <th>{{ 'history.table.traceId' | t }}</th>
+            <th>{{ 'history.table.method' | t }}</th>
+            <th>{{ 'history.table.route' | t }}</th>
+            <th>{{ 'history.table.status' | t }}</th>
+            <th>{{ 'history.table.httpStatus' | t }}</th>
+            <th>{{ 'history.table.startedAt' | t }}</th>
+            <th>{{ 'history.table.duration' | t }}</th>
           </tr>
         </thead>
         <tbody>
@@ -74,24 +74,24 @@
         </tbody>
       </table>
 
-      <nav class="history__pagination" aria-label="Pagination">
-        <span>{{ page.totalCount }} total</span>
+      <nav class="history__pagination" [attr.aria-label]="'history.paginationAria' | t">
+        <span>{{ 'history.pagination.total' | t: { n: page.totalCount } }}</span>
         <button
           mat-stroked-button
           type="button"
           [disabled]="filters().page === 1"
           (click)="setPage(filters().page! - 1)"
         >
-          Previous
+          {{ 'history.pagination.previous' | t }}
         </button>
-        <span>Page {{ filters().page }}</span>
+        <span>{{ 'history.pagination.page' | t: { n: filters().page! } }}</span>
         <button
           mat-stroked-button
           type="button"
           [disabled]="filters().page! * filters().pageSize! >= page.totalCount"
           (click)="setPage(filters().page! + 1)"
         >
-          Next
+          {{ 'history.pagination.next' | t }}
         </button>
       </nav>
     </mat-card>

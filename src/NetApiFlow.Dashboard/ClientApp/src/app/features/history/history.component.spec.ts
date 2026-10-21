@@ -129,6 +129,7 @@ describe('HistoryComponent', () => {
     httpMock.expectOne(() => true).flush('boom', { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Failed to load traces.');
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain('Falha ao carregar os traces.');
   });
 });

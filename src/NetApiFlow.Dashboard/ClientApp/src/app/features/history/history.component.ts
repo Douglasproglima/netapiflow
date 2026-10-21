@@ -7,6 +7,8 @@ import { ApiService } from '../../core/api.service';
 import { FlowStatus, PagedResult, FlowTraceSummary, TraceQuery } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
 import { httpMethodTagClass } from '../../shared/http-method-style';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { TranslationKey } from '../../core/i18n/translations';
 
 const DEFAULT_PAGE_SIZE = 50;
 
@@ -19,7 +21,7 @@ function inputValue(event: Event): string {
   selector: 'app-history',
   templateUrl: './history.component.html',
   styleUrl: './history.component.scss',
-  imports: [MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, TranslatePipe],
 })
 export class HistoryComponent {
   private readonly api = inject(ApiService);
@@ -27,7 +29,7 @@ export class HistoryComponent {
   readonly filters = signal<TraceQuery>({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
 
   readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
+  readonly error = signal<TranslationKey | null>(null);
   readonly result = signal<PagedResult<FlowTraceSummary> | null>(null);
 
   constructor() {
@@ -42,7 +44,7 @@ export class HistoryComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('Failed to load traces.');
+          this.error.set('history.error');
           this.loading.set(false);
         },
       });
