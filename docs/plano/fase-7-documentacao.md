@@ -117,13 +117,40 @@ automatizados existentes:
      tela estreita (tablet, celular). Precisa de um breakpoint que recolha a sidebar.
    - **Menu hambúrguer**: para abrir/fechar a sidebar em tela estreita, consequência direta do
      item de responsividade acima (não faz sentido ter um sem o outro).
+   - **Cartões de métrica sem vida**: hoje só número e rótulo em cinza/branco, sem ícone nem cor,
+     indistinguíveis entre si. Cada cartão ganha ícone próprio (traces, sucesso, erros, latência
+     média, latência máxima, passos executados) e cor de destaque quando o valor importa (ex.:
+     "Errors" em `--naf-danger` quando maior que zero), seguindo a mesma regra de cor + ícone +
+     texto já usada nos estados de nó, não só texto solto.
+   - **Versão do pacote**: nenhum lugar do dashboard mostra a versão do NetApiFlow rodando.
+     Exibir perto do logo na sidebar (ex.: "v0.1.0"), lida de algum metadado já disponível em
+     build (ou de uma nova rota, se não houver outra forma, a confirmar com a Planejadora antes
+     de criar contrato novo).
+   - **Seção "Sobre"**: link ou item na sidebar abrindo informação do projeto (versão, licença
+     MIT, link do repositório, crédito à inspiração no apiflow conforme já exigido no README,
+     tarefa 7.3). Forma exata (modal, página própria, rodapé expansível) fica a critério da
+     Executora.
+   - **Ícone de tipo dentro de cada nó do grafo**: hoje o nó só tem texto e um ícone pequeno de
+     estado. Falta um ícone indicando o tipo de componente (Controller, Service, Repository,
+     Database etc.), reaproveitando o mapeamento de `ComponentType` já existente em
+     `core/models.ts`, não um contrato novo.
+   - **Lista de execuções recentes dentro de `/flow`**: hoje só existe o feed de eventos crus.
+     Falta uma lista curta (últimas N requisições, método, rota, status, duração), igual ao que
+     `/history` já mostra em detalhe, só que condensada direto na tela principal, para não
+     precisar trocar de rota pra ver o que acabou de rodar. Consome `GET /traces` já existente
+     (paginado, pegar só a primeira página), sem contrato novo.
+   - **Badge de verbo HTTP com cor própria por verbo** (GET, POST, PUT, DELETE cada um com uma
+     cor de fundo distinta, não todos iguais), tanto na lista de execuções recentes quanto no
+     painel de ação.
 
 **Pronto quando:** os itens 1 e 2 corrigidos com teste automatizado cobrindo o cenário
 (`graph-builder.spec.ts` com spans cujo root não tem `parentSpanId` nulo; teste de integração que
 cancela a conexão SSE e confirma que não vira `fail` no log). Item 3 corrigido. Item 4 (incluindo
-logo, paleta, responsividade e menu hambúrguer) com captura de tela comparando antes/depois em
-pelo menos duas larguras de tela (desktop e tela estreita) ao lado do HTML do guia, revisada pela
-Planejadora antes de prosseguir para a tarefa 7.2 (GIF).
+logo, paleta, responsividade, menu hambúrguer, cartões de métrica com ícone e cor, versão, "Sobre",
+ícone de tipo no nó do grafo, lista de execuções recentes e badge de verbo HTTP colorido por
+verbo) com captura de tela comparando antes/depois em pelo menos duas larguras de tela (desktop
+e tela estreita) ao lado do HTML do guia, revisada pela Planejadora antes de prosseguir para a
+tarefa 7.2 (GIF).
 
 ### 7.1: Benchmark de overhead (risco R-05)
 
