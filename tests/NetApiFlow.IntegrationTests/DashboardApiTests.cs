@@ -340,6 +340,7 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("slowThresholdMicros").GetInt64().ShouldBe(400_000);
+        doc.RootElement.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
     }
 
     [Fact]

@@ -111,9 +111,10 @@ export interface MetricsSummary {
   maxDurationMicros: number;
 }
 
-/** GET /config (D-24). */
+/** GET /config (D-24, `version` added by D-33). */
 export interface DashboardConfig {
   slowThresholdMicros: number;
+  version: string;
 }
 
 /** GET /metrics/components list item. */

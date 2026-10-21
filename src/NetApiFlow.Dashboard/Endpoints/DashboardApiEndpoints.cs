@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -224,8 +225,29 @@ internal static class DashboardApiEndpoints
         var config = new DashboardConfig
         {
             SlowThresholdMicros = (long)options.Value.SlowThreshold.TotalMicroseconds,
+            Version = GetCoreVersion(),
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);
+    }
+
+    /// <summary>
+    /// Reads the core package version from <c>NetApiFlow</c>'s own
+    /// <see cref="AssemblyInformationalVersionAttribute"/> (D-33): the same value as
+    /// <c>&lt;Version&gt;</c> in <c>Directory.Build.props</c>, stripped of the SourceLink commit
+    /// suffix CI builds append after a <c>+</c>.
+    /// </summary>
+    private static string GetCoreVersion()
+    {
+        var informationalVersion = typeof(NetApiFlowOptions).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (string.IsNullOrEmpty(informationalVersion))
+        {
+            return "0.0.0";
+        }
+
+        var plusIndex = informationalVersion.IndexOf('+');
+        return plusIndex < 0 ? informationalVersion : informationalVersion[..plusIndex];
     }
 }

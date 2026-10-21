@@ -98,7 +98,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
@@ -112,7 +112,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
 
     const summaries: FlowTraceSummary[] = [
       {
@@ -139,7 +139,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 50 });
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 50, version: '0.1.0' });
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
@@ -152,7 +152,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
