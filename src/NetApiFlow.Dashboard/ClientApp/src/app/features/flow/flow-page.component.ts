@@ -92,8 +92,16 @@ export class FlowPageComponent {
       return { nodes: [], edges: [] };
     }
 
-    const spans = this.isReplaying() ? this.replayPlayer.visibleSpans() : trace.spans;
-    return buildGraph({ spans, traceStatus: trace.status, slowThresholdMicros });
+    if (this.isReplaying()) {
+      return buildGraph({
+        spans: this.replayPlayer.visibleSpans(),
+        traceStatus: trace.status,
+        slowThresholdMicros,
+        blueprintSpans: trace.spans,
+      });
+    }
+
+    return buildGraph({ spans: trace.spans, traceStatus: trace.status, slowThresholdMicros });
   });
 
   constructor() {
