@@ -36,14 +36,14 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('h1')?.textContent).toContain('NetApiFlow');
+    expect(compiled.querySelector('.app-shell__topbar-title')?.textContent).toContain('NetApiFlow');
     expect(compiled.querySelector('a[href="/flow"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/history"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/components"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/runner"]')).toBeTruthy();
   });
 
-  it('docks the sidebar on a wide viewport, with no hamburger topbar', async () => {
+  it('docks the sidebar open on a wide viewport, with the topbar always rendered', async () => {
     const { fake } = fakeBreakpointObserver(false);
     await TestBed.configureTestingModule({
       imports: [App],
@@ -54,10 +54,11 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.isNarrow()).toBe(false);
-    expect(fixture.nativeElement.querySelector('.app-shell__topbar')).toBeNull();
+    expect(fixture.componentInstance.sidenavOpened()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.app-shell__topbar')).not.toBeNull();
   });
 
-  it('switches to an overlay sidebar with a hamburger topbar below the breakpoint', async () => {
+  it('switches to an overlay sidebar, closed by default, below the breakpoint', async () => {
     const { fake, emitNarrow } = fakeBreakpointObserver(false);
     await TestBed.configureTestingModule({
       imports: [App],
@@ -71,6 +72,28 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.isNarrow()).toBe(true);
+    expect(fixture.componentInstance.sidenavOpened()).toBe(false);
     expect(fixture.nativeElement.querySelector('.app-shell__topbar')).not.toBeNull();
+  });
+
+  it('toggles the sidebar open/closed via the hamburger button on a wide viewport', async () => {
+    const { fake } = fakeBreakpointObserver(false);
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter(routes), { provide: BreakpointObserver, useValue: fake }],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.sidenavOpened()).toBe(true);
+
+    fixture.componentInstance.toggleSidenav();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.sidenavOpened()).toBe(false);
+
+    fixture.componentInstance.toggleSidenav();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.sidenavOpened()).toBe(true);
   });
 });

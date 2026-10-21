@@ -1,3 +1,7 @@
+.about-dialog__content {
+  overflow-x: hidden;
+}
+
 .about-dialog__list {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -14,6 +18,8 @@
 
   dd {
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 
