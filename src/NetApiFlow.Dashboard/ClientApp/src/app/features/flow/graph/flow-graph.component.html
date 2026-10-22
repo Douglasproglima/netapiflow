@@ -1,0 +1,124 @@
+<svg #svg class="flow-graph" [attr.viewBox]="viewBox()">
+  <g #zoomLayer class="flow-graph__zoom-layer">
+    @for (edge of edges(); track edge.id) {
+      <path
+        class="flow-graph__edge"
+        [attr.data-state]="nodeStateOf(edge.targetId)"
+        [attr.d]="edgePath(edge)"
+      ></path>
+      @if (edgeSequence(edge); as sequence) {
+        <g
+          class="flow-graph__edge-sequence"
+          [attr.transform]="
+            'translate(' + (edgeMidpoint(edge).x - 13) + ' ' + (edgeMidpoint(edge).y - 8) + ')'
+          "
+        >
+          <rect width="26" height="16" rx="8"></rect>
+          <text x="13" y="11.5" text-anchor="middle">#{{ sequence }}</text>
+        </g>
+      }
+    }
+    @for (node of nodes(); track node.id) {
+      <g
+        class="flow-graph__node"
+        [class.flow-graph__node--selected]="node.id === selectedNodeId()"
+        [attr.data-state]="node.state"
+        [attr.transform]="nodeTransform(node)"
+        [attr.aria-label]="nodeAriaLabel(node)"
+        tabindex="0"
+        role="button"
+        (click)="onNodeClick(node)"
+        (keydown.enter)="onNodeClick(node)"
+      >
+        <rect
+          class="flow-graph__node-ring"
+          x="-4"
+          y="-4"
+          [attr.width]="node.width + 8"
+          [attr.height]="node.height + 8"
+          rx="13"
+        ></rect>
+        <rect
+          class="flow-graph__node-rect"
+          [attr.width]="node.width"
+          [attr.height]="node.height"
+        ></rect>
+        <rect
+          class="flow-graph__node-tint"
+          [attr.width]="node.width"
+          [attr.height]="node.height"
+          rx="10"
+        ></rect>
+        <rect class="flow-graph__node-icon-bg" x="10" y="16" width="28" height="28" rx="8"></rect>
+        <svg
+          class="flow-graph__node-type-icon"
+          x="16"
+          y="22"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+        >
+          @switch (typeIcon(node)) {
+            @case ('endpoint') {
+              <circle cx="8" cy="8" r="5.5" />
+              <circle cx="8" cy="8" r="1.6" fill="currentColor" stroke="none" />
+            }
+            @case ('controller') {
+              <rect x="2.5" y="3.5" width="11" height="9" rx="1.4" />
+              <path d="M2.5 8 H13.5" />
+            }
+            @case ('use-case') {
+              <ellipse cx="8" cy="8" rx="6" ry="4.4" />
+            }
+            @case ('service') {
+              <path d="M8 2 L13.2 5 V11 L8 14 L2.8 11 V5 Z" stroke-linejoin="round" />
+            }
+            @case ('repository') {
+              <rect x="2.5" y="3" width="11" height="4.2" rx="1" />
+              <rect x="2.5" y="8.8" width="11" height="4.2" rx="1" />
+            }
+            @case ('database') {
+              <ellipse cx="8" cy="4.2" rx="5.5" ry="2.2" />
+              <path d="M2.5 4.2 V11.8 C2.5 13 5 14 8 14 C11 14 13.5 13 13.5 11.8 V4.2" />
+              <path d="M2.5 8 C2.5 9.2 5 10.2 8 10.2 C11 10.2 13.5 9.2 13.5 8" />
+            }
+            @case ('http') {
+              <circle cx="8" cy="8" r="6" />
+              <path d="M8 2 V5 M8 11 V14 M2 8 H5 M11 8 H14" stroke-linecap="round" />
+            }
+            @case ('custom') {
+              <path d="M8 2 V14 M3 5 L13 11 M13 5 L3 11" stroke-linecap="round" />
+            }
+          }
+        </svg>
+        <text class="flow-graph__node-component" x="48" y="19">{{ node.component }}</text>
+        <image
+          class="flow-graph__node-state-icon"
+          [attr.href]="stateIconSrc(node)"
+          x="48"
+          y="21"
+          width="11"
+          height="11"
+        ></image>
+        <text x="63" y="31">
+          <tspan class="flow-graph__node-state">{{ stateLabel(node) }}</tspan>
+          <tspan class="flow-graph__node-type">&nbsp;&middot; {{ node.type }}</tspan>
+        </text>
+        <text class="flow-graph__node-operation" x="48" y="52">{{ nodeOperationLabel(node) }}</text>
+        @if (nodeDuration(node); as duration) {
+          <text
+            class="flow-graph__node-duration"
+            [attr.x]="node.width - 10"
+            y="52"
+            text-anchor="end"
+          >
+            {{ duration }}
+          </text>
+        }
+      </g>
+    }
+  </g>
+</svg>

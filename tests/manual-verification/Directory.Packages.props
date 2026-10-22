@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Deliberately not centrally managed: these projects pin explicit versions to match the
+         locally packed .nupkg under local-nuget-feed/ (tarefa 5.6), separate from the rest of the repo. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: build-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+          cache: npm
+          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+      # Built explicitly, once, before `dotnet build`: NetApiFlow.Dashboard.csproj's own
+      # BuildAngularClient MSBuild target assumes it only ever runs once per outer,
+      # TargetFramework-less pass of that one project, but a solution build with
+      # ProjectReferences into it (NetApiFlow.IntegrationTests, samples) can trigger more than one
+      # such pass under MSBuild's parallel scheduling, racing on the same dist/ output (PR #17).
+      # With dist/ already fresh, every one of those passes sees its Inputs/Outputs check satisfied
+      # and skips `npm run build` entirely, so the race has nothing left to race on.
+      - name: Build dashboard UI
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npm ci
+          npm run build
+
+      - name: Restore
+        run: dotnet restore NetApiFlow.slnx
+
+      - name: Format check
+        run: dotnet format NetApiFlow.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build NetApiFlow.slnx -c Release --no-restore
+
+      - name: Test
+        shell: bash
+        run: |
+          set -e
+          dotnet test tests/NetApiFlow.Tests -c Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/NetApiFlow.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
+          # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners (tarefa 6.5).
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build --collect:"XPlat Code Coverage"
+          fi
+
+      - name: Pack (verification only)
+        run: dotnet pack NetApiFlow.slnx -c Release --no-build
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --config=/repo/.gitleaks.toml -v

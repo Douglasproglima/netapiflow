@@ -1,0 +1,48 @@
+name: PR lint
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch name
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ "$HEAD_REF" =~ ^(feature|bugfix|chore|release|hotfix)/[a-z0-9.-]+$ ]] \
+            || [[ "$HEAD_REF" == main ]] \
+            || [[ "$HEAD_REF" =~ ^dependabot/ ]]; then
+            echo "Branch name OK: $HEAD_REF"
+          else
+            echo "::error::Branch name '$HEAD_REF' does not follow docs/gitflow.md (feature|bugfix|chore|release|hotfix)/<name>"
+            exit 1
+          fi
+
+      - name: Validate PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ "$BASE_REF" == "main" ]] && [[ "$HEAD_REF" =~ ^(release|hotfix)/ ]]; then
+            if [[ "$PR_TITLE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+              || [[ "$PR_TITLE" =~ ^(feat|fix|refactor|test|docs|chore)(\(.+\))?:\ .+ ]]; then
+              echo "PR title OK (release/hotfix to main): $PR_TITLE"
+            else
+              echo "::error::PR title '$PR_TITLE' must be either a SemVer version (e.g. 0.1.0) or Conventional Commits"
+              exit 1
+            fi
+          elif [[ "$PR_TITLE" =~ ^(feat|fix|refactor|test|docs|chore)(\(.+\))?:\ .+ ]]; then
+            echo "PR title OK: $PR_TITLE"
+          else
+            echo "::error::PR title '$PR_TITLE' must follow Conventional Commits, e.g. 'feat(core): add X'"
+            exit 1
+          fi

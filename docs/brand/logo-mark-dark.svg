@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="Monograma NetApiFlow, versao escura">
+  <rect x="6" y="6" width="188" height="188" rx="44" fill="#131722" stroke="#232B3E" stroke-width="3"/>
+  <path d="M56 144 V56 L144 144 V56" fill="none" stroke="#8B5CF6" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="56" cy="144" r="16" fill="#8B5CF6"/>
+  <circle cx="56" cy="56" r="13" fill="#131722" stroke="#8B5CF6" stroke-width="8"/>
+  <circle cx="144" cy="144" r="13" fill="#131722" stroke="#8B5CF6" stroke-width="8"/>
+  <circle cx="144" cy="56" r="16" fill="#10B981"/>
+  <circle cx="100" cy="100" r="6" fill="#F8FAFC"/>
+</svg>
