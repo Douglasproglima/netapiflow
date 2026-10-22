@@ -66,9 +66,14 @@ jobs:
       # the Trusted Publishing policy configured on nuget.org for this repository and this
       # workflow file *before* the first tag (tarefa 7.7, manual step outside this repo).
       - name: NuGet login (Trusted Publishing)
+        id: nuget-login
         uses: NuGet/login@v1
         with:
           user: Douglasproglima
 
       - name: Push to nuget.org
-        run: dotnet nuget push "./nupkgs/*.nupkg" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: >
+          dotnet nuget push "./nupkgs/*.nupkg"
+          --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
