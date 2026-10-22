@@ -1,20 +1,21 @@
 # Estilo de escrita
 
-Vale para texto corrido em português: `docs/plano/`, `docs/adr/`, comentário interno, mensagem de
-commit de governança. Não vale para código, comando, flag, nem para texto em inglês (README,
-comentário XML, log, mensagem de exceção, ver `.claude/rules/dotnet-core.md` e D-02 em
-`docs/plano/decisoes.md`).
+Vale para texto corrido em português (`docs/plano/`, `docs/adr/`, comentário interno, mensagem de
+commit de governança) e para texto em inglês visível a quem usa o pacote (README, README.pt-BR.md
+é o próprio texto em português). Não vale para código, comando nem flag: flag de comando
+(`--verify-no-changes`) é sintaxe, pode usar hífen duplo.
 
-## Regras (texto em português)
+## Regras (texto em português e em inglês dos READMEs)
 
 - Frases curtas. Uma ideia por frase.
-- Não usar travessão (`—`) nem hífen duplo (`--`) para colar duas ideias numa frase. Trocar por
-  ponto final ou vírgula. Flag de comando (`--verify-no-changes`) é sintaxe, pode.
+- Não usar travessão (`—`) nem hífen duplo (`--`) para colar duas ideias numa frase, em nenhum
+  dos dois idiomas (D-48, atualizado de uma isenção anterior do inglês). Trocar por ponto final,
+  vírgula, ou reformular a frase.
 - Parágrafo curto. Um assunto por parágrafo.
 - Escrever como quem explica para um colega. Sem linguagem de relatório corporativo.
 - Afirmação técnica tem fonte real (seção do prompt, ADR, número medido) ou não entra no texto.
 
-## Regras (texto em inglês: README, XML doc comment, log, exceção)
+## Regras (texto em inglês: comentário XML, log, exceção)
 
 - Direto, sem floreio. Frase curta também ajuda em inglês.
 - `<summary>` de comentário XML descreve o que o membro faz, não repete o nome.
@@ -32,4 +33,5 @@ comentário XML, log, mensagem de exceção, ver `.claude/rules/dotnet-core.md` 
 
 ## Antes de entregar texto
 
-Rodar `grep -rn "—" <arquivos alterados>` e revisar cada ocorrência em texto português.
+Rodar `grep -rn "—" <arquivos alterados>` e revisar cada ocorrência, em português ou em inglês de
+README.
