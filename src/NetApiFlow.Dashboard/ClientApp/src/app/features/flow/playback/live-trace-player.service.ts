@@ -27,6 +27,7 @@ export class LiveTracePlayerService implements OnDestroy {
   private pendingEvents: FlowEvent[] = [];
   private loadingBaseline = false;
   private subscriptions: Subscription[] = [];
+  private tracking = false;
 
   track(traceId: string): void {
     this.stop();
@@ -37,6 +38,7 @@ export class LiveTracePlayerService implements OnDestroy {
       this.sse.reconnected$.subscribe(() => this.loadBaseline()),
     );
 
+    this.tracking = true;
     this.sse.connect();
     this.loadBaseline();
   }
@@ -47,7 +49,10 @@ export class LiveTracePlayerService implements OnDestroy {
     }
 
     this.subscriptions = [];
-    this.sse.disconnect();
+    if (this.tracking) {
+      this.tracking = false;
+      this.sse.disconnect();
+    }
     this.currentTraceId = null;
     this.seenEventIds.clear();
     this.lastEventIdBySpanId.clear();
