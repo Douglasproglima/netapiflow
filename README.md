@@ -1,6 +1,6 @@
 # NetApiFlow
 
-See, live, the path every HTTP request takes through your own ASP.NET Core API — Controller/Endpoint → Handler → Services → Repositories → SQL — with per-step duration, where it failed, what was slow, and what never ran.
+See, live, the path every HTTP request takes through your own ASP.NET Core API: Controller/Endpoint → Handler → Services → Repositories → SQL, with per-step duration, where it failed, what was slow, and what never ran.
 
 [![NuGet](https://img.shields.io/nuget/v/NetApiFlow.svg)](https://www.nuget.org/packages/NetApiFlow)
 [![CI](https://github.com/Douglasproglima/netapiflow/actions/workflows/ci.yml/badge.svg)](https://github.com/Douglasproglima/netapiflow/actions/workflows/ci.yml)
@@ -11,19 +11,19 @@ See, live, the path every HTTP request takes through your own ASP.NET Core API �
 
 ![The flow graph lighting up live as a request executes](docs/images/flow-demo.gif)
 
-> The GIF above is recorded from `samples/SampleApi.Controllers` with the dashboard mounted —
-> see [Quick start](#quick-start) to reproduce it yourself.
+> The GIF above is recorded from `samples/SampleApi.Controllers` with the dashboard mounted.
+> See [Quick start](#quick-start) to reproduce it yourself.
 
 ## What it is, and what it isn't
 
-NetApiFlow instruments your own API's internal call path — not external latency, not
+NetApiFlow instruments your own API's internal call path, not external latency, not
 infrastructure metrics, not distributed tracing across services. It answers "where did *this*
 request spend its time, inside *my* code" for a single ASP.NET Core process.
 
 It is **not**:
 
 - A distributed tracing system (no cross-service context propagation, no OTLP export). If you
-  need that, use OpenTelemetry — NetApiFlow's own `ActivityListener` coexists with it peacefully
+  need that, use OpenTelemetry. NetApiFlow's own `ActivityListener` coexists with it peacefully
   (see [`docs/adr/0002-activitysource-nativo-sem-otel-sdk.md`](docs/adr/0002-activitysource-nativo-sem-otel-sdk.md)).
 - An APM (no alerting, no dashboards beyond the one it ships, no long-term metrics storage
   beyond what you configure via a storage package).
@@ -53,7 +53,7 @@ anywhere but your own machine.
 ## Marking forms
 
 NetApiFlow needs to know where one step ends and the next begins. Pick whichever form fits each
-layer — they compose freely in the same request.
+layer. They compose freely in the same request.
 
 | Form | What it does | When to use it |
 |---|---|---|
@@ -73,7 +73,7 @@ public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 }
 ```
 
-Automatic form, from `samples/SampleApi.Controllers/Program.cs` — `OrderService`/`OrderRepository`
+Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/`OrderRepository`
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
 
 ```csharp
@@ -91,12 +91,12 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 | `NetApiFlow.Storage.PostgreSql` | Persists traces to PostgreSQL instead of memory |
 | `NetApiFlow.Storage.SqlServer` | Persists traces to SQL Server instead of memory |
 
-The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework — every
+The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework. Every
 one of the above is opt-in.
 
 ## Reading the graph
 
-Every node is one step. Color reinforces its state, but never is the only signal — each state
+Every node is one step. Color reinforces its state, but never is the only signal: each state
 also has a distinct icon and text label, so the graph stays legible to color blindness or a
 black-and-white printout.
 
@@ -221,15 +221,15 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 
 ## Contributing
 
-Issues and pull requests are welcome. This project follows Conventional Commits and Gitflow — see
+Issues and pull requests are welcome. This project follows Conventional Commits and Gitflow. See
 `docs/gitflow.md` if you're sending a PR.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 ## Inspiration
 
 NetApiFlow is inspired by the idea behind [apiflow](https://github.com/joshuamaia/apiflow) (Spring
 Boot): visualizing a request's path through an API in real time. No code, file or asset from
-that project was copied or ported — everything here is written from scratch, for .NET.
+that project was copied or ported. Everything here is written from scratch, for .NET.
