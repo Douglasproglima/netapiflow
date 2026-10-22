@@ -109,6 +109,17 @@ black-and-white printout.
 | ✕ Error | Finished with an exception, or a descendant step failed |
 | ∅ Not executed | The blueprint expected this step, but the request finished without reaching it (e.g. an early return, a short-circuited branch) |
 
+## Dashboard preferences
+
+The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in
+the top bar. It also follows your OS's light/dark preference automatically, with a manual
+override next to the language toggle. Both choices persist across reloads; the displayed package
+version always comes from a live `GET /config` call, so it matches whatever's actually installed.
+
+In the history list (`/history`), every column header sorts the whole result set server-side, not
+just the current page. Combine "slow only" with sorting by Duration (descending) to get the
+slowest executions across the entire history.
+
 ## Configuration
 
 ```csharp

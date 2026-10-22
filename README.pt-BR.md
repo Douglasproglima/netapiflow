@@ -110,6 +110,18 @@ impressão em preto e branco.
 | ✕ Erro | Terminou com exceção, ou uma etapa descendente falhou |
 | ∅ Não executado | O blueprint esperava esta etapa, mas a requisição terminou sem alcançá-la (ex.: um retorno antecipado, um ramo que nunca foi seguido) |
 
+## Preferências do dashboard
+
+A interface do dashboard vem em português (pt-BR) por padrão. Troque para inglês pelo seletor de
+idioma na barra superior. Ela também segue a preferência clara/escura do sistema automaticamente,
+com um alternador manual ao lado do seletor de idioma. As duas escolhas sobrevivem a um
+recarregamento. A versão do pacote mostrada vem sempre de uma chamada real a `GET /config`, então
+bate com o que está instalado de fato.
+
+Na listagem do histórico (`/history`), cada cabeçalho de coluna ordena o resultado inteiro no
+servidor, não só a página atual. Combine "Só lentas" com ordenar por Duração (decrescente) para
+ver as execuções mais lentas de todo o histórico.
+
 ## Configuração
 
 ```csharp
