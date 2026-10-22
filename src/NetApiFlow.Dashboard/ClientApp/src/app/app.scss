@@ -124,17 +124,24 @@
   // to its own content height instead of the container's. It already is a positioning
   // context for `.app-rail__close` without redeclaring it.
   width: 84px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.875rem 0;
   overflow-x: hidden;
   border-right: 1px solid var(--naf-border);
   background: var(--naf-bg);
   // Material 3's default sidenav shape rounds the container's leading corners; the rail is flush
   // against the topbar and the page edge, so it must stay perfectly square (S2).
   border-radius: 0;
+
+  // `<mat-sidenav>`'s only real DOM child is Material's own `.mat-drawer-inner-container`, which
+  // is where the projected rail content actually lives — `display: flex`/`gap` declared on
+  // `.app-rail` itself only ever had that one wrapper to flex, so every item stacked with no
+  // gap at all between their boxes.
+  ::ng-deep .mat-drawer-inner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.875rem 0;
+  }
 }
 
 .app-rail__close {
