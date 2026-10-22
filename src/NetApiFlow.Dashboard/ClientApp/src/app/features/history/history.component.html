@@ -485,30 +485,32 @@
                       {{ formatDuration(trace.durationMicros) }}
                     }
                   </td>
-                  <td class="history__col-trace naf-mono history__muted">
-                    {{ shortTraceId(trace.traceId) }}
-                    <button
-                      type="button"
-                      class="history__copy"
-                      [attr.aria-label]="'history.row.copyTraceId' | t"
-                      (click)="copyTraceId(trace.traceId, $event)"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.75"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        width="14"
-                        height="14"
+                  <td class="history__col-trace">
+                    <span class="history__trace-cell">
+                      <span class="naf-mono history__muted">{{ shortTraceId(trace.traceId) }}</span>
+                      <button
+                        type="button"
+                        class="history__copy"
+                        [attr.aria-label]="'history.row.copyTraceId' | t"
+                        (click)="copyTraceId(trace.traceId, $event)"
                       >
-                        <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
-                        <path
-                          d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
-                        />
-                      </svg>
-                    </button>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.75"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          width="14"
+                          height="14"
+                        >
+                          <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                          <path
+                            d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
+                          />
+                        </svg>
+                      </button>
+                    </span>
                   </td>
                 </tr>
               }

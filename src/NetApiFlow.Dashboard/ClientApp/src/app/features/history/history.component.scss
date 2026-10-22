@@ -228,11 +228,20 @@
 }
 
 .history__col-trace {
-  width: 112px;
+  width: 120px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 
   @media (max-width: 1365px) {
     display: none;
   }
+}
+
+.history__trace-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .history__status-pill {
