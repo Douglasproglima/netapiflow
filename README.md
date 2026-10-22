@@ -1,2 +1,235 @@
-# netapiflow
-Motor de execução modular para pipelines de requisições HTTP e fluxos de APIs em .NET, concebido para alta resiliência e fácil manutenção.
+# NetApiFlow
+
+See, live, the path every HTTP request takes through your own ASP.NET Core API — Controller/Endpoint → Handler → Services → Repositories → SQL — with per-step duration, where it failed, what was slow, and what never ran.
+
+[![NuGet](https://img.shields.io/nuget/v/NetApiFlow.svg)](https://www.nuget.org/packages/NetApiFlow)
+[![CI](https://github.com/Douglasproglima/netapiflow/actions/workflows/ci.yml/badge.svg)](https://github.com/Douglasproglima/netapiflow/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![.NET 8 | .NET 10](https://img.shields.io/badge/.NET-8%20%7C%2010-512BD4)](https://dotnet.microsoft.com/)
+
+🇧🇷 [Leia em português](README.pt-BR.md)
+
+![The flow graph lighting up live as a request executes](docs/images/flow-demo.gif)
+
+> The GIF above is recorded from `samples/SampleApi.Controllers` with the dashboard mounted —
+> see [Quick start](#quick-start) to reproduce it yourself.
+
+## What it is, and what it isn't
+
+NetApiFlow instruments your own API's internal call path — not external latency, not
+infrastructure metrics, not distributed tracing across services. It answers "where did *this*
+request spend its time, inside *my* code" for a single ASP.NET Core process.
+
+It is **not**:
+
+- A distributed tracing system (no cross-service context propagation, no OTLP export). If you
+  need that, use OpenTelemetry — NetApiFlow's own `ActivityListener` coexists with it peacefully
+  (see [`docs/adr/0002-activitysource-nativo-sem-otel-sdk.md`](docs/adr/0002-activitysource-nativo-sem-otel-sdk.md)).
+- An APM (no alerting, no dashboards beyond the one it ships, no long-term metrics storage
+  beyond what you configure via a storage package).
+- A profiler (it measures the steps you mark, not every method call in your process).
+
+## Quick start
+
+```bash
+dotnet add package NetApiFlow
+dotnet add package NetApiFlow.Dashboard
+```
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddNetApiFlow();
+builder.Services.AddNetApiFlowDashboard();
+
+var app = builder.Build();
+app.UseNetApiFlowDashboard(); // mounted at /flow by default
+app.Run();
+```
+
+Open `http://localhost:<port>/flow` and send a request to any endpoint under your app. See
+[Dashboard security in production](#dashboard-security-in-production) before deploying this
+anywhere but your own machine.
+
+## Marking forms
+
+NetApiFlow needs to know where one step ends and the next begins. Pick whichever form fits each
+layer — they compose freely in the same request.
+
+| Form | What it does | When to use it |
+|---|---|---|
+| `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
+| `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
+| `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention (e.g. `I*Repository`) |
+| `NetApiFlow.MediatR` | A pipeline behavior that wraps every `IRequest` handled by MediatR | Projects already using MediatR for commands/queries |
+| `NetApiFlow.EntityFrameworkCore` | A `DbCommandInterceptor` that marks each SQL command as a `Database` step | Projects using EF Core |
+
+Manual form, used explicitly:
+
+```csharp
+public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
+{
+    using var step = NetApiFlow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    return await _dbContext.Orders.FindAsync([id], cancellationToken);
+}
+```
+
+Automatic form, from `samples/SampleApi.Controllers/Program.cs` — `OrderService`/`OrderRepository`
+carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
+
+```csharp
+builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
+builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
+```
+
+## Optional packages
+
+| Package | Adds |
+|---|---|
+| `NetApiFlow.Dashboard` | The REST/SSE API and the embedded Angular UI |
+| `NetApiFlow.MediatR` | Automatic tracking of MediatR requests |
+| `NetApiFlow.EntityFrameworkCore` | Automatic tracking of EF Core database commands |
+| `NetApiFlow.Storage.PostgreSql` | Persists traces to PostgreSQL instead of memory |
+| `NetApiFlow.Storage.SqlServer` | Persists traces to SQL Server instead of memory |
+
+The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework — every
+one of the above is opt-in.
+
+## Reading the graph
+
+Every node is one step. Color reinforces its state, but never is the only signal — each state
+also has a distinct icon and text label, so the graph stays legible to color blindness or a
+black-and-white printout.
+
+| State | Meaning |
+|---|---|
+| ⏳ Waiting | Inferred from a previous successful execution of this endpoint (the "blueprint"); the current request hasn't reached this step yet |
+| ▶ Running | Currently executing |
+| ✓ Completed | Finished without error, under the slow threshold |
+| ⚠ Slow | Finished without error, at or above the configured slow threshold |
+| ✕ Error | Finished with an exception, or a descendant step failed |
+| ∅ Not executed | The blueprint expected this step, but the request finished without reaching it (e.g. an early return, a short-circuited branch) |
+
+## Dashboard preferences
+
+The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in
+the top bar. It also follows your OS's light/dark preference automatically, with a manual
+override next to the language toggle. Both choices persist across reloads; the displayed package
+version always comes from a live `GET /config` call, so it matches whatever's actually installed.
+
+In the history list (`/history`), every column header sorts the whole result set server-side, not
+just the current page. Combine "slow only" with sorting by Duration (descending) to get the
+slowest executions across the entire history.
+
+## Configuration
+
+```csharp
+builder.Services.AddNetApiFlow(options =>
+{
+    options.Enabled = true; // master switch; false skips every check at near-zero cost
+    options.SlowThreshold = TimeSpan.FromMilliseconds(250);
+    options.CaptureSqlText = false; // never captures parameter values, only enables the SQL text itself
+    options.Retention.MaxTraces = 1000;
+    options.Retention.MaxAge = TimeSpan.FromHours(24);
+    options.Limits.MaxSpansPerTrace = 300;
+    options.IncludePaths("/api/**"); // only trace matching routes; default traces everything
+    options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
+});
+```
+
+Mounting the dashboard at a path other than the default, and protecting it:
+
+```csharp
+app.UseNetApiFlowDashboard("/internal/flow")
+    .RequireAuthorization("AdminOnly"); // or register an IDashboardAuthorizationFilter in DI
+```
+
+Persisting to a real database instead of memory (call after `AddNetApiFlow`, it replaces the
+default store):
+
+```csharp
+builder.Services.AddNetApiFlowPostgreSqlStorage(
+    connectionString,
+    options => options.TablePrefix = "netapiflow_"); // default shown
+```
+
+`NetApiFlow.Storage.SqlServer` mirrors the same shape (`AddNetApiFlowSqlServerStorage`).
+
+## Dashboard security in production
+
+> **The dashboard shows internal implementation details of your API: component names, operation
+> names, SQL table names, error messages.** Treat its exposure with the same care as any other
+> internal diagnostics endpoint.
+>
+> Outside `IHostEnvironment.IsDevelopment()`, every dashboard route (REST, SSE and the UI itself)
+> responds **404** unless you explicitly configure one of:
+>
+> - `.RequireAuthorization("YourPolicy")`, chained on `app.UseNetApiFlowDashboard(...)`.
+> - A custom `IDashboardAuthorizationFilter` registered in DI, checked on every request
+>   regardless of environment.
+>
+> There is no "partially open" default. If neither is configured, production always 404s.
+
+## Sensitive data
+
+NetApiFlow never captures, under any configuration:
+
+- Request or response bodies.
+- Method arguments or return values.
+- Headers or query strings (routes are always recorded as templates, e.g. `/api/orders/{id}`,
+  never the resolved URI).
+- SQL parameter values, even with `CaptureSqlText = true` (that flag only captures the command
+  text and the main table it touches).
+
+Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
+CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.
+See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+
+## Performance and overhead
+
+Measured with `tests/NetApiFlow.Benchmarks` (BenchmarkDotNet), comparing the cost of a request
+against a minimal ASP.NET Core pipeline with NetApiFlow **absent** (package not installed),
+**disabled** (`Enabled = false`) and **enabled** (default options), on two endpoints: `Simple`
+(no steps marked) and `Nested` (four nested `NetApiFlow.Step` calls, mirroring a
+Controller→Service→Repository→Database chain).
+
+| Scenario | Simple (mean) | Nested, 4 steps (mean) |
+|---|---|---|
+| Absent (package not installed) | 6.22 μs | 11.79 μs |
+| Disabled (`Enabled = false`) | 9.17 μs | 12.84 μs |
+| Enabled (default options) | 27.00 μs | 43.84 μs |
+
+So tracing a request with default options costs roughly 20 μs on an endpoint with no steps
+marked, and about 32 μs more with four nested steps, on this hardware. Turning tracing off
+(`Enabled = false`) keeps most of that cost away (listener registration itself has a small,
+near-constant overhead) without removing the package.
+
+Method: each scenario (absent/disabled/enabled) runs as its own process, isolating .NET's
+process-wide `ActivitySource` listener registration so one scenario can't bias another. Full
+BenchmarkDotNet reports, including hardware and runtime details, are generated under
+`tests/NetApiFlow.Benchmarks/BenchmarkDotNet.Artifacts/results/` on every run.
+
+## Known limitations
+
+- `Activity.Current` (and therefore step nesting) is lost across `ExecutionContext.SuppressFlow()`
+  or a custom, non-flowing thread pool. Spans created after such a boundary record correctly, but
+  as a new root rather than nested under the request's trace.
+- Automatic tracking (`AddFlowTracked`/`DecorateFlowTracked`) does not support `IAsyncEnumerable<T>`
+  return types in this version.
+- `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
+  LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
+  implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.
+
+## Contributing
+
+Issues and pull requests are welcome. This project follows Conventional Commits and Gitflow — see
+`docs/gitflow.md` if you're sending a PR.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Inspiration
+
+NetApiFlow is inspired by the idea behind [apiflow](https://github.com/joshuamaia/apiflow) (Spring
+Boot): visualizing a request's path through an API in real time. No code, file or asset from
+that project was copied or ported — everything here is written from scratch, for .NET.

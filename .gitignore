@@ -1,0 +1,42 @@
+# OS and IDEs
+.DS_Store
+Thumbs.db
+.vs/
+.idea/
+*.swp
+*.user
+*.suo
+
+# .NET
+[Bb]in/
+[Oo]bj/
+TestResults/
+coverage*.xml
+coverage*.json
+*.coverage
+publish/
+artifacts/
+*.nupkg
+*.snupkg
+BenchmarkDotNet.Artifacts/
+
+# Node / Angular (src/NetApiFlow.Dashboard/ClientApp)
+node_modules/
+dist/
+.angular/
+coverage/
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+
+# Claude Code (per-developer local configuration)
+/.claude/settings.local.json*
+.claude/scheduled_tasks.lock
+CLAUDE.local.md
+
+# ai-memory (local only, per dev) - server and data live under %LOCALAPPDATA%\ai-memory; NEVER commit
+/.ai-memory.toml

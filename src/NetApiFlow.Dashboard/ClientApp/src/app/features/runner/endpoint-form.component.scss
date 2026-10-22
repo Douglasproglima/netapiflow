@@ -1,0 +1,218 @@
+// Action panel (docs/design/flow-workspace/guide.md, seção 6.3). Self-contained card: used both
+// standalone (/runner) and embedded in the /flow workspace, so it owns its own border/background
+// rather than relying on a parent card wrapper.
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--naf-surface);
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-lg);
+  overflow: hidden;
+}
+
+.endpoint-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.endpoint-form__header {
+  flex: none;
+  padding: 1rem 1rem 0;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.endpoint-form__intro {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  color: var(--naf-text-muted);
+}
+
+.endpoint-form__status {
+  padding: 0 1rem;
+  opacity: 0.8;
+}
+
+.endpoint-form__status--error {
+  color: var(--naf-danger);
+}
+
+.endpoint-form__status-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.endpoint-form__search {
+  flex: none;
+  position: relative;
+  margin: 0.75rem 1rem 0.5rem;
+
+  svg {
+    position: absolute;
+    left: 0.6875rem;
+    top: 0.5rem;
+    color: var(--naf-text-muted);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    height: 36px;
+    border-radius: var(--naf-radius-sm);
+    border: 1px solid var(--naf-border);
+    background: var(--naf-bg);
+    color: var(--naf-text);
+    padding: 0 0.75rem 0 2.125rem;
+    font-size: 0.8125rem;
+    font-family: var(--naf-font-ui);
+  }
+}
+
+.endpoint-form__search-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.endpoint-form__list-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 55%;
+  overflow-y: auto;
+}
+
+.endpoint-form__endpoints {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem 0.5rem;
+}
+
+.endpoint-form__endpoint {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--naf-radius-md);
+  border: 1px solid transparent;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--naf-surface-2);
+  }
+}
+
+.endpoint-form__endpoint--selected {
+  background: var(--naf-flow-tint);
+  border-color: rgba(139, 92, 246, 0.45);
+}
+
+.endpoint-form__endpoint-path {
+  min-width: 0;
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.endpoint-form__hidden-note {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 1rem 0.5rem;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  color: var(--naf-text-muted);
+}
+
+.endpoint-form__form {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid var(--naf-border);
+  padding: 0.875rem 1rem 1rem;
+}
+
+.endpoint-form__form-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.endpoint-form__form-path {
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endpoint-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--naf-text-muted);
+
+    b {
+      font-weight: 400;
+      font-family: var(--naf-font-mono);
+      font-size: 0.6875rem;
+      margin-left: 0.375rem;
+    }
+  }
+
+  input,
+  textarea {
+    border: 1px solid var(--naf-border);
+    background: var(--naf-bg);
+    color: var(--naf-text);
+    border-radius: var(--naf-radius-sm);
+    padding: 0 0.75rem;
+    height: 36px;
+    font-size: 0.8125rem;
+    font-family: var(--naf-font-ui);
+  }
+
+  textarea {
+    height: 96px;
+    padding: 0.625rem 0.75rem;
+    font-family: var(--naf-font-mono);
+    font-size: 0.75rem;
+    resize: vertical;
+  }
+}
+
+.endpoint-form__send {
+  width: 100%;
+  justify-content: center;
+}
+
+.endpoint-form__trace-id {
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+}

@@ -1,0 +1,4 @@
+title = "NetApiFlow gitleaks config"
+
+[extend]
+useDefault = true

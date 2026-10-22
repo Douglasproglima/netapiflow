@@ -1,0 +1,590 @@
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin will define CSS variables that are used for styling Angular Material
+// components according to the Material 3 design spec.
+// Learn more about theming and how to use it for your application's
+// custom components at https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+@use 'styles/tokens';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+// Brand typeface, embedded locally as variable fonts (one file covers every weight below) so the
+// dashboard renders its real typography without a Google Fonts request: it has to work offline,
+// behind a restrictive CSP, or on the client's own network (docs/brand/tokens.md, ADR-0009).
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('assets/fonts/PlusJakartaSans-Variable.ttf') format('truetype-variations');
+  font-weight: 600 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('assets/fonts/Inter-Variable.ttf') format('truetype-variations');
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('assets/fonts/JetBrainsMono-Variable.ttf') format('truetype-variations');
+  font-weight: 400 500;
+  font-display: swap;
+}
+
+// Brand tokens (docs/brand/tokens.md, ADR-0009), as the --mat-sys-*/--mat-card-*/--flow-*
+// variables every mat-* component and the graph/waterfall actually read. Mixins so the same
+// values can apply unconditionally (dark, the default), behind `prefers-color-scheme` (no saved
+// preference), and behind the manual `data-theme` attribute the theme toggle writes (D-36) —
+// without triplicating every declaration by hand.
+@mixin naf-mat-theme-dark {
+  --mat-sys-primary: #7c3aed;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-tertiary: #8b5cf6;
+  --mat-sys-on-tertiary: #ffffff;
+  --mat-sys-background: #090b10;
+  --mat-sys-on-background: #f8fafc;
+  --mat-sys-surface: #131722;
+  --mat-sys-on-surface: #f8fafc;
+  --mat-sys-surface-variant: #131722;
+  --mat-sys-on-surface-variant: #94a3b8;
+  --mat-sys-outline: #232b3e;
+  --mat-sys-outline-variant: #232b3e;
+  --mat-sys-error: #ef4444;
+  --mat-sys-on-error: #ffffff;
+
+  // Palette audit (D-31, item 4): --mat-sys-primary (flow-600, #7C3AED) is correctly the filled
+  // button's background, exactly as docs/brand/tokens.md names it ("Botão primário"). But
+  // Material also used it, by default, as the plain *text* color of unfilled buttons (mat-button,
+  // mat-stroked-button) — the endpoint list, pagination, nav links. tokens.md has a dedicated
+  // token for text/links on a dark surface, flow-400 (#A78BFA), lighter than flow-600 precisely
+  // because a saturated button-strength purple reads poorly as plain text.
+  --mat-button-text-label-text-color: #a78bfa;
+  --mat-button-outlined-label-text-color: #a78bfa;
+  --mat-button-protected-label-text-color: #a78bfa;
+
+  --mat-card-elevated-container-color: rgba(19, 23, 34, 0.72);
+  --mat-card-outlined-container-color: rgba(19, 23, 34, 0.72);
+  --mat-card-outlined-outline-color: var(--mat-sys-outline-variant);
+
+  // Node states (`shared/node-state-presentation.ts`, `features/flow/graph`), fallback values
+  // already used by `flow-graph.component.scss`/`flow-details-panel.component.scss`.
+  --flow-node-fill: #131722;
+  --flow-node-stroke: #232b3e;
+  --flow-state-waiting-fill: color-mix(in srgb, #64748b 15%, transparent);
+  --flow-state-waiting-stroke: #64748b;
+  --flow-state-running-fill: color-mix(in srgb, #a78bfa 15%, transparent);
+  --flow-state-running-stroke: #a78bfa;
+  --flow-state-completed-fill: color-mix(in srgb, #10b981 15%, transparent);
+  --flow-state-completed-stroke: #10b981;
+  --flow-state-slow-fill: color-mix(in srgb, #f59e0b 15%, transparent);
+  --flow-state-slow-stroke: #f59e0b;
+  --flow-state-error-fill: color-mix(in srgb, #ef4444 15%, transparent);
+  --flow-state-error-stroke: #ef4444;
+  --flow-state-not-executed-fill: color-mix(in srgb, #64748b 10%, transparent);
+  --flow-state-not-executed-stroke: #64748b;
+  --flow-waterfall-track: #232b3e;
+  --flow-waterfall-bar: #8b5cf6;
+  --flow-waterfall-bar-error: #ef4444;
+}
+
+@mixin naf-mat-theme-light {
+  --mat-sys-primary: #6d28d9;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-tertiary: #6d28d9;
+  --mat-sys-on-tertiary: #ffffff;
+
+  // Stage Light has no separate "button" vs "text" shade of purple the way Obsidian's
+  // flow-600/flow-400 split does — Flow 700 is already the AAA-compliant token for both
+  // (docs/brand/tokens.md). Reset back to it, undoing the dark-mode override above.
+  --mat-button-text-label-text-color: #6d28d9;
+  --mat-button-outlined-label-text-color: #6d28d9;
+  --mat-button-protected-label-text-color: #6d28d9;
+  --mat-sys-background: #ffffff;
+  --mat-sys-on-background: #0f172a;
+  --mat-sys-surface: #f1f5f9;
+  --mat-sys-on-surface: #0f172a;
+  --mat-sys-surface-variant: #f1f5f9;
+  --mat-sys-on-surface-variant: #64748b;
+  --mat-sys-outline: #64748b;
+  --mat-sys-outline-variant: #64748b;
+  --mat-sys-error: #b91c1c;
+  --mat-sys-on-error: #ffffff;
+
+  --mat-card-elevated-container-color: rgba(241, 245, 249, 0.72);
+  --mat-card-outlined-container-color: rgba(241, 245, 249, 0.72);
+  --mat-card-outlined-outline-color: #e2e8f0;
+
+  --flow-node-fill: #f1f5f9;
+  --flow-node-stroke: #64748b;
+  --flow-state-waiting-fill: color-mix(in srgb, #64748b 12%, transparent);
+  --flow-state-waiting-stroke: #64748b;
+  --flow-state-running-fill: color-mix(in srgb, #6d28d9 12%, transparent);
+  --flow-state-running-stroke: #6d28d9;
+  --flow-state-completed-fill: color-mix(in srgb, #047857 12%, transparent);
+  --flow-state-completed-stroke: #047857;
+  --flow-state-slow-fill: color-mix(in srgb, #b45309 12%, transparent);
+  --flow-state-slow-stroke: #b45309;
+  --flow-state-error-fill: color-mix(in srgb, #b91c1c 12%, transparent);
+  --flow-state-error-stroke: #b91c1c;
+  --flow-state-not-executed-fill: color-mix(in srgb, #64748b 8%, transparent);
+  --flow-state-not-executed-stroke: #64748b;
+  --flow-waterfall-track: #e2e8f0;
+  --flow-waterfall-bar: #6d28d9;
+  --flow-waterfall-bar-error: #b91c1c;
+}
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        theme-type: color-scheme,
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: 'Inter, -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif',
+      density: 0,
+    )
+  );
+
+  // Obsidian (dark, principal) is the default; Stage Light applies behind the OS preference
+  // (no saved choice) or, explicitly, behind the manual `data-theme` attribute the theme toggle
+  // writes (D-36), which always wins over the OS preference once set. Overriding Material's own
+  // --mat-sys-* system variables after `mat.theme()` runs is the documented way to apply exact
+  // brand colors without regenerating a full M3 tonal palette
+  // (https://material.angular.dev/guide/system-variables) — the palette above only supplies the
+  // roles this file doesn't override.
+  @include naf-mat-theme-dark;
+
+  // Card and button recipe from the brand guide (D-31, tarefa 7.0c): radius-lg (18px) cards,
+  // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
+  // just its stock color palette. Shape/sizing doesn't change between themes.
+  --mat-card-elevated-container-shape: 18px;
+  --mat-card-outlined-container-shape: 18px;
+  --mat-card-filled-container-shape: 18px;
+  --mat-button-filled-container-height: 44px;
+  --mat-button-outlined-container-height: 44px;
+  --mat-button-protected-container-height: 44px;
+  --mat-button-tonal-container-height: 44px;
+  --mat-button-filled-container-shape: 12px;
+  --mat-button-outlined-container-shape: 12px;
+  --mat-button-protected-container-shape: 12px;
+  --mat-button-tonal-container-shape: 12px;
+  --mat-button-filled-label-text-weight: 600;
+  --mat-button-outlined-label-text-weight: 600;
+  --mat-button-protected-label-text-weight: 600;
+  --mat-button-tonal-label-text-weight: 600;
+  --mat-button-text-label-text-weight: 600;
+
+  // `color-scheme` is what the browser reads to pick the native scrollbar/form-control
+  // rendering; `light dark` here is the default (no saved preference), telling the browser both
+  // are supported so it follows the OS. `color-scheme` inherits, so this has to live only here
+  // (not re-declared on `body`, which would pin it and stop the `html[data-theme]` overrides
+  // below from ever reaching anything nested inside `<body>`, i.e. the whole app).
+  color-scheme: light dark;
+
+  @media (prefers-color-scheme: light) {
+    &:not([data-theme='dark']) {
+      @include naf-mat-theme-light;
+    }
+  }
+}
+
+html[data-theme='light'] {
+  @include naf-mat-theme-light;
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  @include naf-mat-theme-dark;
+  color-scheme: dark;
+}
+
+body {
+  // Set a default background, font and text colors for the application using
+  // Angular Material's system-level CSS variables. Learn more about these
+  // variables at https://material.angular.dev/guide/system-variables
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  // Reset the user agent margin.
+  margin: 0;
+  height: 100%;
+}
+
+// Card recipe continued: Material has no system token for blur or padding, so these apply as
+// plain CSS directly on the rendered class. `.mat-mdc-card` is Material's own DOM class, stable
+// across the appearance="outlined"/"raised" variants used throughout the dashboard.
+.mat-mdc-card {
+  padding: 1.75rem; // radius-lg's companion spacing in the brand guide: space-7-ish, rounded to 28px
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+// Heading scale (brand guide, Seção 03), scaled down from the guide's own marketing/hero sizes
+// to what a dense dashboard's panel and section titles actually need.
+h1,
+h2,
+h3 {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+code,
+.runner__trace-id {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+// "Eyebrow"/"tag" label conventions from the brand guide: a small uppercase mono label (eyebrow)
+// and a pill-shaped badge with a border (tag) — used for HTTP method/status indicators instead of
+// plain text, matching the guide's own badge recipe for exactly this kind of short status chip.
+.naf-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mat-sys-tertiary);
+  margin: 0;
+}
+
+// HTTP verb badge (docs/design/flow-workspace/guide.md, seção 3.5): fixed 56px width, centered
+// mono text, so the badge column never pushes the route column around (fixes D1).
+.naf-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 22px;
+  flex: none;
+  font-family: var(--naf-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  color: var(--naf-text-muted);
+  background: var(--naf-idle-tint);
+}
+
+.naf-tag--get {
+  color: var(--naf-flow-text);
+  background: var(--naf-flow-tint);
+}
+
+.naf-tag--post {
+  color: var(--naf-success);
+  background: var(--naf-success-tint);
+}
+
+.naf-tag--put,
+.naf-tag--patch {
+  color: var(--naf-warning);
+  background: var(--naf-warning-tint);
+}
+
+.naf-tag--delete {
+  color: var(--naf-danger);
+  background: var(--naf-danger-tint);
+}
+
+// Connection/status chip (guide seção 6.1, 6.8): a colored dot plus text, three states shared by
+// the topbar and the live events feed.
+.naf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 24px;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  font-family: var(--naf-font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--naf-text-muted);
+  background: var(--naf-idle-tint);
+}
+
+.naf-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.naf-chip--live {
+  color: var(--naf-success);
+  background: var(--naf-success-tint);
+}
+
+.naf-chip--warning {
+  color: var(--naf-warning);
+  background: var(--naf-warning-tint);
+}
+
+.naf-chip--danger {
+  color: var(--naf-danger);
+  background: var(--naf-danger-tint);
+}
+
+.naf-mono {
+  font-family: var(--naf-font-mono);
+}
+
+.naf-card {
+  background: var(--naf-surface);
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-lg);
+  min-width: 0;
+}
+
+.naf-btn {
+  height: 36px;
+  padding: 0 0.875rem;
+  border-radius: var(--naf-radius-sm);
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--naf-surface-2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.naf-btn--primary {
+  background: var(--naf-flow-button);
+  color: #fff;
+  border-color: transparent;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.08);
+    background: var(--naf-flow-button);
+  }
+}
+
+.naf-icon-btn {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: var(--naf-radius-sm);
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text-muted);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--naf-focus);
+    outline-offset: 2px;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.naf-ctl {
+  height: 36px;
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--naf-radius-sm);
+  border: 1px solid var(--naf-border);
+  background: var(--naf-bg);
+  color: var(--naf-text);
+  padding: 0 0.75rem;
+  font-family: var(--naf-font-ui);
+  font-size: 0.8125rem;
+
+  &:disabled {
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--naf-focus);
+    outline-offset: 2px;
+  }
+}
+
+.naf-ctl--mono {
+  font-family: var(--naf-font-mono);
+}
+
+.naf-seg {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  height: 36px;
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-sm);
+  overflow: hidden;
+  background: var(--naf-bg);
+  max-width: 100%;
+
+  button {
+    height: 32px;
+    padding: 0 0.75rem;
+    border: 0;
+    border-left: 1px solid var(--naf-border);
+    background: none;
+    color: var(--naf-text-muted);
+    font-family: var(--naf-font-ui);
+    font-weight: 500;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:first-child {
+      border-left: 0;
+    }
+
+    &:hover {
+      color: var(--naf-text);
+    }
+
+    &[aria-checked='true'] {
+      background: var(--naf-flow-tint);
+      color: var(--naf-flow-text);
+    }
+
+    img {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+.naf-switch {
+  width: 34px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border-strong);
+  background: var(--naf-surface-2);
+  position: relative;
+  cursor: pointer;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--naf-text-muted);
+    transition: left 0.15s ease;
+  }
+
+  &[aria-checked='true'] {
+    background: var(--naf-flow-button);
+    border-color: transparent;
+
+    &::after {
+      left: 15px;
+      background: #fff;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--naf-focus);
+    outline-offset: 2px;
+  }
+}
+
+.naf-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  height: 100%;
+  padding: 0 0.25rem;
+  margin: 0 -0.25rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--naf-focus);
+    outline-offset: 2px;
+  }
+}
+
+.naf-sort-btn--numeric {
+  justify-content: flex-end;
+}
+
+.naf-sort-icon {
+  flex: none;
+  color: var(--naf-text-muted);
+  opacity: 0.5;
+}
+
+.naf-sort-btn:hover .naf-sort-icon {
+  opacity: 0.8;
+}
+
+.naf-sort-btn--active .naf-sort-icon {
+  color: var(--naf-text);
+  opacity: 1;
+}
+/* You can add global styles to this file, and also import other style files */

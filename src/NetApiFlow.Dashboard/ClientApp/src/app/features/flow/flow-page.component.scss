@@ -1,0 +1,454 @@
+.flow-workspace {
+  padding: 1rem;
+  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.flow-workspace__status {
+  opacity: 0.8;
+}
+
+.flow-workspace__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 1rem;
+
+  // Below 1024px, center/details stack with their own fixed heights instead of sharing the row's
+  // height (guide seção 5.2). They can't shrink, so this container must stop being shrinkable too
+  // (flex: 0 0 auto instead of 1 1 auto/min-height: 0) — otherwise the flex algorithm collapses it
+  // below its children's real height, and the footer below ends up positioned over the overflow.
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    min-height: auto;
+    flex-direction: column;
+    height: auto;
+  }
+}
+
+.flow-workspace__action {
+  flex: 0 0 300px;
+  min-width: 0;
+  max-width: 300px;
+  min-height: 0;
+}
+
+// Below 1600px (guide seção 5.2) the action panel leaves the grid and becomes a drawer, opened by
+// the "Try an endpoint" button rendered in its place. The rail is 84px wide down to 1024px, so the
+// drawer starts just past it; below 1024px the rail is itself an overlay drawer (closed by
+// default), so the action drawer can start flush with the edge.
+.flow-workspace__body--drawer {
+  .flow-workspace__action {
+    position: fixed;
+    top: 56px;
+    bottom: 1rem;
+    left: 100px;
+    width: 340px;
+    max-width: 340px;
+    z-index: 40;
+    visibility: hidden;
+    transform: translateX(calc(-100% - 120px));
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 0 1px var(--naf-border);
+
+    @media (max-width: 1023px) {
+      left: 1rem;
+    }
+
+    @media (max-width: 767px) {
+      left: 0.75rem;
+      right: 0.75rem;
+      width: auto;
+      max-width: none;
+    }
+  }
+
+  .flow-workspace__action--open {
+    visibility: visible;
+    transform: none;
+  }
+}
+
+.flow-workspace__scrim {
+  position: fixed;
+  inset: 56px 0 0 100px;
+  // Against this near-black theme, a semi-transparent dark scrim over an already-dark page barely
+  // reads as "something changed" — push it darker so the drawer unmistakably reads as an overlay.
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 35;
+  border: 0;
+  padding: 0;
+  cursor: default;
+
+  @media (max-width: 1023px) {
+    inset: 56px 0 0 0;
+  }
+}
+
+.flow-workspace__action-close {
+  position: fixed;
+  top: 68px;
+  // 100px drawer offset + 340px drawer width - 44px to sit just inside its right edge.
+  left: 396px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface-2);
+  color: var(--naf-text);
+  display: grid;
+  place-items: center;
+  z-index: 41;
+  cursor: pointer;
+
+  @media (max-width: 1023px) {
+    left: auto;
+    right: 1.5rem;
+  }
+
+  @media (max-width: 767px) {
+    right: 1.25rem;
+  }
+}
+
+.flow-workspace__open-action {
+  flex: none;
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 36px;
+  padding: 0 0.875rem;
+  border-radius: var(--naf-radius-sm);
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+  }
+}
+
+.flow-workspace__center {
+  flex: 2 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--naf-surface);
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-lg);
+  overflow: hidden;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    height: 560px;
+  }
+
+  @media (max-width: 767px) {
+    height: 520px;
+  }
+}
+
+.flow-workspace__graph-header {
+  flex: none;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 52px;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--naf-border);
+
+  h2 {
+    margin: 0;
+    flex: none;
+    white-space: nowrap;
+
+    @media (max-width: 767px) {
+      display: none;
+    }
+  }
+}
+
+.flow-workspace__route {
+  font-family: var(--naf-font-mono);
+  font-size: 0.8125rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  // Guide seção 5.2: below 768px only the verb badge and the replay/back-to-live button stay.
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+.flow-workspace__trace-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+  white-space: nowrap;
+
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+.flow-workspace__copy {
+  border: 0;
+  background: none;
+  color: var(--naf-text-muted);
+  padding: 0.25rem;
+  border-radius: 6px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
+}
+
+.flow-workspace__graph-header-end {
+  margin-left: auto;
+  flex: none;
+}
+
+.flow-workspace__banner {
+  flex: none;
+  margin: 0.75rem 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-align: left;
+  width: calc(100% - 2rem);
+  cursor: pointer;
+}
+
+.flow-workspace__banner--danger {
+  background: var(--naf-danger-tint);
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  color: var(--naf-danger);
+}
+
+.flow-workspace__banner--warning {
+  background: var(--naf-warning-tint);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  color: var(--naf-warning);
+}
+
+.flow-workspace__canvas {
+  flex: 1 1 auto;
+  min-height: 200px;
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--naf-border);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+
+  // The graph is the only child that needs to actually fill the canvas; the empty-state message
+  // and the live-request list size to their own content and let flex's default auto-margins
+  // (set on .flow-workspace__empty itself) center them instead.
+  > app-flow-graph {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.flow-workspace__empty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--naf-text-muted);
+
+  svg {
+    opacity: 0.6;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.flow-workspace__empty-hint {
+  font-size: 0.8125rem;
+}
+
+.flow-workspace__replay {
+  flex: none;
+  border-top: 1px solid var(--naf-border);
+  padding: 0.625rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.flow-workspace__replay-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+
+  @media (max-width: 767px) {
+    flex-wrap: wrap;
+  }
+}
+
+.flow-workspace__replay-mode {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: var(--naf-flow-tint);
+  color: var(--naf-flow-text);
+  flex: none;
+}
+
+.flow-workspace__replay-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 0;
+  background: none;
+  color: var(--naf-text-muted);
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+    color: var(--naf-text);
+  }
+}
+
+.flow-workspace__replay-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--naf-flow-button);
+  color: white;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  cursor: pointer;
+}
+
+.flow-workspace__replay-range {
+  flex: 1 1 auto;
+  min-width: 80px;
+  accent-color: var(--naf-flow-fill);
+  height: 4px;
+}
+
+.flow-workspace__speed {
+  display: inline-flex;
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-sm);
+  overflow: hidden;
+  flex: none;
+}
+
+.flow-workspace__speed-btn {
+  height: 34px;
+  padding: 0 0.625rem;
+  border: 0;
+  border-left: 1px solid var(--naf-border);
+  background: none;
+  color: var(--naf-text-muted);
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:first-child {
+    border-left: 0;
+  }
+}
+
+.flow-workspace__speed-btn--active {
+  background: var(--naf-flow-tint);
+  color: var(--naf-flow-text);
+}
+
+.flow-workspace__replay-status {
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flow-workspace__details {
+  flex: 0 0 360px;
+  max-width: 360px;
+  min-width: 0;
+  min-height: 0;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    max-width: none;
+    width: 100%;
+    height: 640px;
+    overflow: hidden;
+  }
+}
+
+.flow-workspace__live-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.flow-workspace__live-item {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+}
+
+.flow-workspace__footer {
+  flex: 0 0 220px;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    flex-direction: column;
+  }
+}
+
+.flow-workspace__recent,
+.flow-workspace__feed {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+
+  @media (max-width: 1023px) {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 300px;
+  }
+}

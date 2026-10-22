@@ -1,0 +1,107 @@
+<mat-card
+  appearance="outlined"
+  class="recent-executions"
+  [class.recent-executions--collapsed]="collapsed()"
+>
+  <div class="recent-executions__header">
+    <h3 class="recent-executions__title">{{ 'recent.title' | t }}</h3>
+    <a class="recent-executions__view-all" routerLink="/history">
+      {{ 'recent.viewAll' | t }}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        width="14"
+        height="14"
+      >
+        <path d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
+    </a>
+    <button
+      mat-icon-button
+      type="button"
+      class="recent-executions__toggle"
+      [attr.aria-label]="(collapsed() ? 'recent.expandAria' : 'recent.collapseAria') | t"
+      (click)="toggleCollapsed()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        width="18"
+        height="18"
+        [class.recent-executions__chevron--collapsed]="collapsed()"
+      >
+        <path d="M6 9 L12 15 L18 9" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+  </div>
+  @if (!collapsed()) {
+    @if (loading()) {
+      <p class="recent-executions__status" role="status">{{ 'recent.loading' | t }}</p>
+    } @else if (error()) {
+      <p class="recent-executions__status recent-executions__status--error" role="alert">
+        {{ error() | t }}
+      </p>
+    } @else if (traces().length === 0) {
+      <p class="recent-executions__status">{{ 'recent.empty' | t }}</p>
+    } @else {
+      <ul class="recent-executions__list">
+        @for (trace of traces(); track trace.traceId) {
+          <li>
+            <button
+              type="button"
+              class="recent-executions__item"
+              (click)="traceSelected.emit(trace.traceId)"
+            >
+              <span
+                class="recent-executions__status-text"
+                [class]="'recent-executions__status-text--' + statusTint(trace)"
+              >
+                @if (trace.status === 'Running') {
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    width="12"
+                    height="12"
+                  >
+                    <circle cx="12" cy="12" r="8.5" opacity=".3" />
+                    <path d="M12 3.5A8.5 8.5 0 0 1 20.5 12" stroke-linecap="round" />
+                  </svg>
+                } @else if (trace.status === 'Error') {
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="m9 9 6 6M15 9l-6 6" stroke="var(--naf-surface)" stroke-width="1.8" />
+                  </svg>
+                } @else {
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                    <circle cx="12" cy="12" r="9" />
+                    <path
+                      d="m8.2 12.2 2.6 2.6 5-5.4"
+                      stroke="var(--naf-surface)"
+                      stroke-width="1.8"
+                      fill="none"
+                    />
+                  </svg>
+                }
+                {{ trace.httpStatus ?? trace.status }}
+              </span>
+              <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
+              <span class="recent-executions__route">{{ trace.routeTemplate }}</span>
+              <span class="recent-executions__duration">{{
+                formatDuration(trace.durationMicros)
+              }}</span>
+              <span class="recent-executions__ago" [attr.title]="trace.startedAt">{{
+                relativeTime(trace.startedAt)
+              }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  }
+</mat-card>

@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: pack-and-publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore NetApiFlow.slnx
+
+      - name: Build
+        run: dotnet build NetApiFlow.slnx -c Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Test
+        run: |
+          set -e
+          dotnet test tests/NetApiFlow.Tests -c Release --no-build
+          dotnet test tests/NetApiFlow.IntegrationTests -c Release --no-build
+          dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build
+
+      - name: Pack the six packages
+        run: >
+          dotnet pack NetApiFlow.slnx -c Release --no-build
+          -p:Version=${{ steps.version.outputs.version }}
+          -o ./nupkgs
+
+      # Trusted Publishing (OIDC): no nuget.org API key stored in a repository secret. Requires
+      # the Trusted Publishing policy configured on nuget.org for this repository and this
+      # workflow file *before* the first tag (tarefa 7.7, manual step outside this repo).
+      - name: NuGet login (Trusted Publishing)
+        uses: NuGet/login@v1
+        with:
+          user: Douglasproglima
+
+      - name: Push to nuget.org
+        run: dotnet nuget push "./nupkgs/*.nupkg" --source https://api.nuget.org/v3/index.json --skip-duplicate
