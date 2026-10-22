@@ -17,9 +17,9 @@ Executora).
 Shell e rotas fazem parte desta tarefa (achado na revisão: faltava no plano original, mas as
 tarefas 4.12 e 4.13 pressupõem que já existe). Uma rota por feature, espelhando a estrutura de
 pastas da seção 7.4 do prompt: `/flow` (padrão, tela principal, aceita `?trace=<traceId>` como
-**query string**, não segmento de rota — é assim que a seção 7.3 do prompt descreve, e é o que a
+**query string**, não segmento de rota: é assim que a seção 7.3 do prompt descreve, e é o que a
 tarefa 4.13 testa), `/history`, `/components`, `/runner`. Navegação lateral ou superior ligando
-as quatro. `PathLocationStrategy` padrão do Angular Router — o fallback de SPA que serve
+as quatro. `PathLocationStrategy` padrão do Angular Router. O fallback de SPA que serve
 `index.html` para qualquer rota não resolvida é responsabilidade do middleware da Fase 5 (tarefa
 5.3), não desta tarefa.
 
