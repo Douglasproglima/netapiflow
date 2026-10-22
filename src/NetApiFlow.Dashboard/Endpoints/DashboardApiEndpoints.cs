@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -38,10 +39,25 @@ internal static class DashboardApiEndpoints
         return group;
     }
 
+    private static readonly IReadOnlyDictionary<string, TraceSortField> SortFieldsByQueryValue = new Dictionary<string, TraceSortField>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["startedAt"] = TraceSortField.StartedAt,
+        ["duration"] = TraceSortField.Duration,
+        ["httpStatus"] = TraceSortField.HttpStatus,
+        ["method"] = TraceSortField.Method,
+        ["route"] = TraceSortField.Route,
+    };
+
+    private static readonly IReadOnlyDictionary<string, SortDirection> SortDirectionsByQueryValue = new Dictionary<string, SortDirection>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["asc"] = SortDirection.Ascending,
+        ["desc"] = SortDirection.Descending,
+    };
+
     private static async Task<IResult> GetTraces(
         FlowStatus? status, string? method, string? route, string? tenant,
         DateTime? from, DateTime? to, long? minDurationMicros,
-        int? page, int? pageSize,
+        int? page, int? pageSize, string? sort, string? order,
         ITraceStore store, CancellationToken cancellationToken)
     {
         var resolvedPage = page ?? 1;
@@ -50,6 +66,32 @@ internal static class DashboardApiEndpoints
         if (resolvedPage < 1 || resolvedPageSize < 1 || resolvedPageSize > 200)
         {
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        TraceSortField? sortField = null;
+        if (sort is not null)
+        {
+            if (!SortFieldsByQueryValue.TryGetValue(sort, out var resolvedField))
+            {
+                return Results.Problem(
+                    detail: $"'{sort}' is not a valid sort field. Accepted values: {string.Join(", ", SortFieldsByQueryValue.Keys)}.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            sortField = resolvedField;
+        }
+
+        SortDirection? sortDirection = null;
+        if (order is not null)
+        {
+            if (!SortDirectionsByQueryValue.TryGetValue(order, out var resolvedDirection))
+            {
+                return Results.Problem(
+                    detail: $"'{order}' is not a valid sort order. Accepted values: {string.Join(", ", SortDirectionsByQueryValue.Keys)}.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            sortDirection = resolvedDirection;
         }
 
         var query = new TraceQuery
@@ -63,6 +105,8 @@ internal static class DashboardApiEndpoints
             MinDurationMicros = minDurationMicros,
             Page = resolvedPage,
             PageSize = resolvedPageSize,
+            SortBy = sortField,
+            SortDirection = sortDirection,
         };
 
         var result = await store.QueryAsync(query, cancellationToken);
@@ -224,8 +268,29 @@ internal static class DashboardApiEndpoints
         var config = new DashboardConfig
         {
             SlowThresholdMicros = (long)options.Value.SlowThreshold.TotalMicroseconds,
+            Version = GetCoreVersion(),
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);
+    }
+
+    /// <summary>
+    /// Reads the core package version from <c>NetApiFlow</c>'s own
+    /// <see cref="AssemblyInformationalVersionAttribute"/> (D-33): the same value as
+    /// <c>&lt;Version&gt;</c> in <c>Directory.Build.props</c>, stripped of the SourceLink commit
+    /// suffix CI builds append after a <c>+</c>.
+    /// </summary>
+    private static string GetCoreVersion()
+    {
+        var informationalVersion = typeof(NetApiFlowOptions).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (string.IsNullOrEmpty(informationalVersion))
+        {
+            return "0.0.0";
+        }
+
+        var plusIndex = informationalVersion.IndexOf('+');
+        return plusIndex < 0 ? informationalVersion : informationalVersion[..plusIndex];
     }
 }

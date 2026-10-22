@@ -9,8 +9,12 @@ export function formatDurationMicros(micros: number | null): string {
   }
 
   if (micros < 1_000_000) {
-    return `${(micros / 1_000).toFixed(1)} ms`;
+    return `${trimTrailingZeros((micros / 1_000).toFixed(1))} ms`;
   }
 
-  return `${(micros / 1_000_000).toFixed(2)} s`;
+  return `${trimTrailingZeros((micros / 1_000_000).toFixed(2))} s`;
+}
+
+function trimTrailingZeros(value: string): string {
+  return value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
 }

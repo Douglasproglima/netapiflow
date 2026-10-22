@@ -1,0 +1,21 @@
+<h2 mat-dialog-title>{{ 'about.title' | t }}</h2>
+<mat-dialog-content class="about-dialog__content">
+  <dl class="about-dialog__list">
+    <dt>{{ 'about.version' | t }}</dt>
+    <dd>{{ version() }}</dd>
+    <dt>{{ 'about.license' | t }}</dt>
+    <dd>MIT</dd>
+    <dt>{{ 'about.repository' | t }}</dt>
+    <dd>
+      <a [href]="repositoryUrl" target="_blank" rel="noopener">{{ repositoryUrl }}</a>
+    </dd>
+  </dl>
+  <p class="about-dialog__credit">
+    {{ 'about.creditPrefix' | t }}
+    <a href="https://github.com/joshuamaia/apiflow" target="_blank" rel="noopener">apiflow</a>
+    {{ 'about.creditSuffix' | t }}
+  </p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close type="button">{{ 'about.close' | t }}</button>
+</mat-dialog-actions>

@@ -26,6 +26,7 @@ internal static class PostgreSqlSchemaInitializer
             CREATE INDEX IF NOT EXISTS ix_{tracesTable}_started_at ON {tracesTable} (started_at);
             CREATE INDEX IF NOT EXISTS ix_{tracesTable}_status ON {tracesTable} (status);
             CREATE INDEX IF NOT EXISTS ix_{tracesTable}_method_route ON {tracesTable} (method, route_template);
+            CREATE INDEX IF NOT EXISTS ix_{tracesTable}_duration_micros ON {tracesTable} (duration_micros);
 
             CREATE TABLE IF NOT EXISTS {spansTable} (
                 trace_id varchar(64) NOT NULL REFERENCES {tracesTable} (trace_id) ON DELETE CASCADE,

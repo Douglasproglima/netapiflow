@@ -58,11 +58,15 @@ describe('LiveTracePlayerService', () => {
   let getTraceCalls: Subject<FlowTraceDetail>[];
   let events: Subject<FlowEvent>;
   let reconnected: Subject<void>;
+  let connectSpy: ReturnType<typeof vi.fn>;
+  let disconnectSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     getTraceCalls = [];
     events = new Subject<FlowEvent>();
     reconnected = new Subject<void>();
+    connectSpy = vi.fn();
+    disconnectSpy = vi.fn();
 
     const fakeApi = {
       getTrace: () => {
@@ -76,8 +80,8 @@ describe('LiveTracePlayerService', () => {
       events$: events.asObservable(),
       reconnected$: reconnected.asObservable(),
       state: () => 'open' as SseConnectionState,
-      connect: vi.fn(),
-      disconnect: vi.fn(),
+      connect: connectSpy,
+      disconnect: disconnectSpy,
     };
 
     TestBed.configureTestingModule({
@@ -93,6 +97,21 @@ describe('LiveTracePlayerService', () => {
 
   afterEach(() => {
     service.stop();
+  });
+
+  it('never calls disconnect without a matching connect (stop/ngOnDestroy before any track)', () => {
+    service.stop();
+    service.ngOnDestroy();
+
+    expect(disconnectSpy).not.toHaveBeenCalled();
+  });
+
+  it('calls connect and disconnect the same number of times across a track/stop cycle', () => {
+    service.track('t1');
+    service.stop();
+
+    expect(connectSpy).toHaveBeenCalledTimes(1);
+    expect(disconnectSpy).toHaveBeenCalledTimes(1);
   });
 
   it('converges to the correct final state when events arrive out of order and duplicated', () => {

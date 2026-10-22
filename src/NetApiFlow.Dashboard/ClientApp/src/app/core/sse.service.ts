@@ -15,6 +15,10 @@ const MAX_RECONNECT_DELAY_MS = 30000;
  * on a connection created by application code; only the browser's own automatic retry can do that.
  * The URL is relative (`api/stream`), resolved against whatever base path the host page sets
  * (risco R-03): never hardcode `/flow`.
+ *
+ * `connect`/`disconnect` are reference-counted: `LiveTracePlayerService` and an always-on event
+ * feed (ADR-0010) can both want the stream open at the same time, each calling `connect()`/
+ * `disconnect()` on its own lifecycle without tearing down the other's connection.
  */
 @Injectable({ providedIn: 'root' })
 export class SseService {
@@ -24,6 +28,7 @@ export class SseService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private manuallyDisconnected = true;
   private hasConnectedBefore = false;
+  private openCount = 0;
 
   private readonly eventsSubject = new Subject<FlowEvent>();
   private readonly reconnectedSubject = new Subject<void>();
@@ -38,6 +43,11 @@ export class SseService {
   readonly state = this.stateSignal.asReadonly();
 
   connect(): void {
+    this.openCount++;
+    if (this.openCount > 1) {
+      return;
+    }
+
     this.manuallyDisconnected = false;
     this.hasConnectedBefore = false;
     this.lastEventId = null;
@@ -46,6 +56,11 @@ export class SseService {
   }
 
   disconnect(): void {
+    this.openCount = Math.max(this.openCount - 1, 0);
+    if (this.openCount > 0) {
+      return;
+    }
+
     this.manuallyDisconnected = true;
     this.clearReconnectTimer();
     this.eventSource?.close();

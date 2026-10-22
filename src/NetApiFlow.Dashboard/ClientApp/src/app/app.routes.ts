@@ -1,17 +1,29 @@
 import { Routes } from '@angular/router';
 import { FlowPageComponent } from './features/flow/flow-page.component';
-import { HistoryComponent } from './features/history/history.component';
-import { ComponentsComponent } from './features/components/components.component';
-import { RunnerComponent } from './features/runner/runner.component';
 
-/**
- * One route per feature (seção 7.4 do prompt, D-23). `/flow` is the default screen and reads
- * `?trace=<traceId>` as a query string, never a route segment (seção 7.3 do prompt, tarefa 4.13).
- */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'flow' },
-  { path: 'flow', component: FlowPageComponent },
-  { path: 'history', component: HistoryComponent },
-  { path: 'components', component: ComponentsComponent },
-  { path: 'runner', component: RunnerComponent },
+  {
+    path: 'flow',
+    component: FlowPageComponent,
+    data: { title: 'nav.flow', subtitle: 'topbar.subtitle.flow' },
+  },
+  {
+    path: 'history',
+    loadComponent: () =>
+      import('./features/history/history.component').then((m) => m.HistoryComponent),
+    data: { title: 'nav.history', subtitle: 'topbar.subtitle.history' },
+  },
+  {
+    path: 'components',
+    loadComponent: () =>
+      import('./features/components/components.component').then((m) => m.ComponentsComponent),
+    data: { title: 'nav.components', subtitle: 'topbar.subtitle.components' },
+  },
+  {
+    path: 'runner',
+    loadComponent: () =>
+      import('./features/runner/runner.component').then((m) => m.RunnerComponent),
+    data: { title: 'nav.runner', subtitle: 'topbar.subtitle.runner' },
+  },
 ];

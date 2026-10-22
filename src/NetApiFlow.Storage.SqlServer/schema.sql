@@ -23,6 +23,7 @@ BEGIN
     CREATE INDEX ix_netapiflow_traces_started_at ON dbo.netapiflow_traces (started_at);
     CREATE INDEX ix_netapiflow_traces_status ON dbo.netapiflow_traces (status);
     CREATE INDEX ix_netapiflow_traces_method_route ON dbo.netapiflow_traces (method, route_template);
+    CREATE INDEX ix_netapiflow_traces_duration_micros ON dbo.netapiflow_traces (duration_micros);
 END;
 
 IF OBJECT_ID('dbo.netapiflow_spans', 'U') IS NULL

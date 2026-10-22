@@ -1,13 +1,6 @@
 import * as dagre from '@dagrejs/dagre';
-import { ComponentType, FlowSpan, FlowStatus } from '../../../core/models';
-
-/**
- * The six visual states of seção 7.2 do prompt. Ghost nodes (inferred from the blueprint, never
- * actually executed) are "waiting" while the trace is still running, "not-executed" once it has
- * concluded — there is no way to know a missing branch will never run until the trace is done.
- */
-export type NodeVisualState =
-  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed';
+import { ComponentType, FlowSpan, FlowStatus, NodeVisualState } from '../../../core/models';
+import { formatDurationMicros } from '../../../shared/duration-format';
 
 export interface GraphNode {
   id: string;
@@ -44,9 +37,43 @@ export interface GraphBuilderInput {
   blueprintSpans?: FlowSpan[];
 }
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 72;
+const NODE_WIDTH = 184;
+const NODE_MAX_WIDTH = 320;
+const NODE_HEIGHT = 60;
+const NODE_LEFT_INSET_PX = 48;
+const NODE_RIGHT_MARGIN_PX = 10;
+const NODE_DURATION_GAP_PX = 8;
+// Both labels are rendered at a fixed font size (flow-graph.component.scss), so an average
+// advance width per character is enough to size the card without measuring real text — the
+// component name is proportional sans-serif, the operation/duration pair is monospace.
+const COMPONENT_CHAR_WIDTH_PX = 6.8;
+const MONO_CHAR_WIDTH_PX = 6.3;
 const GHOST_ID_PREFIX = 'ghost-';
+
+/**
+ * A node this wide fits its component name and its operation + duration pair without
+ * truncating either (D-34: a fixed card width used to force "/api/orders/{id:int}" and its
+ * duration to overlap). Capped at `NODE_MAX_WIDTH` so one pathologically long route can't blow
+ * up the whole graph's layout; `nodeOperationLabel` in the SVG component still truncates with an
+ * ellipsis for whatever doesn't fit past that cap.
+ */
+function nodeWidthFor(component: string, operation: string, durationMicros: number | null): number {
+  const durationLabel = durationMicros === null ? '' : formatDurationMicros(durationMicros);
+  const operationAndDurationWidth =
+    NODE_LEFT_INSET_PX +
+    operation.length * MONO_CHAR_WIDTH_PX +
+    (durationLabel ? NODE_DURATION_GAP_PX + durationLabel.length * MONO_CHAR_WIDTH_PX : 0) +
+    NODE_RIGHT_MARGIN_PX;
+  const componentWidth =
+    NODE_LEFT_INSET_PX + component.length * COMPONENT_CHAR_WIDTH_PX + NODE_RIGHT_MARGIN_PX;
+
+  return Math.min(NODE_MAX_WIDTH, Math.max(NODE_WIDTH, operationAndDurationWidth, componentWidth));
+}
+
+/** Ghost nodes (inferred from the blueprint, never actually executed) carry this id prefix. */
+export function isGhostNodeId(id: string): boolean {
+  return id.startsWith(GHOST_ID_PREFIX);
+}
 
 interface MergedNode {
   id: string;
@@ -72,7 +99,9 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
   }
 
   const layoutGraph = new dagre.graphlib.Graph();
-  layoutGraph.setGraph({ rankdir: 'TB', nodesep: 40, ranksep: 60 });
+  // rankdir 'LR' (guide seção 6.4): a left-to-right flow instead of a single vertical column is
+  // what turns a 10-step trace into a readable graph instead of one tall, scroll-only strip (D4).
+  layoutGraph.setGraph({ rankdir: 'LR', nodesep: 16, ranksep: 44, marginx: 24, marginy: 24 });
   layoutGraph.setDefaultEdgeLabel(() => ({}));
 
   const flatNodes: MergedNode[] = [];
@@ -80,7 +109,10 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
 
   const visit = (node: MergedNode, parentId: string | null): void => {
     flatNodes.push(node);
-    layoutGraph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    layoutGraph.setNode(node.id, {
+      width: nodeWidthFor(node.component, node.operation, node.durationMicros),
+      height: NODE_HEIGHT,
+    });
     if (parentId !== null) {
       layoutGraph.setEdge(parentId, node.id);
       flatEdges.push({ parentId, childId: node.id });
@@ -121,20 +153,38 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
   return { nodes, edges };
 }
 
+/**
+ * Ghost nodes (inferred from the blueprint, never actually executed) are "waiting" while the
+ * trace is still running, "not-executed" once it has concluded — there is no way to know a
+ * missing branch will never run until the trace is done.
+ */
 function resolveState(node: MergedNode, input: GraphBuilderInput): NodeVisualState {
   if (node.status === null) {
     return input.traceStatus === 'Running' ? 'waiting' : 'not-executed';
   }
 
-  if (node.status === 'Error') {
+  return stateFromSpanStatus(node.status, node.durationMicros, input.slowThresholdMicros);
+}
+
+/**
+ * Shared with the waterfall (`details/waterfall.ts`, guide seção 6.6): a real span's visual state
+ * depends only on its own status/duration and the slow threshold, regardless of whether it's
+ * reached through the graph or the details panel.
+ */
+export function stateFromSpanStatus(
+  status: FlowStatus,
+  durationMicros: number | null,
+  slowThresholdMicros: number,
+): NodeVisualState {
+  if (status === 'Error') {
     return 'error';
   }
 
-  if (node.status === 'Running') {
+  if (status === 'Running') {
     return 'running';
   }
 
-  if (node.durationMicros !== null && node.durationMicros >= input.slowThresholdMicros) {
+  if (durationMicros !== null && durationMicros >= slowThresholdMicros) {
     return 'slow';
   }
 
@@ -156,12 +206,24 @@ function buildChildrenByParent(spans: FlowSpan[]): Map<string | null, FlowSpan[]
   return byParent;
 }
 
+/**
+ * A span is the trace's root when its `parentSpanId` is `null`, or when it doesn't match any
+ * `spanId` in the same set — the backend normalizes a true root to `null` (docs/plano/contratos.md),
+ * but this stays robust even against a non-conforming store that leaves a dangling ambient parent
+ * id (e.g. the host framework's own Activity) instead.
+ */
+function findRoot(spans: FlowSpan[]): FlowSpan | undefined {
+  return spans.find(
+    (span) => span.parentSpanId === null || !spans.some((s) => s.spanId === span.parentSpanId),
+  );
+}
+
 function buildMergedTree(input: GraphBuilderInput): MergedNode | null {
   const realChildrenByParent = buildChildrenByParent(input.spans);
   const blueprintChildrenByParent = buildChildrenByParent(input.blueprintSpans ?? []);
 
-  const realRoot = input.spans.find((span) => span.parentSpanId === null);
-  const blueprintRoot = (input.blueprintSpans ?? []).find((span) => span.parentSpanId === null);
+  const realRoot = findRoot(input.spans);
+  const blueprintRoot = findRoot(input.blueprintSpans ?? []);
 
   if (realRoot) {
     return mergeNode(realRoot, realChildrenByParent, blueprintRoot, blueprintChildrenByParent);

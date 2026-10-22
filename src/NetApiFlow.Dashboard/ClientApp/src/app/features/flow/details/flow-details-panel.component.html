@@ -1,87 +1,163 @@
 @if (selectedSpan(); as detail) {
   <section class="flow-details" aria-label="Span details">
-    <h2>{{ detail.span.component }}.{{ detail.span.operation }}</h2>
+    <div class="flow-details__block">
+      <button type="button" class="flow-details__back" (click)="backToSummary.emit()">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          width="16"
+          height="16"
+        >
+          <path d="M19 12H5M11 6l-6 6 6 6" />
+        </svg>
+        {{ 'details.backToSummary' | t }}
+      </button>
+      <h2>{{ detail.span.component }}.{{ detail.span.operation }}</h2>
 
-    <dl class="flow-details__fields">
-      <dt>Span id</dt>
-      <dd>{{ detail.span.spanId }}</dd>
-      <dt>Parent span id</dt>
-      <dd>{{ detail.span.parentSpanId ?? '—' }}</dd>
-      <dt>Trace id</dt>
-      <dd>{{ trace().traceId }}</dd>
-      <dt>Started at</dt>
-      <dd>{{ detail.span.startedAt }}</dd>
-      <dt>Ended at</dt>
-      <dd>{{ detail.span.endedAt ?? '—' }}</dd>
-      <dt>Duration</dt>
-      <dd>{{ formatDuration(detail.span.durationMicros) }}</dd>
-      <dt>Status</dt>
-      <dd>{{ detail.span.status }}</dd>
+      <dl class="flow-details__meta-dl">
+        <dt>{{ 'details.span.id' | t }}</dt>
+        <dd>{{ detail.span.spanId }}</dd>
+        <dt>{{ 'details.span.parentId' | t }}</dt>
+        <dd>{{ detail.span.parentSpanId ?? '—' }}</dd>
+        <dt>{{ 'details.span.started' | t }}</dt>
+        <dd [attr.title]="detail.span.startedAt">{{ formatLocalTime(detail.span.startedAt) }}</dd>
+        <dt>{{ 'details.span.ended' | t }}</dt>
+        <dd [attr.title]="detail.span.endedAt">{{ formatLocalTime(detail.span.endedAt) }}</dd>
+        <dt>{{ 'details.span.duration' | t }}</dt>
+        <dd>{{ formatDuration(detail.span.durationMicros) }}</dd>
+        <dt>{{ 'details.span.status' | t }}</dt>
+        <dd>{{ detail.span.status }}</dd>
+        <dt>{{ 'details.span.medianDuration' | t }}</dt>
+        <dd>{{ formatDuration(detail.medianDurationMicros) }}</dd>
+        <dt>{{ 'details.span.deltaFromMedian' | t }}</dt>
+        <dd>{{ formatDelta(detail.deltaFromMedianMicros) }}</dd>
+      </dl>
+
       @if (detail.span.errorType) {
-        <dt>Error</dt>
-        <dd>{{ detail.span.errorType }}: {{ detail.span.errorMessage }}</dd>
+        <div class="flow-details__errbox">
+          <b
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="16"
+              height="16"
+            >
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5v5.5M12 16.4v.1" />
+            </svg>
+            {{ detail.span.errorType }}</b
+          >
+          <p>{{ detail.span.errorMessage }}</p>
+        </div>
       }
-      <dt>Median duration (same operation)</dt>
-      <dd>{{ formatDuration(detail.medianDurationMicros) }}</dd>
-      <dt>Delta from median</dt>
-      <dd>{{ formatDelta(detail.deltaFromMedianMicros) }}</dd>
-    </dl>
 
-    @if (detail.ancestors.length > 0) {
-      <h3>Ancestors</h3>
-      <ol class="flow-details__refs">
-        @for (ancestor of detail.ancestors; track ancestor.spanId) {
-          <li>{{ ancestor.component }}.{{ ancestor.operation }}</li>
-        }
-      </ol>
-    }
+      @if (detail.ancestors.length > 0) {
+        <p class="flow-details__section-label">{{ 'details.span.ancestors' | t }}</p>
+        <ol class="flow-details__refs">
+          @for (ancestor of detail.ancestors; track ancestor.spanId) {
+            <li>{{ ancestor.component }}.{{ ancestor.operation }}</li>
+          }
+        </ol>
+      }
 
-    @if (detail.children.length > 0) {
-      <h3>Children</h3>
-      <ul class="flow-details__refs">
-        @for (child of detail.children; track child.spanId) {
-          <li>{{ child.component }}.{{ child.operation }}</li>
-        }
-      </ul>
-    }
+      @if (detail.children.length > 0) {
+        <p class="flow-details__section-label">{{ 'details.span.children' | t }}</p>
+        <ul class="flow-details__refs">
+          @for (child of detail.children; track child.spanId) {
+            <li>{{ child.component }}.{{ child.operation }}</li>
+          }
+        </ul>
+      }
+    </div>
   </section>
 } @else {
   <section class="flow-details" aria-label="Request summary">
-    <h2>{{ trace().method }} {{ trace().routeTemplate }}</h2>
+    <div class="flow-details__block">
+      <div class="flow-details__head">
+        <span class="naf-tag" [class]="methodTagClass(trace().method)">{{ trace().method }}</span>
+        <span class="flow-details__route naf-mono">{{ trace().routeTemplate }}</span>
+      </div>
 
-    <dl class="flow-details__fields">
-      <dt>Trace id</dt>
-      <dd>{{ trace().traceId }}</dd>
-      <dt>HTTP status</dt>
-      <dd>{{ trace().httpStatus ?? '—' }}</dd>
-      <dt>Status</dt>
-      <dd>{{ trace().status }}</dd>
-      <dt>Started at</dt>
-      <dd>{{ trace().startedAt }}</dd>
-      <dt>Duration</dt>
-      <dd>{{ formatDuration(trace().durationMicros) }}</dd>
+      <div class="flow-details__chips">
+        <span
+          class="flow-details__chip"
+          [class.flow-details__chip--danger]="trace().status === 'Error'"
+          [class.flow-details__chip--success]="trace().status === 'Success'"
+        >
+          {{ 'details.httpStatus' | t: { status: trace().httpStatus ?? '—' } }}
+        </span>
+      </div>
+
+      <div class="flow-details__kpis">
+        <div>
+          <b>{{ formatDuration(trace().durationMicros) }}</b>
+          <span>{{ 'details.kpi.total' | t }}</span>
+        </div>
+        <div>
+          <b>{{ executedCount() }}</b>
+          <span>{{ 'details.kpi.executed' | t }}</span>
+        </div>
+        <div>
+          <b>{{ notExecutedCount() }}</b>
+          <span>{{ 'details.kpi.notExecuted' | t }}</span>
+        </div>
+      </div>
+
       @if (trace().errorMessage) {
-        <dt>Error</dt>
-        <dd>{{ trace().errorMessage }}</dd>
-      }
-    </dl>
-
-    <h3>Waterfall</h3>
-    <div class="flow-waterfall">
-      @for (row of waterfall(); track row.spanId) {
-        <div class="flow-waterfall__row">
-          <span class="flow-waterfall__label">{{ row.component }}.{{ row.operation }}</span>
-          <div class="flow-waterfall__track">
-            <div
-              class="flow-waterfall__bar"
-              [attr.data-status]="row.status"
-              [style.margin-left.%]="row.offsetPercent"
-              [style.width.%]="row.widthPercent"
-            ></div>
-          </div>
-          <span class="flow-waterfall__duration">{{ formatDuration(row.durationMicros) }}</span>
+        <div class="flow-details__errbox">
+          <b
+            ><svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="16"
+              height="16"
+            >
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5v5.5M12 16.4v.1" />
+            </svg>
+            {{ 'details.span.failedLabel' | t }}</b
+          >
+          <p>{{ trace().errorMessage }}</p>
         </div>
       }
     </div>
+
+    <div class="flow-details__block">
+      <dl class="flow-details__meta-dl">
+        <dt>{{ 'details.summary.traceId' | t }}</dt>
+        <dd>
+          <span>{{ trace().traceId }}</span>
+        </dd>
+        <dt>{{ 'details.summary.started' | t }}</dt>
+        <dd [attr.title]="trace().startedAt">{{ formatLocalTime(trace().startedAt) }}</dd>
+        <dt>{{ 'details.summary.finished' | t }}</dt>
+        <dd [attr.title]="trace().endedAt">{{ formatLocalTime(trace().endedAt) }}</dd>
+      </dl>
+    </div>
+
+    <p class="flow-details__section-label">
+      {{ 'details.steps.sectionLabel' | t }} <em>· {{ 'details.steps.sectionHint' | t }}</em>
+    </p>
+    <ul class="flow-waterfall">
+      @for (row of waterfall(); track row.spanId) {
+        <li class="flow-waterfall__row" [attr.data-state]="row.state">
+          <span class="flow-waterfall__label">{{ row.component }}.{{ row.operation }}</span>
+          <span class="flow-waterfall__track">
+            <span
+              class="flow-waterfall__bar"
+              [style.margin-left.%]="row.offsetPercent"
+              [style.width.%]="row.widthPercent"
+            ></span>
+          </span>
+          <span class="flow-waterfall__duration">{{ formatDuration(row.durationMicros) }}</span>
+        </li>
+      }
+    </ul>
   </section>
 }

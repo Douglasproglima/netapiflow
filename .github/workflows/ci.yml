@@ -28,6 +28,26 @@ jobs:
             8.0.x
             10.0.x
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+          cache: npm
+          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+      # Built explicitly, once, before `dotnet build`: NetApiFlow.Dashboard.csproj's own
+      # BuildAngularClient MSBuild target assumes it only ever runs once per outer,
+      # TargetFramework-less pass of that one project, but a solution build with
+      # ProjectReferences into it (NetApiFlow.IntegrationTests, samples) can trigger more than one
+      # such pass under MSBuild's parallel scheduling, racing on the same dist/ output (PR #17).
+      # With dist/ already fresh, every one of those passes sees its Inputs/Outputs check satisfied
+      # and skips `npm run build` entirely, so the race has nothing left to race on.
+      - name: Build dashboard UI
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npm ci
+          npm run build
+
       - name: Restore
         run: dotnet restore NetApiFlow.slnx
 

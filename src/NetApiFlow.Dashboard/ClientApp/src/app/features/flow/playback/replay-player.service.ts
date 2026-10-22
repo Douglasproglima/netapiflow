@@ -31,6 +31,8 @@ export class ReplayPlayerService implements OnDestroy {
   /** The spans revealed so far, in order. Each one keeps its own real `durationMicros` untouched. */
   readonly visibleSpans = computed(() => this.orderedSpans().slice(0, this.stepIndexSignal()));
 
+  readonly totalSteps = computed(() => this.orderedSpans().length);
+
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   load(trace: FlowTraceDetail): void {
@@ -76,6 +78,20 @@ export class ReplayPlayerService implements OnDestroy {
     this.stateSignal.set(
       this.stepIndexSignal() >= this.orderedSpans().length ? 'finished' : 'paused',
     );
+  }
+
+  stepBackward(): void {
+    this.clearTimer();
+    this.stepIndexSignal.update((index) => Math.max(index - 1, 0));
+    this.stateSignal.set('paused');
+  }
+
+  /** Jumps directly to a step index, e.g. from the replay bar's range input. */
+  seek(index: number): void {
+    this.clearTimer();
+    const clamped = Math.min(Math.max(index, 0), this.orderedSpans().length);
+    this.stepIndexSignal.set(clamped);
+    this.stateSignal.set(clamped >= this.orderedSpans().length ? 'finished' : 'paused');
   }
 
   ngOnDestroy(): void {

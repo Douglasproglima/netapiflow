@@ -1,8 +1,9 @@
+using Microsoft.Extensions.DependencyInjection;
 using SampleApi.MinimalMediatR.Data;
 
 namespace SampleApi.MinimalMediatR.Application;
 
-public sealed class OrderService(IOrderRepository repository) : IOrderService
+public sealed class OrderService(IOrderRepository repository, IServiceScopeFactory scopeFactory) : IOrderService
 {
     public Task<Order?> GetAsync(int id, CancellationToken cancellationToken) =>
         repository.FindAsync(id, cancellationToken);
@@ -28,7 +29,14 @@ public sealed class OrderService(IOrderRepository repository) : IOrderService
 
     public async Task<IReadOnlyList<Order>> GetManyInParallelAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken)
     {
-        var tasks = ids.Select(id => repository.FindAsync(id, cancellationToken));
+        // EF Core's DbContext isn't thread-safe; each parallel branch needs its own DI scope
+        // (and therefore its own DbContext) to query concurrently without throwing.
+        var tasks = ids.Select(async id =>
+        {
+            using var scope = scopeFactory.CreateScope();
+            var scopedRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+            return await scopedRepository.FindAsync(id, cancellationToken);
+        });
         var results = await Task.WhenAll(tasks);
         return [.. results.Where(o => o is not null).Select(o => o!)];
     }

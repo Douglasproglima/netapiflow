@@ -28,6 +28,7 @@ internal static class SqlServerSchemaInitializer
                 CREATE INDEX ix_{SafeIndexName(tracesTable)}_started_at ON {tracesTable} (started_at);
                 CREATE INDEX ix_{SafeIndexName(tracesTable)}_status ON {tracesTable} (status);
                 CREATE INDEX ix_{SafeIndexName(tracesTable)}_method_route ON {tracesTable} (method, route_template);
+                CREATE INDEX ix_{SafeIndexName(tracesTable)}_duration_micros ON {tracesTable} (duration_micros);
             END;
 
             IF OBJECT_ID('{spansTable}', 'U') IS NULL

@@ -1,40 +1,287 @@
+// Shell (docs/design/flow-workspace/guide.md, seção 6.1).
 :host {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-.app-shell__toolbar {
+.app-topbar {
+  flex: 0 0 auto;
   display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  height: 56px;
+  border-bottom: 1px solid var(--naf-border);
+  min-width: 0;
 }
 
-.app-shell__title {
-  font-size: 1.1rem;
-  margin: 0;
-}
+.app-topbar__hamburger {
+  flex: none;
 
-.app-shell__nav {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-
-  a {
-    color: inherit;
-    text-decoration: none;
-    opacity: 0.75;
+  // The rail is always docked open at this width and up (S1): there's nothing to toggle.
+  @media (min-width: 1024px) {
+    display: none;
   }
 }
 
-.app-shell__link--active {
-  opacity: 1;
-  font-weight: 600;
-  text-decoration: underline;
+.app-topbar__title {
+  flex: none;
+  margin: 0;
+  font-family: var(--naf-font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.app-shell__content {
+.app-topbar__sub {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--naf-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // Guide seção 5.2: below 768px the topbar drops the subtitle entirely rather than truncate it.
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+.app-topbar__right {
+  flex: none;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-topbar__meta {
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+  white-space: nowrap;
+
+  // Guide seção 5.2: 1024-1199px already drops the text metadata, keeping only the connection chip.
+  @media (max-width: 1199px) {
+    display: none;
+  }
+}
+
+// Language selector (docs/design/dashboard-preferences/guide.md, seção 4): same segmented-control
+// pattern as the replay speed group (flow-workspace guide, seção 6.5).
+.app-topbar__lang {
+  flex: none;
+  display: inline-flex;
+  height: 36px;
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-sm);
+  overflow: hidden;
+
+  button {
+    height: 100%;
+    padding: 0 0.75rem;
+    border: 0;
+    background: none;
+    font-family: var(--naf-font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    color: var(--naf-text-muted);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--naf-surface-2);
+    }
+
+    &[aria-checked='true'] {
+      background: var(--naf-flow-tint);
+      color: var(--naf-flow-text);
+    }
+
+    & + button {
+      border-left: 1px solid var(--naf-border);
+    }
+  }
+}
+
+.app-topbar__theme {
+  flex: none;
+}
+
+.app-shell {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.app-rail {
+  // No position here: Angular Material already sets `.mat-drawer`/`.app-rail` to
+  // `position: absolute` so it stretches to the sidenav container's full height. Declaring
+  // `position: relative` here (same specificity as Material's rule, but loaded after it)
+  // used to win the cascade and silently drop that absolute positioning, shrinking the rail
+  // to its own content height instead of the container's. It already is a positioning
+  // context for `.app-rail__close` without redeclaring it.
+  width: 84px;
+  overflow-x: hidden;
+  border-right: 1px solid var(--naf-border);
+  background: var(--naf-bg);
+  // Material 3's default sidenav shape rounds the container's leading corners; the rail is flush
+  // against the topbar and the page edge, so it must stay perfectly square (S2).
+  border-radius: 0;
+
+  // `<mat-sidenav>`'s only real DOM child is Material's own `.mat-drawer-inner-container`, which
+  // is where the projected rail content actually lives — `display: flex`/`gap` declared on
+  // `.app-rail` itself only ever had that one wrapper to flex, so every item stacked with no
+  // gap at all between their boxes.
+  ::ng-deep .mat-drawer-inner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.875rem 0;
+  }
+}
+
+.app-rail__close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
+}
+
+// Material's own backdrop for the overlay rail defaults to a low-opacity black that barely reads
+// against this dark theme; darken it so it's obvious the rail can be dismissed by tapping outside.
+::ng-deep .mat-drawer-backdrop.mat-drawer-shown {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.app-rail__logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.875rem;
+  text-decoration: none;
+  color: var(--naf-text-muted);
+  font-size: 0.625rem;
+}
+
+.app-rail__logo-mark--light {
+  display: none;
+}
+
+@media (prefers-color-scheme: light) {
+  // `:host-context(S)` is true if ANY ancestor matches `S`, not specifically `<html>` — so the
+  // argument has to pin down the element itself (`html:not(...)`, not a bare `:not(...)`), or
+  // it would trivially match through some other ancestor (e.g. `<body>`) that never carries
+  // `data-theme` either way.
+  :host-context(html:not([data-theme])) {
+    .app-rail__logo-mark--dark {
+      display: none;
+    }
+
+    .app-rail__logo-mark--light {
+      display: inline;
+    }
+  }
+}
+
+// Manual override (D-36): same switch as the media query above, but driven by the `data-theme`
+// attribute the theme toggle writes, so it wins over the OS preference once set.
+// `:host-context` is required here (instead of plain `:root`) because this is a component
+// stylesheet: Angular's emulated encapsulation would otherwise scope a bare `:root` selector with
+// this component's own content attribute, which the real `<html>` element never carries.
+:host-context([data-theme='light']) {
+  .app-rail__logo-mark--dark {
+    display: none;
+  }
+
+  .app-rail__logo-mark--light {
+    display: inline;
+  }
+}
+
+:host-context([data-theme='dark']) {
+  .app-rail__logo-mark--light {
+    display: none;
+  }
+
+  .app-rail__logo-mark--dark {
+    display: inline;
+  }
+}
+
+.app-rail__item {
+  width: 76px;
+  min-height: 56px;
+  border-radius: var(--naf-radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0;
+  color: var(--naf-text-muted);
+  text-decoration: none;
+  font-family: var(--naf-font-ui);
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+
+  span {
+    display: block;
+    width: 100%;
+    text-align: center;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
+  &:hover {
+    background: var(--naf-surface-2);
+    color: var(--naf-text);
+  }
+}
+
+.app-rail__item--active {
+  background: var(--naf-flow-tint);
+  color: var(--naf-text);
+
+  svg {
+    color: var(--naf-flow-text);
+  }
+}
+
+.app-rail__spacer {
+  flex: 1;
+}
+
+.app-rail__divider {
+  width: 40px;
+  height: 1px;
+  background: var(--naf-border);
+  margin: 0.375rem 0;
+}
+
+.app-content {
+  height: 100%;
   overflow-x: hidden;
 }
