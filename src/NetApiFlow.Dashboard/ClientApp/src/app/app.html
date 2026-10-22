@@ -124,7 +124,7 @@
     <a
       class="app-rail__logo"
       routerLink="/flow"
-      [attr.aria-label]="'rail.logoAria' | t: { version }"
+      [attr.aria-label]="'rail.logoAria' | t: { version: version() ?? '' }"
     >
       <img
         class="app-rail__logo-mark app-rail__logo-mark--dark"
@@ -140,7 +140,9 @@
         width="36"
         height="36"
       />
-      <span class="naf-mono">v{{ version }}</span>
+      @if (version(); as v) {
+        <span class="naf-mono">v{{ v }}</span>
+      }
     </a>
     <a
       class="app-rail__item"

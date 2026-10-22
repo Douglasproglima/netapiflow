@@ -187,6 +187,16 @@ describe('App', () => {
     expect(TestBed.inject(ThemeService).toggle).toHaveBeenCalled();
   });
 
+  it('reads the rail version from GET /config, not a build-time constant (D-44)', async () => {
+    const { fixture } = setup(false);
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.version()).toBe('0.1.0');
+    expect(fixture.nativeElement.querySelector('.app-rail__logo')?.textContent).toContain('v0.1.0');
+  });
+
   it('shows the in-progress count fetched from GET /traces/live', async () => {
     const { fixture } = setup(false);
     await fixture.whenStable();

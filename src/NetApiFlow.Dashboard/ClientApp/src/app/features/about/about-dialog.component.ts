@@ -1,7 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { DASHBOARD_VERSION } from '../../core/version';
+import { ApiService } from '../../core/api.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 
 const REPOSITORY_URL = 'https://github.com/Douglasproglima/netapiflow';
@@ -17,6 +17,12 @@ const REPOSITORY_URL = 'https://github.com/Douglasproglima/netapiflow';
   imports: [MatDialogModule, MatButtonModule, TranslatePipe],
 })
 export class AboutDialogComponent {
-  readonly version = DASHBOARD_VERSION;
+  private readonly api = inject(ApiService);
+
+  readonly version = signal<string | null>(null);
   readonly repositoryUrl = REPOSITORY_URL;
+
+  constructor() {
+    this.api.getConfig().subscribe((config) => this.version.set(config.version));
+  }
 }

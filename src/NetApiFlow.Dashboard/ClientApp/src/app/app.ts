@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { filter, map, startWith } from 'rxjs';
-import { DASHBOARD_VERSION } from './core/version';
 import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ApiService } from './core/api.service';
 import { SseService } from './core/sse.service';
@@ -46,7 +45,7 @@ export class App implements OnInit, OnDestroy {
   private readonly language = inject(LanguageService);
   private readonly theme = inject(ThemeService);
 
-  readonly version = DASHBOARD_VERSION;
+  readonly version = signal<string | null>(null);
   readonly connectionState = this.sse.state;
   readonly activeLanguage = this.language.language;
   readonly isDarkTheme = this.theme.isDark;
@@ -97,12 +96,10 @@ export class App implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.sse.connect();
-    this.api
-      .getConfig()
-      .subscribe(
-        (config) =>
-          void this.slowThresholdValue.set(formatDurationMicros(config.slowThresholdMicros)),
-      );
+    this.api.getConfig().subscribe((config) => {
+      this.slowThresholdValue.set(formatDurationMicros(config.slowThresholdMicros));
+      this.version.set(config.version);
+    });
     this.refreshInProgressCount();
     this.sse.events$.subscribe((event) => {
       if (event.type === 'TraceStarted' || event.type === 'TraceCompleted') {
