@@ -228,27 +228,24 @@
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  padding: 0.25rem;
+  padding: 0;
   color: var(--naf-text-muted);
   text-decoration: none;
   font-family: var(--naf-font-ui);
   font-weight: 500;
   font-size: 0.6875rem;
+  letter-spacing: 0;
   border: 0;
   background: none;
   cursor: pointer;
 
-  // align-items: center sizes a flex item to its own content by default, so without an explicit
-  // width the label never actually wraps or centers against the item — it just renders at its
-  // full natural width, off-center. The rail label never truncates (S3): it stays on one line
-  // whenever the 76px item is wide enough, and only wraps to a second centered line otherwise.
   span {
     display: block;
     width: 100%;
     text-align: center;
     line-height: 1.1;
-    white-space: normal;
-    overflow-wrap: break-word;
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
 
   &:hover {
