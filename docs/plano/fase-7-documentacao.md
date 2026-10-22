@@ -254,6 +254,26 @@ que esse passo foi (ou não) confirmado como feito antes de criar `v0.1.0`.
 
 **Pronto quando:** a tag `v0.1.0` dispara o workflow e os 6 pacotes aparecem no nuget.org.
 
+### 7.9: Ordenação por coluna em `/history` (D-41)
+
+Especificação completa (backend, frontend, testes, "pronto quando") em D-41 de
+`docs/plano/decisoes.md` e na seção "GET `/traces`" de `docs/plano/contratos.md`, já atualizada
+com os parâmetros `sort`/`order`. Ler os dois antes de começar.
+
+Resumo: `TraceQuery` ganha `SortBy`/`SortDirection` opcionais, aditivos. Os três `ITraceStore`
+(memória, PostgreSQL, SQL Server) aplicam a mesma regra de desempate e de `null` por último,
+provada por `TraceStoreTestsBase`. `GET /flow/api/traces` aceita `sort`/`order`, `400` para
+valor fora da lista. No frontend, cabeçalho de `/history` vira botão ordenável com
+`aria-sort`, estado refletido na query string da rota, volta para a página 1 ao trocar de
+coluna, preserva os filtros.
+
+**Pronto quando:** testes .NET verdes nos dois TFMs, incluindo os stores PostgreSQL e SQL
+Server via Testcontainers com Docker local. `npm run lint`, `format:check`, `test:ci` e `build`
+verdes. No navegador real, com pelo menos 30 execuções do sample (algumas lentas via `/slow`,
+algumas com erro via `/999/confirm`) e `pageSize=10`: ordenar por Duração decrescente mostra a
+execução mais lenta do histórico inteiro na página 1, e a página 2 continua a sequência sem
+repetir nem pular linha. Captura em 1366×768 com a coluna Duração ativa e a seta visível.
+
 ## Aceite da fase
 
 `0.1.0` publicada no nuget.org pelo workflow de tag (critério da seção 13, Fase 7, do prompt).

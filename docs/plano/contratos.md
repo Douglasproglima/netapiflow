@@ -333,6 +333,25 @@ Query string:
 | `minDurationMicros` | long | não | `DurationMicros >= minDurationMicros` |
 | `page` | int, padrão `1` | não | 1-based |
 | `pageSize` | int, padrão `50`, máximo `200` | não | acima do máximo responde `400` |
+| `sort` | `startedAt` \| `duration` \| `httpStatus` \| `method` \| `route` | não | ordena por este campo (D-41, tarefa 7.9) |
+| `order` | `asc` \| `desc` | não | direção da ordenação (D-41) |
+
+`sort`/`order` mapeiam para `TraceQuery.SortBy`/`TraceQuery.SortDirection`
+(`TraceSortField`/`SortDirection`, ambos opcionais, aditivos à tarefa 3.1). Sem `sort`, o
+comportamento é o de hoje: `StartedAt` decrescente. Valor fora da lista em `sort` ou `order`
+responde `400` (`ProblemDetails` citando os valores aceitos), nunca ignora em silêncio.
+
+Regra igual nos três `ITraceStore` (`InMemoryTraceStore`, PostgreSQL, SQL Server), provada por
+`TraceStoreTestsBase` contra os três:
+
+- Desempate fixo: `StartedAt` decrescente, depois `TraceId`. Sem isso, linhas com valor igual
+  trocam de página entre uma consulta e outra.
+- `null` sempre por último, nas duas direções (`durationMicros` de trace em andamento,
+  `httpStatus` ausente).
+- `route` ordena pelo template, comparação ordinal, sem diferenciar maiúscula de minúscula.
+- SQL: coluna do `ORDER BY` vem de um `switch` sobre o enum já convertido, nunca de texto da
+  query string concatenado.
+- `duration_micros` ganha índice em `schema.sql` dos dois bancos (Postgres e SQL Server).
 
 Resposta `200`, forma de `PagedResult<FlowTraceSummary>`:
 
