@@ -224,4 +224,113 @@ describe('HistoryComponent', () => {
     );
     req.flush(EMPTY_PAGE);
   });
+
+  it('first click on a column sorts duration/startedAt descending and the rest ascending', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSort('duration');
+    await harness.fixture.whenStable();
+    httpMock
+      .expectOne((r) => r.params.get('sort') === 'duration' && r.params.get('order') === 'desc')
+      .flush(EMPTY_PAGE);
+    await harness.fixture.whenStable();
+
+    component.toggleSort('route');
+    await harness.fixture.whenStable();
+    const req = httpMock.expectOne(
+      (r) => r.params.get('sort') === 'route' && r.params.get('order') === 'asc',
+    );
+    req.flush(EMPTY_PAGE);
+  });
+
+  it('clicking the active column again flips its direction', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSort('duration');
+    await harness.fixture.whenStable();
+    httpMock.expectOne((r) => r.params.get('order') === 'desc').flush(EMPTY_PAGE);
+    await harness.fixture.whenStable();
+
+    component.toggleSort('duration');
+    await harness.fixture.whenStable();
+
+    const req = httpMock.expectOne(
+      (r) => r.params.get('sort') === 'duration' && r.params.get('order') === 'asc',
+    );
+    req.flush(EMPTY_PAGE);
+  });
+
+  it('reflects the active sort column and direction in aria-sort', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    expect(component.sortAriaSort('startedAt')).toBe('descending');
+    expect(component.sortAriaSort('duration')).toBe('none');
+
+    component.toggleSort('duration');
+    await harness.fixture.whenStable();
+    httpMock.expectOne(() => true).flush(EMPTY_PAGE);
+    await harness.fixture.whenStable();
+
+    expect(component.sortAriaSort('duration')).toBe('descending');
+    expect(component.sortAriaSort('startedAt')).toBe('none');
+  });
+
+  it('sorting resets to page 1 and keeps the active filters', async () => {
+    const component = await mount();
+    flushConfig();
+    httpMock.expectOne(() => true).flush({ items: [], totalCount: 200 });
+    await harness.fixture.whenStable();
+
+    component.setMethod('GET');
+    await harness.fixture.whenStable();
+    httpMock.expectOne(() => true).flush({ items: [], totalCount: 200 });
+    await harness.fixture.whenStable();
+
+    component.setPage(2);
+    await harness.fixture.whenStable();
+    httpMock.expectOne((r) => r.params.get('page') === '2').flush({ items: [], totalCount: 200 });
+    await harness.fixture.whenStable();
+
+    component.toggleSort('duration');
+    await harness.fixture.whenStable();
+
+    const req = httpMock.expectOne(
+      (r) =>
+        r.params.get('sort') === 'duration' &&
+        r.params.get('page') === '1' &&
+        r.params.get('method') === 'GET',
+    );
+    req.flush(EMPTY_PAGE);
+  });
+
+  it('reads a valid sort/order from the query string on mount', async () => {
+    const valid = await mount('/history?sort=duration&order=asc');
+    flushConfig();
+    httpMock
+      .expectOne((r) => r.params.get('sort') === 'duration' && r.params.get('order') === 'asc')
+      .flush(EMPTY_PAGE);
+    await harness.fixture.whenStable();
+    expect(valid.filters().sort).toBe('duration');
+    expect(valid.filters().order).toBe('asc');
+  });
+
+  it('falls back to the default sort when the query string has an invalid value', async () => {
+    const invalid = await mount('/history?sort=bogus&order=sideways');
+    flushConfig();
+    httpMock.expectOne((r) => !r.params.has('sort') && !r.params.has('order')).flush(EMPTY_PAGE);
+    await harness.fixture.whenStable();
+    expect(invalid.filters().sort).toBeUndefined();
+    expect(invalid.filters().order).toBeUndefined();
+    expect(invalid.activeSort()).toBe('startedAt');
+    expect(invalid.activeOrder()).toBe('desc');
+  });
 });

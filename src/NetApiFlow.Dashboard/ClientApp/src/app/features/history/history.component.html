@@ -421,16 +421,198 @@
         </div>
       }
       @case ('data') {
+        <label class="history__mobile-sort">
+          {{ 'history.sort.mobileLabel' | t }}
+          <select (change)="onMobileSortChange($event)">
+            @for (option of mobileSortOptions; track mobileSortOptionValue(option)) {
+              <option
+                [value]="mobileSortOptionValue(option)"
+                [selected]="isMobileSortOptionActive(option)"
+              >
+                {{
+                  (sortColumnKey(option.field) | t) +
+                    ' (' +
+                    (directionLabelKey(option.direction) | t) +
+                    ')'
+                }}
+              </option>
+            }
+          </select>
+        </label>
         <div class="history__table-wrap">
           <table class="history__table">
             <thead>
               <tr>
-                <th class="history__col-status">{{ 'history.table.status' | t }}</th>
-                <th class="history__col-method">{{ 'history.table.method' | t }}</th>
-                <th class="history__col-route">{{ 'history.table.route' | t }}</th>
-                <th class="history__col-started">{{ 'history.table.startedAt' | t }}</th>
-                <th class="history__col-duration history__col-duration--right">
-                  {{ 'history.table.duration' | t }}
+                <th class="history__col-status" [attr.aria-sort]="sortAriaSort('httpStatus')">
+                  <button
+                    type="button"
+                    class="naf-sort-btn"
+                    [class.naf-sort-btn--active]="isActiveSort('httpStatus')"
+                    [attr.aria-label]="
+                      (sortColumnKey('httpStatus') | t) +
+                      ', ' +
+                      (sortIndicatorDirectionKey('httpStatus') | t)
+                    "
+                    (click)="toggleSort('httpStatus')"
+                  >
+                    {{ 'history.table.status' | t }}
+                    <svg
+                      class="naf-sort-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="12"
+                      height="12"
+                    >
+                      @if (!isActiveSort('httpStatus')) {
+                        <path d="M7 9l5-5 5 5M7 15l5 5 5-5" />
+                      } @else if (activeOrder() === 'asc') {
+                        <path d="M6 15l6-6 6 6" />
+                      } @else {
+                        <path d="M6 9l6 6 6-6" />
+                      }
+                    </svg>
+                  </button>
+                </th>
+                <th class="history__col-method" [attr.aria-sort]="sortAriaSort('method')">
+                  <button
+                    type="button"
+                    class="naf-sort-btn"
+                    [class.naf-sort-btn--active]="isActiveSort('method')"
+                    [attr.aria-label]="
+                      (sortColumnKey('method') | t) +
+                      ', ' +
+                      (sortIndicatorDirectionKey('method') | t)
+                    "
+                    (click)="toggleSort('method')"
+                  >
+                    {{ 'history.table.method' | t }}
+                    <svg
+                      class="naf-sort-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="12"
+                      height="12"
+                    >
+                      @if (!isActiveSort('method')) {
+                        <path d="M7 9l5-5 5 5M7 15l5 5 5-5" />
+                      } @else if (activeOrder() === 'asc') {
+                        <path d="M6 15l6-6 6 6" />
+                      } @else {
+                        <path d="M6 9l6 6 6-6" />
+                      }
+                    </svg>
+                  </button>
+                </th>
+                <th class="history__col-route" [attr.aria-sort]="sortAriaSort('route')">
+                  <button
+                    type="button"
+                    class="naf-sort-btn"
+                    [class.naf-sort-btn--active]="isActiveSort('route')"
+                    [attr.aria-label]="
+                      (sortColumnKey('route') | t) + ', ' + (sortIndicatorDirectionKey('route') | t)
+                    "
+                    (click)="toggleSort('route')"
+                  >
+                    {{ 'history.table.route' | t }}
+                    <svg
+                      class="naf-sort-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="12"
+                      height="12"
+                    >
+                      @if (!isActiveSort('route')) {
+                        <path d="M7 9l5-5 5 5M7 15l5 5 5-5" />
+                      } @else if (activeOrder() === 'asc') {
+                        <path d="M6 15l6-6 6 6" />
+                      } @else {
+                        <path d="M6 9l6 6 6-6" />
+                      }
+                    </svg>
+                  </button>
+                </th>
+                <th class="history__col-started" [attr.aria-sort]="sortAriaSort('startedAt')">
+                  <button
+                    type="button"
+                    class="naf-sort-btn"
+                    [class.naf-sort-btn--active]="isActiveSort('startedAt')"
+                    [attr.aria-label]="
+                      (sortColumnKey('startedAt') | t) +
+                      ', ' +
+                      (sortIndicatorDirectionKey('startedAt') | t)
+                    "
+                    (click)="toggleSort('startedAt')"
+                  >
+                    {{ 'history.table.startedAt' | t }}
+                    <svg
+                      class="naf-sort-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="12"
+                      height="12"
+                    >
+                      @if (!isActiveSort('startedAt')) {
+                        <path d="M7 9l5-5 5 5M7 15l5 5 5-5" />
+                      } @else if (activeOrder() === 'asc') {
+                        <path d="M6 15l6-6 6 6" />
+                      } @else {
+                        <path d="M6 9l6 6 6-6" />
+                      }
+                    </svg>
+                  </button>
+                </th>
+                <th
+                  class="history__col-duration history__col-duration--right"
+                  [attr.aria-sort]="sortAriaSort('duration')"
+                >
+                  <button
+                    type="button"
+                    class="naf-sort-btn naf-sort-btn--numeric"
+                    [class.naf-sort-btn--active]="isActiveSort('duration')"
+                    [attr.aria-label]="
+                      (sortColumnKey('duration') | t) +
+                      ', ' +
+                      (sortIndicatorDirectionKey('duration') | t)
+                    "
+                    (click)="toggleSort('duration')"
+                  >
+                    <svg
+                      class="naf-sort-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      width="12"
+                      height="12"
+                    >
+                      @if (!isActiveSort('duration')) {
+                        <path d="M7 9l5-5 5 5M7 15l5 5 5-5" />
+                      } @else if (activeOrder() === 'asc') {
+                        <path d="M6 15l6-6 6 6" />
+                      } @else {
+                        <path d="M6 9l6 6 6-6" />
+                      }
+                    </svg>
+                    {{ 'history.table.duration' | t }}
+                  </button>
                 </th>
                 <th class="history__col-trace">{{ 'history.table.trace' | t }}</th>
               </tr>

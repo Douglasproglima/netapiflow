@@ -9,7 +9,9 @@ import {
   NodeVisualState,
   PagedResult,
   FlowTraceSummary,
+  SortDirection,
   TraceQuery,
+  TraceSortField,
 } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
 import { httpMethodTagClass } from '../../shared/http-method-style';
@@ -23,6 +25,44 @@ const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZES: readonly number[] = [10, 20, 50, 100];
 const METHODS: readonly string[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const PERIOD_PRESETS: readonly PeriodPreset[] = ['15m', '1h', '24h', '7d'];
+const SORTABLE_FIELDS: readonly TraceSortField[] = [
+  'httpStatus',
+  'method',
+  'route',
+  'startedAt',
+  'duration',
+];
+const DEFAULT_SORT_FIELD: TraceSortField = 'startedAt';
+const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';
+
+const SORT_FIELD_DEFAULT_DIRECTION: Readonly<Record<TraceSortField, SortDirection>> = {
+  startedAt: 'desc',
+  duration: 'desc',
+  httpStatus: 'asc',
+  method: 'asc',
+  route: 'asc',
+};
+
+const SORT_FIELD_LABEL_KEY: Readonly<Record<TraceSortField, TranslationKey>> = {
+  startedAt: 'history.table.startedAt',
+  duration: 'history.table.duration',
+  httpStatus: 'history.table.status',
+  method: 'history.table.method',
+  route: 'history.table.route',
+};
+
+const MOBILE_SORT_OPTIONS: readonly { field: TraceSortField; direction: SortDirection }[] = [
+  { field: 'startedAt', direction: 'desc' },
+  { field: 'startedAt', direction: 'asc' },
+  { field: 'duration', direction: 'desc' },
+  { field: 'duration', direction: 'asc' },
+  { field: 'httpStatus', direction: 'asc' },
+  { field: 'httpStatus', direction: 'desc' },
+  { field: 'method', direction: 'asc' },
+  { field: 'method', direction: 'desc' },
+  { field: 'route', direction: 'asc' },
+  { field: 'route', direction: 'desc' },
+];
 
 type ViewState = 'loading' | 'error' | 'empty-none' | 'empty-filtered' | 'data';
 
@@ -32,6 +72,14 @@ function inputValue(event: Event): string {
 
 function isFlowStatus(value: string | null): value is FlowStatus {
   return value === 'Running' || value === 'Success' || value === 'Error';
+}
+
+function isTraceSortField(value: string | null): value is TraceSortField {
+  return SORTABLE_FIELDS.includes(value as TraceSortField);
+}
+
+function isSortDirection(value: string | null): value is SortDirection {
+  return value === 'asc' || value === 'desc';
 }
 
 function queryFromParamMap(params: ParamMap): TraceQuery {
@@ -44,6 +92,8 @@ function queryFromParamMap(params: ParamMap): TraceQuery {
   const minDurationMicros = params.get('minDurationMicros');
   const page = params.get('page');
   const pageSize = params.get('pageSize');
+  const sort = params.get('sort');
+  const order = params.get('order');
 
   return {
     status: isFlowStatus(status) ? status : undefined,
@@ -55,6 +105,8 @@ function queryFromParamMap(params: ParamMap): TraceQuery {
     minDurationMicros: minDurationMicros ? Number(minDurationMicros) : undefined,
     page: page ? Number(page) : 1,
     pageSize: pageSize ? Number(pageSize) : DEFAULT_PAGE_SIZE,
+    sort: isTraceSortField(sort) ? sort : undefined,
+    order: isSortDirection(order) ? order : undefined,
   };
 }
 
@@ -86,6 +138,12 @@ function paramsFromQuery(query: TraceQuery): Params {
   }
   if (query.pageSize !== undefined) {
     params['pageSize'] = String(query.pageSize);
+  }
+  if (query.sort !== undefined) {
+    params['sort'] = query.sort;
+  }
+  if (query.order !== undefined) {
+    params['order'] = query.order;
   }
   return params;
 }
@@ -214,6 +272,14 @@ export class HistoryComponent {
     }
     return (query.page ?? 1) * (query.pageSize ?? DEFAULT_PAGE_SIZE) < page.totalCount;
   });
+
+  readonly sortableFields = SORTABLE_FIELDS;
+  readonly mobileSortOptions = MOBILE_SORT_OPTIONS;
+
+  readonly activeSort = computed<TraceSortField>(() => this.filters().sort ?? DEFAULT_SORT_FIELD);
+  readonly activeOrder = computed<SortDirection>(
+    () => this.filters().order ?? DEFAULT_SORT_DIRECTION,
+  );
 
   private readonly routeInput$ = new Subject<string>();
   private readonly tenantInput$ = new Subject<string>();
@@ -351,6 +417,54 @@ export class HistoryComponent {
 
   retry(): void {
     this.filters.update((current) => ({ ...current }));
+  }
+
+  toggleSort(field: TraceSortField): void {
+    const order = this.isActiveSort(field)
+      ? this.activeOrder() === 'asc'
+        ? 'desc'
+        : 'asc'
+      : SORT_FIELD_DEFAULT_DIRECTION[field];
+    this.patchFilters({ sort: field, order });
+  }
+
+  isActiveSort(field: TraceSortField): boolean {
+    return this.activeSort() === field;
+  }
+
+  sortAriaSort(field: TraceSortField): 'ascending' | 'descending' | 'none' {
+    if (!this.isActiveSort(field)) {
+      return 'none';
+    }
+    return this.activeOrder() === 'asc' ? 'ascending' : 'descending';
+  }
+
+  sortColumnKey(field: TraceSortField): TranslationKey {
+    return SORT_FIELD_LABEL_KEY[field];
+  }
+
+  sortIndicatorDirectionKey(field: TraceSortField): TranslationKey {
+    const direction = this.isActiveSort(field)
+      ? this.activeOrder()
+      : SORT_FIELD_DEFAULT_DIRECTION[field];
+    return this.directionLabelKey(direction);
+  }
+
+  directionLabelKey(direction: SortDirection): TranslationKey {
+    return direction === 'asc' ? 'history.sort.ascending' : 'history.sort.descending';
+  }
+
+  mobileSortOptionValue(option: { field: TraceSortField; direction: SortDirection }): string {
+    return `${option.field}:${option.direction}`;
+  }
+
+  isMobileSortOptionActive(option: { field: TraceSortField; direction: SortDirection }): boolean {
+    return this.activeSort() === option.field && this.activeOrder() === option.direction;
+  }
+
+  onMobileSortChange(event: Event): void {
+    const [field, direction] = inputValue(event).split(':') as [TraceSortField, SortDirection];
+    this.patchFilters({ sort: field, order: direction });
   }
 
   formatDuration(micros: number | null): string {

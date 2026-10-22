@@ -134,6 +134,12 @@ export interface PagedResult<T> {
   totalCount: number;
 }
 
+/** Sort field accepted by GET /traces (D-41, tarefa 7.9). */
+export type TraceSortField = 'startedAt' | 'duration' | 'httpStatus' | 'method' | 'route';
+
+/** Sort direction accepted by GET /traces (D-41, tarefa 7.9). */
+export type SortDirection = 'asc' | 'desc';
+
 /** Query string accepted by GET /traces. */
 export interface TraceQuery {
   status?: FlowStatus;
@@ -145,6 +151,8 @@ export interface TraceQuery {
   minDurationMicros?: number;
   page?: number;
   pageSize?: number;
+  sort?: TraceSortField;
+  order?: SortDirection;
 }
 
 /** Query string accepted by GET /metrics and GET /metrics/components. */

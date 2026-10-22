@@ -211,6 +211,9 @@ const en = {
   'history.state.empty.filtered.action': 'Clear filters',
   'history.state.error.title': 'Could not load the history',
   'history.state.error.action': 'Try again',
+  'history.sort.ascending': 'ascending',
+  'history.sort.descending': 'descending',
+  'history.sort.mobileLabel': 'Sort by',
 };
 
 const ptBr: Record<keyof typeof en, string> = {
@@ -418,6 +421,9 @@ const ptBr: Record<keyof typeof en, string> = {
   'history.state.empty.filtered.action': 'Limpar filtros',
   'history.state.error.title': 'Não foi possível carregar o histórico',
   'history.state.error.action': 'Tentar de novo',
+  'history.sort.ascending': 'crescente',
+  'history.sort.descending': 'decrescente',
+  'history.sort.mobileLabel': 'Ordenar por',
 };
 
 export type TranslationKey = keyof typeof en;
