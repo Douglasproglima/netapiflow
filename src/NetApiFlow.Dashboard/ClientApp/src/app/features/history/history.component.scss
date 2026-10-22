@@ -5,8 +5,6 @@
   gap: 1rem;
 }
 
-// Filters card
-
 .history__filter-toggle {
   display: none;
   align-self: flex-start;
@@ -138,50 +136,9 @@
   font-size: 0.8125rem;
 }
 
-.history__switch {
-  width: 34px;
-  height: 20px;
-  flex: none;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid var(--naf-border-strong);
-  background: var(--naf-surface-2);
-  position: relative;
-  cursor: pointer;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--naf-text-muted);
-    transition: left 0.15s ease;
-  }
-
-  &[aria-checked='true'] {
-    background: var(--naf-flow-button);
-    border-color: transparent;
-
-    &::after {
-      left: 15px;
-      background: #fff;
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--naf-focus);
-    outline-offset: 2px;
-  }
-}
-
 .history__muted {
   color: var(--naf-text-muted);
 }
-
-// Results card
 
 .history__card-header {
   display: flex;
@@ -300,13 +257,26 @@
 }
 
 .history__row-link {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--naf-text);
+  text-decoration: none;
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
 }
 
-// Stacks above the row link stretched across the whole `<tr>` (z-index: 0) so the truncated
-// badge stays visible instead of sitting under the link's hit area.
 .history__tag {
   position: relative;
   z-index: 1;
@@ -379,8 +349,6 @@
   }
 }
 
-// Empty / error states
-
 .history__state {
   display: flex;
   flex-direction: column;
@@ -445,8 +413,6 @@
   }
 }
 
-// Loading skeleton
-
 .history__skeleton-row {
   display: grid;
   grid-template-columns: 72px 56px 1fr 80px;
@@ -476,8 +442,6 @@
     animation: none;
   }
 }
-
-// Responsive (guide seção 5, item 4)
 
 @media (max-width: 1365px) {
   .history__row1 {
