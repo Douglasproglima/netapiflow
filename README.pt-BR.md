@@ -86,11 +86,11 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 
 | Pacote | Acrescenta |
 |---|---|
-| `NetApiFlow.Dashboard` | A API REST/SSE e a UI Angular embutida |
-| `NetApiFlow.MediatR` | Rastreamento automático de requests do MediatR |
-| `NetApiFlow.EntityFrameworkCore` | Rastreamento automático de comandos de banco do EF Core |
-| `NetApiFlow.Storage.PostgreSql` | Persiste traces no PostgreSQL em vez de memória |
-| `NetApiFlow.Storage.SqlServer` | Persiste traces no SQL Server em vez de memória |
+| [`NetApiFlow.Dashboard`](https://www.nuget.org/packages/NetApiFlow.Dashboard) | A API REST/SSE e a UI Angular embutida |
+| [`NetApiFlow.MediatR`](https://www.nuget.org/packages/NetApiFlow.MediatR) | Rastreamento automático de requests do MediatR |
+| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Rastreamento automático de comandos de banco do EF Core |
+| [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persiste traces no PostgreSQL em vez de memória |
+| [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persiste traces no SQL Server em vez de memória |
 
 O núcleo (`NetApiFlow`) não tem nenhuma dependência além do shared framework do ASP.NET Core.
 Cada item acima é opcional.
