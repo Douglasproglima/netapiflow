@@ -30,4 +30,10 @@ public sealed record TraceQuery
 
     /// <summary>Number of items per page.</summary>
     public int PageSize { get; init; } = 50;
+
+    /// <summary>Field to sort by. <see langword="null"/> keeps the default (<see cref="TraceSortField.StartedAt"/> descending).</summary>
+    public TraceSortField? SortBy { get; init; }
+
+    /// <summary>Direction <see cref="SortBy"/> sorts in. Ignored when <see cref="SortBy"/> is <see langword="null"/>.</summary>
+    public SortDirection? SortDirection { get; init; }
 }
