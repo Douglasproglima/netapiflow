@@ -181,8 +181,8 @@ query. Tudo que não está nesta lista (`PostgreSqlTraceStore`, `SqlServerTraceS
 cobrindo os filtros da seção 7.1 item 3 (status, método, rota, tenant, período, duração mínima,
 paginação) e as métricas da seção 7.1 item 4 (execuções, erros, mediana, média, p95, máximo).
 Cada um traz `/// <remarks>Provisional shape...</remarks>` no comentário XML. O contrato
-definitivo (campo a campo, JSON de exemplo) continua sendo responsabilidade da tarefa 3.1 — a
-Fase 3 pode renomear ou reformar esses tipos sem que isso seja uma quebra de contrato desta
+definitivo (campo a campo, JSON de exemplo) continua sendo responsabilidade da tarefa 3.1.
+A Fase 3 pode renomear ou reformar esses tipos sem que isso seja uma quebra de contrato desta
 seção, só uma substituição do que era provisório.
 
 `GetTraceStatsAsync` e `TraceStats` foram acrescentados a `ITraceStore` durante a tarefa 3.2
@@ -448,7 +448,7 @@ Resposta `200`:
 ```
 
 `ancestors` vem ordenado da raiz para o pai direto (exclui o próprio span). `children` é só um
-nível (filhos diretos, não a árvore inteira — a árvore completa já está em `/traces/{traceId}`).
+nível (filhos diretos, não a árvore inteira: a árvore completa já está em `/traces/{traceId}`).
 `medianDurationMicros` e `deltaFromMedianMicros` vêm `null` se não houver histórico suficiente
 no `ITraceStore` para aquele componente/operação. `404` se o `traceId` ou o `spanId` não
 existirem.
