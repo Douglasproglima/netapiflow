@@ -1,34 +1,310 @@
-<section class="flow-page">
-  @if (trace(); as trace) {
-    <div class="flow-page__layout">
-      <app-flow-graph
-        class="flow-page__graph"
-        [nodes]="graph().nodes"
-        [edges]="graph().edges"
-        [selectedNodeId]="selectedNodeId()"
-        (nodeSelected)="onNodeSelected($event)"
-      />
+<section class="flow-workspace">
+  <app-metric-cards class="flow-workspace__metrics" />
+
+  <div class="flow-workspace__body" [class.flow-workspace__body--drawer]="isActionDrawer()">
+    <app-endpoint-form
+      class="flow-workspace__action"
+      [class.flow-workspace__action--open]="actionDrawerOpen()"
+      (traceDispatched)="openTrace($event); closeActionDrawer()"
+    />
+    @if (isActionDrawer() && actionDrawerOpen()) {
+      <button
+        type="button"
+        class="flow-workspace__scrim"
+        [attr.aria-label]="'action.closePanel' | t"
+        (click)="closeActionDrawer()"
+      ></button>
+      <button
+        type="button"
+        class="flow-workspace__action-close"
+        [attr.aria-label]="'action.closePanel' | t"
+        (click)="closeActionDrawer()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          width="18"
+          height="18"
+        >
+          <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+        </svg>
+      </button>
+    }
+
+    <div class="flow-workspace__center">
+      @if (isActionDrawer()) {
+        <button type="button" class="flow-workspace__open-action" (click)="toggleActionDrawer()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            width="16"
+            height="16"
+          >
+            <path d="M7 4.5v15l12-7.5Z" />
+          </svg>
+          {{ 'action.openPanel' | t }}
+        </button>
+      }
+      @if (trace(); as trace) {
+        <div class="flow-workspace__graph-header">
+          <h2>{{ 'graph.title' | t }}</h2>
+          <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
+          <span class="flow-workspace__route">{{ trace.routeTemplate }}</span>
+          <span class="flow-workspace__trace-id naf-mono"
+            >{{ shortTraceId(trace.traceId) }}
+            <button
+              type="button"
+              class="flow-workspace__copy"
+              [attr.aria-label]="'graph.copyTraceId' | t"
+              (click)="copyTraceId(trace.traceId)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                width="14"
+                height="14"
+              >
+                <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                <path
+                  d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
+                />
+              </svg>
+            </button>
+          </span>
+          <span class="flow-workspace__graph-header-end">
+            <button mat-stroked-button type="button" (click)="toggleReplay()">
+              {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
+            </button>
+          </span>
+        </div>
+
+        @if (errorOrigin(); as origin) {
+          <button
+            type="button"
+            class="flow-workspace__banner flow-workspace__banner--danger"
+            (click)="onNodeSelected(origin.spanId)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="18"
+              height="18"
+            >
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5v5.5M12 16.4v.1" />
+            </svg>
+            {{
+              'graph.errorOrigin'
+                | t
+                  : {
+                      component: origin.component,
+                      status: trace.httpStatus ?? '—',
+                      duration: formatDuration(trace.durationMicros),
+                    }
+            }}
+          </button>
+        } @else if (slowestStep(); as step) {
+          <button
+            type="button"
+            class="flow-workspace__banner flow-workspace__banner--warning"
+            (click)="onNodeSelected(step.spanId)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="18"
+              height="18"
+            >
+              <circle cx="12" cy="12" r="7" />
+              <path d="M12 8v4l2.5 1.5" />
+            </svg>
+            {{
+              'graph.slowestStep'
+                | t: { component: step.component, duration: formatDuration(step.durationMicros) }
+            }}
+          </button>
+        }
+      }
+
+      <div class="flow-workspace__canvas">
+        @if (trace(); as trace) {
+          <app-flow-graph
+            [nodes]="graph().nodes"
+            [edges]="graph().edges"
+            [selectedNodeId]="selectedNodeId()"
+            (nodeSelected)="onNodeSelected($event)"
+          />
+        } @else if (liveTracesLoading()) {
+          <p class="flow-workspace__status" role="status">{{ 'graph.loading' | t }}</p>
+        } @else if (liveTraces().length === 0) {
+          <div class="flow-workspace__empty">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              width="28"
+              height="28"
+            >
+              <path d="M4 12 H9 L11 6 L14 18 L16 12 H20" />
+            </svg>
+            <p>{{ 'graph.empty.title' | t }}</p>
+            <p class="flow-workspace__empty-hint">{{ 'graph.empty.hint' | t }}</p>
+          </div>
+        } @else {
+          <ul class="flow-workspace__live-list">
+            @for (summary of liveTraces(); track summary.traceId) {
+              <li>
+                <button
+                  type="button"
+                  class="flow-workspace__live-item"
+                  (click)="openTrace(summary.traceId)"
+                >
+                  <span class="naf-tag" [class]="methodTagClass(summary.method)">{{
+                    summary.method
+                  }}</span>
+                  <span>{{ summary.routeTemplate }}</span>
+                  <span>{{ summary.status }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      @if (isReplaying()) {
+        <div class="flow-workspace__replay">
+          <div class="flow-workspace__replay-row">
+            <span class="naf-mono flow-workspace__replay-mode">{{ 'replay.chip.replay' | t }}</span>
+            <button
+              type="button"
+              class="flow-workspace__replay-icon-btn"
+              [attr.aria-label]="'replay.restart' | t"
+              (click)="replayPlayer.restart()"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="18"
+                height="18"
+              >
+                <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" />
+                <path d="M4.5 4.5v4h4" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="flow-workspace__replay-icon-btn"
+              [attr.aria-label]="'replay.previousStep' | t"
+              (click)="replayPlayer.stepBackward()"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="18"
+                height="18"
+              >
+                <path d="M6.5 5.5v13M18 6l-8.5 6 8.5 6Z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="flow-workspace__replay-play"
+              [attr.aria-label]="
+                (replayPlayer.state() === 'playing' ? 'replay.pause' : 'replay.play') | t
+              "
+              (click)="
+                replayPlayer.state() === 'playing' ? replayPlayer.pause() : replayPlayer.play()
+              "
+            >
+              @if (replayPlayer.state() === 'playing') {
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" />
+                </svg>
+              } @else {
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M8 5.5v13l10.5-6.5Z" fill="currentColor" />
+                </svg>
+              }
+            </button>
+            <button
+              type="button"
+              class="flow-workspace__replay-icon-btn"
+              [attr.aria-label]="'replay.nextStep' | t"
+              (click)="replayPlayer.stepForward()"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="18"
+                height="18"
+              >
+                <path d="M17.5 5.5v13M6 6l8.5 6L6 18Z" />
+              </svg>
+            </button>
+            <input
+              class="flow-workspace__replay-range"
+              type="range"
+              min="0"
+              [max]="replayPlayer.totalSteps()"
+              [value]="replayPlayer.stepIndex()"
+              [attr.aria-label]="'replay.positionAria' | t"
+              (input)="onSeek($event)"
+            />
+            <div
+              class="flow-workspace__speed"
+              role="radiogroup"
+              [attr.aria-label]="'replay.speedAria' | t"
+            >
+              @for (speed of replaySpeeds; track speed) {
+                <button
+                  type="button"
+                  role="radio"
+                  [attr.aria-checked]="replayPlayer.speed() === speed"
+                  [class.flow-workspace__speed-btn--active]="replayPlayer.speed() === speed"
+                  class="flow-workspace__speed-btn"
+                  (click)="setSpeed(speed)"
+                >
+                  {{ speed }}×
+                </button>
+              }
+            </div>
+          </div>
+          <div class="flow-workspace__replay-status naf-mono">{{ replayStatusLine() }}</div>
+        </div>
+      }
+    </div>
+
+    @if (trace(); as trace) {
       <app-flow-details-panel
-        class="flow-page__details"
+        class="flow-workspace__details"
         [trace]="trace"
         [selectedSpan]="selectedSpanDetail()"
+        [slowThresholdMicros]="slowThresholdMicros() ?? 0"
+        [notExecutedCount]="notExecutedCount()"
+        (backToSummary)="backToSummary()"
       />
-    </div>
-  } @else if (liveTracesLoading()) {
-    <p class="flow-page__status" role="status">Loading…</p>
-  } @else if (liveTraces().length === 0) {
-    <p class="flow-page__status">No request is currently in progress.</p>
-  } @else {
-    <ul class="flow-page__live-list">
-      @for (summary of liveTraces(); track summary.traceId) {
-        <li>
-          <button type="button" class="flow-page__live-item" (click)="openTrace(summary.traceId)">
-            <span>{{ summary.method }}</span>
-            <span>{{ summary.routeTemplate }}</span>
-            <span>{{ summary.status }}</span>
-          </button>
-        </li>
-      }
-    </ul>
-  }
+    }
+  </div>
+
+  <div class="flow-workspace__footer">
+    <app-recent-executions class="flow-workspace__recent" (traceSelected)="openTrace($event)" />
+    <app-event-feed class="flow-workspace__feed" />
+  </div>
 </section>

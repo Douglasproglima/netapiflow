@@ -72,7 +72,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         pageCommand.CommandText = $"""
             SELECT trace_id, method, route_template, http_status, status, started_at, duration_micros, truncated
             FROM {_tracesTable} {whereForPage}
-            ORDER BY started_at DESC
+            {BuildOrderBy(query)}
             OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
             """;
         pageCommand.Parameters.AddWithValue("pageSize", query.PageSize);
@@ -281,6 +281,33 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         }
 
         return conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
+    }
+
+    /// <summary>
+    /// Builds the <c>ORDER BY</c> clause from <paramref name="query"/>'s already-parsed sort enum,
+    /// never from concatenated query-string text (D-41). Ties break by <c>started_at</c>
+    /// descending, then <c>trace_id</c>, so paginating a result set with repeated values never
+    /// skips or repeats a row across pages. <c>UPPER()</c> keeps route/method ordering consistent
+    /// regardless of the server's configured collation.
+    /// </summary>
+    private static string BuildOrderBy(TraceQuery query)
+    {
+        var field = query.SortBy ?? TraceSortField.StartedAt;
+        var ascending = query.SortDirection == global::NetApiFlow.SortDirection.Ascending;
+        var direction = ascending ? "ASC" : "DESC";
+
+        var primary = field switch
+        {
+            TraceSortField.Duration => $"CASE WHEN duration_micros IS NULL THEN 1 ELSE 0 END, duration_micros {direction}",
+            TraceSortField.HttpStatus => $"CASE WHEN http_status IS NULL THEN 1 ELSE 0 END, http_status {direction}",
+            TraceSortField.Method => $"UPPER(method) {direction}",
+            TraceSortField.Route => $"UPPER(route_template) {direction}",
+            _ => $"started_at {direction}",
+        };
+
+        return field == TraceSortField.StartedAt
+            ? $"ORDER BY {primary}, trace_id"
+            : $"ORDER BY {primary}, started_at DESC, trace_id";
     }
 
     private async ValueTask<SqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)

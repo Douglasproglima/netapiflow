@@ -68,24 +68,28 @@ describe('FlowDetailsPanelComponent', () => {
   it('shows the request summary and waterfall when nothing is selected', async () => {
     const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
     fixture.componentRef.setInput('trace', makeTrace());
+    fixture.componentRef.setInput('slowThresholdMicros', 250_000);
     await fixture.whenStable();
 
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('GET /api/orders/{id}');
-    expect(text).toContain('Waterfall');
+    expect(text).toContain('GET');
+    expect(text).toContain('/api/orders/{id}');
+    // pt-BR is the default language (D-35).
+    expect(text).toContain('Etapas');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(1);
   });
 
   it('shows the full span detail, including children and the delta from the median, when a span is selected', async () => {
     const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
     fixture.componentRef.setInput('trace', makeTrace());
+    fixture.componentRef.setInput('slowThresholdMicros', 250_000);
     fixture.componentRef.setInput('selectedSpan', makeSpanDetail());
     await fixture.whenStable();
 
     const text: string = fixture.nativeElement.textContent;
     expect(text).toContain('OrdersController.Get');
     expect(text).toContain('OrderService.GetAsync');
-    expect(text).toContain('+20.0 ms');
+    expect(text).toContain('+20 ms');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(0);
   });
 });

@@ -76,13 +76,38 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
+  /** Both FlowPageComponent and the metric cards (ADR-0010) read GET /config independently. */
+  function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
+    for (const request of httpMock.match('api/config')) {
+      request.flush({ slowThresholdMicros, version: '0.1.0' });
+    }
+  }
+
+  /** The workspace's metric cards and action panel (ADR-0010) fire their own requests on mount. */
+  function flushWorkspaceChildRequests(): void {
+    httpMock.expectOne('api/metrics').flush({
+      totalTraces: 0,
+      errorCount: 0,
+      errorRate: 0,
+      averageDurationMicros: 0,
+      p95DurationMicros: 0,
+      maxDurationMicros: 0,
+    });
+    httpMock.expectOne('api/metrics/components').flush([]);
+    httpMock.expectOne('/openapi/v1.json').flush({ paths: {} });
+    httpMock
+      .expectOne((request) => request.url === 'api/traces')
+      .flush({ totalCount: 0, items: [] });
+  }
+
   it('loads the trace from the ?trace= query param on mount', async () => {
     configure('t1');
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
+    flushAllConfigRequests();
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.trace()?.traceId).toBe('t1');
@@ -94,7 +119,7 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000 });
+    flushAllConfigRequests();
 
     const summaries: FlowTraceSummary[] = [
       {
@@ -109,6 +134,7 @@ describe('FlowPageComponent', () => {
       },
     ];
     httpMock.expectOne('api/traces/live').flush(summaries);
+    flushWorkspaceChildRequests();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.liveTraces()).toEqual(summaries);
@@ -120,10 +146,53 @@ describe('FlowPageComponent', () => {
     const fixture = TestBed.createComponent(FlowPageComponent);
     await fixture.whenStable();
 
-    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 50 });
+    flushAllConfigRequests(50);
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.graph().nodes[0].state).toBe('slow');
+  });
+
+  it('toggles into replay mode and back to live', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.isReplaying()).toBe(false);
+
+    fixture.componentInstance.toggleReplay();
+    expect(fixture.componentInstance.isReplaying()).toBe(true);
+    expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+    expect(fixture.componentInstance.graph().nodes[0].state).toBe('not-executed');
+
+    fixture.componentInstance.replayPlayer.stepForward();
+    expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+    expect(fixture.componentInstance.graph().nodes[0].state).toBe('completed');
+
+    fixture.componentInstance.toggleReplay();
+    expect(fixture.componentInstance.isReplaying()).toBe(false);
+    expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('toggles and closes the action drawer', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
+    fixture.componentInstance.toggleActionDrawer();
+    expect(fixture.componentInstance.actionDrawerOpen()).toBe(true);
+    fixture.componentInstance.closeActionDrawer();
+    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
   });
 });

@@ -1,0 +1,120 @@
+<section class="endpoint-form">
+  <div class="endpoint-form__header">
+    <h2>{{ 'action.title' | t }}</h2>
+    <p class="endpoint-form__intro">{{ 'action.intro' | t }}</p>
+  </div>
+
+  @if (loading()) {
+    <p class="endpoint-form__status" role="status">{{ 'action.loading' | t }}</p>
+  } @else if (loadError()) {
+    <div class="endpoint-form__status endpoint-form__status--error" role="alert">
+      <p>{{ loadError() | t }}</p>
+      <p class="endpoint-form__status-hint">{{ 'action.openApiError.hint' | t }}</p>
+    </div>
+  } @else {
+    <div class="endpoint-form__search">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        width="16"
+        height="16"
+      >
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m16 16 4 4" />
+      </svg>
+      <label class="endpoint-form__search-label" for="endpoint-form-filter">{{
+        'action.filterAria' | t
+      }}</label>
+      <input
+        id="endpoint-form-filter"
+        type="text"
+        [attr.placeholder]="'action.filterPlaceholder' | t"
+        [value]="routeFilter()"
+        (input)="setRouteFilter($any($event.target).value)"
+      />
+    </div>
+
+    <div class="endpoint-form__list-wrapper">
+      @if (endpoints().length === 0) {
+        <p class="endpoint-form__status">{{ 'action.noEndpoints' | t }}</p>
+      } @else {
+        <ul class="endpoint-form__endpoints">
+          @for (endpoint of endpoints(); track endpoint.method + ' ' + endpoint.path) {
+            <li>
+              <button
+                type="button"
+                class="endpoint-form__endpoint"
+                [class.endpoint-form__endpoint--selected]="
+                  selected()?.method === endpoint.method && selected()?.path === endpoint.path
+                "
+                [attr.title]="endpoint.method + ' ' + endpoint.path"
+                (click)="selectEndpoint(endpoint.method, endpoint.path)"
+              >
+                <span class="naf-tag" [class]="methodTagClass(endpoint.method)">{{
+                  endpoint.method
+                }}</span>
+                <span class="endpoint-form__endpoint-path">{{ endpoint.path }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    @if (hiddenDashboardRouteCount() > 0) {
+      <p class="endpoint-form__hidden-note">
+        {{
+          hiddenRoutesNoteKey()
+            | t: { count: hiddenDashboardRouteCount(), prefix: hiddenDashboardRoutePrefix }
+        }}
+      </p>
+    }
+
+    @if (form(); as form) {
+      <form class="endpoint-form__form" (submit)="$event.preventDefault(); send()">
+        <div class="endpoint-form__form-header">
+          <span class="naf-tag" [class]="methodTagClass(form.method)">{{ form.method }}</span>
+          <span class="endpoint-form__form-path">{{ form.path }}</span>
+        </div>
+
+        @for (field of form.fields; track field.name) {
+          <div class="endpoint-form__field">
+            <label [for]="'endpoint-form-field-' + field.name"
+              >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
+            >
+            @if (field.kind === 'body') {
+              <textarea
+                [id]="'endpoint-form-field-' + field.name"
+                [value]="fieldValue(field.name)"
+                (input)="onFieldInput(field.name, $event)"
+              ></textarea>
+            } @else {
+              <input
+                type="text"
+                [id]="'endpoint-form-field-' + field.name"
+                [value]="fieldValue(field.name)"
+                (input)="onFieldInput(field.name, $event)"
+              />
+            }
+          </div>
+        }
+
+        <button mat-flat-button type="submit" class="endpoint-form__send" [disabled]="sending()">
+          {{ 'action.send' | t }}
+        </button>
+
+        @if (sendError()) {
+          <p class="endpoint-form__status endpoint-form__status--error" role="alert">
+            {{ sendError() | t }}
+          </p>
+        }
+
+        @if (lastTraceId(); as traceId) {
+          <p class="endpoint-form__trace-id">{{ 'action.traceConfirmation' | t: { traceId } }}</p>
+        }
+      </form>
+    }
+  }
+</section>

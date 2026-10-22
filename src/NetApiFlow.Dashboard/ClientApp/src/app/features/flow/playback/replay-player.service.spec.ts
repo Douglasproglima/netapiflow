@@ -146,4 +146,42 @@ describe('ReplayPlayerService', () => {
     expect(service.visibleSpans()).toEqual([]);
     expect(service.state()).toBe('paused');
   });
+
+  it('stepBackward undoes one step, never going below zero', () => {
+    const trace = makeTrace([
+      makeSpan('first', 0, '2026-01-01T00:00:00.000000Z', 1_000),
+      makeSpan('second', 1, '2026-01-01T00:00:00.001000Z', 1_000),
+    ]);
+    service.load(trace);
+    service.stepForward();
+    service.stepForward();
+    expect(service.visibleSpans()).toHaveLength(2);
+
+    service.stepBackward();
+    expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first']);
+    expect(service.state()).toBe('paused');
+
+    service.stepBackward();
+    service.stepBackward();
+    expect(service.visibleSpans()).toEqual([]);
+  });
+
+  it('seek jumps directly to a step index, clamped to the valid range', () => {
+    const trace = makeTrace([
+      makeSpan('first', 0, '2026-01-01T00:00:00.000000Z', 1_000),
+      makeSpan('second', 1, '2026-01-01T00:00:00.001000Z', 1_000),
+    ]);
+    service.load(trace);
+
+    service.seek(1);
+    expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first']);
+    expect(service.state()).toBe('paused');
+
+    service.seek(100);
+    expect(service.visibleSpans()).toHaveLength(2);
+    expect(service.state()).toBe('finished');
+
+    service.seek(-5);
+    expect(service.visibleSpans()).toEqual([]);
+  });
 });

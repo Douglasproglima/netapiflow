@@ -30,8 +30,9 @@ internal sealed class InMemoryTraceStore : ITraceStore
             .Where(trace => query.From is null || trace.StartedAt >= query.From)
             .Where(trace => query.To is null || trace.StartedAt <= query.To)
             .Where(trace => query.MinDurationMicros is null || (trace.DurationMicros ?? 0) >= query.MinDurationMicros)
-            .OrderByDescending(trace => trace.StartedAt)
             .ToList();
+
+        matching = ApplySort(matching, query);
 
         var page = matching
             .Skip((Math.Max(query.Page, 1) - 1) * query.PageSize)
@@ -145,6 +146,42 @@ internal sealed class InMemoryTraceStore : ITraceStore
         }
 
         return ValueTask.FromResult(removed);
+    }
+
+    private static List<FlowTrace> ApplySort(List<FlowTrace> traces, TraceQuery query)
+    {
+        var field = query.SortBy ?? TraceSortField.StartedAt;
+        var ascending = query.SortDirection == global::NetApiFlow.SortDirection.Ascending;
+
+        IOrderedEnumerable<FlowTrace> ordered = field switch
+        {
+            TraceSortField.Duration => OrderByNullsLast(traces, t => t.DurationMicros, ascending),
+            TraceSortField.HttpStatus => OrderByNullsLast(traces, t => t.HttpStatus, ascending),
+            TraceSortField.Method => ascending
+                ? traces.OrderBy(t => t.Method, StringComparer.OrdinalIgnoreCase)
+                : traces.OrderByDescending(t => t.Method, StringComparer.OrdinalIgnoreCase),
+            TraceSortField.Route => ascending
+                ? traces.OrderBy(t => t.RouteTemplate, StringComparer.OrdinalIgnoreCase)
+                : traces.OrderByDescending(t => t.RouteTemplate, StringComparer.OrdinalIgnoreCase),
+            _ => ascending
+                ? traces.OrderBy(t => t.StartedAt)
+                : traces.OrderByDescending(t => t.StartedAt),
+        };
+
+        if (field != TraceSortField.StartedAt)
+        {
+            ordered = ordered.ThenByDescending(t => t.StartedAt);
+        }
+
+        return ordered.ThenBy(t => t.TraceId, StringComparer.Ordinal).ToList();
+    }
+
+    private static IOrderedEnumerable<FlowTrace> OrderByNullsLast<TKey>(
+        List<FlowTrace> traces, Func<FlowTrace, TKey?> selector, bool ascending)
+        where TKey : struct, IComparable<TKey>
+    {
+        var byPresence = traces.OrderBy(t => selector(t) is null);
+        return ascending ? byPresence.ThenBy(selector) : byPresence.ThenByDescending(selector);
     }
 
     private static FlowTraceDetail ToDetail(Entry entry) =>

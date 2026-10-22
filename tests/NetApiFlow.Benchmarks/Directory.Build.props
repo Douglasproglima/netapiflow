@@ -1,0 +1,8 @@
+<Project>
+  <!--
+    Empty on purpose: this stops the walk-up to the repo root's Directory.Build.props, whose
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks> would otherwise conflict with this
+    project's single net10.0 target — including inside BenchmarkDotNet's own auto-generated
+    wrapper project, which walks up from its own temp build folder under this one.
+  -->
+</Project>

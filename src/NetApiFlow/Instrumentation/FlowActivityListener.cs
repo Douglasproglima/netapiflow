@@ -66,7 +66,7 @@ internal sealed class FlowActivityListener : IDisposable
         {
             TraceId = traceId,
             SpanId = activity.SpanId.ToString(),
-            ParentSpanId = activity.Parent?.SpanId.ToString(),
+            ParentSpanId = ResolveParentSpanId(activity, trace),
             Sequence = trace.NextSequence(),
             Component = activity.GetTagItem(FlowTagNames.Component) as string ?? activity.OperationName,
             Operation = activity.GetTagItem(FlowTagNames.Operation) as string ?? activity.OperationName,
@@ -115,6 +115,22 @@ internal sealed class FlowActivityListener : IDisposable
         {
             PropagateErrorToAncestors(trace, activity.Parent);
         }
+    }
+
+    /// <summary>
+    /// <see cref="Activity.Parent"/> reflects the real .NET Activity graph, which includes
+    /// ambient parents NetApiFlow never recorded as a span (e.g. ASP.NET Core's own request
+    /// Activity for the root span of a trace). Only a parent already present in this trace's own
+    /// spans is a real NetApiFlow parent; anything else means this span is the trace's root, and
+    /// the API contract (docs/plano/contratos.md) requires a root span's <c>parentSpanId</c> to
+    /// be <see langword="null"/>, not a dangling id the frontend can never resolve.
+    /// </summary>
+    private static string? ResolveParentSpanId(Activity activity, ActiveTrace trace)
+    {
+        var parentSpanId = activity.Parent?.SpanId.ToString();
+        return parentSpanId is not null && trace.Spans.Any(span => span.SpanId == parentSpanId)
+            ? parentSpanId
+            : null;
     }
 
     private void PropagateErrorToAncestors(ActiveTrace trace, Activity? parent)

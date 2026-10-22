@@ -200,6 +200,138 @@ public abstract class TraceStoreTestsBase
         stats.Sum(s => s.ExecutionCount).ShouldBe(2);
     }
 
+    private static FlowTrace MakeRawTrace(string traceId, DateTime startedAt, string method = "GET", string route = "/api/orders/{id}", int? httpStatus = 200, long? durationMicros = 1_000) => new()
+    {
+        TraceId = traceId,
+        Method = method,
+        RouteTemplate = route,
+        HttpStatus = httpStatus,
+        Status = httpStatus is null && durationMicros is null ? FlowStatus.Running : FlowStatus.Success,
+        StartedAt = startedAt,
+        EndedAt = durationMicros is null ? null : startedAt.AddMicroseconds(durationMicros.Value),
+        DurationMicros = durationMicros,
+        SpanCount = 1,
+        Truncated = false,
+    };
+
+    [Fact]
+    public async Task QueryAsync_SortsByStartedAt_BothDirections()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeRawTrace("s-1", now.AddMinutes(-10)), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("s-2", now.AddMinutes(-5)), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("s-3", now), [], CancellationToken.None);
+
+        var ascending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.StartedAt, SortDirection = SortDirection.Ascending }, CancellationToken.None);
+        ascending.Items.Select(i => i.TraceId).ShouldBe(["s-1", "s-2", "s-3"]);
+
+        var descending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.StartedAt, SortDirection = SortDirection.Descending }, CancellationToken.None);
+        descending.Items.Select(i => i.TraceId).ShouldBe(["s-3", "s-2", "s-1"]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortsByDuration_NullsLastBothDirections()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeRawTrace("d-running", now.AddMinutes(-1), httpStatus: null, durationMicros: null), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("d-slow", now.AddMinutes(-2), durationMicros: 9_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("d-fast", now.AddMinutes(-3), durationMicros: 1_000), [], CancellationToken.None);
+
+        var ascending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.Duration, SortDirection = SortDirection.Ascending }, CancellationToken.None);
+        ascending.Items.Select(i => i.TraceId).ShouldBe(["d-fast", "d-slow", "d-running"]);
+
+        var descending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.Duration, SortDirection = SortDirection.Descending }, CancellationToken.None);
+        descending.Items.Select(i => i.TraceId).ShouldBe(["d-slow", "d-fast", "d-running"]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortsByHttpStatus_NullsLastBothDirections()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeRawTrace("h-running", now.AddMinutes(-1), httpStatus: null, durationMicros: null), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("h-500", now.AddMinutes(-2), httpStatus: 500), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("h-200", now.AddMinutes(-3), httpStatus: 200), [], CancellationToken.None);
+
+        var ascending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.HttpStatus, SortDirection = SortDirection.Ascending }, CancellationToken.None);
+        ascending.Items.Select(i => i.TraceId).ShouldBe(["h-200", "h-500", "h-running"]);
+
+        var descending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.HttpStatus, SortDirection = SortDirection.Descending }, CancellationToken.None);
+        descending.Items.Select(i => i.TraceId).ShouldBe(["h-500", "h-200", "h-running"]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortsByMethod_OrdinalIgnoringCase()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeRawTrace("m-post", now.AddMinutes(-1), method: "post"), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("m-get", now.AddMinutes(-2), method: "GET"), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("m-delete", now.AddMinutes(-3), method: "Delete"), [], CancellationToken.None);
+
+        var ascending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.Method, SortDirection = SortDirection.Ascending }, CancellationToken.None);
+        ascending.Items.Select(i => i.TraceId).ShouldBe(["m-delete", "m-get", "m-post"]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortsByRoute_OrdinalIgnoringCase()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeRawTrace("r-c", now.AddMinutes(-1), route: "/r/C"), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("r-a", now.AddMinutes(-2), route: "/r/A"), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("r-b", now.AddMinutes(-3), route: "/r/b"), [], CancellationToken.None);
+
+        var ascending = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.Route, SortDirection = SortDirection.Ascending }, CancellationToken.None);
+        ascending.Items.Select(i => i.TraceId).ShouldBe(["r-a", "r-b", "r-c"]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortTieBreak_StartedAtThenTraceId_IsStableForEqualSortValues()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeRawTrace("tie-b", now.AddMinutes(-1), durationMicros: 5_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("tie-a", now.AddMinutes(-1), durationMicros: 5_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeRawTrace("tie-older", now.AddMinutes(-5), durationMicros: 5_000), [], CancellationToken.None);
+
+        var result = await store.QueryAsync(new TraceQuery { SortBy = TraceSortField.Duration, SortDirection = SortDirection.Descending }, CancellationToken.None);
+
+        // Same duration everywhere: ties break by StartedAt desc, then TraceId.
+        result.Items.Select(i => i.TraceId).ShouldBe(["tie-a", "tie-b", "tie-older"]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_SortCombinedWithFilterAndPagination_PreservesOrderAcrossPages()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        var durations = new long[] { 1_000, 9_000, 3_000, 7_000, 5_000 };
+        for (var i = 0; i < durations.Length; i++)
+        {
+            await store.SaveAsync(MakeRawTrace($"p-{i}", now.AddMinutes(-i), httpStatus: 200, durationMicros: durations[i]), [], CancellationToken.None);
+        }
+
+        var query = new TraceQuery
+        {
+            Status = FlowStatus.Success,
+            SortBy = TraceSortField.Duration,
+            SortDirection = SortDirection.Descending,
+            PageSize = 2,
+        };
+
+        var firstPage = await store.QueryAsync(query with { Page = 1 }, CancellationToken.None);
+        var secondPage = await store.QueryAsync(query with { Page = 2 }, CancellationToken.None);
+        var thirdPage = await store.QueryAsync(query with { Page = 3 }, CancellationToken.None);
+
+        firstPage.TotalCount.ShouldBe(5);
+        var allIds = firstPage.Items.Concat(secondPage.Items).Concat(thirdPage.Items).Select(i => i.TraceId).ToList();
+        allIds.ShouldBe(["p-1", "p-3", "p-4", "p-2", "p-0"]);
+        allIds.Distinct().Count().ShouldBe(5);
+    }
+
     [Fact]
     public async Task ApplyRetentionAsync_MaxTracesZero_RemovesEverything()
     {

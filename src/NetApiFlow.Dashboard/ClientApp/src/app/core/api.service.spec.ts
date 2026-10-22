@@ -128,6 +128,7 @@ describe('ApiService', () => {
   it('getMetrics omits from/to when not provided', () => {
     const summary: MetricsSummary = {
       totalTraces: 0,
+      errorCount: 0,
       errorRate: 0,
       averageDurationMicros: 0,
       p95DurationMicros: 0,
@@ -166,10 +167,12 @@ describe('ApiService', () => {
   it('getConfig hits /config', () => {
     service
       .getConfig()
-      .subscribe((result) => expect(result).toEqual({ slowThresholdMicros: 250_000 }));
+      .subscribe((result) =>
+        expect(result).toEqual({ slowThresholdMicros: 250_000, version: '0.1.0' }),
+      );
 
     const req = httpMock.expectOne('api/config');
-    req.flush({ slowThresholdMicros: 250_000 });
+    req.flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
   });
 
   it('callEndpoint sends a root-relative request, not prefixed by the dashboard base path', () => {

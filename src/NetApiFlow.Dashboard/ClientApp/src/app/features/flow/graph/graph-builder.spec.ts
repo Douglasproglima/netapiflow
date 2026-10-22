@@ -76,12 +76,41 @@ describe('buildGraph', () => {
     );
 
     const byId = Object.fromEntries(result.nodes.map((n) => [n.id, n]));
-    // Top-to-bottom layout: each level strictly below the previous one.
-    expect(byId['mid'].y).toBeGreaterThan(byId['root'].y);
-    expect(byId['leaf'].y).toBeGreaterThan(byId['mid'].y);
+    // Left-to-right layout (guide seção 6.4): each level strictly to the right of the previous one.
+    expect(byId['mid'].x).toBeGreaterThan(byId['root'].x);
+    expect(byId['leaf'].x).toBeGreaterThan(byId['mid'].x);
     expect(byId['root'].sequence).toBe(0);
     expect(byId['mid'].sequence).toBe(1);
     expect(byId['leaf'].sequence).toBe(2);
+  });
+
+  it('finds the root even when its parentSpanId is a dangling, non-null ambient id (D-31)', () => {
+    // Real data shape: the root span's parentSpanId points at ASP.NET Core's own Activity, which
+    // is never one of NetApiFlow's own spans — not `null` as the earlier synthetic fixtures above
+    // always assumed.
+    const spans: FlowSpan[] = [
+      span({
+        spanId: 'root',
+        parentSpanId: '55aa63b602cd359e',
+        sequence: 0,
+        component: 'OrdersController',
+        operation: 'Get',
+      }),
+      span({
+        spanId: 'mid',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'OrderService',
+        operation: 'GetAsync',
+      }),
+    ];
+
+    const result = buildGraph(input({ spans }));
+
+    expect(result.nodes.map((n) => n.id).sort()).toEqual(['mid', 'root']);
+    expect(result.edges).toContainEqual(
+      expect.objectContaining({ sourceId: 'root', targetId: 'mid' }),
+    );
   });
 
   it('marks a successful span under the slow threshold as completed', () => {

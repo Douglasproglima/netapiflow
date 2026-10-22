@@ -5,6 +5,10 @@
 
 export type FlowStatus = 'Running' | 'Success' | 'Error';
 
+/** The six visual states of seção 7.2 do prompt (D-26: lives in `core/`, not under `features/flow`). */
+export type NodeVisualState =
+  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed';
+
 export type ComponentType =
   'Endpoint' | 'Controller' | 'UseCase' | 'Service' | 'Repository' | 'Database' | 'Http' | 'Custom';
 
@@ -97,18 +101,20 @@ export interface EndpointDescriptor {
   displayName: string;
 }
 
-/** GET /metrics */
+/** GET /metrics (D-30: `errorCount` is the raw count behind `errorRate`). */
 export interface MetricsSummary {
   totalTraces: number;
+  errorCount: number;
   errorRate: number;
   averageDurationMicros: number;
   p95DurationMicros: number;
   maxDurationMicros: number;
 }
 
-/** GET /config (D-24). */
+/** GET /config (D-24, `version` added by D-33). */
 export interface DashboardConfig {
   slowThresholdMicros: number;
+  version: string;
 }
 
 /** GET /metrics/components list item. */
@@ -128,6 +134,12 @@ export interface PagedResult<T> {
   totalCount: number;
 }
 
+/** Sort field accepted by GET /traces (D-41, tarefa 7.9). */
+export type TraceSortField = 'startedAt' | 'duration' | 'httpStatus' | 'method' | 'route';
+
+/** Sort direction accepted by GET /traces (D-41, tarefa 7.9). */
+export type SortDirection = 'asc' | 'desc';
+
 /** Query string accepted by GET /traces. */
 export interface TraceQuery {
   status?: FlowStatus;
@@ -139,6 +151,8 @@ export interface TraceQuery {
   minDurationMicros?: number;
   page?: number;
   pageSize?: number;
+  sort?: TraceSortField;
+  order?: SortDirection;
 }
 
 /** Query string accepted by GET /metrics and GET /metrics/components. */

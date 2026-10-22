@@ -18,6 +18,7 @@ publish/
 artifacts/
 *.nupkg
 *.snupkg
+BenchmarkDotNet.Artifacts/
 
 # Node / Angular (src/NetApiFlow.Dashboard/ClientApp)
 node_modules/

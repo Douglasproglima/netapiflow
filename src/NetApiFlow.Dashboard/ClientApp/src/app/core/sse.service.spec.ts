@@ -161,6 +161,20 @@ describe('SseService', () => {
     expect(reconnectedCount).toBe(1);
   });
 
+  it('keeps the connection open while any caller still holds it (reference counting)', () => {
+    service.connect();
+    service.connect();
+    expect(FakeEventSource.instances.length).toBe(1);
+
+    service.disconnect();
+    expect(FakeEventSource.latest().closed).toBe(false);
+    expect(service.state()).not.toBe('closed');
+
+    service.disconnect();
+    expect(FakeEventSource.latest().closed).toBe(true);
+    expect(service.state()).toBe('closed');
+  });
+
   it('does not reconnect after an explicit disconnect', async () => {
     vi.useFakeTimers();
 

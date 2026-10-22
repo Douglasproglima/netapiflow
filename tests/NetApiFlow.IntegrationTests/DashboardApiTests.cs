@@ -121,6 +121,68 @@ public class DashboardApiTests
     }
 
     [Fact]
+    public async Task GetTraces_InvalidSort_Returns400WithAcceptedValues()
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/traces?sort=foo");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        var body = await response.Content.ReadAsStringAsync();
+        body.ShouldContain("startedAt");
+    }
+
+    [Fact]
+    public async Task GetTraces_InvalidOrder_Returns400WithAcceptedValues()
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/traces?order=sideways");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        var body = await response.Content.ReadAsStringAsync();
+        body.ShouldContain("asc");
+    }
+
+    [Fact]
+    public async Task GetTraces_SortByDurationDescending_OrdersAcrossTheWholeResultSet()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        await store.SaveAsync(CreateTrace("slow", "GET", "/api/orders/1", FlowStatus.Success, DateTime.UtcNow, 50_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("fast", "GET", "/api/orders/2", FlowStatus.Success, DateTime.UtcNow, 1_000), [], CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/traces?sort=duration&order=desc");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("items")[0].GetProperty("traceId").GetString().ShouldBe("slow");
+        doc.RootElement.GetProperty("items")[1].GetProperty("traceId").GetString().ShouldBe("fast");
+    }
+
+    [Fact]
+    public async Task GetTraces_NoSort_KeepsTheExistingStartedAtDescendingBehavior()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        await store.SaveAsync(CreateTrace("older", "GET", "/api/orders/1", FlowStatus.Success, DateTime.UtcNow.AddMinutes(-5), 1_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("newer", "GET", "/api/orders/2", FlowStatus.Success, DateTime.UtcNow, 1_000), [], CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/traces");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("items")[0].GetProperty("traceId").GetString().ShouldBe("newer");
+        doc.RootElement.GetProperty("items")[1].GetProperty("traceId").GetString().ShouldBe("older");
+    }
+
+    [Fact]
     public async Task GetTracesLive_ReturnsRunningTracesFromRecorder()
     {
         using var host = CreateHost();
@@ -285,6 +347,7 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("totalTraces").GetInt32().ShouldBe(2);
+        doc.RootElement.GetProperty("errorCount").GetInt32().ShouldBe(1);
         doc.RootElement.GetProperty("errorRate").GetDouble().ShouldBe(0.5);
         doc.RootElement.GetProperty("maxDurationMicros").GetInt64().ShouldBe(3_000);
     }
@@ -300,6 +363,7 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("totalTraces").GetInt32().ShouldBe(0);
+        doc.RootElement.GetProperty("errorCount").GetInt32().ShouldBe(0);
         doc.RootElement.GetProperty("errorRate").GetDouble().ShouldBe(0);
         doc.RootElement.GetProperty("averageDurationMicros").GetInt64().ShouldBe(0);
     }
@@ -338,6 +402,7 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("slowThresholdMicros").GetInt64().ShouldBe(400_000);
+        doc.RootElement.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
     }
 
     [Fact]

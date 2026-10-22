@@ -48,6 +48,16 @@
     Hooked before DispatchToInnerBuilds (not Build/Pack themselves): both Build and Pack depend on
     DispatchToInnerBuilds, which runs every inner per-TargetFramework build (and their embedded
     resource compilation) before a BeforeTargets="Build" hook would ever fire.
+
+    This assumes one outer, TargetFramework-less pass of this project per build. Building the
+    whole solution can trigger more than one: a ProjectReference from another multi-targeted
+    project (e.g. NetApiFlow.IntegrationTests, once per its own net8.0/net10.0 inner build) asks
+    for this project with a different set of global properties than the solution's own direct
+    build, and MSBuild does not always dedupe that into a single evaluation. Under parallel
+    scheduling those extra passes can race on dist/ (observed in CI, PR #17, never locally). CI
+    works around it by building the Angular client explicitly before `dotnet build`, so every pass
+    here finds dist/ already fresh and this target's own Inputs/Outputs check turns it into a
+    no-op — see .github/workflows/ci.yml.
   -->
   <Target Name="BuildAngularClient"
           BeforeTargets="DispatchToInnerBuilds"

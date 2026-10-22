@@ -8,7 +8,7 @@
 }
 
 .components__status--error {
-  color: var(--flow-state-error-stroke, #e53935);
+  color: var(--naf-danger);
 }
 
 .components__table {
@@ -19,6 +19,6 @@
   td {
     padding: 0.4rem 0.6rem;
     text-align: left;
-    border-bottom: 1px solid var(--flow-table-border, #ddd);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
 }

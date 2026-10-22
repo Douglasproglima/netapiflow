@@ -41,7 +41,7 @@ function makeSpan(overrides: Partial<FlowSpan> & Pick<FlowSpan, 'spanId' | 'star
 
 describe('buildWaterfall', () => {
   it('returns an empty list for a trace with no spans', () => {
-    expect(buildWaterfall(makeTrace({ spans: [] }))).toEqual([]);
+    expect(buildWaterfall(makeTrace({ spans: [] }), 250_000)).toEqual([]);
   });
 
   it('orders rows by start time, not array order', () => {
@@ -60,7 +60,7 @@ describe('buildWaterfall', () => {
       ],
     });
 
-    const rows = buildWaterfall(trace);
+    const rows = buildWaterfall(trace, 250_000);
 
     expect(rows.map((r) => r.spanId)).toEqual(['first', 'second']);
   });
@@ -77,7 +77,7 @@ describe('buildWaterfall', () => {
       ],
     });
 
-    const [row] = buildWaterfall(trace);
+    const [row] = buildWaterfall(trace, 250_000);
 
     expect(row.offsetPercent).toBeCloseTo(25, 0);
     expect(row.widthPercent).toBeCloseTo(50, 0);
@@ -91,7 +91,7 @@ describe('buildWaterfall', () => {
       ],
     });
 
-    const [row] = buildWaterfall(trace);
+    const [row] = buildWaterfall(trace, 250_000);
 
     expect(row.durationMicros).toBe(42);
   });
@@ -111,8 +111,41 @@ describe('buildWaterfall', () => {
       ],
     });
 
-    const [row] = buildWaterfall(trace);
+    const [row] = buildWaterfall(trace, 250_000);
 
     expect(row.widthPercent).toBeCloseTo(100, 0);
+  });
+
+  it('assigns the slow state when a span is at or above the slow threshold', () => {
+    const trace = makeTrace({
+      spans: [
+        makeSpan({
+          spanId: 's1',
+          startedAt: '2026-01-01T00:00:00.000000Z',
+          durationMicros: 300_000,
+        }),
+      ],
+    });
+
+    const [row] = buildWaterfall(trace, 250_000);
+
+    expect(row.state).toBe('slow');
+  });
+
+  it('assigns error over the slow threshold', () => {
+    const trace = makeTrace({
+      spans: [
+        makeSpan({
+          spanId: 's1',
+          startedAt: '2026-01-01T00:00:00.000000Z',
+          durationMicros: 300_000,
+          status: 'Error',
+        }),
+      ],
+    });
+
+    const [row] = buildWaterfall(trace, 250_000);
+
+    expect(row.state).toBe('error');
   });
 });

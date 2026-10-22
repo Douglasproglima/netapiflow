@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS netapiflow_traces (
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_started_at ON netapiflow_traces (started_at);
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_status ON netapiflow_traces (status);
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_method_route ON netapiflow_traces (method, route_template);
+CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_duration_micros ON netapiflow_traces (duration_micros);
 
 CREATE TABLE IF NOT EXISTS netapiflow_spans (
     trace_id varchar(64) NOT NULL REFERENCES netapiflow_traces (trace_id) ON DELETE CASCADE,

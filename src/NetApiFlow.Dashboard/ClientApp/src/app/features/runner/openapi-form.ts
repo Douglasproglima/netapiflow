@@ -31,6 +31,26 @@ export function listOpenApiEndpoints(doc: OpenApiDocument): OpenApiEndpoint[] {
   return endpoints;
 }
 
+/**
+ * Splits endpoints into the host's own and the dashboard's own routes (guide seção 6.3, D2):
+ * the dashboard maps its REST API on the same route builder as the host app, so a host that calls
+ * `MapOpenApi()` documents `{basePath}/api/*` (e.g. `DELETE /flow/api/traces`, which erases the
+ * trace history) alongside the user's actual endpoints. Hidden by default so a stray click can't
+ * reach them; `hiddenCount` drives the "N dashboard routes hidden" note.
+ */
+export function partitionDashboardRoutes(
+  endpoints: OpenApiEndpoint[],
+  dashboardBasePath: string,
+): { visible: OpenApiEndpoint[]; hiddenCount: number } {
+  if (!dashboardBasePath) {
+    return { visible: endpoints, hiddenCount: 0 };
+  }
+
+  const prefix = `${dashboardBasePath}/`;
+  const visible = endpoints.filter((endpoint) => !endpoint.path.startsWith(prefix));
+  return { visible, hiddenCount: endpoints.length - visible.length };
+}
+
 export type FormFieldKind = 'path' | 'query' | 'body';
 
 export interface FormField {
