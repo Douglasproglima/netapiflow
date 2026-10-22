@@ -129,6 +129,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.875rem 0;
+  overflow-x: hidden;
   border-right: 1px solid var(--naf-border);
   background: var(--naf-bg);
   // Material 3's default sidenav shape rounds the container's leading corners; the rail is flush

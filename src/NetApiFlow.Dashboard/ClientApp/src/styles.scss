@@ -6,6 +6,12 @@
 @use '@angular/material' as mat;
 @use 'styles/tokens';
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 // Brand typeface, embedded locally as variable fonts (one file covers every weight below) so the
 // dashboard renders its real typography without a Google Fonts request: it has to work offline,
 // behind a restrictive CSP, or on the client's own network (docs/brand/tokens.md, ADR-0009).
@@ -345,8 +351,6 @@ code,
   font-family: var(--naf-font-mono);
 }
 
-// Shared card/button primitives (guide seção 3.4): any feature screen with a results or filters
-// card reads these instead of redeclaring the same surface/border/radius per component.
 .naf-card {
   background: var(--naf-surface);
   border: 1px solid var(--naf-border);
@@ -427,7 +431,6 @@ code,
   clip: rect(0 0 0 0);
 }
 
-// Shared form control + segmented-control primitives (guide seção 3.4/3.6).
 .naf-ctl {
   height: 36px;
   width: 100%;
@@ -456,7 +459,9 @@ code,
 
 .naf-seg {
   display: inline-flex;
+  align-items: center;
   flex-wrap: wrap;
+  height: 36px;
   border: 1px solid var(--naf-border);
   border-radius: var(--naf-radius-sm);
   overflow: hidden;
@@ -496,6 +501,45 @@ code,
       width: 14px;
       height: 14px;
     }
+  }
+}
+
+.naf-switch {
+  width: 34px;
+  height: 20px;
+  flex: none;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border-strong);
+  background: var(--naf-surface-2);
+  position: relative;
+  cursor: pointer;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--naf-text-muted);
+    transition: left 0.15s ease;
+  }
+
+  &[aria-checked='true'] {
+    background: var(--naf-flow-button);
+    border-color: transparent;
+
+    &::after {
+      left: 15px;
+      background: #fff;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--naf-focus);
+    outline-offset: 2px;
   }
 }
 /* You can add global styles to this file, and also import other style files */
