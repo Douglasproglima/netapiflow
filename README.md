@@ -224,6 +224,11 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 Issues and pull requests are welcome. This project follows Conventional Commits and Gitflow. See
 `docs/gitflow.md` if you're sending a PR.
 
+## Support
+
+NetApiFlow is free and open source. If it saved you time, consider buying the author a coffee:
+PIX key `douglasproglima@gmail.com`.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

@@ -228,6 +228,11 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
 Issues e pull requests são bem-vindos. Este projeto segue Conventional Commits e Gitflow. Veja
 `docs/gitflow.md` antes de enviar um PR.
 
+## Apoie o projeto
+
+O NetApiFlow é livre e de código aberto. Se ele economizou seu tempo, considere pagar um café
+para o autor: chave PIX `douglasproglima@gmail.com`.
+
 ## Licença
 
 MIT. Veja [LICENSE](LICENSE).
