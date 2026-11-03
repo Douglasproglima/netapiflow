@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-03
+
+### Fixed
+
+- `NetApiFlow.Dashboard`'s embedded Angular bundle rebuilt against a patched `@angular/build`,
+  resolving a high-severity `vite`/`launch-editor` advisory (arbitrary command execution via a
+  crafted editor CLI flag) that shipped in the `0.1.0` build tooling. No application behavior
+  changed; the fix only updates the Angular framework packages compiled into the dashboard UI.
+
 ## [0.1.0] - 2026-10-22
 
 ### Added
