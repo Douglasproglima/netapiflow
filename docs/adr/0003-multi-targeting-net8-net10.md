@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#63](https://github.com/Douglasproglima/netapiflow/issues/63)
+
 ## Contexto
 `netapiflow-prompt.md` (seção 4.1) exige `net8.0` e `net10.0`, as duas versões LTS do .NET no
 momento. `net9.0` (STS) fica de fora de propósito. A diferença mais visível entre os dois alvos é
