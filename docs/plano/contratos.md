@@ -52,7 +52,9 @@ public interface ITraceStore
 }
 
 public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
-public interface IDashboardAuthorizationFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
+
+/// <summary>Shared gate for every diagnostic surface (Dashboard, MCP, any future one). ADR-0015.</summary>
+public interface IFlowAccessFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
 
 public sealed class NetApiFlowOptions
 {
@@ -140,17 +142,13 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
     public static IEndpointConventionBuilder UseNetApiFlowDashboard(
         this IEndpointRouteBuilder endpoints, string basePath = "/flow");
 }
-
-public interface IDashboardAuthorizationFilter
-{
-    ValueTask<bool> AuthorizeAsync(HttpContext context);
-}
 ```
 
 `UseNetApiFlowDashboard` monta a API REST/SSE sob `{basePath}/api` e a UI Angular embutida sob
 `basePath`, com fallback de SPA. Devolve um `IEndpointConventionBuilder` para encadear
 `RequireAuthorization(...)`, que vale para as duas partes juntas (ADR-0006). Fora de
-`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IDashboardAuthorizationFilter`
+`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IFlowAccessFilter` (núcleo,
+ADR-0015; antes `IDashboardAuthorizationFilter`, declarado localmente aqui até a Fase 10)
 registrado no DI, toda rota do dashboard responde `404`; com um dos dois e a autorização negada,
 responde `403`. Tudo que não está nesta lista (`DashboardAccessGate`,
 `DashboardIndexHtmlCache`, `DashboardEmbeddedFiles`, `MapNetApiFlowDashboardApi`) é `internal`.
@@ -176,13 +174,13 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
 ```
 
 `UseNetApiFlowMcp` monta o servidor MCP (transporte HTTP, `ModelContextProtocol.AspNetCore`) sob
-`basePath`. Mesma régua da Dashboard (ADR-0006/ADR-0013): fora de
-`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization(...)` nem
-`IDashboardAuthorizationFilter` (reaproveitado, não duplicado) registrado no DI, toda rota do MCP
-responde `404`. Três tools na v1, todas só leitura, implementadas sobre `ITraceStore`: listar
-traces recentes (filtro por status, método, rota, limite), obter uma trace por id, obter
-estatísticas por componente. Não depende de `NetApiFlow.Dashboard`. Formalizado na revisão da
-Fase 10.
+`basePath`. Mesma régua da Dashboard (ADR-0006/ADR-0013), com o filtro compartilhado do núcleo
+(ADR-0015): fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization(...)` nem
+`IFlowAccessFilter` registrado no DI, toda rota do MCP responde `404`. Três tools na v1, todas só
+leitura, implementadas sobre `ITraceStore`: listar traces recentes (filtro por status, método,
+rota, limite), obter uma trace por id, obter estatísticas por componente. Não depende de
+`NetApiFlow.Dashboard`: os dois dependem só de `NetApiFlow` (núcleo) para `IFlowAccessFilter`.
+Formalizado na revisão da Fase 10.
 
 ### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
 
