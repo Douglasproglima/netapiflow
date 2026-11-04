@@ -24,7 +24,7 @@ internal sealed class FlowActivityListener : IDisposable
 
         _listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == FlowActivitySource.Name,
+            ShouldListenTo = ShouldListenTo,
             Sample = Sample,
             ActivityStarted = OnActivityStarted,
             ActivityStopped = OnActivityStopped,
@@ -34,6 +34,11 @@ internal sealed class FlowActivityListener : IDisposable
     }
 
     public void Dispose() => _listener.Dispose();
+
+    private bool ShouldListenTo(ActivitySource source) =>
+        source.Name == FlowActivitySource.Name ||
+        (source.Name == HttpClientActivityTagNames.SourceName &&
+            _options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient));
 
     private ActivitySamplingResult Sample(ref ActivityCreationOptions<ActivityContext> options)
     {

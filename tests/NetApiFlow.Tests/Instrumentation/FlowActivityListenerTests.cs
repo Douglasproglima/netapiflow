@@ -47,6 +47,36 @@ public class FlowActivityListenerTests
     }
 
     [Fact]
+    public void ActivityStarted_WithExternalSourcesHttpClient_ObservesSystemNetHttpActivityAsASpan()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.HttpClient });
+        using var _ = subject;
+        using var __ = root;
+        using var httpClientSource = new ActivitySource(HttpClientActivityTagNames.SourceName);
+
+        using (httpClientSource.StartActivity("System.Net.Http.HttpRequestOut"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ActivityStarted_WithDefaultExternalSources_DoesNotObserveSystemNetHttpActivity()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+        using var httpClientSource = new ActivitySource(HttpClientActivityTagNames.SourceName);
+
+        using (httpClientSource.StartActivity("System.Net.Http.HttpRequestOut"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Sample_WhenDisabled_ReturnsNoneAndDoesNotRecordASpan()
     {
         var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { Enabled = false });
