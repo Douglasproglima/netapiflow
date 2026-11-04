@@ -105,18 +105,18 @@
 
   &[data-method='POST'][aria-checked='true'] {
     background: var(--naf-success-tint);
-    color: var(--naf-success);
+    color: var(--naf-success-on-tint);
   }
 
   &[data-method='PUT'][aria-checked='true'],
   &[data-method='PATCH'][aria-checked='true'] {
     background: var(--naf-warning-tint);
-    color: var(--naf-warning);
+    color: var(--naf-warning-on-tint);
   }
 
   &[data-method='DELETE'][aria-checked='true'] {
     background: var(--naf-danger-tint);
-    color: var(--naf-danger);
+    color: var(--naf-danger-on-tint);
   }
 }
 
@@ -416,7 +416,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--naf-danger);
+    color: var(--naf-danger-on-tint);
   }
 
   p {

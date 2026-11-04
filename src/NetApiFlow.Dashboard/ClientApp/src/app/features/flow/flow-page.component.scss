@@ -244,13 +244,13 @@
 .flow-workspace__banner--danger {
   background: var(--naf-danger-tint);
   border: 1px solid rgba(239, 68, 68, 0.55);
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
 }
 
 .flow-workspace__banner--warning {
   background: var(--naf-warning-tint);
   border: 1px solid rgba(245, 158, 11, 0.55);
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
 }
 
 .flow-workspace__canvas {

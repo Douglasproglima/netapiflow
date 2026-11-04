@@ -293,18 +293,18 @@ code,
 }
 
 .naf-tag--post {
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
   background: var(--naf-success-tint);
 }
 
 .naf-tag--put,
 .naf-tag--patch {
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   background: var(--naf-warning-tint);
 }
 
 .naf-tag--delete {
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
   background: var(--naf-danger-tint);
 }
 
@@ -333,17 +333,17 @@ code,
 }
 
 .naf-chip--live {
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
   background: var(--naf-success-tint);
 }
 
 .naf-chip--warning {
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   background: var(--naf-warning-tint);
 }
 
 .naf-chip--danger {
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
   background: var(--naf-danger-tint);
 }
 
