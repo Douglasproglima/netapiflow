@@ -13,7 +13,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | `contratos.md` | API pública do núcleo, formato do evento SSE, visão geral da API REST. Não implementar divergindo sem avisar a Planejadora |
 | `decisoes.md` | Decisões travadas (D-01 em diante), append-only, com justificativa |
 | `riscos.md` | Riscos técnicos, mitigação e como cada um é provado por teste |
-| `fase-0-fundacao.md` … `fase-10-servidor-mcp.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
+| `fase-0-fundacao.md` … `fase-11-impeccable-qualidade-visual.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
 
 ## Estado das fases
 
@@ -30,8 +30,9 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 8 | Interop OpenTelemetry, parte 1 (ingestão de `HttpClient`) | **Aceita e mergeada** (2026-11-04) | PR #86, CI verde nos 5 checks. Primeiro item do roadmap D-58 a sair do papel (D-68, ADR-0012), escopo deliberadamente estreito: só `ActivitySource` nativa do `HttpClient`, opt-in via `NetApiFlowOptions.ExternalSources`. Npgsql (duplicaria span do `NetApiFlow.EntityFrameworkCore`, R-06) e MassTransit ficam fora, por desenho, para uma fase futura própria. Achado real durante a tarefa 8.3 (D-69): `net8.0` não produz tag nenhuma na `Activity` nativa do `HttpClient` (só `net9.0+`); corrigido com um backfill de tag via `DiagnosticListener` isolado em `#if NET8_0`. Revisão de código na mesma branch achou e corrigiu um vazamento real de query string nesse backfill antes do merge. R-13 mitigado, provado por `HttpClientActivityTagBackfillTests` (inspeciona a tag crua da `Activity`) e `HttpClientInteropIntegrationTests` (ponta a ponta) |
 | 9 | Detector de N+1 | **Aceita e mergeada** (2026-11-04) | PR #90, CI verde nos 5 checks. Segundo item do roadmap D-58 (D-71), 100% frontend: `graph-builder.ts` agrupa spans `Database` por `(Component, Operation)` em todo o trace (cross-parent, não por irmão direto, provado pelo teste mais importante da fase), selo de ícone+texto no grafo, painel de detalhes com contagem e "pular para a primeira". Sem mudança no núcleo .NET nem em `contratos.md`. Limiar fixo de 3, não configurável nesta fase |
 | 10 | Servidor MCP embutido (`NetApiFlow.Mcp`) | **Planejada, aguardando a Executora** | Item A do roadmap D-60 (D-72, ADR-0013). Pacote novo, única dependência nova fora do núcleo nesta rodada: `ModelContextProtocol.AspNetCore` (Apache-2.0, verificado pela Planejadora). Três tools, só leitura (listar traces, obter trace, estatísticas por componente), mesma régua de segurança da Dashboard (R-14, fora de Development sem autorização responde 404). Sétimo pacote a se juntar à publicação na mesma tag |
+| 11 | Impeccable, guarda de qualidade visual | **Planejada, aguardando a Executora** | Governança/ferramenta de dev, fora do roadmap D-58/D-60 (D-73, ADR-0014). `PRODUCT.md`/`DESIGN.md` na raiz, `docs/brand/tokens.md` e os dois mockups já corrigidos pela Planejadora (tokens `-on-tint`, R-13→4,5:1+, rótulo de versão em 11px). Tarefa 11.4 corrige a implementação real para bater com a escala tipográfica que o guia já define (D-74), não inventa tamanho novo. Novo risco R-15 (`--no-sandbox` em container root no job de CI) |
 
-`0.1.1` publicada, Fases 8 e 9 aceitas e mergeadas, Fase 10 planejada. Roadmap pós `0.1.0`
+`0.1.1` publicada, Fases 8 e 9 aceitas e mergeadas, Fases 10 e 11 planejadas. Roadmap pós `0.1.0`
 registrado em
 D-32 (zoom, legenda, sparkline, cenários, delay slider, follow-live) e ampliado por duas rodadas
 de auditoria de mercado: D-58 (interop OpenTelemetry como prioridade 1, detector de N+1, sampling
