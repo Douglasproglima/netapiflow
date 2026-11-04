@@ -41,6 +41,25 @@ comunicação que precise das cores, tipografia ou espaçamento oficiais do proj
 | Inter | Interface, corpo | Regular 400, Medium 500, SemiBold 600 |
 | JetBrains Mono | Métricas, código, HTTP | Regular 400, Medium 500, tabular nums |
 
+### Escala aplicada ao dashboard
+
+Única fonte da escala por papel (tamanho/altura de linha/peso): `docs/design/flow-workspace/guide.md`
+só referencia esta tabela, não a duplica, achado da Fase 11 (`generate-design-md.js` dependia das
+duas fontes, risco de divergência silenciosa). Escala densa, própria de dashboard:
+
+| Papel | Família | Tamanho / altura | Peso |
+|---|---|---|---|
+| Título da página (topbar) | Plus Jakarta Sans | 18 / 24 | 700 |
+| Valor de métrica | Plus Jakarta Sans | 24 / 28, `tabular-nums` | 700 |
+| Título de card | Inter | 14 / 20 | 600 |
+| Corpo, itens de lista | Inter | 13 / 20 | 400 e 500 |
+| Rótulo, legenda | Inter | 12 / 16 | 500 |
+| Métrica pequena, duração, rota, trace id, verbo | JetBrains Mono | 12 / 16, `tabular-nums` | 400 e 500 |
+| Badge de verbo | JetBrains Mono | 11 / 16, `letter-spacing: .04em` | 600 |
+
+Nenhum texto do dashboard fica abaixo de 11px. O texto dentro do nó do grafo fica no mínimo em
+12px **no zoom 100%**.
+
 ## Espaçamento (base 4)
 
 `space-1` 4px · `space-2` 8px · `space-3` 12px · `space-4` 16px · `space-6` 24px · `space-8` 32px ·
