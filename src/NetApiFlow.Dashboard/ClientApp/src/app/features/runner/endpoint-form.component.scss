@@ -73,6 +73,11 @@
     padding: 0 0.75rem 0 2.125rem;
     font-size: 0.8125rem;
     font-family: var(--naf-font-ui);
+
+    &::placeholder {
+      color: var(--naf-text-muted);
+      opacity: 1;
+    }
   }
 }
 
