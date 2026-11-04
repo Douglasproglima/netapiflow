@@ -150,7 +150,7 @@
 .flow-graph__node-badge-text {
   font-size: 11px;
   font-weight: 600;
-  fill: var(--naf-warning);
+  fill: var(--naf-warning-on-tint);
   font-family: var(--naf-font-mono);
   user-select: none;
 }
@@ -209,10 +209,12 @@
     stroke: var(--naf-success);
   }
 
-  .flow-graph__node-type-icon,
-  .flow-graph__node-state {
+  .flow-graph__node-type-icon {
     color: var(--naf-success);
-    fill: var(--naf-success);
+  }
+
+  .flow-graph__node-state {
+    fill: var(--naf-success-on-tint);
   }
 }
 
@@ -230,10 +232,12 @@
     stroke: var(--naf-warning);
   }
 
-  .flow-graph__node-type-icon,
-  .flow-graph__node-state {
+  .flow-graph__node-type-icon {
     color: var(--naf-warning);
-    fill: var(--naf-warning);
+  }
+
+  .flow-graph__node-state {
+    fill: var(--naf-warning-on-tint);
   }
 }
 
@@ -251,10 +255,12 @@
     stroke: var(--naf-danger);
   }
 
-  .flow-graph__node-type-icon,
-  .flow-graph__node-state {
+  .flow-graph__node-type-icon {
     color: var(--naf-danger);
-    fill: var(--naf-danger);
+  }
+
+  .flow-graph__node-state {
+    fill: var(--naf-danger-on-tint);
   }
 }
 
