@@ -52,7 +52,7 @@ internal sealed partial class HttpClientActivityTagBackfill
                     BackfillResponseTags(value.Value);
                     break;
                 case "System.Net.Http.Exception":
-                    BackfillErrorTag();
+                    BackfillErrorTag(value.Value);
                     break;
             }
         }
@@ -78,7 +78,7 @@ internal sealed partial class HttpClientActivityTagBackfill
         }
 
         Activity.Current?.SetTag(HttpClientActivityTagNames.Method, request.Method.Method);
-        Activity.Current?.SetTag(HttpClientActivityTagNames.UrlFull, request.RequestUri?.ToString());
+        Activity.Current?.SetTag(HttpClientActivityTagNames.UrlFull, WithoutQueryOrFragment(request.RequestUri));
     }
 
     private static void BackfillResponseTags(object? payload)
@@ -89,8 +89,17 @@ internal sealed partial class HttpClientActivityTagBackfill
         }
     }
 
-    private static void BackfillErrorTag() =>
-        Activity.Current?.SetTag(HttpClientActivityTagNames.ErrorType, "connection_error");
+    private static void BackfillErrorTag(object? payload)
+    {
+        var exceptionTypeName = payload?.GetType().GetProperty("Exception")?.GetValue(payload) is Exception exception
+            ? exception.GetType().Name
+            : "connection_error";
+
+        Activity.Current?.SetTag(HttpClientActivityTagNames.ErrorType, exceptionTypeName);
+    }
+
+    private static string? WithoutQueryOrFragment(Uri? uri) =>
+        uri is null ? null : $"{uri.Scheme}://{uri.Authority}{uri.AbsolutePath}";
 
     private static partial class Log
     {
