@@ -77,6 +77,8 @@ const en = {
   'node.state.slow': 'Slow',
   'node.state.error': 'Error',
   'node.state.notExecuted': 'Not executed',
+  'node.nPlusOneBadge': '×{count}',
+  'node.nPlusOneAria': 'Suspected N+1, {count} queries with the same shape in this trace',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Restart',
@@ -112,6 +114,8 @@ const en = {
   'details.span.ancestors': 'Ancestors',
   'details.span.children': 'Children',
   'details.span.failedLabel': 'Failed',
+  'details.span.nPlusOne': 'Suspected N+1: {count} queries with this same shape in this trace.',
+  'details.span.nPlusOneJump': 'Jump to the first one',
   'details.backToSummary': 'Back to trace summary',
 
   'recent.title': 'Recent executions',
@@ -287,6 +291,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.state.slow': 'Lento',
   'node.state.error': 'Erro',
   'node.state.notExecuted': 'Não executado',
+  'node.nPlusOneBadge': '×{count}',
+  'node.nPlusOneAria': 'Possível N+1, {count} consultas com o mesmo formato neste trace',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Reiniciar',
@@ -322,6 +328,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'details.span.ancestors': 'Ancestrais',
   'details.span.children': 'Filhos',
   'details.span.failedLabel': 'Falhou',
+  'details.span.nPlusOne': 'Possível N+1: {count} consultas com esse mesmo formato neste trace.',
+  'details.span.nPlusOneJump': 'Pular para a primeira',
   'details.backToSummary': 'Voltar ao resumo do trace',
 
   'recent.title': 'Execuções recentes',

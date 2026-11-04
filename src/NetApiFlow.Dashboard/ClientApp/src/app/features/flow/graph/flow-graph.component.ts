@@ -115,7 +115,17 @@ export class FlowGraphComponent implements AfterViewInit {
   nodeAriaLabel(node: GraphNode): string {
     const duration =
       node.durationMicros === null ? '' : `, ${formatDurationMicros(node.durationMicros)}`;
-    return `${node.component}, ${node.operation}, ${this.stateLabel(node)}${duration}`;
+    const nPlusOne =
+      node.nPlusOneCount === null ? '' : `, ${this.nPlusOneAriaLabel(node.nPlusOneCount)}`;
+    return `${node.component}, ${node.operation}, ${this.stateLabel(node)}${duration}${nPlusOne}`;
+  }
+
+  nPlusOneBadgeLabel(count: number): string {
+    return this.language.translate('node.nPlusOneBadge', { count });
+  }
+
+  nPlusOneAriaLabel(count: number): string {
+    return this.language.translate('node.nPlusOneAria', { count });
   }
 
   nodeDuration(node: GraphNode): string {

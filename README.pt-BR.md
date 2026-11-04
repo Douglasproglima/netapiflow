@@ -110,6 +110,11 @@ impressão em preto e branco.
 | ✕ Erro | Terminou com exceção, ou uma etapa descendente falhou |
 | ∅ Não executado | O blueprint esperava esta etapa, mas a requisição terminou sem alcançá-la (ex.: um retorno antecipado, um ramo que nunca foi seguido) |
 
+Um nó `Database` também mostra um selo de N+1, por exemplo `⚠ ×12`, quando 3 ou mais etapas
+`Database` do mesmo trace compartilham o mesmo componente e a mesma operação, mesmo sob pais
+diferentes. É essa a forma que um N+1 clássico produz. Uma consulta por iteração do laço, mesmo
+formato de SQL, cada uma filha de uma instância diferente da etapa em loop.
+
 ## Preferências do dashboard
 
 A interface do dashboard vem em português (pt-BR) por padrão. Troque para inglês pelo seletor de

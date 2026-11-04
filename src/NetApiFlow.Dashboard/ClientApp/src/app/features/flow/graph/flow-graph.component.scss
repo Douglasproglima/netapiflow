@@ -134,6 +134,27 @@
   user-select: none;
 }
 
+// Suspected N+1 (D-71): icon + count, never color alone, same rule as node state (seção 7.2 do
+// prompt). Rendered outside the state color map below: it overlays any state, since the group
+// signal is independent of whether the query itself is slow, errored, etc.
+.flow-graph__node-badge {
+  color: var(--naf-warning);
+}
+
+.flow-graph__node-badge-bg {
+  fill: var(--naf-warning-tint);
+  stroke: var(--naf-warning);
+  stroke-width: 0.75;
+}
+
+.flow-graph__node-badge-text {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--naf-warning);
+  font-family: var(--naf-font-mono);
+  user-select: none;
+}
+
 // Color reinforces the state but is never the only signal: every state already renders a
 // distinct icon and text label (seção 7.2 do prompt), so this still works with colors removed.
 .flow-graph__node[data-state='waiting'] {
