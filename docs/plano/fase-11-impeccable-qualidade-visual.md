@@ -12,6 +12,13 @@ sobre fundo tingido (`-on-tint`), e os dois mockups de `docs/design/` já foram 
 usá-la, com o rótulo de versão em 11px. A Executora **não precisa refazer isso**, só aplicar o
 equivalente no código real.
 
+**Rollout cauteloso (D-76), depois de uma análise de prós e contras da própria Executora**: só
+`low-contrast` e `undersized-ui-text` bloqueiam tarefa, por serem medíveis (número de contraste,
+tamanho em px). Todo o resto (`ai-color-palette`, `overused-font`, `flat-type-hierarchy`,
+`nested-cards`) é aviso, não bloqueio, nesta fase. As tarefas 11.4 e 11.5 continuam valendo como
+correção de bug real (a implementação diverge do guia), só não são condição de pronto via
+detector. Ver `.claude/rules/design-quality.md` para a régua completa.
+
 ## Checagens antes de começar
 
 - `PRODUCT.md`, `DESIGN.md`, `.claude/rules/design-quality.md` já existem na raiz/`.claude/rules/`
@@ -68,9 +75,9 @@ Conferir a tabela completa da seção 3.3 do guia para qualquer outro papel tipo
 tenha divergido (valor de métrica, rótulo/legenda, métrica pequena, badge de verbo), não só os
 dois citados aqui.
 
-**Pronto quando:** `npx impeccable detect` não reporta mais `flat-type-hierarchy`, e uma conferência
-visual manual (print ou descrição no resumo da fase) mostra título de card visivelmente menor que
-título de página, igual ao mockup.
+**Pronto quando:** uma conferência visual manual (print ou descrição no resumo da fase) mostra
+título de card visivelmente menor que título de página, igual ao mockup. `flat-type-hierarchy`
+não bloqueia (D-76, aviso), mas corrigir é a coisa certa a fazer, não só para calar o detector.
 
 ### 11.5: `nested-cards` na caixa de erro do painel de detalhes
 
@@ -78,15 +85,18 @@ título de página, igual ao mockup.
 detalhes). Ajustar para uma seção com destaque plano (ex. fundo tingido sem borda arredondada
 igual à do card pai, ou remover a borda/sombra duplicada), não um card aninhado.
 
-**Pronto quando:** `npx impeccable detect` não reporta mais `nested-cards` nessa tela.
+**Pronto quando:** conferência visual manual confirma que a caixa de erro não parece mais um card
+dentro de outro. `nested-cards` não bloqueia (D-76, aviso), fica para julgamento de quem revisa.
 
 ### 11.6: Exceções conscientes da marca
 
-`npx impeccable ignores add-value ai-color-palette <valor-da-cor-flow> --reason "ADR-0009, ADR-0014"`
-e `npx impeccable ignores add-value overused-font Inter --reason "ADR-0009, ADR-0014"` (ou a
-sintaxe real da versão instalada, confirmar com `npx impeccable ignores --help`). Preferir
-`add-value` a `add-rule`: a regra continua ativa para qualquer cor ou fonte que não seja a da
-marca.
+`ai-color-palette` e `overused-font` já são aviso, não bloqueio (D-76). Registrar a exceção via
+`impeccable ignores add-value` muda o *texto* do aviso para deixar claro que é decisão tomada
+(ADR-0009/ADR-0014), não pendência esquecida: `npx impeccable ignores add-value ai-color-palette
+<valor-da-cor-flow> --reason "ADR-0009, ADR-0014"` e `npx impeccable ignores add-value
+overused-font Inter --reason "ADR-0009, ADR-0014"` (ou a sintaxe real da versão instalada,
+confirmar com `npx impeccable ignores --help`). Preferir `add-value` a `add-rule`: a regra
+continua ativa para qualquer cor ou fonte que não seja a da marca.
 
 **Pronto quando:** `npx impeccable detect` não reporta mais `ai-color-palette` nem
 `overused-font` para os valores da marca, e reportaria normalmente para um valor diferente (teste
@@ -105,7 +115,7 @@ ainda acusa).
 **Pronto quando:** botão na barra do topo, igual ao mockup; comportamento das barras de duração
 confirmado com dado real, corrigido ou explicado.
 
-### 11.8: CI no GitHub Actions
+### 11.8: CI no GitHub Actions, em modo aviso (D-76)
 
 Novo step (ou job) em `.github/workflows/ci.yml` (só quando o PR toca `ClientApp/`, reaproveitando
 o `detect-changes` já existente, D-64): subir um dos `samples/` com o dashboard habilitado,
@@ -117,11 +127,38 @@ rodando como root pode exigir `--no-sandbox` para o Chromium do detector; o runn
 GitHub Actions não deveria precisar disso, mas documentar a bandeira mesmo assim, para quem rodar
 localmente em container.
 
-**Pronto quando:** o job roda verde numa PR real, falha de propósito numa PR com uma regressão
-visual forçada (teste manual antes de reverter), e documenta no resumo da fase se
-`--no-sandbox` foi necessário no runner do GitHub ou não.
+**Nesta fase o job nunca falha o CI por um achado do detector**, mesmo `low-contrast`/
+`undersized-ui-text`: roda com `--github` (anotações aparecem na PR) mas o código de saída do
+comando é ignorado (ex.: `npx impeccable detect ... || true`), decisão deliberada de D-76 para
+rodar um ciclo inteiro em modo aviso antes de decidir se o CI passa a bloquear de verdade. A
+Planejadora decide isso depois de ver o job funcionando de ponta a ponta numa fase futura, não
+nesta.
 
-### 11.9: Comandos limpos e CHANGELOG
+**Pronto quando:** o job roda numa PR real, mostra anotação na PR para um achado forçado de
+propósito (teste manual, revertido depois), nunca falha o check por causa do detector, e
+documenta no resumo da fase se `--no-sandbox` foi necessário no runner do GitHub ou não.
+
+### 11.9: Versão fixa do Impeccable
+
+`package.json` (devDependency, não `npx impeccable` solto em nenhum script nem no workflow de
+CI) e o workflow de CI fixam a mesma versão exata. Atualizar é decisão deliberada (ler o
+changelog do Impeccable antes), mesma régua de `.claude/rules/dependencies.md`.
+
+**Pronto quando:** `package.json` tem `impeccable` como devDependency com versão exata (sem `^`
+nem `~`), e nenhum script/workflow chama `npx impeccable` sem passar por essa versão fixada.
+
+### 11.10: `DESIGN.md` gerado, não mantido à mão
+
+Script pequeno (ex. `scripts/generate-design-md.js` ou equivalente, rodando com Node já disponível
+no `ClientApp/`) que lê `docs/brand/tokens.md` e escreve `DESIGN.md` na raiz, para as duas
+referências nunca divergirem em silêncio. Rodar o script manualmente sempre que
+`docs/brand/tokens.md` mudar; não editar `DESIGN.md` à mão depois desta tarefa.
+
+**Pronto quando:** rodar o script a partir do `docs/brand/tokens.md` atual produz um `DESIGN.md`
+idêntico (ou semanticamente equivalente) ao que está hoje na raiz, e o script está documentado
+(onde roda, quando rodar) no próprio `.claude/rules/design-quality.md` ou no README do script.
+
+### 11.11: Comandos limpos e CHANGELOG
 
 `npm run lint`, `npm run test:ci`, `npm run build`, `npm run format:check` em `ClientApp/`;
 `dotnet build` e `dotnet test NetApiFlow.slnx` nos dois TFMs. `CHANGELOG.md` ganha uma entrada
@@ -133,9 +170,10 @@ correção de contraste e a adoção do Impeccable como guarda de CI.
 ## Aceite da fase
 
 Todos os critérios de pronto acima. Contagem do detector no resumo de fim de fase: quantos avisos
-antes da fase, quantos depois (esperado: zero fora das duas exceções conscientes). R-15 mitigado
-e provado (ou "não aplicável" documentado, se o runner do GitHub realmente não precisar de
-`--no-sandbox`).
+antes da fase, quantos depois, separados por categoria bloqueante (`low-contrast`,
+`undersized-ui-text`, esperado zero) e categoria aviso (o resto, esperado zero fora das duas
+exceções conscientes, mas não é condição de aceite). R-15 mitigado e provado (ou "não aplicável"
+documentado, se o runner do GitHub realmente não precisar de `--no-sandbox`).
 
 ## Ao terminar
 
