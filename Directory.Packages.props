@@ -51,6 +51,9 @@
     <!-- NetApiFlow.Mcp -->
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
 
+    <!-- tests/NetApiFlow.Mcp.Tests: real MCP client against the HTTP transport -->
+    <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
+
     <!-- NetApiFlow.Storage.PostgreSql -->
     <PackageVersion Include="Npgsql" Version="8.0.5" />
 

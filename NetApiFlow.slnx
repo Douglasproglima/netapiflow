@@ -15,6 +15,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/NetApiFlow.Benchmarks/NetApiFlow.Benchmarks.csproj" />
     <Project Path="tests/NetApiFlow.IntegrationTests/NetApiFlow.IntegrationTests.csproj" />
+    <Project Path="tests/NetApiFlow.Mcp.Tests/NetApiFlow.Mcp.Tests.csproj" />
     <Project Path="tests/NetApiFlow.Storage.Tests/NetApiFlow.Storage.Tests.csproj" />
     <Project Path="tests/NetApiFlow.Tests/NetApiFlow.Tests.csproj" />
   </Folder>
