@@ -25,9 +25,6 @@
   --naf-focus: #8b5cf6;
   --naf-grid-dot: rgba(148, 163, 184, 0.12);
 
-  // Text on its own tinted background (docs/brand/tokens.md, ADR-0014): a different contrast
-  // pair than the base color on a flat surface. Falls back to the base color until a pair is
-  // measured and found failing.
   --naf-danger-on-tint: #f87171;
   --naf-warning-on-tint: var(--naf-warning);
   --naf-success-on-tint: var(--naf-success);
