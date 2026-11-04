@@ -45,6 +45,7 @@ public class SampleApiControllersTests
                 {
                     services.AddRouting();
                     services.AddControllers().AddApplicationPart(typeof(Sample.Controllers.OrdersController).Assembly);
+                    services.AddHttpClient();
 
                     services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
                     services.AddNetApiFlowEntityFrameworkCore();
