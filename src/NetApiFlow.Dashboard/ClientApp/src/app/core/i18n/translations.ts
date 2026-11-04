@@ -77,6 +77,8 @@ const en = {
   'node.state.slow': 'Slow',
   'node.state.error': 'Error',
   'node.state.notExecuted': 'Not executed',
+  'node.nPlusOneBadge': '×{count}',
+  'node.nPlusOneAria': 'Suspected N+1, {count} queries with the same shape in this trace',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Restart',
@@ -287,6 +289,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.state.slow': 'Lento',
   'node.state.error': 'Erro',
   'node.state.notExecuted': 'Não executado',
+  'node.nPlusOneBadge': '×{count}',
+  'node.nPlusOneAria': 'Possível N+1, {count} consultas com o mesmo formato neste trace',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Reiniciar',

@@ -118,6 +118,31 @@
             {{ duration }}
           </text>
         }
+        @if (node.nPlusOneCount; as count) {
+          <g
+            class="flow-graph__node-badge"
+            [attr.transform]="'translate(' + (node.width - 36) + ' -9)'"
+            [attr.aria-label]="nPlusOneAriaLabel(count)"
+          >
+            <rect class="flow-graph__node-badge-bg" width="36" height="18" rx="9"></rect>
+            <svg
+              x="5"
+              y="4"
+              width="10"
+              height="10"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+            >
+              <path d="M8 1.5 L14.5 13.5 H1.5 Z" stroke-linejoin="round" />
+              <path d="M8 6.2V9.4M8 11.3v.1" stroke-linecap="round" />
+            </svg>
+            <text class="flow-graph__node-badge-text" x="21" y="13" text-anchor="middle">
+              {{ nPlusOneBadgeLabel(count) }}
+            </text>
+          </g>
+        }
       </g>
     }
   </g>
