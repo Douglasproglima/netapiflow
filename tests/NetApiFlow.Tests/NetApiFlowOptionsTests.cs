@@ -33,6 +33,18 @@ public class NetApiFlowOptionsTests
         options.Retention.MaxTraces.ShouldBe(1000);
         options.Retention.MaxAge.ShouldBe(TimeSpan.FromHours(24));
         options.Limits.MaxSpansPerTrace.ShouldBe(300);
+        options.ExternalSources.ShouldBe(ExternalActivitySource.None);
+    }
+
+    [Fact]
+    public void Value_WithExternalSourcesHttpClientInConfiguration_BindsFlag()
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:ExternalSources"] = "HttpClient",
+        }).Value;
+
+        options.ExternalSources.ShouldBe(ExternalActivitySource.HttpClient);
     }
 
     [Fact]
