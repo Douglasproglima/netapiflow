@@ -60,7 +60,6 @@ const en = {
   'action.requestFailed': 'Request failed.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Close the action panel',
-  'action.openPanel': 'Try an endpoint',
 
   'graph.title': 'Request path',
   'graph.backToLive': 'Back to live',
@@ -273,7 +272,6 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.requestFailed': 'A requisição falhou.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Fechar o painel de ação',
-  'action.openPanel': 'Testar um endpoint',
 
   'graph.title': 'Caminho da requisição',
   'graph.backToLive': 'Voltar ao vivo',

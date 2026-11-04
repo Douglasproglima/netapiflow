@@ -114,28 +114,6 @@
   }
 }
 
-.flow-workspace__open-action {
-  flex: none;
-  align-self: flex-start;
-  margin-bottom: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  height: 36px;
-  padding: 0 0.875rem;
-  border-radius: var(--naf-radius-sm);
-  border: 1px solid var(--naf-border);
-  background: var(--naf-surface);
-  color: var(--naf-text);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--naf-surface-2);
-  }
-}
-
 .flow-workspace__center {
   flex: 2 1 0;
   min-width: 0;

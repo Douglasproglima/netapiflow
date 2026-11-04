@@ -4,21 +4,21 @@
   <div class="flow-workspace__body" [class.flow-workspace__body--drawer]="isActionDrawer()">
     <app-endpoint-form
       class="flow-workspace__action"
-      [class.flow-workspace__action--open]="actionDrawerOpen()"
-      (traceDispatched)="openTrace($event); closeActionDrawer()"
+      [class.flow-workspace__action--open]="actionDrawer.open()"
+      (traceDispatched)="openTrace($event); actionDrawer.close()"
     />
-    @if (isActionDrawer() && actionDrawerOpen()) {
+    @if (isActionDrawer() && actionDrawer.open()) {
       <button
         type="button"
         class="flow-workspace__scrim"
         [attr.aria-label]="'action.closePanel' | t"
-        (click)="closeActionDrawer()"
+        (click)="actionDrawer.close()"
       ></button>
       <button
         type="button"
         class="flow-workspace__action-close"
         [attr.aria-label]="'action.closePanel' | t"
-        (click)="closeActionDrawer()"
+        (click)="actionDrawer.close()"
       >
         <svg
           viewBox="0 0 24 24"
@@ -34,21 +34,6 @@
     }
 
     <div class="flow-workspace__center">
-      @if (isActionDrawer()) {
-        <button type="button" class="flow-workspace__open-action" (click)="toggleActionDrawer()">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            width="16"
-            height="16"
-          >
-            <path d="M7 4.5v15l12-7.5Z" />
-          </svg>
-          {{ 'action.openPanel' | t }}
-        </button>
-      }
       @if (trace(); as trace) {
         <div class="flow-workspace__graph-header">
           <h2>{{ 'graph.title' | t }}</h2>

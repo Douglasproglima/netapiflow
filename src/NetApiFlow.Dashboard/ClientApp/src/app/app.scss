@@ -58,6 +58,27 @@
   gap: 1rem;
 }
 
+.app-topbar__try-endpoint {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 32px;
+  padding: 0 0.875rem;
+  border-radius: var(--naf-radius-sm);
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface);
+  color: var(--naf-text);
+  font-family: var(--naf-font-ui);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+  }
+}
+
 .app-topbar__meta {
   font-family: var(--naf-font-mono);
   font-size: 0.75rem;

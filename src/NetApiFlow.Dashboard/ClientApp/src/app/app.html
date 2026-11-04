@@ -20,6 +20,21 @@
   <h1 class="app-topbar__title">{{ pageTitle() | t }}</h1>
   <span class="app-topbar__sub">{{ pageSubtitle() | t }}</span>
   <div class="app-topbar__right">
+    @if (onFlowRoute() && actionDrawer.isDrawer()) {
+      <button type="button" class="app-topbar__try-endpoint" (click)="actionDrawer.toggle()">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          width="16"
+          height="16"
+        >
+          <path d="M7 4.5v15l12-7.5Z" />
+        </svg>
+        {{ 'topbar.tryEndpoint' | t }}
+      </button>
+    }
     <span class="app-topbar__meta">{{
       'topbar.inProgress' | t: { count: inProgressCount() }
     }}</span>
