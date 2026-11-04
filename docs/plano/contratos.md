@@ -156,6 +156,34 @@ responde `403`. Tudo que não está nesta lista (`DashboardAccessGate`,
 `DashboardIndexHtmlCache`, `DashboardEmbeddedFiles`, `MapNetApiFlowDashboardApi`) é `internal`.
 Formalizado na revisão da Fase 5.
 
+### `NetApiFlow.Mcp`: superfície pública
+
+```csharp
+namespace NetApiFlow.Mcp;
+
+public static class NetApiFlowMcpServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlowMcp(this IServiceCollection services);
+}
+
+namespace NetApiFlow.Mcp.Endpoints;
+
+public static class NetApiFlowMcpEndpointRouteBuilderExtensions
+{
+    public static IEndpointConventionBuilder UseNetApiFlowMcp(
+        this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp");
+}
+```
+
+`UseNetApiFlowMcp` monta o servidor MCP (transporte HTTP, `ModelContextProtocol.AspNetCore`) sob
+`basePath`. Mesma régua da Dashboard (ADR-0006/ADR-0013): fora de
+`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization(...)` nem
+`IDashboardAuthorizationFilter` (reaproveitado, não duplicado) registrado no DI, toda rota do MCP
+responde `404`. Três tools na v1, todas só leitura, implementadas sobre `ITraceStore`: listar
+traces recentes (filtro por status, método, rota, limite), obter uma trace por id, obter
+estatísticas por componente. Não depende de `NetApiFlow.Dashboard`. Formalizado na revisão da
+Fase 10.
+
 ### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
 
 ```csharp
