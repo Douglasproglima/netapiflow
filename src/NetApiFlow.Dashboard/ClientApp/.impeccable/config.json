@@ -7,9 +7,7 @@
     }
   },
   "detector": {
-    "ignoreRules": [
-      "ai-color-palette"
-    ],
+    "ignoreRules": ["ai-color-palette"],
     "ignoreFiles": [],
     "ignoreValues": [
       {
