@@ -227,28 +227,22 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-// Heading scale (brand guide, Seção 03), scaled down from the guide's own marketing/hero sizes
-// to what a dense dashboard's panel and section titles actually need.
-h1,
-h2,
-h3 {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+// Heading scale. h1 is the page title (brand guide, Seção 03); h2/h3 are card titles
+// (docs/design/flow-workspace/guide.md, seção 3.3: Inter 14/20, weight 600), not a smaller step
+// of the page title's Plus Jakarta Sans scale.
+h1 {
+  font-family: var(--naf-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
   letter-spacing: -0.01em;
 }
 
-h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-}
-
-h2 {
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
+h2,
 h3 {
-  font-size: 1rem;
-  font-weight: 700;
+  font-family: var(--naf-font-ui);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
 }
 
 code,
