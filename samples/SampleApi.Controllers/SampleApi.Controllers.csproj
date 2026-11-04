@@ -19,6 +19,7 @@
   <!-- Microsoft.AspNetCore.OpenApi only ships a net9.0+ asset. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
 </Project>
