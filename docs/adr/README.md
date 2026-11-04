@@ -21,3 +21,4 @@ comunidade, sem reabrir a decisão sem justificativa técnica nova).
 | [ADR-0009](0009-identidade-visual-guia-de-marca.md) | Guia de marca v1 como referência canônica de identidade visual | Aceito | [#68](https://github.com/Douglasproglima/netapiflow/issues/68) |
 | [ADR-0010](0010-layout-de-workspace-unico.md) | `/flow` vira um workspace denso, as demais rotas continuam existindo | Aceito | [#69](https://github.com/Douglasproglima/netapiflow/issues/69) |
 | [ADR-0011](0011-i18n-em-tempo-de-execucao-e-tema-manual.md) | i18n do dashboard em tempo de execução, tema com alternador manual | Aceito | [#70](https://github.com/Douglasproglima/netapiflow/issues/70) |
+| [ADR-0012](0012-ingestao-httpclient-via-activitysource-externo.md) | Ingestão da `ActivitySource` nativa do `HttpClient`, opt-in, sem exportação OTLP | Aceito | [#83](https://github.com/Douglasproglima/netapiflow/issues/83) |

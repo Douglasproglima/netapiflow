@@ -59,12 +59,23 @@ public sealed class NetApiFlowOptions
     public bool Enabled { get; set; } = true;
     public TimeSpan SlowThreshold { get; set; } = TimeSpan.FromMilliseconds(250);
     public bool CaptureSqlText { get; set; }
+    public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public IReadOnlyList<string> IncludePatterns { get; }
     public IReadOnlyList<string> ExcludePatterns { get; }
     public NetApiFlowOptions IncludePaths(params string[] patterns);
     public NetApiFlowOptions ExcludePaths(params string[] patterns);
+}
+
+/// <summary>Ecosystem <c>ActivitySource</c> instances NetApiFlow also listens to (ADR-0012). Opt-in, "None" by default.</summary>
+[Flags]
+public enum ExternalActivitySource
+{
+    None = 0,
+
+    /// <summary>Outbound calls from <see cref="System.Net.Http.HttpClient"/>, mapped to a <see cref="ComponentType.Http"/> span.</summary>
+    HttpClient = 1,
 }
 
 public sealed class RetentionOptions
