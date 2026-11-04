@@ -30,7 +30,17 @@ agir. Não assuma um papel fixo só porque é o que este arquivo descreveu numa 
 - Conventional Commits, em inglês, uma linha, escopo opcional (`feat(core): ...`).
 - Sem corpo desnecessário. Sem linha de coautor em commit fora de `main`.
 - Commit pequeno e coerente. Uma mudança lógica por commit (uma tarefa do plano de fase = um
-  commit, seção 15.2 do `netapiflow-prompt.md`).
+  commit, seção 15.2 do `netapiflow-prompt.md`). **Isso não significa uma PR por commit**: várias
+  mudanças pequenas e relacionadas (atualizar um status, ajustar um workflow, registrar a decisão
+  que isso gerou) cabem na mesma branch, em commits separados, numa única PR. Abrir uma PR por
+  commit multiplica rodada de CI e confirmação de merge sem necessidade (D-63 em diante).
+
+## Proteção de branch
+
+`main` e `develop` têm proteção configurada no GitHub (D-65): PR obrigatório para mergear, checks
+`pr-lint`, `secret-scan`, `detect-changes` e `build-test` (os dois sistemas operacionais)
+obrigatórios, sem force-push, sem apagar a branch. Vale até para quem administra o repositório.
+Push direto numa das duas branches é rejeitado pelo próprio GitHub, não só pela convenção abaixo.
 
 ## Ações que exigem confirmação
 
