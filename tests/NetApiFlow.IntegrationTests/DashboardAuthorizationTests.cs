@@ -18,9 +18,10 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the dashboard's access gate (tarefa 5.4, risco R-09, ADR-0006): outside Development,
-/// every route (API and static UI alike) 404s unless the host configured <c>RequireAuthorization</c>
-/// or an <see cref="IDashboardAuthorizationFilter"/>; with one configured and denied, it 403s.
+/// Verifies the dashboard's access gate (tarefa 5.4, risco R-09, ADR-0006, ADR-0015): outside
+/// Development, every route (API and static UI alike) 404s unless the host configured
+/// <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>; with one configured and
+/// denied, it 403s.
 /// </summary>
 public class DashboardAuthorizationTests
 {
@@ -52,11 +53,11 @@ public class DashboardAuthorizationTests
     }
 
     [Fact]
-    public async Task WithDashboardAuthorizationFilterDenying_EveryRouteReturns403()
+    public async Task WithFlowAccessFilterDenying_EveryRouteReturns403()
     {
         using var host = await StartHostAsync(
             Environments.Development,
-            configureServices: services => services.AddSingleton<IDashboardAuthorizationFilter>(new DenyingAuthorizationFilter()),
+            configureServices: services => services.AddSingleton<IFlowAccessFilter>(new DenyingAccessFilter()),
             configureDashboard: _ => { });
 
         var client = host.GetTestServer().CreateClient();
@@ -99,7 +100,7 @@ public class DashboardAuthorizationTests
             .StartAsync();
     }
 
-    private sealed class DenyingAuthorizationFilter : IDashboardAuthorizationFilter
+    private sealed class DenyingAccessFilter : IFlowAccessFilter
     {
         public ValueTask<bool> AuthorizeAsync(Microsoft.AspNetCore.Http.HttpContext context) => new(false);
     }

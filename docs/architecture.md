@@ -16,6 +16,7 @@ flowchart TD
     PW --> STORE[(ITraceStore<br/>in-memory · PostgreSQL · SQL Server)]
     STORE --> DASH[NetApiFlow.Dashboard<br/>REST /flow/api/* + embedded Angular UI]
     SSE --> DASH
+    STORE --> MCP[NetApiFlow.Mcp<br/>read-only MCP tools]
 ```
 
 ## Components
@@ -42,8 +43,12 @@ flowchart TD
 - **`NetApiFlow.Dashboard`**: REST + SSE API under `{basePath}/api`, and the compiled Angular
   client served from the same assembly, embedded as a manifest resource — see
   [ADR-0005](adr/0005-dashboard-angular-embutido.md). Access is gated outside Development unless
-  `RequireAuthorization` or `IDashboardAuthorizationFilter` is configured — see
+  `RequireAuthorization` or `IFlowAccessFilter` is configured — see
   [ADR-0006](adr/0006-dashboard-restrito-a-development.md).
+- **`NetApiFlow.Mcp`**: three read-only MCP tools over the same `ITraceStore`, no dependency on
+  `NetApiFlow.Dashboard` — see [ADR-0013](adr/0013-servidor-mcp-somente-leitura.md). Shares the
+  dashboard's access gate via `IFlowAccessFilter` in the core, instead of duplicating it — see
+  [ADR-0015](adr/0015-filtro-de-acesso-unico-no-nucleo.md).
 
 ## Cross-cutting decisions
 

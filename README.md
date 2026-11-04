@@ -90,6 +90,7 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 | [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Automatic tracking of EF Core database commands |
 | [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persists traces to PostgreSQL instead of memory |
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persists traces to SQL Server instead of memory |
+| [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | A read-only MCP server so an AI agent can query traces directly |
 
 The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework. Every
 one of the above is opt-in.
@@ -151,7 +152,7 @@ Mounting the dashboard at a path other than the default, and protecting it:
 
 ```csharp
 app.UseNetApiFlowDashboard("/internal/flow")
-    .RequireAuthorization("AdminOnly"); // or register an IDashboardAuthorizationFilter in DI
+    .RequireAuthorization("AdminOnly"); // or register an IFlowAccessFilter in DI
 ```
 
 Persisting to a real database instead of memory (call after `AddNetApiFlow`, it replaces the
@@ -175,10 +176,35 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > responds **404** unless you explicitly configure one of:
 >
 > - `.RequireAuthorization("YourPolicy")`, chained on `app.UseNetApiFlowDashboard(...)`.
-> - A custom `IDashboardAuthorizationFilter` registered in DI, checked on every request
+> - A custom `IFlowAccessFilter` registered in DI, checked on every request
 >   regardless of environment.
 >
 > There is no "partially open" default. If neither is configured, production always 404s.
+
+## MCP server
+
+```bash
+dotnet add package NetApiFlow.Mcp
+```
+
+```csharp
+builder.Services.AddNetApiFlowMcp();
+
+var app = builder.Build();
+app.UseNetApiFlowMcp(); // mounted at /flow/mcp by default
+```
+
+Three read-only tools, backed by the same `ITraceStore` the dashboard reads from: `list_recent_traces`,
+`get_trace` and `get_component_stats`. No write tool exists in this version: nothing deletes a
+trace or triggers a replay through MCP.
+
+> **Same security rule as the dashboard.** Outside `IHostEnvironment.IsDevelopment()`, every MCP
+> route responds **404** unless you explicitly configure `.RequireAuthorization(...)` or a custom
+> `IFlowAccessFilter`, exactly like [Dashboard security in production](#dashboard-security-in-production).
+> An AI agent reading trace data is the same exposure risk as the visual dashboard.
+
+See `samples/SampleApi.Controllers/README.md` for how to point a real MCP client (e.g. Claude
+Code) at a running instance.
 
 ## Sensitive data
 
