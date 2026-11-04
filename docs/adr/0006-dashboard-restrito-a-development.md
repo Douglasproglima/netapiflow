@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#66](https://github.com/Douglasproglima/netapiflow/issues/66)
+
 ## Contexto
 O dashboard expõe a estrutura interna da aplicação do usuário: nomes de componente, operação,
 duração e origem de erro. `netapiflow-prompt.md` (seção 6.10) exige que isso não vaze por

@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#64](https://github.com/Douglasproglima/netapiflow/issues/64)
+
 ## Contexto
 `netapiflow-prompt.md` (seção 5) deixa em aberto a escolha entre ADO.NET puro e Dapper para
 `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`, pedindo que a IA Planejadora

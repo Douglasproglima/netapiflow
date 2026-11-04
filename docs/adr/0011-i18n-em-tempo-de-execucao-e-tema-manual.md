@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#70](https://github.com/Douglasproglima/netapiflow/issues/70)
+
 ## Contexto
 
 O dashboard ganhou um pedido novo do usuário: idioma com PT-BR como padrão e inglês como
