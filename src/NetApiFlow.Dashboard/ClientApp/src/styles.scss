@@ -227,9 +227,6 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-// Heading scale. h1 is the page title (brand guide, Seção 03); h2/h3 are card titles
-// (docs/design/flow-workspace/guide.md, seção 3.3: Inter 14/20, weight 600), not a smaller step
-// of the page title's Plus Jakarta Sans scale.
 h1 {
   font-family: var(--naf-font-display);
   font-size: 1.25rem;
@@ -444,6 +441,11 @@ code,
   &:focus-visible {
     outline: 2px solid var(--naf-focus);
     outline-offset: 2px;
+  }
+
+  &::placeholder {
+    color: var(--naf-text-muted);
+    opacity: 1;
   }
 }
 
