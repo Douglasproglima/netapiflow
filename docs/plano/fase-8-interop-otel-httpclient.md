@@ -32,17 +32,35 @@ em relação ao que existe hoje.
 `HttpClientHandler` sendo observada e virando `FlowSpan`; a suíte inteira de `NetApiFlow.Tests`
 continua verde sem a flag (sem regressão).
 
-### 8.3: Mapeamento da `Activity` de `HttpClient` para `FlowSpan`
+### 8.3: Mapeamento da `Activity` de `HttpClient` para `FlowSpan` (ver D-69)
 
 `Component = "HttpClient"`, `Type = ComponentType.Http`, `Operation = "{método} {host}{path}"`
-(ex.: `"GET api.example.com/users"`). Confirmar empiricamente os nomes de tag reais produzidos
-pelo runtime em `net8.0` e em `net10.0` (podem divergir entre convenções de semântica OTel do
-`HttpClientHandler`; documentar no resumo da fase qual nome de tag foi usado em cada TFM, com
-`#if` se necessário).
+(ex.: `"GET api.example.com/users"`).
+
+Achado da Executora durante a implementação (D-69): em `net8.0`, a `Activity` nativa de
+`"System.Net.Http.HttpRequestOut"` **não carrega nenhuma tag de convenção semântica** (nem
+`http.method`, nem `url.full`, nem equivalente antigo). Só `net9.0+`/`net10.0` produz essas tags
+na própria `Activity`. Decisão: em vez de degradar a feature em `net8.0` ou criar um segundo
+mecanismo de captura de span, usar o `DiagnosticListener` legado (`"HttpHandlerDiagnosticListener"`,
+também BCL, sem dependência nova) **só sob `#if NET8_0`**, para ler o `HttpRequestMessage` real no
+evento `"System.Net.Http.HttpRequestOut.Start"` e chamar `Activity.Current?.SetTag(...)` com os
+**mesmos nomes de tag canônicos** que `net10.0` já produz nativamente. A partir daí, o resto do
+código de mapeamento (`FlowActivityListener`) lê sempre o mesmo conjunto de tags, sem `#if` fora
+desse único ponto de backfill.
+
+Para não depender da ordem de execução entre o `DiagnosticListener` (que roda `SetTag` no início
+da chamada) e o `ActivityListener.ActivityStarted` do NetApiFlow (que pode rodar antes ou depois,
+sem garantia), `Component`/`Operation`/URL sanitizada da etapa `HttpClient` só são lidos e
+gravados de verdade em `ActivityStopped`, não em `ActivityStarted` (`FlowSpan` já é atualizado via
+`existing with { ... }` nesse ponto para outros campos, ver `FlowActivityListener.cs`). Em
+`ActivityStarted`, o span nasce com um nome genérico (ex. `"HTTP request"`), igual ao fallback já
+usado para qualquer `Activity` sem as tags do NetApiFlow; o nome final chega no evento
+`SpanCompleted` do SSE, nunca antes.
 
 **Pronto quando:** teste de integração com um `HttpClient` real contra um servidor de teste local
 (`WebApplicationFactory` ou `HttpListener`) confere `Component`, `Type` e `Operation` do span
-resultante, nos dois TFMs.
+resultante, nos dois TFMs, incluindo um teste que comprova que `net8.0` produz o mesmo resultado
+final que `net10.0` apesar da `Activity` nativa não ter tag nenhuma.
 
 ### 8.4: Sanitização da URL (prova R-13, ADR-0007 continua valendo)
 
