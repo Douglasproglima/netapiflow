@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
@@ -14,7 +15,7 @@ public class FlowActivityListenerTests
     {
         var wrappedOptions = Options.Create(options ?? new NetApiFlowOptions());
         var recorder = new FlowRecorder(wrappedOptions);
-        var subject = new FlowActivityListener(recorder, wrappedOptions);
+        var subject = new FlowActivityListener(recorder, wrappedOptions, NullLoggerFactory.Instance);
 
         var root = new Activity("TestRoot");
         root.Start();
