@@ -46,9 +46,8 @@ configuração extra.
 
 ### 10.3: Régua de segurança (prova R-14)
 
-Fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
-`IDashboardAuthorizationFilter` (reaproveitado do núcleo/Dashboard, não duplicado) registrado no
-DI, toda rota do MCP responde 404.
+Fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IFlowAccessFilter`
+(núcleo, ADR-0015; reaproveitado, não duplicado) registrado no DI, toda rota do MCP responde 404.
 
 **Pronto quando:** teste de integração com `UseEnvironment(Environments.Production)` real, sem
 nenhuma configuração de autorização, confirma 404 em toda rota do MCP. Mitiga R-14.
