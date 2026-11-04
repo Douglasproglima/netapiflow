@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#61](https://github.com/Douglasproglima/netapiflow/issues/61)
+
 ## Contexto
 O NetApiFlow é distribuído como pacote NuGet público. Outros projetos pessoais do autor (Palpitt)
 usam gitflow com versão no formato `VERSAO.ANOMES.RELEASE.FIX`, mas esse formato não carrega

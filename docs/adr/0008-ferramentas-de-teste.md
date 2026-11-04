@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#67](https://github.com/Douglasproglima/netapiflow/issues/67)
+
 ## Contexto
 `netapiflow-prompt.md` (seção 4.3) deixa em aberto a escolha entre FluentAssertions/Shouldly e
 NSubstitute/Moq, pedindo decisão justificada da IA Planejadora.
