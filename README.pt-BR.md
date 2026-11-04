@@ -91,6 +91,7 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 | [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Rastreamento automático de comandos de banco do EF Core |
 | [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persiste traces no PostgreSQL em vez de memória |
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persiste traces no SQL Server em vez de memória |
+| [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | Um servidor MCP só leitura para um agente de IA consultar traces direto |
 
 O núcleo (`NetApiFlow`) não tem nenhuma dependência além do shared framework do ASP.NET Core.
 Cada item acima é opcional.
@@ -153,7 +154,7 @@ Montando o dashboard num caminho diferente do padrão, e protegendo-o:
 
 ```csharp
 app.UseNetApiFlowDashboard("/internal/flow")
-    .RequireAuthorization("AdminOnly"); // ou registre um IDashboardAuthorizationFilter no DI
+    .RequireAuthorization("AdminOnly"); // ou registre um IFlowAccessFilter no DI
 ```
 
 Persistindo num banco de verdade em vez de memória (chamar depois de `AddNetApiFlow`, substitui o
@@ -177,11 +178,37 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > responde **404**, a menos que você configure explicitamente um dos dois:
 >
 > - `.RequireAuthorization("SuaPolicy")`, encadeado em `app.UseNetApiFlowDashboard(...)`.
-> - Um `IDashboardAuthorizationFilter` próprio registrado no DI, checado em toda requisição,
+> - Um `IFlowAccessFilter` próprio registrado no DI, checado em toda requisição,
 >   independente do ambiente.
 >
 > Não existe padrão "parcialmente aberto". Sem nenhum dos dois configurados, produção sempre
 > devolve 404.
+
+## Servidor MCP
+
+```bash
+dotnet add package NetApiFlow.Mcp
+```
+
+```csharp
+builder.Services.AddNetApiFlowMcp();
+
+var app = builder.Build();
+app.UseNetApiFlowMcp(); // montado em /flow/mcp por padrão
+```
+
+Três tools só leitura, sobre o mesmo `ITraceStore` que o dashboard lê: `list_recent_traces`,
+`get_trace` e `get_component_stats`. Nenhuma tool de escrita existe nesta versão. Nada apaga um
+trace nem dispara um replay via MCP.
+
+> **Mesma regra de segurança do dashboard.** Fora de `IHostEnvironment.IsDevelopment()`, toda
+> rota do MCP responde **404**, a menos que você configure explicitamente
+> `.RequireAuthorization(...)` ou um `IFlowAccessFilter` próprio, igual a
+> [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção). Um agente de IA
+> lendo dado de trace tem o mesmo risco de exposição que o dashboard visual.
+
+Veja `samples/SampleApi.Controllers/README.md` para como apontar um cliente MCP real (ex.:
+Claude Code) para uma instância rodando.
 
 ## Dados sensíveis
 

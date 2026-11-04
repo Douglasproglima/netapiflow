@@ -4,6 +4,8 @@ using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Marking;
+using NetApiFlow.Mcp;
+using NetApiFlow.Mcp.Endpoints;
 using SampleApi.Controllers.Application;
 using SampleApi.Controllers.Data;
 
@@ -17,6 +19,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
 builder.Services.AddNetApiFlowDashboard();
+builder.Services.AddNetApiFlowMcp();
 builder.Services.AddNetApiFlowEntityFrameworkCore();
 
 builder.Services.AddDbContext<SampleDbContext>((sp, options) =>
@@ -57,5 +60,6 @@ app.MapControllers();
 app.MapOpenApi();
 #endif
 app.UseNetApiFlowDashboard();
+app.UseNetApiFlowMcp();
 
 app.Run();
