@@ -3,23 +3,59 @@ name: CI
 on:
   push:
     branches: [main, develop]
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - ".claude/**"
   pull_request:
     branches: [main, develop]
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-      - ".claude/**"
 
 permissions:
   contents: read
 
 jobs:
+  # Detects documentation-only changes so build-test and secret-scan can report "skipped" (which
+  # satisfies a required status check) instead of never running at all. A workflow-level
+  # `paths-ignore` would leave required checks permanently pending on a docs-only PR, since GitHub
+  # branch protection waits for a status that a skipped *workflow* never reports (D-64).
+  detect-changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.filter.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determine if only docs changed
+        id: filter
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.event.after }}"
+          fi
+
+          if [ -z "$BASE_SHA" ] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
+            echo "No usable base SHA (new branch or force-push), treating as a full build." >&2
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -qvE '\.md$|^docs/|^\.claude/'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build-test:
     name: build-test (${{ matrix.os }})
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +117,8 @@ jobs:
 
   secret-scan:
     name: secret-scan
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
