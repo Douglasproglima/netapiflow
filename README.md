@@ -109,6 +109,11 @@ black-and-white printout.
 | ✕ Error | Finished with an exception, or a descendant step failed |
 | ∅ Not executed | The blueprint expected this step, but the request finished without reaching it (e.g. an early return, a short-circuited branch) |
 
+A `Database` node also shows an N+1 badge, e.g. `⚠ ×12`, when 3 or more `Database` steps in the
+same trace share the same component and operation, even under different parents. That shape is
+what a classic N+1 loop produces: one query per loop iteration, same SQL format, different
+instance of the step in the loop.
+
 ## Dashboard preferences
 
 The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in

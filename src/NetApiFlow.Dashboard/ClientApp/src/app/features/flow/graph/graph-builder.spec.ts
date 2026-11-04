@@ -1,4 +1,9 @@
-import { buildGraph, GraphBuilderInput } from './graph-builder';
+import {
+  buildGraph,
+  findNPlusOneGroup,
+  GraphBuilderInput,
+  N_PLUS_ONE_THRESHOLD,
+} from './graph-builder';
 import { ComponentType, FlowSpan, FlowStatus } from '../../../core/models';
 
 const SLOW_THRESHOLD_MICROS = 250_000;
@@ -349,5 +354,231 @@ describe('buildGraph', () => {
     expect(takenBranch?.state).toBe('completed');
     const missedBranch = result.nodes.find((n) => n.component === 'CacheMissHandler');
     expect(missedBranch?.state).toBe('not-executed');
+  });
+
+  describe('N+1 detection (D-71)', () => {
+    it('marks every member of a (component, operation) group spread under different parents once it reaches the threshold', () => {
+      const spans: FlowSpan[] = [
+        span({
+          spanId: 'root',
+          parentSpanId: null,
+          sequence: 0,
+          component: 'OrdersController',
+          operation: 'Get',
+        }),
+        span({
+          spanId: 'loop-1',
+          parentSpanId: 'root',
+          sequence: 1,
+          component: 'OrderService',
+          operation: 'GetAsync',
+        }),
+        span({
+          spanId: 'query-1',
+          parentSpanId: 'loop-1',
+          sequence: 2,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'loop-2',
+          parentSpanId: 'root',
+          sequence: 3,
+          component: 'OrderService',
+          operation: 'GetAsync',
+        }),
+        span({
+          spanId: 'query-2',
+          parentSpanId: 'loop-2',
+          sequence: 4,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'loop-3',
+          parentSpanId: 'root',
+          sequence: 5,
+          component: 'OrderService',
+          operation: 'GetAsync',
+        }),
+        span({
+          spanId: 'query-3',
+          parentSpanId: 'loop-3',
+          sequence: 6,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+      ];
+
+      const result = buildGraph(input({ spans }));
+
+      const queryNodes = result.nodes.filter((n) => n.id.startsWith('query-'));
+      expect(queryNodes).toHaveLength(3);
+      for (const node of queryNodes) {
+        expect(node.nPlusOneCount).toBe(3);
+      }
+    });
+
+    it('does not mark a group below the threshold', () => {
+      const spans: FlowSpan[] = [
+        span({
+          spanId: 'root',
+          parentSpanId: null,
+          sequence: 0,
+          component: 'C',
+          operation: 'Op',
+        }),
+        span({
+          spanId: 'query-1',
+          parentSpanId: 'root',
+          sequence: 1,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'query-2',
+          parentSpanId: 'root',
+          sequence: 2,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+      ];
+
+      const result = buildGraph(input({ spans }));
+
+      expect(result.nodes.find((n) => n.id === 'query-1')?.nPlusOneCount).toBeNull();
+      expect(result.nodes.find((n) => n.id === 'query-2')?.nPlusOneCount).toBeNull();
+    });
+
+    it('never groups Database spans with a different operation, even at threshold count', () => {
+      const spans: FlowSpan[] = [
+        span({
+          spanId: 'root',
+          parentSpanId: null,
+          sequence: 0,
+          component: 'C',
+          operation: 'Op',
+        }),
+        span({
+          spanId: 'query-orders',
+          parentSpanId: 'root',
+          sequence: 1,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'query-items-1',
+          parentSpanId: 'root',
+          sequence: 2,
+          component: 'OrderRepository',
+          operation: 'SELECT Items',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'query-items-2',
+          parentSpanId: 'root',
+          sequence: 3,
+          component: 'OrderRepository',
+          operation: 'SELECT Items',
+          type: 'Database' as ComponentType,
+        }),
+      ];
+
+      const result = buildGraph(input({ spans }));
+
+      expect(result.nodes.find((n) => n.id === 'query-orders')?.nPlusOneCount).toBeNull();
+      expect(result.nodes.find((n) => n.id === 'query-items-1')?.nPlusOneCount).toBeNull();
+    });
+
+    it('never counts or marks a ghost node, even when its blueprint shape matches a real N+1 group', () => {
+      const spans: FlowSpan[] = [
+        span({
+          spanId: 'root',
+          parentSpanId: null,
+          sequence: 0,
+          component: 'C',
+          operation: 'Op',
+        }),
+        span({
+          spanId: 'query-1',
+          parentSpanId: 'root',
+          sequence: 1,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'query-2',
+          parentSpanId: 'root',
+          sequence: 2,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+      ];
+      const blueprintSpans: FlowSpan[] = [
+        ...spans,
+        span({
+          spanId: 'bp-query-3',
+          parentSpanId: 'root',
+          sequence: 3,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+      ];
+
+      const result = buildGraph(input({ spans, blueprintSpans }));
+
+      const ghost = result.nodes.find(
+        (n) => n.component === 'OrderRepository' && n.sequence === null,
+      );
+      expect(ghost).toBeDefined();
+      expect(ghost?.nPlusOneCount).toBeNull();
+      expect(result.nodes.find((n) => n.id === 'query-1')?.nPlusOneCount).toBeNull();
+      expect(result.nodes.find((n) => n.id === 'query-2')?.nPlusOneCount).toBeNull();
+    });
+  });
+});
+
+describe('findNPlusOneGroup', () => {
+  function dbSpan(spanId: string, sequence: number, operation = 'SELECT Orders'): FlowSpan {
+    return span({
+      spanId,
+      parentSpanId: null,
+      sequence,
+      component: 'OrderRepository',
+      operation,
+      type: 'Database' as ComponentType,
+    });
+  }
+
+  it('returns the whole group, sorted by sequence, once the threshold is reached', () => {
+    const spans = [dbSpan('c', 2), dbSpan('a', 0), dbSpan('b', 1)];
+
+    const group = findNPlusOneGroup(spans, 'b');
+
+    expect(group.map((s) => s.spanId)).toEqual(['a', 'b', 'c']);
+    expect(group.length).toBeGreaterThanOrEqual(N_PLUS_ONE_THRESHOLD);
+  });
+
+  it('returns an empty array when the group is below the threshold', () => {
+    const spans = [dbSpan('a', 0), dbSpan('b', 1)];
+
+    expect(findNPlusOneGroup(spans, 'a')).toEqual([]);
+  });
+
+  it('returns an empty array for a span that is not of type Database', () => {
+    const spans = [
+      span({ spanId: 'svc', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),
+    ];
+
+    expect(findNPlusOneGroup(spans, 'svc')).toEqual([]);
   });
 });
