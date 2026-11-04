@@ -49,7 +49,7 @@
   text {
     fill: var(--naf-text-muted);
     font-family: var(--naf-font-mono);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
   }
 }
@@ -120,14 +120,14 @@
 }
 
 .flow-graph__node-operation {
-  font-size: 10.5px;
+  font-size: 11px;
   fill: var(--naf-text-muted);
   font-family: var(--naf-font-mono);
   user-select: none;
 }
 
 .flow-graph__node-duration {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
   fill: var(--naf-text);
   font-family: var(--naf-font-mono);
@@ -148,7 +148,7 @@
 }
 
 .flow-graph__node-badge-text {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   fill: var(--naf-warning);
   font-family: var(--naf-font-mono);
