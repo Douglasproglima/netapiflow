@@ -55,16 +55,21 @@ jobs:
   build-test:
     name: build-test (${{ matrix.os }})
     needs: detect-changes
-    if: needs.detect-changes.outputs.docs_only != 'true'
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # A job-level `if` here would stop the matrix from ever expanding on a skip, so GitHub reports
+    # a single literal "build-test (${{ matrix.os }})" check instead of one per OS. Required status
+    # checks name the OS explicitly, so a docs-only PR would block forever waiting on a check that
+    # never gets created. Skipping every step instead keeps both OS-specific job names intact.
     steps:
-      - uses: actions/checkout@v7
+      - if: needs.detect-changes.outputs.docs_only != 'true'
+        uses: actions/checkout@v7
 
       - name: Setup .NET
+        if: needs.detect-changes.outputs.docs_only != 'true'
         uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
@@ -73,6 +78,7 @@ jobs:
             10.0.x
 
       - name: Setup Node
+        if: needs.detect-changes.outputs.docs_only != 'true'
         uses: actions/setup-node@v7
         with:
           node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
@@ -87,21 +93,26 @@ jobs:
       # With dist/ already fresh, every one of those passes sees its Inputs/Outputs check satisfied
       # and skips `npm run build` entirely, so the race has nothing left to race on.
       - name: Build dashboard UI
+        if: needs.detect-changes.outputs.docs_only != 'true'
         working-directory: src/NetApiFlow.Dashboard/ClientApp
         run: |
           npm ci
           npm run build
 
       - name: Restore
+        if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet restore NetApiFlow.slnx
 
       - name: Format check
+        if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet format NetApiFlow.slnx --verify-no-changes --no-restore
 
       - name: Build
+        if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet build NetApiFlow.slnx -c Release --no-restore
 
       - name: Test
+        if: needs.detect-changes.outputs.docs_only != 'true'
         shell: bash
         run: |
           set -e
@@ -113,6 +124,7 @@ jobs:
           fi
 
       - name: Pack (verification only)
+        if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet pack NetApiFlow.slnx -c Release --no-build
 
   secret-scan:
