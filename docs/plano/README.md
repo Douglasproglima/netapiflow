@@ -26,9 +26,17 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 4 | Dashboard Angular | **Aceita e mergeada** (2026-10-20) | PR #5, CI verde nos 4 checks. 73 testes Angular + testes .NET de SSE/dashboard/config. Tarefa 4.14 (D-24, `GET /config`) concluída. Verificação visual confirmada (tema claro e escuro limpos, formulário do histórico sem vazamento horizontal em viewport reduzida) |
 | 5 | Empacotamento | **Aceita e mergeada** (2026-10-20) | PR #8, CI verde nos 4 checks. Verificação da tarefa 5.6 rodada pessoalmente pela Planejadora (`dotnet pack` + `dotnet test` em `tests/manual-verification`, 4 testes verdes). PR #9 corrige o "pronto quando" da tarefa 5.5 (D-25) e congela a superfície pública de `NetApiFlow.Dashboard` em `contratos.md` |
 | 6 | Storages persistentes | **Aceita e mergeada** (2026-10-20) | PR #12, CI verde nos 4 checks (incluindo Testcontainers de verdade no `build-test (ubuntu-latest)`). Testcontainers rodado pessoalmente com Docker local antes do merge: 20 testes por TFM contra Postgres e SQL Server reais. PR #11 congela a superfície pública dos dois pacotes de storage em `contratos.md` |
-| 7 | Documentação e release | **Aceita e mergeada, `v0.1.0` publicada** (2026-10-22) | PRs #17, #24 a #39 (identidade visual, workspace denso, idioma PT-BR/EN e tema manual, ordenação em `/history`, GIF, correções D-37 a D-51). `release.yml` publicou os 6 pacotes no nuget.org via Trusted Publishing na tag `v0.1.0`, confirmado por log (12 "Your package was pushed"). Duas tentativas anteriores de tag falharam e foram corrigidas: D-49 (corrida de build do Angular sem a etapa isolada que `ci.yml` já tinha) e D-50 (chave de Trusted Publishing nunca repassada ao `dotnet nuget push`) |
+| 7 | Documentação e release | **Aceita e mergeada, `v0.1.0` e `v0.1.1` publicadas** (`v0.1.0` em 2026-10-22, `v0.1.1` em 2026-11-03) | PRs #17, #24 a #39 (identidade visual, workspace denso, idioma PT-BR/EN e tema manual, ordenação em `/history`, GIF, correções D-37 a D-51). `release.yml` publicou os 6 pacotes no nuget.org via Trusted Publishing na tag `v0.1.0`, confirmado por log (12 "Your package was pushed"). Duas tentativas anteriores de tag falharam e foram corrigidas: D-49 (corrida de build do Angular sem a etapa isolada que `ci.yml` já tinha) e D-50 (chave de Trusted Publishing nunca repassada ao `dotnet nuget push`). `v0.1.1` (PATCH) corrigiu o bundle do dashboard compilado contra o `@angular/build` vulnerável (D-53/D-56). `release.yml` ganhou espelho no GitHub Packages (D-57) |
 
-`0.1.0` publicada. Próximo passo: roadmap pós `0.1.0` já registrado em D-32 (zoom, legenda, sparkline, cenários, delay slider, follow-live), com i18n/tema (D-35/D-36) e ordenação (D-41) já adiantados nesta versão.
+`0.1.1` publicada. Roadmap pós `0.1.0` registrado em D-32 (zoom, legenda, sparkline, cenários,
+delay slider, follow-live) e ampliado por duas rodadas de auditoria de mercado: D-58 (interop
+OpenTelemetry como prioridade 1, detector de N+1, sampling tail-based, diff entre execuções,
+correlação de log, asserção de fluxo em teste), D-60 (servidor MCP embutido, tempo não explicado
+no waterfall, trace portátil, visibilidade de pré-pipeline, mapa de arquitetura, visão agregada
+estilo Pulse). D-59 trava a regra de implementação: uma feature por vez, só avançar quando a
+anterior estiver estável em produção. D-61 registra entry points não-HTTP como tensão de escopo
+em aberto, sem decisão. D-62 conecta todo ADR aceito a uma Issue pública no GitHub. Nenhuma
+feature do roadmap foi iniciada ainda, por desenho (D-59).
 
 ## Regra de avanço
 
