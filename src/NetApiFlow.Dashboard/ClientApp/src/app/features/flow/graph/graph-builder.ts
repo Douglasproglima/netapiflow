@@ -11,6 +11,13 @@ export interface GraphNode {
   sequence: number | null;
   state: NodeVisualState;
   durationMicros: number | null;
+  /**
+   * Total size of the `(component, operation)` group this node belongs to, when that group is a
+   * suspected N+1 (D-71: grouped across the whole trace, not by direct sibling, because each
+   * query in a classic N+1 is a child of a different loop iteration, not of the same parent).
+   * `null` when the node isn't part of such a group.
+   */
+  nPlusOneCount: number | null;
   x: number;
   y: number;
   width: number;
@@ -49,6 +56,13 @@ const NODE_DURATION_GAP_PX = 8;
 const COMPONENT_CHAR_WIDTH_PX = 6.8;
 const MONO_CHAR_WIDTH_PX = 6.3;
 const GHOST_ID_PREFIX = 'ghost-';
+
+/**
+ * Minimum size of a `(component, operation)` group of `Database` steps to flag it as a suspected
+ * N+1 (D-71). Fixed on purpose for this phase: a per-instance configuration knob is only worth
+ * adding if real usage shows this number wrong.
+ */
+export const N_PLUS_ONE_THRESHOLD = 3;
 
 /**
  * A node this wide fits its component name and its operation + duration pair without
@@ -126,6 +140,8 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
   visit(tree, null);
   dagre.layout(layoutGraph);
 
+  const nPlusOneCounts = computeNPlusOneCounts(flatNodes);
+
   const nodes: GraphNode[] = flatNodes.map((node) => {
     const position = layoutGraph.node(node.id);
     return {
@@ -136,6 +152,7 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
       sequence: node.sequence,
       state: resolveState(node, input),
       durationMicros: node.durationMicros,
+      nPlusOneCount: nPlusOneCounts.get(node.id) ?? null,
       x: position.x,
       y: position.y,
       width: position.width,
@@ -189,6 +206,60 @@ export function stateFromSpanStatus(
   }
 
   return 'completed';
+}
+
+/**
+ * Groups real (non-ghost) `Database` nodes by `component::operation` across the whole merged
+ * tree, regardless of their parent. Returns the group's size for every node whose group reached
+ * `N_PLUS_ONE_THRESHOLD`, keyed by node id.
+ */
+function computeNPlusOneCounts(nodes: MergedNode[]): Map<string, number> {
+  const idsByGroupKey = new Map<string, string[]>();
+
+  for (const node of nodes) {
+    if (node.status === null || node.type !== 'Database') {
+      continue;
+    }
+
+    const key = `${node.component}::${node.operation}`;
+    const ids = idsByGroupKey.get(key) ?? [];
+    ids.push(node.id);
+    idsByGroupKey.set(key, ids);
+  }
+
+  const counts = new Map<string, number>();
+  for (const ids of idsByGroupKey.values()) {
+    if (ids.length < N_PLUS_ONE_THRESHOLD) {
+      continue;
+    }
+
+    for (const id of ids) {
+      counts.set(id, ids.length);
+    }
+  }
+
+  return counts;
+}
+
+/**
+ * Same grouping rule as `computeNPlusOneCounts`, applied to a flat list of real spans (the shape
+ * the details panel, tarefa 9.3, already has from `FlowTraceDetail.spans`). Returns the full
+ * group, sorted by execution order, or an empty array when `spanId` isn't part of one.
+ */
+export function findNPlusOneGroup(spans: FlowSpan[], spanId: string): FlowSpan[] {
+  const target = spans.find((span) => span.spanId === spanId);
+  if (!target || target.type !== 'Database') {
+    return [];
+  }
+
+  const group = spans.filter(
+    (span) =>
+      span.type === 'Database' &&
+      span.component === target.component &&
+      span.operation === target.operation,
+  );
+
+  return group.length >= N_PLUS_ONE_THRESHOLD ? group.sort((a, b) => a.sequence - b.sequence) : [];
 }
 
 function buildChildrenByParent(spans: FlowSpan[]): Map<string | null, FlowSpan[]> {
