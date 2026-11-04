@@ -22,3 +22,4 @@ comunidade, sem reabrir a decisão sem justificativa técnica nova).
 | [ADR-0010](0010-layout-de-workspace-unico.md) | `/flow` vira um workspace denso, as demais rotas continuam existindo | Aceito | [#69](https://github.com/Douglasproglima/netapiflow/issues/69) |
 | [ADR-0011](0011-i18n-em-tempo-de-execucao-e-tema-manual.md) | i18n do dashboard em tempo de execução, tema com alternador manual | Aceito | [#70](https://github.com/Douglasproglima/netapiflow/issues/70) |
 | [ADR-0012](0012-ingestao-httpclient-via-activitysource-externo.md) | Ingestão da `ActivitySource` nativa do `HttpClient`, opt-in, sem exportação OTLP | Aceito | [#83](https://github.com/Douglasproglima/netapiflow/issues/83) |
+| [ADR-0013](0013-servidor-mcp-somente-leitura.md) | Servidor MCP embutido (`NetApiFlow.Mcp`), só leitura, restrito a Development | Aceito | [#92](https://github.com/Douglasproglima/netapiflow/issues/92) |

@@ -4,7 +4,8 @@
 
 - `PackageId` com prefixo `NetApiFlow` (`NetApiFlow`, `NetApiFlow.Dashboard`,
   `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`, `NetApiFlow.Storage.PostgreSql`,
-  `NetApiFlow.Storage.SqlServer`). Conferidos como livres no nuget.org antes do uso (tarefa 0.1).
+  `NetApiFlow.Storage.SqlServer`, `NetApiFlow.Mcp`). Conferidos como livres no nuget.org antes do
+  uso (tarefa 0.1; `NetApiFlow.Mcp` conferido pela Planejadora em 2026-11-04, D-72).
 - `PackageReadmeFile`, `PackageIcon` (`docs/images/icon.png`, tarefa 0.7), `PackageTags`,
   `RepositoryUrl` (`https://github.com/Douglasproglima/netapiflow`),
   `PackageLicenseExpression=MIT`. Autor e licença herdados de `Directory.Build.props`
@@ -35,7 +36,8 @@
 
 ## Release (ver também `docs/gitflow.md`)
 
-- Os 6 pacotes são versionados e publicados juntos, na mesma tag `v<versao>` (D-01, ADR-0001).
+- Os pacotes (6 originais mais `NetApiFlow.Mcp`, D-72) são versionados e publicados juntos, na
+  mesma tag `v<versao>` (D-01, ADR-0001).
 - Publicação via **Trusted Publishing** (OIDC do GitHub Actions): sem API key do nuget.org
   guardada em secret do repositório. Configuração da política de Trusted Publishing no site do
   nuget.org é passo manual, fora do repositório, feito antes da primeira tag (tarefa 7.7).
