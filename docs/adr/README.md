@@ -24,3 +24,4 @@ comunidade, sem reabrir a decisão sem justificativa técnica nova).
 | [ADR-0012](0012-ingestao-httpclient-via-activitysource-externo.md) | Ingestão da `ActivitySource` nativa do `HttpClient`, opt-in, sem exportação OTLP | Aceito | [#83](https://github.com/Douglasproglima/netapiflow/issues/83) |
 | [ADR-0013](0013-servidor-mcp-somente-leitura.md) | Servidor MCP embutido (`NetApiFlow.Mcp`), só leitura, restrito a Development | Aceito | [#92](https://github.com/Douglasproglima/netapiflow/issues/92) |
 | [ADR-0014](0014-impeccable-como-ferramenta-de-qualidade-visual.md) | Impeccable como guarda de qualidade visual do dashboard, ferramenta de dev only | Aceito | [#94](https://github.com/Douglasproglima/netapiflow/issues/94) |
+| [ADR-0015](0015-filtro-de-acesso-unico-no-nucleo.md) | `IFlowAccessFilter` único no núcleo, compartilhado por Dashboard e MCP | Aceito | [#96](https://github.com/Douglasproglima/netapiflow/issues/96) |
