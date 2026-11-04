@@ -92,19 +92,10 @@ No tema claro, os tints usam a cor 700 correspondente com alpha `.10`.
 
 ### 3.3 Tipografia aplicada ao dashboard
 
-Fontes embutidas localmente (tarefa 7.0, sem CDN). Escala densa, própria para dashboard:
-
-| Papel | Família | Tamanho / altura | Peso |
-|---|---|---|---|
-| Título da página (topbar) | Plus Jakarta Sans | 18 / 24 | 700 |
-| Valor de métrica | Plus Jakarta Sans | 24 / 28, `tabular-nums` | 700 |
-| Título de card | Inter | 14 / 20 | 600 |
-| Corpo, itens de lista | Inter | 13 / 20 | 400 e 500 |
-| Rótulo, legenda | Inter | 12 / 16 | 500 |
-| Métrica pequena, duração, rota, trace id, verbo | JetBrains Mono | 12 / 16, `tabular-nums` | 400 e 500 |
-| Badge de verbo | JetBrains Mono | 11 / 16, `letter-spacing: .04em` | 600 |
-
-Nenhum texto do dashboard fica abaixo de 11 px. O texto dentro do nó do grafo fica no mínimo em 12 px **no zoom 100%**.
+Fontes embutidas localmente (tarefa 7.0, sem CDN). Escala por papel (tamanho, altura de linha,
+peso) em `docs/brand/tokens.md`, seção "Escala aplicada ao dashboard": única fonte, não duplicada
+aqui, para não divergir em silêncio (achado da Fase 11, `generate-design-md.js` lia as duas
+fontes antes dessa correção).
 
 ### 3.4 Espaçamento, raio, elevação
 
