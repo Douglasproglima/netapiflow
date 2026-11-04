@@ -11,4 +11,6 @@ public interface IOrderService
     Task<Order?> GetSlowlyAsync(int id, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Order>> GetManyInParallelAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken);
+
+    Task<string> GetShippingStatusAsync(int id, CancellationToken cancellationToken);
 }

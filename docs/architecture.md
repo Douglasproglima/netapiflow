@@ -26,7 +26,9 @@ flowchart TD
 - **`FlowActivityListener`**: bridges `System.Diagnostics.Activity` into `FlowRecorder`. Every
   `NetApiFlow.Step(...)` call becomes an `Activity`; this listener is the only place that decides,
   per span, whether to record it (`ActivityListener.Sample`, risco R-05). No OpenTelemetry SDK
-  dependency — see [ADR-0002](adr/0002-activitysource-nativo-sem-otel-sdk.md).
+  dependency — see [ADR-0002](adr/0002-activitysource-nativo-sem-otel-sdk.md). When
+  `ExternalSources` is enabled, it also observes `HttpClient`'s own `ActivitySource` and maps
+  outbound calls to a sanitized `Http` span — see [ADR-0012](adr/0012-ingestao-httpclient-via-activitysource-externo.md).
 - **`FlowRecorder`**: in-memory state of every active and recently-completed trace. The single
   source of truth both the dashboard's live view and the persistence path read from.
 - **`PersistenceWriter`**: a `BackgroundService` draining a bounded `Channel` of completed traces.

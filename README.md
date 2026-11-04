@@ -133,8 +133,14 @@ builder.Services.AddNetApiFlow(options =>
     options.Limits.MaxSpansPerTrace = 300;
     options.IncludePaths("/api/**"); // only trace matching routes; default traces everything
     options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
+    options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; default is None
 });
 ```
+
+`ExternalSources` ingests the `Activity` instances the .NET runtime itself already produces for
+outbound calls (ADR-0012), with no code change in your services. Only `HttpClient` is supported
+today. The outbound URL is reduced to `scheme://host[:port]/path` before it is ever recorded:
+query string and fragment are never captured, same guarantee as every other span.
 
 Mounting the dashboard at a path other than the default, and protecting it:
 
@@ -179,6 +185,8 @@ NetApiFlow never captures, under any configuration:
   never the resolved URI).
 - SQL parameter values, even with `CaptureSqlText = true` (that flag only captures the command
   text and the main table it touches).
+- Query strings or fragments of outbound URLs, when `ExternalSources` is enabled (same reduction
+  to `scheme://host[:port]/path` as routes).
 
 Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
 CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.

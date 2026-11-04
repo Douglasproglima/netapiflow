@@ -135,8 +135,14 @@ builder.Services.AddNetApiFlow(options =>
     options.Limits.MaxSpansPerTrace = 300;
     options.IncludePaths("/api/**"); // só rastreia rota que bater; por padrão rastreia tudo
     options.ExcludePaths("/api/health"); // excluída mesmo que também bata com um padrão de inclusão
+    options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; padrão é None
 });
 ```
+
+`ExternalSources` ingere a `Activity` que o próprio runtime .NET já produz para chamada de saída
+(ADR-0012), sem nenhuma mudança de código nos seus serviços. Só `HttpClient` é suportado hoje. A
+URL de saída é reduzida a `scheme://host[:porta]/path` antes de ser gravada. Query string e
+fragment nunca são capturados, a mesma garantia de qualquer outro span.
 
 Montando o dashboard num caminho diferente do padrão, e protegendo-o:
 
@@ -182,6 +188,8 @@ O NetApiFlow nunca captura, em nenhuma configuração:
   URI resolvida).
 - Valor de parâmetro SQL, mesmo com `CaptureSqlText = true` (essa flag só captura o texto do
   comando e a tabela principal envolvida).
+- Query string ou fragment de URL de saída, quando `ExternalSources` está habilitado (mesma
+  redução a `scheme://host[:porta]/path` usada em rota).
 
 Mensagem de erro é truncada em 300 caracteres e sanitizada, removendo e-mail, CPF, CNPJ, sequência
 numérica longa, e os pares `password=`/`token=`/`authorization`/`api-key`/`secret`. Veja

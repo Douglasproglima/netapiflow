@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
@@ -14,7 +15,7 @@ public class FlowActivityListenerTests
     {
         var wrappedOptions = Options.Create(options ?? new NetApiFlowOptions());
         var recorder = new FlowRecorder(wrappedOptions);
-        var subject = new FlowActivityListener(recorder, wrappedOptions);
+        var subject = new FlowActivityListener(recorder, wrappedOptions, NullLoggerFactory.Instance);
 
         var root = new Activity("TestRoot");
         root.Start();
@@ -44,6 +45,36 @@ public class FlowActivityListenerTests
         span.Type.ShouldBe(ComponentType.Service);
         span.Status.ShouldBe(FlowStatus.Success);
         span.DurationMicros.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void ActivityStarted_WithExternalSourcesHttpClient_ObservesSystemNetHttpActivityAsASpan()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.HttpClient });
+        using var _ = subject;
+        using var __ = root;
+        using var httpClientSource = new ActivitySource(HttpClientActivityTagNames.SourceName);
+
+        using (httpClientSource.StartActivity("System.Net.Http.HttpRequestOut"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ActivityStarted_WithDefaultExternalSources_DoesNotObserveSystemNetHttpActivity()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+        using var httpClientSource = new ActivitySource(HttpClientActivityTagNames.SourceName);
+
+        using (httpClientSource.StartActivity("System.Net.Http.HttpRequestOut"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldBeEmpty();
     }
 
     [Fact]

@@ -21,6 +21,9 @@ public sealed class NetApiFlowOptions
     /// <summary>Whether to record the SQL command text (without parameter values) for database spans. Default: <see langword="false"/>.</summary>
     public bool CaptureSqlText { get; set; }
 
+    /// <summary>Ecosystem <c>ActivitySource</c> instances to also observe, besides NetApiFlow's own (ADR-0012). Default: <see cref="ExternalActivitySource.None"/>.</summary>
+    public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
+
     /// <summary>Retention policy for persisted traces.</summary>
     public RetentionOptions Retention { get; } = new();
 
