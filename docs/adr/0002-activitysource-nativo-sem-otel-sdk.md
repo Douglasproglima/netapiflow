@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#62](https://github.com/Douglasproglima/netapiflow/issues/62)
+
 ## Contexto
 `netapiflow-prompt.md` (seção 4.1) exige que o pacote núcleo (`NetApiFlow`) não dependa do SDK do
 OpenTelemetry. O .NET já expõe `System.Diagnostics.ActivitySource` e `ActivityListener` na BCL,

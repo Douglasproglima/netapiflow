@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#69](https://github.com/Douglasproglima/netapiflow/issues/69)
+
 ## Contexto
 
 A Fase 4 (D-23) decidiu uma rota por feature (`/flow`, `/history`, `/components`, `/runner`),

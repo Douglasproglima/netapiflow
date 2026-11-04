@@ -3,6 +3,9 @@
 ## Status
 Aceito
 
+## Issue
+[#71](https://github.com/Douglasproglima/netapiflow/issues/71)
+
 ## Contexto
 `netapiflow-prompt.md` (seção 6.8) é explícito: o NetApiFlow não é uma ferramenta de
 observabilidade de dados, é uma ferramenta de diagnóstico de fluxo. Capturar corpo de requisição,
