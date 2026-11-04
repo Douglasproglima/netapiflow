@@ -9,6 +9,7 @@
     "test": "ng test",
     "test:ci": "ng test --watch=false",
     "lint": "ng lint",
+    "generate:design-md": "node scripts/generate-design-md.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
