@@ -299,6 +299,7 @@
         [slowThresholdMicros]="slowThresholdMicros() ?? 0"
         [notExecutedCount]="notExecutedCount()"
         (backToSummary)="backToSummary()"
+        (jumpToSpan)="onNodeSelected($event)"
       />
     }
   </div>

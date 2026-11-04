@@ -3,6 +3,7 @@ import { FlowTraceDetail, SpanDetail } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
 import { buildWaterfall } from './waterfall';
+import { findNPlusOneGroup } from '../graph/graph-builder';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 /**
@@ -23,10 +24,24 @@ export class FlowDetailsPanelComponent {
   readonly notExecutedCount = input(0);
 
   readonly backToSummary = output<void>();
+  readonly jumpToSpan = output<string>();
 
   readonly waterfall = computed(() => buildWaterfall(this.trace(), this.slowThresholdMicros()));
 
   readonly executedCount = computed(() => this.trace().spans.length);
+
+  /** D-71: siblings of the same shape as the selected span, anywhere in the trace. */
+  readonly nPlusOneGroup = computed(() => {
+    const selected = this.selectedSpan();
+    return selected ? findNPlusOneGroup(this.trace().spans, selected.span.spanId) : [];
+  });
+
+  jumpToFirstNPlusOne(): void {
+    const first = this.nPlusOneGroup()[0];
+    if (first) {
+      this.jumpToSpan.emit(first.spanId);
+    }
+  }
 
   methodTagClass(method: string): string {
     return httpMethodTagClass(method);
