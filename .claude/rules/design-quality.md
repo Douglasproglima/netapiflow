@@ -58,6 +58,15 @@ no código do projeto. `package.json` (devDependency) e o workflow de CI fixam u
 igual a qualquer outra dependência. Atualizar é decisão deliberada (ler o changelog, não um
 `npx` que sempre pega a última), mesma régua de `.claude/rules/dependencies.md`.
 
+## `npx impeccable install` é passo de setup local, não versionado
+
+`.claude/skills/impeccable/` (gerado por `npx impeccable install`) é código de terceiro
+genérico, sem nada específico do NetApiFlow, e reproduzível a qualquer momento pelo próprio
+comando. Mesmo tratamento de `node_modules/`: fica no `.gitignore`, nunca commitado. Cada dev
+roda `npx impeccable install` uma vez, localmente, ao clonar o repositório ou trocar de máquina.
+Se o comando for atualizado numa versão nova do pacote (`package.json` fixa a versão, ver acima),
+rodar `install` de novo é parte do passo de atualização.
+
 ## `DESIGN.md` é gerado, não mantido à mão
 
 Para não existir duas referências de marca (`docs/brand/tokens.md` e `DESIGN.md`) que podem
