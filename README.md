@@ -151,7 +151,7 @@ Mounting the dashboard at a path other than the default, and protecting it:
 
 ```csharp
 app.UseNetApiFlowDashboard("/internal/flow")
-    .RequireAuthorization("AdminOnly"); // or register an IDashboardAuthorizationFilter in DI
+    .RequireAuthorization("AdminOnly"); // or register an IFlowAccessFilter in DI
 ```
 
 Persisting to a real database instead of memory (call after `AddNetApiFlow`, it replaces the
@@ -175,7 +175,7 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > responds **404** unless you explicitly configure one of:
 >
 > - `.RequireAuthorization("YourPolicy")`, chained on `app.UseNetApiFlowDashboard(...)`.
-> - A custom `IDashboardAuthorizationFilter` registered in DI, checked on every request
+> - A custom `IFlowAccessFilter` registered in DI, checked on every request
 >   regardless of environment.
 >
 > There is no "partially open" default. If neither is configured, production always 404s.
