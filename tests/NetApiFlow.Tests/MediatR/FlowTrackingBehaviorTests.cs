@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.MediatR;
@@ -24,7 +25,7 @@ public class FlowTrackingBehaviorTests
     {
         var options = Options.Create(new NetApiFlowOptions());
         var recorder = new FlowRecorder(options);
-        using var listener = new FlowActivityListener(recorder, options);
+        using var listener = new FlowActivityListener(recorder, options, NullLoggerFactory.Instance);
 
         using var root = new Activity("TestRoot");
         root.Start();

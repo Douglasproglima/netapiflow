@@ -10,6 +10,7 @@ using SampleApi.Controllers.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 #if NET10_0_OR_GREATER
 builder.Services.AddOpenApi();
 #endif

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
@@ -16,24 +17,41 @@ internal sealed class FlowActivityListener : IDisposable
     private readonly FlowRecorder _recorder;
     private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ActivityListener _listener;
+#if NET8_0
+    private readonly HttpClientActivityTagBackfill _httpClientActivityTagBackfill;
+#endif
 
-    public FlowActivityListener(FlowRecorder recorder, IOptions<NetApiFlowOptions> options)
+    public FlowActivityListener(FlowRecorder recorder, IOptions<NetApiFlowOptions> options, ILoggerFactory loggerFactory)
     {
         _recorder = recorder;
         _options = options;
 
         _listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == FlowActivitySource.Name,
+            ShouldListenTo = ShouldListenTo,
             Sample = Sample,
             ActivityStarted = OnActivityStarted,
             ActivityStopped = OnActivityStopped,
         };
 
         ActivitySource.AddActivityListener(_listener);
+#if NET8_0
+        _httpClientActivityTagBackfill = new HttpClientActivityTagBackfill(options, loggerFactory.CreateLogger<HttpClientActivityTagBackfill>());
+#endif
     }
 
-    public void Dispose() => _listener.Dispose();
+    public void Dispose()
+    {
+        _listener.Dispose();
+#if NET8_0
+        _httpClientActivityTagBackfill.Dispose();
+#endif
+    }
+
+    private bool ShouldListenTo(ActivitySource source) =>
+        source.Name == FlowActivitySource.Name ||
+        (source.Name == HttpClientActivityTagNames.SourceName &&
+            _options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient));
 
     private ActivitySamplingResult Sample(ref ActivityCreationOptions<ActivityContext> options)
     {
@@ -57,12 +75,21 @@ internal sealed class FlowActivityListener : IDisposable
             return;
         }
 
+        var span = activity.Source.Name == HttpClientActivityTagNames.SourceName
+            ? BuildHttpClientSpan(activity, traceId, trace)
+            : BuildFlowSpan(activity, traceId, trace);
+
+        _recorder.TryAddSpan(traceId, span);
+    }
+
+    private static FlowSpan BuildFlowSpan(Activity activity, string traceId, ActiveTrace trace)
+    {
         var componentType = activity.GetTagItem(FlowTagNames.ComponentType) as string;
         var type = componentType is not null && Enum.TryParse<ComponentType>(componentType, out var parsed)
             ? parsed
             : ComponentType.Custom;
 
-        var span = new FlowSpan
+        return new FlowSpan
         {
             TraceId = traceId,
             SpanId = activity.SpanId.ToString(),
@@ -74,9 +101,27 @@ internal sealed class FlowActivityListener : IDisposable
             StartedAt = activity.StartTimeUtc,
             Status = FlowStatus.Running,
         };
-
-        _recorder.TryAddSpan(traceId, span);
     }
+
+    /// <summary>
+    /// The real method/host/path only become reliably available in <see cref="OnActivityStopped"/>
+    /// (D-69: on <c>net8.0</c> they are backfilled by a <c>HttpClientActivityTagBackfill</c>
+    /// subscriber whose ordering relative to this callback is not guaranteed). The span starts with
+    /// a generic name and is finalized on completion.
+    /// </summary>
+    private static FlowSpan BuildHttpClientSpan(Activity activity, string traceId, ActiveTrace trace) =>
+        new()
+        {
+            TraceId = traceId,
+            SpanId = activity.SpanId.ToString(),
+            ParentSpanId = ResolveParentSpanId(activity, trace),
+            Sequence = trace.NextSequence(),
+            Component = "HttpClient",
+            Operation = "HTTP request",
+            Type = ComponentType.Http,
+            StartedAt = activity.StartTimeUtc,
+            Status = FlowStatus.Running,
+        };
 
     private void OnActivityStopped(Activity activity)
     {
@@ -94,6 +139,20 @@ internal sealed class FlowActivityListener : IDisposable
             return;
         }
 
+        var (updated, isErrorOrigin) = activity.Source.Name == HttpClientActivityTagNames.SourceName
+            ? CompleteHttpClientSpan(activity, existing)
+            : CompleteFlowSpan(activity, existing);
+
+        _recorder.CompleteSpan(traceId, updated);
+
+        if (isErrorOrigin)
+        {
+            PropagateErrorToAncestors(trace, activity.Parent);
+        }
+    }
+
+    private static (FlowSpan Span, bool IsErrorOrigin) CompleteFlowSpan(Activity activity, FlowSpan existing)
+    {
         var isErrorOrigin = (string?)activity.GetTagItem(FlowTagNames.ErrorOrigin) == bool.TrueString;
         var status = isErrorOrigin || existing.Status == FlowStatus.Error
             ? FlowStatus.Error
@@ -109,13 +168,51 @@ internal sealed class FlowActivityListener : IDisposable
             IsErrorOrigin = isErrorOrigin,
         };
 
-        _recorder.CompleteSpan(traceId, updated);
-
-        if (isErrorOrigin)
-        {
-            PropagateErrorToAncestors(trace, activity.Parent);
-        }
+        return (updated, isErrorOrigin);
     }
+
+    /// <summary>
+    /// Maps the outbound call's method, status code and error onto the span (ADR-0012, D-69, risco
+    /// R-13). The URL is reduced to <c>host/path</c> before it ever reaches <see cref="FlowSpan.Operation"/>:
+    /// query string and fragment are never recorded. A 4xx/5xx response marks the span as
+    /// <see cref="FlowStatus.Error"/>; only a network-level failure (no response at all) marks it as
+    /// the error's origin, since an HTTP error status is a result the span itself already reports.
+    /// </summary>
+    private static (FlowSpan Span, bool IsErrorOrigin) CompleteHttpClientSpan(Activity activity, FlowSpan existing)
+    {
+        var method = activity.GetTagItem(HttpClientActivityTagNames.Method) as string;
+        var sanitizedTarget = OutboundUrlSanitizer.SanitizeHostAndPath(activity.GetTagItem(HttpClientActivityTagNames.UrlFull) as string);
+        var statusCode = TryGetStatusCode(activity);
+        var errorType = activity.GetTagItem(HttpClientActivityTagNames.ErrorType) as string;
+
+        var isErrorOrigin = statusCode is null && errorType is not null;
+        var status = isErrorOrigin || statusCode is >= 400
+            ? FlowStatus.Error
+            : FlowStatus.Success;
+
+        var updated = existing with
+        {
+            Operation = method is not null && sanitizedTarget is not null ? $"{method} {sanitizedTarget}" : existing.Operation,
+            EndedAt = activity.StartTimeUtc + activity.Duration,
+            DurationMicros = (long)activity.Duration.TotalMicroseconds,
+            Status = status,
+            ErrorType = isErrorOrigin ? errorType : null,
+            ErrorMessage = isErrorOrigin
+                ? ErrorMessageSanitizer.Sanitize($"Outbound HTTP call to {sanitizedTarget} failed.")
+                : null,
+            IsErrorOrigin = isErrorOrigin,
+        };
+
+        return (updated, isErrorOrigin);
+    }
+
+    private static int? TryGetStatusCode(Activity activity) =>
+        activity.GetTagItem(HttpClientActivityTagNames.StatusCode) switch
+        {
+            int statusCode => statusCode,
+            string text when int.TryParse(text, out var parsed) => parsed,
+            _ => null,
+        };
 
     /// <summary>
     /// <see cref="Activity.Parent"/> reflects the real .NET Activity graph, which includes

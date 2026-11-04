@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Instrumentation;
@@ -29,7 +30,7 @@ public class FlowDbCommandInterceptorTests
     {
         var recorderOptions = Options.Create(new NetApiFlowOptions());
         var recorder = new FlowRecorder(recorderOptions);
-        using var listener = new FlowActivityListener(recorder, recorderOptions);
+        using var listener = new FlowActivityListener(recorder, recorderOptions, NullLoggerFactory.Instance);
 
         using var root = new Activity("TestRoot");
         root.Start();
