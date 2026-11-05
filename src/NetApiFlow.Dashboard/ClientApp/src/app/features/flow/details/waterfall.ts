@@ -59,3 +59,62 @@ export function buildWaterfall(
     };
   });
 }
+
+export interface UnexplainedTime {
+  unexplainedMicros: number;
+  unexplainedPercent: number;
+}
+
+interface Interval {
+  startMs: number;
+  endMs: number;
+}
+
+/**
+ * Merges overlapping or touching intervals (sorted by start) so their combined length can be
+ * summed without double-counting a nested span or two parallel `Task.WhenAll` branches (D-78).
+ */
+function mergeIntervals(intervals: Interval[]): Interval[] {
+  const sorted = [...intervals].sort((a, b) => a.startMs - b.startMs);
+  const merged: Interval[] = [];
+
+  for (const current of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && current.startMs <= last.endMs) {
+      last.endMs = Math.max(last.endMs, current.endMs);
+    } else {
+      merged.push({ ...current });
+    }
+  }
+
+  return merged;
+}
+
+/**
+ * Pure function: how much of the trace's total duration isn't covered by any recorded span,
+ * as the union of `[startedAt, endedAt)` intervals, not a naive sum of `durationMicros` (D-78).
+ * A naive sum double-counts a nested span (its time is already inside its parent's) and two
+ * sibling branches of a `Task.WhenAll` that overlap on the wall clock.
+ */
+export function computeUnexplainedTime(trace: FlowTraceDetail): UnexplainedTime | null {
+  if (trace.status === 'Running' || trace.spans.length === 0 || trace.durationMicros === null) {
+    return null;
+  }
+
+  const intervals = trace.spans
+    .filter((span) => span.status !== 'Running' && span.endedAt !== null)
+    .map((span) => ({ startMs: Date.parse(span.startedAt), endMs: Date.parse(span.endedAt!) }));
+
+  const coveredMs = mergeIntervals(intervals).reduce(
+    (sum, interval) => sum + (interval.endMs - interval.startMs),
+    0,
+  );
+
+  const totalMicros = trace.durationMicros;
+  const unexplainedMicros = Math.max(0, totalMicros - coveredMs * 1_000);
+
+  return {
+    unexplainedMicros,
+    unexplainedPercent: totalMicros > 0 ? (unexplainedMicros / totalMicros) * 100 : 0,
+  };
+}
