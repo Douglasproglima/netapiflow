@@ -9,6 +9,7 @@
     "test": "ng test",
     "test:ci": "ng test --watch=false",
     "lint": "ng lint",
+    "generate:design-md": "node scripts/generate-design-md.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -40,6 +41,7 @@
     "@vitest/coverage-v8": "^5.0.5",
     "angular-eslint": "22.6.0",
     "eslint": "^10.12.0",
+    "impeccable": "4.8.0",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

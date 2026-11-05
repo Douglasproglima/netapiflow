@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs_only: ${{ steps.filter.outputs.docs_only }}
+      clientapp_changed: ${{ steps.filter.outputs.clientapp_changed }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -39,6 +40,7 @@ jobs:
           if [ -z "$BASE_SHA" ] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
             echo "No usable base SHA (new branch or force-push), treating as a full build." >&2
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "clientapp_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -50,6 +52,12 @@ jobs:
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          if echo "$CHANGED" | grep -qE '^src/NetApiFlow\.Dashboard/ClientApp/'; then
+            echo "clientapp_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "clientapp_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
   build-test:
@@ -126,6 +134,91 @@ jobs:
       - name: Pack (verification only)
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet pack NetApiFlow.slnx -c Release --no-build
+
+  # D-76: visual-quality findings never fail this job (`|| true` below). The detector runs in
+  # warn-only mode for a full cycle before the Planejadora decides whether it should block.
+  # R-15: the GitHub-hosted runner doesn't run as root, so the detector's Chromium shouldn't need
+  # `--no-sandbox` here; that flag is only a known fallback for someone running this same scan
+  # locally inside a root container.
+  visual-quality:
+    name: visual-quality
+    needs: detect-changes
+    if: needs.detect-changes.outputs.clientapp_changed == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: netapiflow_sample
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+          cache: npm
+          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+      - name: Build dashboard UI
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build sample
+        run: dotnet build samples/SampleApi.Controllers/SampleApi.Controllers.csproj -c Debug -f net10.0
+
+      - name: Run sample and generate real requests
+        shell: bash
+        run: |
+          (cd samples/SampleApi.Controllers/bin/Debug/net10.0 && \
+            ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:60803 \
+            dotnet SampleApi.Controllers.dll) &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:60803/flow >/dev/null && break
+            sleep 1
+          done
+
+          curl -s http://localhost:60803/api/orders/1 -o /dev/null
+          curl -s http://localhost:60803/api/orders/2/confirm -o /dev/null
+          curl -s http://localhost:60803/api/orders/3/slow -o /dev/null
+
+          TRACE_ID=$(curl -s "http://localhost:60803/flow/api/traces?limit=1&status=Error" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{console.log(JSON.parse(d).items[0].traceId);})")
+          echo "TRACE_ID=$TRACE_ID" >> "$GITHUB_ENV"
+
+      - name: Run Impeccable detector (warn-only)
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npx impeccable detect --github --viewport 390x844 \
+            "http://localhost:60803/flow?trace=${TRACE_ID}" \
+            "http://localhost:60803/flow/history" \
+            "http://localhost:60803/flow/components" \
+            "http://localhost:60803/flow/runner" || true
+
+          npx impeccable detect --github \
+            "http://localhost:60803/flow?trace=${TRACE_ID}" \
+            "http://localhost:60803/flow/history" \
+            "http://localhost:60803/flow/components" \
+            "http://localhost:60803/flow/runner" || true
 
   secret-scan:
     name: secret-scan
