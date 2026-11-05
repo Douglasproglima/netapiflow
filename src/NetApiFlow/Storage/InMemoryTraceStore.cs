@@ -125,6 +125,38 @@ internal sealed class InMemoryTraceStore : ITraceStore
         });
     }
 
+    public ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken)
+    {
+        var traces = _entries.Values
+            .Select(e => e.Trace)
+            .Where(trace => query.From is null || trace.StartedAt >= query.From)
+            .Where(trace => query.To is null || trace.StartedAt <= query.To)
+            .GroupBy(trace => (trace.Method, trace.RouteTemplate));
+
+        var stats = traces.Select(group =>
+        {
+            var durations = group
+                .Where(t => t.DurationMicros is not null)
+                .Select(t => t.DurationMicros!.Value)
+                .OrderBy(d => d)
+                .ToList();
+
+            return new RouteStat
+            {
+                Method = group.Key.Method,
+                RouteTemplate = group.Key.RouteTemplate,
+                ExecutionCount = group.Count(),
+                ErrorCount = group.Count(t => t.Status == FlowStatus.Error),
+                MedianDurationMicros = Percentile(durations, 0.5),
+                AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
+                P95DurationMicros = Percentile(durations, 0.95),
+                MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
+            };
+        }).ToList();
+
+        return ValueTask.FromResult<IReadOnlyList<RouteStat>>(stats);
+    }
+
     public ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken)
     {
         var cutoff = DateTime.UtcNow - policy.MaxAge;
