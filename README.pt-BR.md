@@ -137,6 +137,15 @@ Na listagem do histórico (`/history`), cada cabeçalho de coluna ordena o resul
 servidor, não só a página atual. Combine "Só lentas" com ordenar por Duração (decrescente) para
 ver as execuções mais lentas de todo o histórico.
 
+## Insights
+
+`/insights` é uma visão agregada sobre toda rota rastreável da API hospedeira, numa janela de
+tempo escolhida (últimas 24 horas, últimos 7 dias por padrão, ou últimos 30 dias): as rotas mais
+lentas por p95, as rotas com mais erros, e rotas mortas, aquelas que existem na API hospedeira mas
+não rodaram na janela escolhida. As três vêm de `GET /metrics/routes` e `GET /endpoints`. Rotas
+mais lentas e top erros são duas ordenações diferentes do mesmo payload, e rotas mortas é o
+dashboard cruzando esse payload com toda rota que a API hospedeira expõe.
+
 ## Configuração
 
 ```csharp
