@@ -14,7 +14,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | `decisoes.md` | Decisões travadas (D-01 em diante), append-only, com justificativa |
 | `riscos.md` | Riscos técnicos, mitigação e como cada um é provado por teste |
 | `roadmap-valor.md` | Backlog pós-`0.1.0` ranqueado por peso de valor de entrega (D-79). Arquivo vivo, não append-only |
-| `fase-0-fundacao.md` … `fase-12-tempo-nao-explicado.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
+| `fase-0-fundacao.md` … `fase-13-exportacao-otlp.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
 
 ## Estado das fases
 
@@ -33,8 +33,9 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 10 | Servidor MCP embutido (`NetApiFlow.Mcp`) | **Aceita e mergeada** (2026-11-04) | PR #99, CI verde nos 5 checks. Item A do roadmap D-60 (D-72, ADR-0013). Pacote novo, única dependência nova fora do núcleo nesta rodada: `ModelContextProtocol.AspNetCore` (Apache-2.0, verificado pela Planejadora). Três tools, só leitura (listar traces, obter trace, estatísticas por componente), mesma régua de segurança da Dashboard. Achado real na tarefa 10.3 (D-75/ADR-0015): `IDashboardAuthorizationFilter` só existia em `NetApiFlow.Dashboard`, contradizendo a decisão de `NetApiFlow.Mcp` não depender desse pacote; corrigido movendo a interface para o núcleo como `IFlowAccessFilter`. R-14 mitigado, provado por `NetApiFlowMcpEndpointTests` e confirmado pela Planejadora no `.nuspec` real do pacote empacotado (não só no código-fonte). Sétimo pacote publicado na mesma tag |
 | 11 | Impeccable, guarda de qualidade visual | **Aceita e mergeada** (2026-11-04) | PR #102, CI verde nos 6 checks (inclui o novo `visual-quality`). Governança/ferramenta de dev, fora do roadmap D-58/D-60 (D-73/D-76/D-77, ADR-0014). Tokens `-on-tint` aplicados em `_tokens.scss`, hierarquia tipográfica alinhada à escala do guia (D-74), botão "Testar um endpoint" movido pra topbar, `errbox` achatado. Rollout cauteloso confirmado na prática (D-76): só `low-contrast`/`undersized-ui-text` bloqueiam, resto é aviso; job `visual-quality` roda em modo aviso. Três achados reais corrigidos durante a revisão (D-77): `.claude/skills/impeccable/` (vendoring de terceiro, ~21 mil linhas) desrastreado do git; tabela de tipografia consolidada em `docs/brand/tokens.md`; serviço Postgres real adicionado ao job de CI depois de o log mostrar que o sample não conseguia sequer subir sem ele. R-15 mitigado, confirmado no log real do job (Postgres conectando, trace de erro gerado, detector rodando contra URL real, sem `--no-sandbox` necessário) |
 | 12 | Tempo não explicado no waterfall | **Aceita e mergeada** (2026-11-05) | PR #105, CI verde nos 6 checks. Item B do roadmap D-60 (D-78), 100% frontend (`details/waterfall.ts`), nenhuma mudança no núcleo nem em `contratos.md`. `computeUnexplainedTime` usa união de intervalos, não soma ingênua; matemática verificada pela Planejadora à mão nos dois testes críticos (span aninhado, branches paralelas de `Task.WhenAll`). Prova real com o sample (183ms de trace): soma ingênua dava 213,6% (absurdo), união de intervalos deu 30% (correto), demonstrando na prática por que a conta importa. Selo nunca aparece para trace `Running` |
+| 13 | Exportação OTLP (`NetApiFlow.OpenTelemetry`) | **Planejada** (2026-11-05) | Item 1 do ranking de valor de entrega (D-79), item 1b do roadmap D-58, registrado em ADR-0016. Pacote novo, só wiring sobre o SDK do OpenTelemetry (`OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, Apache-2.0, `net8.0`+, `1.20.1`), observando a `ActivitySource` `"NetApiFlow"` que já existe (ADR-0002), sem serialização própria. Novo risco R-16 (sanitização da URL de saída não se aplica à exportação quando `IncludeHttpClientSource` está ligado, documentado, não corrigido) |
 
-`0.1.1` publicada, Fases 8 a 12 aceitas e mergeadas. Roadmap pós `0.1.0`
+`0.1.1` publicada, Fases 8 a 12 aceitas e mergeadas, Fase 13 planejada. Roadmap pós `0.1.0`
 registrado em
 D-32 (zoom, legenda, sparkline, cenários, delay slider, follow-live) e ampliado por duas rodadas
 de auditoria de mercado: D-58 (interop OpenTelemetry como prioridade 1, detector de N+1, sampling
@@ -43,7 +44,8 @@ MCP embutido, tempo não explicado no waterfall, trace portátil, visibilidade d
 de arquitetura, visão agregada estilo Pulse). D-59 trava a regra de implementação: uma feature por
 vez, clarificada pelo D-70 enquanto o produto não é divulgado publicamente (não precisa esperar
 uso real em produção entre fases). D-61 registra entry points não-HTTP como tensão de escopo em
-aberto, sem decisão. D-62 conecta todo ADR aceito a uma Issue pública no GitHub.
+aberto, sem decisão. D-62 conecta todo ADR aceito a uma Issue pública no GitHub. D-79 ranqueia o
+backlog restante por peso de valor de entrega, mantido em `docs/plano/roadmap-valor.md`.
 
 ## Regra de avanço
 
