@@ -16,7 +16,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Visão agregada estilo Pulse | D-60 (Pulse) | 🔴 Alto | Backlog |
+| 1 | Visão agregada "Insights" | D-60 (Pulse) | 🔴 Alto | Em planejamento (Fase 14) |
 | 2 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Backlog |
 | 3 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Backlog |
 | 4 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
