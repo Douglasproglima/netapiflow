@@ -13,6 +13,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | `contratos.md` | API pública do núcleo, formato do evento SSE, visão geral da API REST. Não implementar divergindo sem avisar a Planejadora |
 | `decisoes.md` | Decisões travadas (D-01 em diante), append-only, com justificativa |
 | `riscos.md` | Riscos técnicos, mitigação e como cada um é provado por teste |
+| `roadmap-valor.md` | Backlog pós-`0.1.0` ranqueado por peso de valor de entrega (D-79). Arquivo vivo, não append-only |
 | `fase-0-fundacao.md` … `fase-12-tempo-nao-explicado.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
 
 ## Estado das fases
