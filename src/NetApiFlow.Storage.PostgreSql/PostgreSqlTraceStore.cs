@@ -265,6 +265,52 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             .ToList<RouteStat>();
     }
 
+    public async ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+
+        await using var totalCommand = new NpgsqlCommand($"""
+            SELECT COUNT(*) FROM {_tracesTable}
+            WHERE method ILIKE @method AND route_template = @route
+              AND (@from::timestamptz IS NULL OR started_at >= @from) AND (@to::timestamptz IS NULL OR started_at <= @to)
+            """, connection);
+        totalCommand.Parameters.AddWithValue("method", method);
+        totalCommand.Parameters.AddWithValue("route", routeTemplate);
+        totalCommand.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
+        totalCommand.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
+        var totalExecutions = (int)(long)(await totalCommand.ExecuteScalarAsync(cancellationToken))!;
+
+        await using var command = new NpgsqlCommand($"""
+            SELECT s.trace_id, s.component, s.operation, s.type, p.component, p.operation
+            FROM {_spansTable} s
+            JOIN {_tracesTable} t ON s.trace_id = t.trace_id
+            LEFT JOIN {_spansTable} p ON s.parent_span_id = p.span_id AND s.trace_id = p.trace_id
+            WHERE t.method ILIKE @method AND t.route_template = @route
+              AND (@from::timestamptz IS NULL OR t.started_at >= @from) AND (@to::timestamptz IS NULL OR t.started_at <= @to)
+            """, connection);
+        command.Parameters.AddWithValue("method", method);
+        command.Parameters.AddWithValue("route", routeTemplate);
+        command.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
+        command.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
+
+        var rows = new List<(string TraceId, string Component, string Operation, ComponentType Type, string? ParentComponent, string? ParentOperation)>();
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add((
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    Enum.Parse<ComponentType>(reader.GetString(3)),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5)));
+            }
+        }
+
+        return BuildArchitectureMap(totalExecutions, rows);
+    }
+
     public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
@@ -525,6 +571,62 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
 
     public void Dispose() => _schemaLock.Dispose();
+
+    /// <summary>
+    /// Same aggregation as <c>InMemoryTraceStore.GetArchitectureMapAsync</c>, kept consistent across
+    /// every <see cref="ITraceStore"/> implementation: a node's <c>ExecutionCount</c> counts the
+    /// distinct traces that touched it, an edge's <c>CallCount</c> counts every occurrence of that
+    /// parent-child relationship.
+    /// </summary>
+    private static ArchitectureMap BuildArchitectureMap(
+        int totalExecutions,
+        List<(string TraceId, string Component, string Operation, ComponentType Type, string? ParentComponent, string? ParentOperation)> rows)
+    {
+        var nodeTypes = new Dictionary<(string Component, string Operation), ComponentType>();
+        var nodeExecutionCounts = new Dictionary<(string Component, string Operation), int>();
+
+        foreach (var traceGroup in rows.GroupBy(r => r.TraceId))
+        {
+            var seen = new HashSet<(string Component, string Operation)>();
+            foreach (var row in traceGroup)
+            {
+                var nodeKey = (row.Component, row.Operation);
+                if (seen.Add(nodeKey))
+                {
+                    nodeTypes[nodeKey] = row.Type;
+                    nodeExecutionCounts[nodeKey] = nodeExecutionCounts.GetValueOrDefault(nodeKey) + 1;
+                }
+            }
+        }
+
+        var edgeCallCounts = rows
+            .Where(r => r.ParentComponent is not null)
+            .GroupBy(r => (FromComponent: r.ParentComponent!, FromOperation: r.ParentOperation!, ToComponent: r.Component, ToOperation: r.Operation))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var nodes = nodeExecutionCounts
+            .Select(kvp => new ArchitectureNode
+            {
+                Component = kvp.Key.Component,
+                Operation = kvp.Key.Operation,
+                Type = nodeTypes[kvp.Key],
+                ExecutionCount = kvp.Value,
+            })
+            .ToList<ArchitectureNode>();
+
+        var edges = edgeCallCounts
+            .Select(kvp => new ArchitectureEdge
+            {
+                FromComponent = kvp.Key.FromComponent,
+                FromOperation = kvp.Key.FromOperation,
+                ToComponent = kvp.Key.ToComponent,
+                ToOperation = kvp.Key.ToOperation,
+                CallCount = kvp.Value,
+            })
+            .ToList<ArchitectureEdge>();
+
+        return new ArchitectureMap { TotalExecutions = totalExecutions, Nodes = nodes, Edges = edges };
+    }
 
     /// <summary>Same formula as <c>InMemoryTraceStore</c>, kept consistent across every <see cref="ITraceStore"/> implementation.</summary>
     private static long Percentile(List<long> sortedValues, double percentile)

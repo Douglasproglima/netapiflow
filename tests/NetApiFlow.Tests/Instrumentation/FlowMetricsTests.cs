@@ -138,6 +138,9 @@ public class FlowMetricsTests
         public ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken) =>
             ValueTask.FromResult<IReadOnlyList<RouteStat>>([]);
 
+        public ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new ArchitectureMap { TotalExecutions = 0, Nodes = [], Edges = [] });
+
         public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken) =>
             ValueTask.FromResult<FlowTraceDetail?>(null);
 

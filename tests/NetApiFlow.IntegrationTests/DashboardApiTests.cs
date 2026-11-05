@@ -419,6 +419,52 @@ public class DashboardApiTests
     }
 
     [Fact]
+    public async Task GetArchitecture_WithConditionalPath_ReturnsGraphWithPerStepExecutionCounts()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        await store.SaveAsync(
+            CreateTrace("arch-hit", "GET", "/api/orders/{id}", FlowStatus.Success, DateTime.UtcNow, 1_000),
+            [
+                CreateSpan("arch-hit", "root", null, 0, "OrdersController", "GetOrder", 1_000),
+                CreateSpan("arch-hit", "cache", "root", 1, "OrderCache", "TryGetAsync", 200),
+            ],
+            CancellationToken.None);
+        await store.SaveAsync(
+            CreateTrace("arch-miss", "GET", "/api/orders/{id}", FlowStatus.Success, DateTime.UtcNow, 2_000),
+            [
+                CreateSpan("arch-miss", "root", null, 0, "OrdersController", "GetOrder", 2_000),
+                CreateSpan("arch-miss", "repo", "root", 1, "OrderRepository", "FindAsync", 1_500),
+            ],
+            CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/architecture?method=GET&route=%2Fapi%2Forders%2F%7Bid%7D");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("totalExecutions").GetInt32().ShouldBe(2);
+        var nodes = doc.RootElement.GetProperty("nodes").EnumerateArray().ToList();
+        nodes.ShouldContain(n => n.GetProperty("component").GetString() == "OrdersController" && n.GetProperty("executionCount").GetInt32() == 2);
+        nodes.ShouldContain(n => n.GetProperty("component").GetString() == "OrderCache" && n.GetProperty("executionCount").GetInt32() == 1);
+        nodes.ShouldContain(n => n.GetProperty("component").GetString() == "OrderRepository" && n.GetProperty("executionCount").GetInt32() == 1);
+        var edges = doc.RootElement.GetProperty("edges").EnumerateArray().ToList();
+        edges.ShouldContain(e => e.GetProperty("fromComponent").GetString() == "OrdersController" && e.GetProperty("toComponent").GetString() == "OrderCache" && e.GetProperty("callCount").GetInt32() == 1);
+        edges.ShouldContain(e => e.GetProperty("fromComponent").GetString() == "OrdersController" && e.GetProperty("toComponent").GetString() == "OrderRepository" && e.GetProperty("callCount").GetInt32() == 1);
+    }
+
+    [Fact]
+    public async Task GetArchitecture_MissingRequiredParameter_Returns400()
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/architecture?method=GET");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task GetConfig_ReturnsSlowThresholdConfiguredOnTheHost()
     {
         using var host = CreateHost(configure: options => options.SlowThreshold = TimeSpan.FromMilliseconds(400));

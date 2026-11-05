@@ -254,6 +254,30 @@
     </a>
     <a
       class="app-rail__item"
+      routerLink="/architecture"
+      routerLinkActive="app-rail__item--active"
+      [attr.title]="'nav.architecture' | t"
+      (click)="closeSidenavIfNarrow()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        width="20"
+        height="20"
+      >
+        <circle cx="6" cy="6" r="2.2" />
+        <circle cx="18" cy="6" r="2.2" />
+        <circle cx="12" cy="18" r="2.2" />
+        <path d="M8 6h8M7.8 7.4 11.2 16.2M16.2 7.4 12.8 16.2" />
+      </svg>
+      <span>{{ 'nav.architecture' | t }}</span>
+    </a>
+    <a
+      class="app-rail__item"
       routerLink="/runner"
       routerLinkActive="app-rail__item--active"
       [attr.title]="'nav.runner' | t"
