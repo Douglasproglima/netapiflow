@@ -24,6 +24,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow.Dashboard`: a new "Architecture map" page (`/architecture`, D-83), the static call
+  graph of a single route built from every execution recorded within a chosen time window, not
+  just the last one. `ITraceStore.GetArchitectureMapAsync` and `ArchitectureMap` (nodes by
+  `(Component, Operation)`, edges by observed parent-child relationship), implemented by the
+  in-memory store and both storage packages, exposed via `GET /architecture`. The occurrence
+  percentage of a step below 100% is embedded in its label (e.g. `TryGetAsync (14%)`), computed by
+  the frontend from `executionCount`/`totalExecutions`, same treatment as `/metrics`'s `errorRate`.
+  Reuses the existing SVG graph renderer unmodified; exports the graph as Mermaid or SVG, both
+  generated client-side from the data already loaded.
 - `NetApiFlow`: tail-based sampling of persisted traces (`NetApiFlowOptions.TailSampling`, D-82).
   Disabled by default. Enabled, a trace with an error or a duration at or above `SlowThreshold`
   is always persisted, and any other trace is kept with probability `SuccessSampleRate` (default
