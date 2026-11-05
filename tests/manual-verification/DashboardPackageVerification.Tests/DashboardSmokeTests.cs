@@ -6,7 +6,7 @@ using Xunit;
 namespace DashboardPackageVerification.Tests;
 
 /// <summary>
-/// Proves the published .nupkg works standalone (tarefa 5.6): the dashboard opens at its default
+/// Proves the published .nupkg works standalone: the dashboard opens at its default
 /// path and at an arbitrary one, every asset the rewritten HTML references resolves, and nothing
 /// relies on being built from source inside this repo's own solution.
 /// </summary>

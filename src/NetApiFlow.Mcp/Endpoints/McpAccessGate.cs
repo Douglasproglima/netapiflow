@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 namespace NetApiFlow.Mcp.Endpoints;
 
 /// <summary>
-/// Shared gate for every MCP route (ADR-0006, ADR-0013, ADR-0015, risco R-14): outside
+/// Shared gate for every MCP route (risco R-14): outside
 /// Development, a route 404s unless <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>
 /// was configured. An <see cref="IFlowAccessFilter"/>, when registered, is always enforced (even in
 /// Development, since the host asked for it explicitly), returning <c>403</c> when it denies the

@@ -18,7 +18,7 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies tail-based sampling (D-82, tarefa 15.3): the decision only affects what reaches the
+/// Verifies tail-based sampling (D-82): the decision only affects what reaches the
 /// persisted history, never the live view.
 /// </summary>
 public class TailSamplingIntegrationTests

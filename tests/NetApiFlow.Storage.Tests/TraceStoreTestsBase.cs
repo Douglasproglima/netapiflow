@@ -6,7 +6,7 @@ namespace NetApiFlow.Storage.Tests;
 /// <summary>
 /// Exercises the full <see cref="ITraceStore"/> contract against a real database. Each test calls
 /// <see cref="CreateStore"/>, which gives it a fresh, uniquely-prefixed set of tables on the same
-/// shared container (tarefa 6.5): tests never see each other's rows, without dropping tables
+/// shared container: tests never see each other's rows, without dropping tables
 /// between them.
 /// </summary>
 public abstract class TraceStoreTestsBase

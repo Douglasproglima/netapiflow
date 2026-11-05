@@ -104,7 +104,7 @@ interface MergedNode {
 /**
  * Pure function: spans in, a laid-out graph out. No Angular, no HTTP, no DOM — `@dagrejs/dagre`
  * computes node positions only, never renders anything (seção 4.2 do prompt forbids a ready-made
- * graph-rendering library; the SVG component, tarefa 4.4, owns rendering).
+ * graph-rendering library; the SVG component owns rendering).
  */
 export function buildGraph(input: GraphBuilderInput): GraphResult {
   const tree = buildMergedTree(input);
@@ -243,7 +243,7 @@ function computeNPlusOneCounts(nodes: MergedNode[]): Map<string, number> {
 
 /**
  * Same grouping rule as `computeNPlusOneCounts`, applied to a flat list of real spans (the shape
- * the details panel, tarefa 9.3, already has from `FlowTraceDetail.spans`). Returns the full
+ * the details panel already has from `FlowTraceDetail.spans`). Returns the full
  * group, sorted by execution order, or an empty array when `spanId` isn't part of one.
  */
 export function findNPlusOneGroup(spans: FlowSpan[], spanId: string): FlowSpan[] {

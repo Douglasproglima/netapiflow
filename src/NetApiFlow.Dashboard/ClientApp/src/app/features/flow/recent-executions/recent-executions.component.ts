@@ -15,7 +15,7 @@ import { TranslationKey } from '../../../core/i18n/translations';
 const PAGE_SIZE = 8;
 
 /**
- * Condensed recent-executions list for the `/flow` workspace (D-31, tarefa 7.0c): the first page
+ * Condensed recent-executions list for the `/flow` workspace (D-31): the first page
  * of `GET /traces` (the same route `/history` already uses in full), so the last few requests are
  * visible without leaving the main screen. Clicking a row opens it the same way the live-in-progress
  * list already does (`openTrace`, reused by the parent).

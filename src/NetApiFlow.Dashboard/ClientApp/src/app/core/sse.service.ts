@@ -17,7 +17,7 @@ const MAX_RECONNECT_DELAY_MS = 30000;
  * (risco R-03): never hardcode `/flow`.
  *
  * `connect`/`disconnect` are reference-counted: `LiveTracePlayerService` and an always-on event
- * feed (ADR-0010) can both want the stream open at the same time, each calling `connect()`/
+ * feed can both want the stream open at the same time, each calling `connect()`/
  * `disconnect()` on its own lifecycle without tearing down the other's connection.
  */
 @Injectable({ providedIn: 'root' })

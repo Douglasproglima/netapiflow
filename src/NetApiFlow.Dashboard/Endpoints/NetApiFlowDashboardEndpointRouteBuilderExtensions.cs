@@ -7,7 +7,7 @@ using NetApiFlow.Dashboard.StaticFiles;
 
 namespace NetApiFlow.Dashboard.Endpoints;
 
-/// <summary>Mounts the whole dashboard: the REST/SSE API and the embedded Angular UI (ADR-0005).</summary>
+/// <summary>Mounts the whole dashboard: the REST/SSE API and the embedded Angular UI.</summary>
 public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
 {
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
@@ -17,7 +17,7 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
     /// under <c>{basePath}/api</c>, and the compiled Angular client everywhere else under
     /// <paramref name="basePath"/>, with a SPA fallback to <c>index.html</c> for any route that
     /// matches neither a static asset nor an API route (risco R-03). Chain <c>RequireAuthorization</c>
-    /// on the result to protect every dashboard route with the same policy (ADR-0006, risco R-09).
+    /// on the result to protect every dashboard route with the same policy (risco R-09).
     /// </summary>
     public static IEndpointConventionBuilder UseNetApiFlowDashboard(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
     {

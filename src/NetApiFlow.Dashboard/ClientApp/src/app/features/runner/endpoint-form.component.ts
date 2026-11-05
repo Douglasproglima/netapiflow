@@ -16,7 +16,7 @@ import { TranslationKey } from '../../core/i18n/translations';
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
  * path/query parameters and JSON body, and dispatch it. Shared by the `/runner` route and the
- * `/flow` workspace's action panel (ADR-0010, guide seção 6.3): it only emits the dispatched
+ * `/flow` workspace's action panel (guide seção 6.3): it only emits the dispatched
  * trace id, leaving what to do with it (track it inline, navigate to it) to whichever page embeds
  * it. `openApiUrl` is root-relative on purpose: the host's OpenAPI document and the endpoints it
  * describes live at the application root, which is unrelated to wherever the dashboard itself is

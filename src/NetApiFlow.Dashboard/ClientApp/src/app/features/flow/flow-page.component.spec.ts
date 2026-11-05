@@ -76,14 +76,14 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
-  /** Both FlowPageComponent and the metric cards (ADR-0010) read GET /config independently. */
+  /** Both FlowPageComponent and the metric cards read GET /config independently. */
   function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
     for (const request of httpMock.match('api/config')) {
       request.flush({ slowThresholdMicros, version: '0.1.0' });
     }
   }
 
-  /** The workspace's metric cards and action panel (ADR-0010) fire their own requests on mount. */
+  /** The workspace's metric cards and action panel fire their own requests on mount. */
   function flushWorkspaceChildRequests(): void {
     httpMock.expectOne('api/metrics').flush({
       totalTraces: 0,

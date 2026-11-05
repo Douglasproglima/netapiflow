@@ -6,7 +6,7 @@ using NetApiFlow.Domain;
 namespace NetApiFlow.Storage.SqlServer;
 
 /// <summary>
-/// <see cref="ITraceStore"/> backed by SQL Server via raw ADO.NET (ADR-0004, D-05). <see cref="SaveAsync"/>
+/// <see cref="ITraceStore"/> backed by SQL Server via raw ADO.NET (D-05). <see cref="SaveAsync"/>
 /// uses <see cref="SqlBulkCopy"/> for the batch write of a trace and its spans.
 /// </summary>
 internal sealed class SqlServerTraceStore : ITraceStore, IDisposable

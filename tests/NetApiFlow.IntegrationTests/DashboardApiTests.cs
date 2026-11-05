@@ -17,7 +17,7 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the eleven REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3 (tarefa 3.2),
+/// Verifies the eleven REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3,
 /// against a host running only NetApiFlow's own services (no sample app), seeding
 /// <see cref="InMemoryTraceStore"/> and <see cref="FlowRecorder"/> directly.
 /// </summary>
