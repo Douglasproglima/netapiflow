@@ -1,0 +1,105 @@
+<section class="insights">
+  <div class="insights__window">
+    <span class="insights__window-label" id="insights-window-label">{{
+      'insights.window.label' | t
+    }}</span>
+    <div class="naf-seg" role="radiogroup" aria-labelledby="insights-window-label">
+      @for (w of windows; track w) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="window() === w"
+          (click)="selectWindow(w)"
+        >
+          {{ windowLabelKey(w) | t }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="insights__status" role="status">{{ 'insights.loading' | t }}</p>
+  } @else if (error()) {
+    <p class="insights__status insights__status--error" role="alert">{{ error() | t }}</p>
+  } @else {
+    <mat-card appearance="outlined" class="insights__block">
+      <h2>{{ 'insights.slowest.title' | t }}</h2>
+      @if (slowestRoutes().length === 0) {
+        <p class="insights__status">{{ 'insights.slowest.empty' | t }}</p>
+      } @else {
+        <table class="insights__table">
+          <thead>
+            <tr>
+              <th>{{ 'insights.table.method' | t }}</th>
+              <th>{{ 'insights.table.route' | t }}</th>
+              <th>{{ 'insights.table.executions' | t }}</th>
+              <th>{{ 'insights.table.p95' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (stat of slowestRoutes(); track trackByRoute($index, stat)) {
+              <tr>
+                <td>{{ stat.method }}</td>
+                <td>{{ stat.routeTemplate }}</td>
+                <td>{{ stat.executionCount }}</td>
+                <td>{{ formatDuration(stat.p95DurationMicros) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="insights__block">
+      <h2>{{ 'insights.topErrors.title' | t }}</h2>
+      @if (topErrors().length === 0) {
+        <p class="insights__status">{{ 'insights.topErrors.empty' | t }}</p>
+      } @else {
+        <table class="insights__table">
+          <thead>
+            <tr>
+              <th>{{ 'insights.table.method' | t }}</th>
+              <th>{{ 'insights.table.route' | t }}</th>
+              <th>{{ 'insights.table.errors' | t }}</th>
+              <th>{{ 'insights.table.executions' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (stat of topErrors(); track trackByRoute($index, stat)) {
+              <tr>
+                <td>{{ stat.method }}</td>
+                <td>{{ stat.routeTemplate }}</td>
+                <td>{{ stat.errorCount }}</td>
+                <td>{{ stat.executionCount }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="insights__block">
+      <h2>{{ 'insights.deadRoutes.title' | t }}</h2>
+      @if (deadRoutes().length === 0) {
+        <p class="insights__status">{{ 'insights.deadRoutes.empty' | t }}</p>
+      } @else {
+        <table class="insights__table">
+          <thead>
+            <tr>
+              <th>{{ 'insights.table.method' | t }}</th>
+              <th>{{ 'insights.table.route' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (endpoint of deadRoutes(); track trackByEndpoint($index, endpoint)) {
+              <tr>
+                <td>{{ endpoint.method }}</td>
+                <td>{{ endpoint.routeTemplate }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </mat-card>
+  }
+</section>

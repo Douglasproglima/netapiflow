@@ -153,6 +153,70 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetRouteStatsAsync_AggregatesPerMethodAndRouteTemplate()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-1", method: "GET", route: "/api/orders/{id}", durationMicros: 1_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-2", method: "GET", route: "/api/orders/{id}", durationMicros: 3_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-3", method: "GET", route: "/api/orders/{id}", durationMicros: 2_000, status: FlowStatus.Error), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-4", method: "GET", route: "/api/customers", durationMicros: 500), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        stats.Count.ShouldBe(2);
+        var orders = stats.Single(s => s.RouteTemplate == "/api/orders/{id}");
+        orders.Method.ShouldBe("GET");
+        orders.ExecutionCount.ShouldBe(3);
+        orders.ErrorCount.ShouldBe(1);
+        orders.MedianDurationMicros.ShouldBe(2_000);
+        orders.MaxDurationMicros.ShouldBe(3_000);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_SameRouteDifferentMethod_TreatedAsSeparateEntries()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-get", method: "GET", route: "/api/orders/{id}"), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-delete", method: "DELETE", route: "/api/orders/{id}"), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        stats.Count.ShouldBe(2);
+        stats.ShouldContain(s => s.Method == "GET" && s.RouteTemplate == "/api/orders/{id}");
+        stats.ShouldContain(s => s.Method == "DELETE" && s.RouteTemplate == "/api/orders/{id}");
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_FiltersByFromAndTo()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeTrace("rs-old", route: "/api/orders", startedAt: now.AddDays(-10)), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-new", route: "/api/orders", startedAt: now), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(
+            new StatsQuery { From = now.AddHours(-1), To = now.AddHours(1) },
+            CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.ExecutionCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_RunningTraceWithNullDuration_CountedButExcludedFromDurationStats()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeRawTrace("rs-running", DateTime.UtcNow, httpStatus: null, durationMicros: null), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.ExecutionCount.ShouldBe(1);
+        stat.MedianDurationMicros.ShouldBe(0);
+        stat.MaxDurationMicros.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task GetLastSuccessfulAsync_ReturnsMostRecentSuccessForThatEndpoint()
     {
         var store = CreateStore();

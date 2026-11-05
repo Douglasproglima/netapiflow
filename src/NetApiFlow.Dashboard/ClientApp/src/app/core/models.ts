@@ -129,6 +129,18 @@ export interface ComponentStat {
   maxDurationMicros: number;
 }
 
+/** GET /metrics/routes list item. */
+export interface RouteStat {
+  method: string;
+  routeTemplate: string;
+  executionCount: number;
+  errorCount: number;
+  medianDurationMicros: number;
+  averageDurationMicros: number;
+  p95DurationMicros: number;
+  maxDurationMicros: number;
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;

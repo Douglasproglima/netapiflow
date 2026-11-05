@@ -33,6 +33,7 @@ internal static class DashboardApiEndpoints
         group.MapGet("/endpoints", GetEndpoints);
         group.MapGet("/metrics", GetMetrics);
         group.MapGet("/metrics/components", GetComponentMetrics);
+        group.MapGet("/metrics/routes", GetRouteMetrics);
         group.MapGet("/config", GetConfig);
         group.MapStream();
 
@@ -259,6 +260,13 @@ internal static class DashboardApiEndpoints
     private static async Task<IResult> GetComponentMetrics(DateTime? from, DateTime? to, ITraceStore store, CancellationToken cancellationToken)
     {
         var stats = await store.GetComponentStatsAsync(new StatsQuery { From = from, To = to }, cancellationToken);
+        var ordered = stats.OrderByDescending(s => s.ExecutionCount).ToList();
+        return Results.Json(ordered, DashboardJsonOptions.Rest);
+    }
+
+    private static async Task<IResult> GetRouteMetrics(DateTime? from, DateTime? to, ITraceStore store, CancellationToken cancellationToken)
+    {
+        var stats = await store.GetRouteStatsAsync(new StatsQuery { From = from, To = to }, cancellationToken);
         var ordered = stats.OrderByDescending(s => s.ExecutionCount).ToList();
         return Results.Json(ordered, DashboardJsonOptions.Rest);
     }

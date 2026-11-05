@@ -20,6 +20,9 @@ public interface ITraceStore
     /// <summary>Aggregated statistics across whole traces within <paramref name="query"/>'s time window.</summary>
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
 
+    /// <summary>Aggregated statistics per HTTP method/route template within <paramref name="query"/>'s time window.</summary>
+    ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+
     /// <summary>Gets the last successful trace with its spans for an endpoint, used as the blueprint for "not executed" steps.</summary>
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
 
