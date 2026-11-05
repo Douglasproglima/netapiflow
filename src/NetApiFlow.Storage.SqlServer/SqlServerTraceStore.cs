@@ -209,7 +209,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         }
 
         return rows
-            .GroupBy(r => (r.Method, r.RouteTemplate))
+            .GroupBy(r => (Method: r.Method.ToUpperInvariant(), r.RouteTemplate))
             .Select(group =>
             {
                 var durations = group.Where(r => r.Duration is not null).Select(r => r.Duration!.Value).OrderBy(d => d).ToList();

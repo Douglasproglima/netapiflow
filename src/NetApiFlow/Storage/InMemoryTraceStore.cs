@@ -131,7 +131,7 @@ internal sealed class InMemoryTraceStore : ITraceStore
             .Select(e => e.Trace)
             .Where(trace => query.From is null || trace.StartedAt >= query.From)
             .Where(trace => query.To is null || trace.StartedAt <= query.To)
-            .GroupBy(trace => (trace.Method, trace.RouteTemplate));
+            .GroupBy(trace => (Method: trace.Method.ToUpperInvariant(), trace.RouteTemplate));
 
         var stats = traces.Select(group =>
         {

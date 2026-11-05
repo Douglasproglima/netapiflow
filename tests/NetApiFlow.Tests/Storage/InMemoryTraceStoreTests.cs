@@ -139,6 +139,35 @@ public class InMemoryTraceStoreTests
     }
 
     [Fact]
+    public async Task GetRouteStatsAsync_SameMethodDifferentCasing_TreatedAsOneEntryWithUppercaseMethod()
+    {
+        await _subject.SaveAsync(new FlowTrace
+        {
+            TraceId = "orders-get-upper",
+            Method = "GET",
+            RouteTemplate = "/api/orders/{id}",
+            Status = FlowStatus.Success,
+            StartedAt = DateTime.UtcNow,
+            DurationMicros = 1000,
+        }, [], CancellationToken.None);
+        await _subject.SaveAsync(new FlowTrace
+        {
+            TraceId = "orders-get-lower",
+            Method = "get",
+            RouteTemplate = "/api/orders/{id}",
+            Status = FlowStatus.Success,
+            StartedAt = DateTime.UtcNow,
+            DurationMicros = 1000,
+        }, [], CancellationToken.None);
+
+        var stats = await _subject.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        stats.Count.ShouldBe(1);
+        stats[0].Method.ShouldBe("GET");
+        stats[0].ExecutionCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task GetRouteStatsAsync_FiltersByFromAndTo()
     {
         var baseTime = DateTime.UtcNow;
