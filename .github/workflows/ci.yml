@@ -213,6 +213,7 @@ jobs:
             "http://localhost:60803/flow/history" \
             "http://localhost:60803/flow/components" \
             "http://localhost:60803/flow/insights" \
+            "http://localhost:60803/flow/architecture" \
             "http://localhost:60803/flow/runner" || true
 
           npx impeccable detect --github \
@@ -220,6 +221,7 @@ jobs:
             "http://localhost:60803/flow/history" \
             "http://localhost:60803/flow/components" \
             "http://localhost:60803/flow/insights" \
+            "http://localhost:60803/flow/architecture" \
             "http://localhost:60803/flow/runner" || true
 
   secret-scan:
