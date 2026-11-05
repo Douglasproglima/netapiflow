@@ -16,22 +16,22 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Exportação OTLP | D-58 item 1b | 🔴 Alto | Em planejamento (Fase 13) |
-| 2 | Visão agregada estilo Pulse | D-60 (Pulse) | 🔴 Alto | Backlog |
-| 3 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Backlog |
-| 4 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Backlog |
-| 5 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
-| 6 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
-| 7 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
-| 8 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
-| 9 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
-| 10 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
+| 1 | Visão agregada estilo Pulse | D-60 (Pulse) | 🔴 Alto | Backlog |
+| 2 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Backlog |
+| 3 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Backlog |
+| 4 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
+| 5 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
+| 6 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
+| 7 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
+| 8 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
+| 9 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
 | — | Visibilidade de cancelamento, anotação de deploy | D-60 (menores) | ⚪ Baixo | Backlog, sem posição fixa |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
 Interop OTel ingestão (Fase 8), detector de N+1 (Fase 9), servidor MCP (Fase 10), Impeccable
-(Fase 11, governança, não é item de roadmap de produto), tempo não explicado (Fase 12).
+(Fase 11, governança, não é item de roadmap de produto), tempo não explicado (Fase 12),
+exportação OTLP (Fase 13, era item 1 deste ranking).
 
 ## Fora do ranking, decisão de escopo em aberto
 
