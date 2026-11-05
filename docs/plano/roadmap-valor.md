@@ -16,7 +16,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Backlog |
+| 1 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Em planejamento (Fase 15) |
 | 2 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Backlog |
 | 3 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
 | 4 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
@@ -30,7 +30,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 Interop OTel ingestão (Fase 8), detector de N+1 (Fase 9), servidor MCP (Fase 10), Impeccable
 (Fase 11, governança, não é item de roadmap de produto), tempo não explicado (Fase 12),
-exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14, era item 1 deste ranking).
+exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14).
 
 ## Fora do ranking, decisão de escopo em aberto
 
