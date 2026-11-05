@@ -31,6 +31,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   `false`) optionally observes the native `"System.Net.Http"` source, which is not sanitized by
   NetApiFlow's own URL sanitizer (ADR-0016, R-16). Published alongside the other seven packages
   on the same tag from this release onward.
+- `NetApiFlow`: `ITraceStore.GetRouteStatsAsync` and `RouteStat`, aggregated statistics per HTTP
+  method/route template (D-81), implemented by the in-memory store and both storage packages.
+- `NetApiFlow.Dashboard`: `GET /metrics/routes` and a new "Insights" page (`/insights`), an
+  aggregated view of every traceable route: slowest routes, top errors, and dead routes (routes
+  the host API exposes but that never ran in the chosen time window).
 - `NetApiFlow.Mcp`: a new optional package embedding a read-only MCP (Model Context Protocol)
   server over the existing `ITraceStore`, so an AI agent can list recent traces, get a trace by
   id, and read per-component statistics without any REST client code. Same Development-only gate

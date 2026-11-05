@@ -134,6 +134,15 @@ In the history list (`/history`), every column header sorts the whole result set
 just the current page. Combine "slow only" with sorting by Duration (descending) to get the
 slowest executions across the entire history.
 
+## Insights
+
+`/insights` is an aggregated view across every traceable route of the host API, for a chosen time
+window (last 24 hours, last 7 days by default, or last 30 days): the slowest routes by p95
+duration, the routes with the most errors, and dead routes, those that exist in the host API but
+never ran in the chosen window. All three come from `GET /metrics/routes` and `GET /endpoints`;
+slowest and top errors are two different sortings of the same payload, and dead routes is the
+dashboard cross-referencing it against every route the host API exposes.
+
 ## Configuration
 
 ```csharp
