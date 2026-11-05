@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- `NetApiFlow.Dashboard`: semantic text (HTTP verb badges, status chips, error/warning banners,
+  graph node state labels) sitting directly on its own tinted background now uses a dedicated
+  `-on-tint` color token instead of the flat-surface base color, fixing six low-contrast pairs
+  found by Impeccable (ADR-0014).
+- `NetApiFlow.Dashboard`: interface text below the 11px floor (version label, graph sub-labels,
+  input placeholders) raised to 11px or given a readable `::placeholder` color.
+- `NetApiFlow.Dashboard`: card titles and body text now follow the dashboard's type scale (Inter
+  14/20 for card titles, 13/20 for body/list items) instead of inheriting the page-title scale.
+- `NetApiFlow.Dashboard`: the error box in the span details panel no longer reads as a card nested
+  inside the details panel card.
+- `NetApiFlow.Dashboard`: "Try an endpoint" moved from a button floating in the graph panel to the
+  topbar, matching the `/flow` workspace guide.
+
+### Added
+
+- Impeccable (ADR-0014) adopted as a dev-only visual quality guard: installed skill and hook for
+  Claude Code sessions, `DESIGN.md` now generated from `docs/brand/tokens.md`, and a warn-only CI
+  job runs the detector against a live sample on every PR that touches
+  `NetApiFlow.Dashboard/ClientApp`.
+
 ## [0.1.1] - 2026-11-03
 
 ### Fixed

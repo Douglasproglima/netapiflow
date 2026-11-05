@@ -227,28 +227,19 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-// Heading scale (brand guide, Seção 03), scaled down from the guide's own marketing/hero sizes
-// to what a dense dashboard's panel and section titles actually need.
-h1,
-h2,
-h3 {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+h1 {
+  font-family: var(--naf-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
   letter-spacing: -0.01em;
 }
 
-h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-}
-
-h2 {
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
+h2,
 h3 {
-  font-size: 1rem;
-  font-weight: 700;
+  font-family: var(--naf-font-ui);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
 }
 
 code,
@@ -293,18 +284,18 @@ code,
 }
 
 .naf-tag--post {
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
   background: var(--naf-success-tint);
 }
 
 .naf-tag--put,
 .naf-tag--patch {
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   background: var(--naf-warning-tint);
 }
 
 .naf-tag--delete {
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
   background: var(--naf-danger-tint);
 }
 
@@ -333,17 +324,17 @@ code,
 }
 
 .naf-chip--live {
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
   background: var(--naf-success-tint);
 }
 
 .naf-chip--warning {
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   background: var(--naf-warning-tint);
 }
 
 .naf-chip--danger {
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
   background: var(--naf-danger-tint);
 }
 
@@ -450,6 +441,11 @@ code,
   &:focus-visible {
     outline: 2px solid var(--naf-focus);
     outline-offset: 2px;
+  }
+
+  &::placeholder {
+    color: var(--naf-text-muted);
+    opacity: 1;
   }
 }
 

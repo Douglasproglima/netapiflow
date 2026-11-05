@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { map } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
 import { FlowTraceSummary, SpanDetail } from '../../core/models';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
@@ -55,21 +56,13 @@ export class FlowPageComponent {
   readonly livePlayer = inject(LiveTracePlayerService);
   readonly replayPlayer = inject(ReplayPlayerService);
 
+  readonly actionDrawer = inject(ActionDrawerService);
+
   /** Below 1600px the action panel leaves the grid and becomes a drawer (guide seção 5.2). */
   readonly isActionDrawer = toSignal(
     this.breakpointObserver.observe('(max-width: 1599px)').pipe(map((state) => state.matches)),
     { initialValue: false },
   );
-
-  readonly actionDrawerOpen = signal(false);
-
-  toggleActionDrawer(): void {
-    this.actionDrawerOpen.update((open) => !open);
-  }
-
-  closeActionDrawer(): void {
-    this.actionDrawerOpen.set(false);
-  }
 
   readonly traceId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('trace'))), {
     initialValue: this.route.snapshot.queryParamMap.get('trace'),
@@ -108,6 +101,10 @@ export class FlowPageComponent {
     this.api
       .getConfig()
       .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+
+    effect(() => {
+      this.actionDrawer.isDrawer.set(this.isActionDrawer());
+    });
 
     effect(() => {
       const traceId = this.traceId();

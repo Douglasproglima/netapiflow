@@ -189,10 +189,10 @@ describe('FlowPageComponent', () => {
     flushWorkspaceChildRequests();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
-    fixture.componentInstance.toggleActionDrawer();
-    expect(fixture.componentInstance.actionDrawerOpen()).toBe(true);
-    fixture.componentInstance.closeActionDrawer();
-    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
+    expect(fixture.componentInstance.actionDrawer.open()).toBe(false);
+    fixture.componentInstance.actionDrawer.toggle();
+    expect(fixture.componentInstance.actionDrawer.open()).toBe(true);
+    fixture.componentInstance.actionDrawer.close();
+    expect(fixture.componentInstance.actionDrawer.open()).toBe(false);
   });
 });

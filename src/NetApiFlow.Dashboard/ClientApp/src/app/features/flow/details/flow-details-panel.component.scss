@@ -50,7 +50,7 @@
 }
 
 .flow-details__route {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -75,12 +75,12 @@
 
 .flow-details__chip--success {
   background: var(--naf-success-tint);
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
 }
 
 .flow-details__chip--danger {
   background: var(--naf-danger-tint);
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
 }
 
 .flow-details__kpis {
@@ -111,15 +111,13 @@
 .flow-details__errbox {
   margin-top: 0.875rem;
   padding: 0.75rem;
-  border-radius: 10px;
   background: var(--naf-danger-tint);
-  border: 1px solid rgba(239, 68, 68, 0.45);
 
   b {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--naf-danger);
+    color: var(--naf-danger-on-tint);
     font-size: 0.8125rem;
     font-weight: 600;
   }
@@ -142,7 +140,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--naf-warning);
+    color: var(--naf-warning-on-tint);
     font-size: 0.8125rem;
     font-weight: 600;
   }
@@ -153,7 +151,7 @@
   border: 0;
   background: none;
   padding: 0;
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   font-size: 0.75rem;
   font-weight: 600;
   text-decoration: underline;

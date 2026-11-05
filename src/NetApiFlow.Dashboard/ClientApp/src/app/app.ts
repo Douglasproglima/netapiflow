@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { filter, map, startWith } from 'rxjs';
 import { AboutDialogComponent } from './features/about/about-dialog.component';
+import { ActionDrawerService } from './core/action-drawer.service';
 import { ApiService } from './core/api.service';
 import { SseService } from './core/sse.service';
 import { formatDurationMicros } from './shared/duration-format';
@@ -44,6 +45,7 @@ export class App implements OnInit, OnDestroy {
   private readonly sse = inject(SseService);
   private readonly language = inject(LanguageService);
   private readonly theme = inject(ThemeService);
+  readonly actionDrawer = inject(ActionDrawerService);
 
   readonly version = signal<string | null>(null);
   readonly connectionState = this.sse.state;
@@ -79,6 +81,15 @@ export class App implements OnInit, OnDestroy {
 
   readonly slowThresholdValue = signal<string | null>(null);
   readonly inProgressCount = signal(0);
+
+  readonly onFlowRoute = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.router.url.split('?')[0] === '/flow'),
+    ),
+    { initialValue: this.router.url.split('?')[0] === '/flow' },
+  );
 
   constructor() {
     // Open by default on a wide screen, closed by default below 1024px — but only when crossing
