@@ -48,6 +48,23 @@ Push, merge, tag, abrir ou mergear PR e criar release são visíveis publicament
 repositório é público). Nunca fazer nenhuma delas sem confirmação explícita na conversa.
 Confirmação vale para aquela ação, não para as próximas.
 
+## Limpeza depois do merge
+
+Rotina padrão assim que uma PR for confirmada como `MERGED` (sempre confirmar via `gh pr view
+--json state,mergedAt` ou equivalente antes de apagar qualquer coisa, nunca assumir pelo nome ou
+pela aparência do branch):
+
+- Worktree isolado criado para aquele trabalho (padrão da Planejadora, ver seção acima):
+  `git worktree remove <path> --force`.
+- Branch remota da PR: conferir se ainda existe (`gh api repos/<owner>/<repo>/branches`). Se
+  `--delete-branch` não rodou (instabilidade da API do GitHub já aconteceu nesta sessão: a
+  mutação de merge foi processada mas a resposta falhou, deixando a flag de apagar branch sem
+  efeito), apagar manualmente (`gh api -X DELETE repos/<owner>/<repo>/git/refs/heads/<branch>`).
+- Checkout compartilhado (Executora): se o branch local dela aponta para uma PR já mergeada e o
+  `git status` está limpo (sem nada além de scratch conhecido: screenshots, logs de verificação
+  manual), trocar para `develop`, `git pull`, e apagar o branch local antigo (`git branch -d`).
+  Nunca fazer isso com trabalho não commitado no meio.
+
 ## Nunca
 
 - `git push --force` em `main`, `develop` ou `release/*`.
