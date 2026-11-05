@@ -2,7 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { FlowTraceDetail, SpanDetail } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
-import { buildWaterfall } from './waterfall';
+import { buildWaterfall, computeUnexplainedTime } from './waterfall';
 import { findNPlusOneGroup } from '../graph/graph-builder';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
@@ -27,6 +27,19 @@ export class FlowDetailsPanelComponent {
   readonly jumpToSpan = output<string>();
 
   readonly waterfall = computed(() => buildWaterfall(this.trace(), this.slowThresholdMicros()));
+
+  readonly unexplainedTimeValues = computed(() => {
+    const unexplained = computeUnexplainedTime(this.trace());
+    if (!unexplained) {
+      return null;
+    }
+
+    return {
+      percent: unexplained.unexplainedPercent.toFixed(0),
+      unexplained: this.formatDuration(unexplained.unexplainedMicros),
+      total: this.formatDuration(this.trace().durationMicros),
+    };
+  });
 
   readonly executedCount = computed(() => this.trace().spans.length);
 

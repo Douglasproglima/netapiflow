@@ -115,6 +115,11 @@ same trace share the same component and operation, even under different parents.
 what a classic N+1 loop produces: one query per loop iteration, same SQL format, different
 instance of the step in the loop.
 
+A finished trace also shows how much of its total duration isn't covered by any recorded step,
+e.g. "30% of the time (55 ms of 183 ms) is not covered by any recorded step." The math is the
+union of every step's `[startedAt, endedAt)` interval, not a naive sum of durations, so a nested
+step or two parallel branches of a `Task.WhenAll` never get counted twice.
+
 ## Dashboard preferences
 
 The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in

@@ -108,6 +108,40 @@ describe('FlowDetailsPanelComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(1);
   });
 
+  describe('unexplained time badge (D-78)', () => {
+    it('shows the badge with the percent and both absolute durations for a finished trace', async () => {
+      const trace = makeTrace();
+      trace.durationMicros = 100_000;
+      trace.spans[0].durationMicros = 60_000;
+      trace.spans[0].endedAt = '2026-01-01T00:00:00.060000Z';
+
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', trace);
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      await fixture.whenStable();
+
+      const badge: HTMLElement = fixture.nativeElement.querySelector('.flow-details__unexplained');
+      expect(badge).not.toBeNull();
+      expect(badge.textContent).toContain('40%');
+      expect(badge.textContent).toContain('40 ms');
+      expect(badge.textContent).toContain('100 ms');
+    });
+
+    it('does not show the badge for a trace still running', async () => {
+      const trace = makeTrace();
+      trace.status = 'Running';
+      trace.endedAt = null;
+      trace.durationMicros = null;
+
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', trace);
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.flow-details__unexplained')).toBeNull();
+    });
+  });
+
   it('shows the full span detail, including children and the delta from the median, when a span is selected', async () => {
     const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
     fixture.componentRef.setInput('trace', makeTrace());

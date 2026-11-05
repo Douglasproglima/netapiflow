@@ -201,6 +201,13 @@
   padding-left: 1.25rem;
 }
 
+.flow-details__unexplained {
+  margin: 0;
+  padding: 0 1rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+}
+
 .flow-waterfall {
   list-style: none;
   display: flex;
