@@ -28,6 +28,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   Claude Code sessions, `DESIGN.md` now generated from `docs/brand/tokens.md`, and a warn-only CI
   job runs the detector against a live sample on every PR that touches
   `NetApiFlow.Dashboard/ClientApp`.
+- `NetApiFlow.Dashboard`: a finished trace now shows how much of its total duration isn't covered
+  by any recorded step, as the union of every step's `[startedAt, endedAt)` interval rather than a
+  naive sum of durations, so a nested step or two parallel `Task.WhenAll` branches are never
+  counted twice (D-78).
 
 ## [0.1.1] - 2026-11-03
 

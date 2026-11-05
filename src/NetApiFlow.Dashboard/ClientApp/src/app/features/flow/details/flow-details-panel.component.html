@@ -170,6 +170,9 @@
     <p class="flow-details__section-label">
       {{ 'details.steps.sectionLabel' | t }} <em>· {{ 'details.steps.sectionHint' | t }}</em>
     </p>
+    @if (unexplainedTimeValues(); as values) {
+      <p class="flow-details__unexplained">{{ 'details.unexplainedTime' | t: values }}</p>
+    }
     <ul class="flow-waterfall">
       @for (row of waterfall(); track row.spanId) {
         <li class="flow-waterfall__row" [attr.data-state]="row.state">

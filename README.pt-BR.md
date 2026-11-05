@@ -116,6 +116,12 @@ Um nó `Database` também mostra um selo de N+1, por exemplo `⚠ ×12`, quando 
 diferentes. É essa a forma que um N+1 clássico produz. Uma consulta por iteração do laço, mesmo
 formato de SQL, cada uma filha de uma instância diferente da etapa em loop.
 
+Um trace concluído também mostra quanto da sua duração total não está coberto por nenhuma etapa
+registrada, por exemplo "30% do tempo (55 ms de 183 ms) não está coberto por nenhuma etapa
+registrada". A conta é a união dos intervalos `[startedAt, endedAt)` de cada etapa, não uma soma
+ingênua das durações. Assim, uma etapa aninhada ou duas branches paralelas de um `Task.WhenAll`
+nunca são contadas em dobro.
+
 ## Preferências do dashboard
 
 A interface do dashboard vem em português (pt-BR) por padrão. Troque para inglês pelo seletor de
