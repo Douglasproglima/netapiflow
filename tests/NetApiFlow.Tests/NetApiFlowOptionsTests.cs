@@ -34,6 +34,8 @@ public class NetApiFlowOptionsTests
         options.Retention.MaxAge.ShouldBe(TimeSpan.FromHours(24));
         options.Limits.MaxSpansPerTrace.ShouldBe(300);
         options.ExternalSources.ShouldBe(ExternalActivitySource.None);
+        options.TailSampling.Enabled.ShouldBeFalse();
+        options.TailSampling.SuccessSampleRate.ShouldBe(0.1);
     }
 
     [Fact]
@@ -82,5 +84,19 @@ public class NetApiFlowOptionsTests
 
         var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
         exception.Message.ShouldContain("SlowThreshold");
+    }
+
+    [Theory]
+    [InlineData("-0.1")]
+    [InlineData("1.1")]
+    public void Value_WithSuccessSampleRateOutOfRange_ThrowsOptionsValidationException(string rate)
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:TailSampling:SuccessSampleRate"] = rate,
+        });
+
+        var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
+        exception.Message.ShouldContain("TailSampling.SuccessSampleRate");
     }
 }

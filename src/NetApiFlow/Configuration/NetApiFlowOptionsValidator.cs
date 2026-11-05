@@ -31,6 +31,12 @@ internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOp
                 $"NetApiFlow: SlowThreshold must be greater than zero (was {options.SlowThreshold}).");
         }
 
+        if (options.TailSampling.SuccessSampleRate is < 0.0 or > 1.0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: TailSampling.SuccessSampleRate must be between 0.0 and 1.0 (was {options.TailSampling.SuccessSampleRate}).");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }
