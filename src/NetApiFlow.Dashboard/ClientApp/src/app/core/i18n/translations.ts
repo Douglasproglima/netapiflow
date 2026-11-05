@@ -116,6 +116,8 @@ const en = {
   'details.span.nPlusOne': 'Suspected N+1: {count} queries with this same shape in this trace.',
   'details.span.nPlusOneJump': 'Jump to the first one',
   'details.backToSummary': 'Back to trace summary',
+  'details.unexplainedTime':
+    '{percent}% of the time ({unexplained} of {total}) is not covered by any recorded step.',
 
   'recent.title': 'Recent executions',
   'recent.viewAll': 'View all',
@@ -329,6 +331,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'details.span.nPlusOne': 'Possível N+1: {count} consultas com esse mesmo formato neste trace.',
   'details.span.nPlusOneJump': 'Pular para a primeira',
   'details.backToSummary': 'Voltar ao resumo do trace',
+  'details.unexplainedTime':
+    '{percent}% do tempo ({unexplained} de {total}) não está coberto por nenhuma etapa registrada.',
 
   'recent.title': 'Execuções recentes',
   'recent.viewAll': 'Ver todas',
