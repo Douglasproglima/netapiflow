@@ -58,8 +58,9 @@ public class FlowEventPublisherTests
     [Fact]
     public async Task Publish_WhenOneListenerThrows_OtherListenerStillReceivesEvent()
     {
-        var recorder = new FlowRecorder(Options.Create(new NetApiFlowOptions()));
-        using var persistenceWriter = new PersistenceWriter(recorder, new NoOpTraceStore(), NullLogger<PersistenceWriter>.Instance);
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        using var persistenceWriter = new PersistenceWriter(recorder, new NoOpTraceStore(), options, NullLogger<PersistenceWriter>.Instance);
         var recording = new RecordingListener();
         var listeners = new IFlowEventListener[] { new ThrowingListener(), recording };
         using var publisher = new FlowEventPublisher(recorder, persistenceWriter, listeners, NullLogger<FlowEventPublisher>.Instance);
