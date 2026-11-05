@@ -187,6 +187,20 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetRouteStatsAsync_SameMethodDifferentCasing_TreatedAsOneEntryWithUppercaseMethod()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-upper", method: "GET", route: "/api/orders/{id}"), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-lower", method: "get", route: "/api/orders/{id}"), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.Method.ShouldBe("GET");
+        stat.ExecutionCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task GetRouteStatsAsync_FiltersByFromAndTo()
     {
         var store = CreateStore();
