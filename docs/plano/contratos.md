@@ -47,6 +47,7 @@ public interface ITraceStore
     ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
@@ -266,6 +267,24 @@ public sealed record TraceStats
 
 `errorRate` do payload de `/metrics` é calculado pela camada de API (`ErrorCount / TotalTraces`,
 `0` quando `TotalTraces` é `0`), não pelo `ITraceStore`.
+
+`GetRouteStatsAsync` e `RouteStat` foram acrescentados a `ITraceStore` na Fase 14 (D-81): agregado
+por rota do trace (`Method`, `RouteTemplate`), mesmo molde de `ComponentStat` mas sobre
+`FlowTrace`, não `FlowSpan`. Base da visão agregada estilo Pulse (`GET /metrics/routes`).
+
+```csharp
+public sealed record RouteStat
+{
+    public required string Method { get; init; }
+    public required string RouteTemplate { get; init; }
+    public required int ExecutionCount { get; init; }
+    public required int ErrorCount { get; init; }
+    public required long MedianDurationMicros { get; init; }
+    public required long AverageDurationMicros { get; init; }
+    public required long P95DurationMicros { get; init; }
+    public required long MaxDurationMicros { get; init; }
+}
+```
 
 `GetAsync` e `GetLastSuccessfulAsync` passaram a devolver `FlowTraceDetail?` em vez de
 `FlowTrace?` (D-19 em `docs/plano/decisoes.md`), achado durante a tarefa 3.2: os três
@@ -591,6 +610,36 @@ Resposta `200`:
 ```
 
 Ordenado por `executionCount` decrescente.
+
+### GET `/metrics/routes`
+
+Acrescentada na Fase 14 (D-81), base da visão agregada estilo Pulse (D-60). Estatísticas por
+rota da própria API hospedeira, forma de `RouteStat[]`.
+
+Query string: `from`, `to` (opcionais, forma de `StatsQuery`, mesmo contrato de `/metrics/components`).
+
+Resposta `200`:
+
+```json
+[
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id}",
+    "executionCount": 612,
+    "errorCount": 9,
+    "medianDurationMicros": 18200,
+    "averageDurationMicros": 21500,
+    "p95DurationMicros": 88200,
+    "maxDurationMicros": 412000
+  }
+]
+```
+
+Ordenado por `executionCount` decrescente, mesma convenção de `/metrics/components`. "Rotas mais
+lentas" e "top erros" são ordenações diferentes do mesmo payload, feitas pelo frontend, não dois
+endpoints separados. "Rotas mortas" (rota sem nenhuma execução na janela) não é campo deste
+payload: o frontend cruza esta lista com `GET /endpoints`, que já lista toda rota rastreável da
+API hospedeira independente de ter sido executada ou não.
 
 ### DELETE `/traces`
 
