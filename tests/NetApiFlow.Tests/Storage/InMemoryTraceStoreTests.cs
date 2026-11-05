@@ -18,6 +18,19 @@ public class InMemoryTraceStoreTests
         StartedAt = startedAt,
     };
 
+    private static FlowSpan CreateSpan(string traceId, string spanId, string? parentSpanId, int sequence, string component, string operation, ComponentType type = ComponentType.Service) => new()
+    {
+        TraceId = traceId,
+        SpanId = spanId,
+        ParentSpanId = parentSpanId,
+        Sequence = sequence,
+        Component = component,
+        Operation = operation,
+        Type = type,
+        StartedAt = DateTime.UtcNow,
+        Status = FlowStatus.Success,
+    };
+
     [Fact]
     public async Task SaveAsync_ThenGetAsync_ReturnsTheSameTrace()
     {
@@ -177,5 +190,122 @@ public class InMemoryTraceStoreTests
         stats[0].AverageDurationMicros.ShouldBe(0);
         stats[0].P95DurationMicros.ShouldBe(0);
         stats[0].MaxDurationMicros.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_SingleTrace_BuildsSimpleGraphWithCountsOfOne()
+    {
+        var trace = CreateTrace("arch-1", DateTime.UtcNow);
+        var spans = new[]
+        {
+            CreateSpan("arch-1", "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+            CreateSpan("arch-1", "service", "root", 1, "OrderService", "FindAsync"),
+            CreateSpan("arch-1", "repository", "service", 2, "OrderRepository", "FindAsync", ComponentType.Repository),
+        };
+        await _subject.SaveAsync(trace, spans, CancellationToken.None);
+
+        var map = await _subject.GetArchitectureMapAsync("GET", "/api/orders", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+        map.Nodes.Count.ShouldBe(3);
+        map.Nodes.ShouldAllBe(n => n.ExecutionCount == 1);
+        map.Nodes.ShouldContain(n => n.Component == "OrdersController" && n.Operation == "GetOrder" && n.Type == ComponentType.Controller);
+        map.Edges.Count.ShouldBe(2);
+        map.Edges.ShouldAllBe(e => e.CallCount == 1);
+        map.Edges.ShouldContain(e => e.FromComponent == "OrdersController" && e.ToComponent == "OrderService");
+        map.Edges.ShouldContain(e => e.FromComponent == "OrderService" && e.ToComponent == "OrderRepository");
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_TwoExecutionsSamePath_DoublesCountsWithoutDuplicatingNodesOrEdges()
+    {
+        for (var i = 0; i < 2; i++)
+        {
+            var traceId = $"arch-same-{i}";
+            await _subject.SaveAsync(CreateTrace(traceId, DateTime.UtcNow), new[]
+            {
+                CreateSpan(traceId, "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+                CreateSpan(traceId, "service", "root", 1, "OrderService", "FindAsync"),
+            }, CancellationToken.None);
+        }
+
+        var map = await _subject.GetArchitectureMapAsync("GET", "/api/orders", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(2);
+        map.Nodes.Count.ShouldBe(2);
+        map.Nodes.ShouldAllBe(n => n.ExecutionCount == 2);
+        map.Edges.ShouldHaveSingleItem().CallCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_DifferentPaths_NonSharedStepsHaveCountsBelowTotalExecutions()
+    {
+        await _subject.SaveAsync(CreateTrace("arch-cache-hit", DateTime.UtcNow), new[]
+        {
+            CreateSpan("arch-cache-hit", "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+            CreateSpan("arch-cache-hit", "cache", "root", 1, "OrderCache", "TryGetAsync"),
+        }, CancellationToken.None);
+        await _subject.SaveAsync(CreateTrace("arch-cache-miss", DateTime.UtcNow), new[]
+        {
+            CreateSpan("arch-cache-miss", "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+            CreateSpan("arch-cache-miss", "repository", "root", 1, "OrderRepository", "FindAsync", ComponentType.Repository),
+        }, CancellationToken.None);
+
+        var map = await _subject.GetArchitectureMapAsync("GET", "/api/orders", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(2);
+        map.Nodes.ShouldContain(n => n.Component == "OrdersController" && n.ExecutionCount == 2);
+        map.Nodes.ShouldContain(n => n.Component == "OrderCache" && n.ExecutionCount == 1);
+        map.Nodes.ShouldContain(n => n.Component == "OrderRepository" && n.ExecutionCount == 1);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_RouteWithNoExecutionsInWindow_ReturnsZeroAndEmptyLists()
+    {
+        await _subject.SaveAsync(CreateTrace("arch-other-route", DateTime.UtcNow), [], CancellationToken.None);
+
+        var map = await _subject.GetArchitectureMapAsync("GET", "/api/never-called", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(0);
+        map.Nodes.ShouldBeEmpty();
+        map.Edges.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_FiltersByFromAndTo()
+    {
+        var baseTime = DateTime.UtcNow;
+        await _subject.SaveAsync(CreateTrace("arch-outside", baseTime - TimeSpan.FromDays(10)), new[]
+        {
+            CreateSpan("arch-outside", "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+        }, CancellationToken.None);
+        await _subject.SaveAsync(CreateTrace("arch-inside", baseTime), new[]
+        {
+            CreateSpan("arch-inside", "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+        }, CancellationToken.None);
+
+        var map = await _subject.GetArchitectureMapAsync(
+            "GET", "/api/orders",
+            new StatsQuery { From = baseTime - TimeSpan.FromHours(1), To = baseTime + TimeSpan.FromHours(1) },
+            CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_SameStepCalledRepeatedlyInOneTrace_NodeCountsTraceOnceEdgeCountsEveryCall()
+    {
+        await _subject.SaveAsync(CreateTrace("arch-loop", DateTime.UtcNow), new[]
+        {
+            CreateSpan("arch-loop", "root", null, 0, "OrdersController", "GetOrder", ComponentType.Controller),
+            CreateSpan("arch-loop", "r1", "root", 1, "OrderRepository", "FindAsync", ComponentType.Repository),
+            CreateSpan("arch-loop", "r2", "root", 2, "OrderRepository", "FindAsync", ComponentType.Repository),
+            CreateSpan("arch-loop", "r3", "root", 3, "OrderRepository", "FindAsync", ComponentType.Repository),
+        }, CancellationToken.None);
+
+        var map = await _subject.GetArchitectureMapAsync("GET", "/api/orders", new StatsQuery(), CancellationToken.None);
+
+        map.Nodes.ShouldContain(n => n.Component == "OrderRepository" && n.ExecutionCount == 1);
+        map.Edges.ShouldContain(e => e.FromComponent == "OrdersController" && e.ToComponent == "OrderRepository" && e.CallCount == 3);
     }
 }
