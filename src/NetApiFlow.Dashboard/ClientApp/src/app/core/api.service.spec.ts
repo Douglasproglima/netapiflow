@@ -8,6 +8,7 @@ import {
   FlowTraceSummary,
   MetricsSummary,
   PagedResult,
+  RouteStat,
   SpanDetail,
 } from './models';
 
@@ -152,6 +153,20 @@ describe('ApiService', () => {
     const req = httpMock.expectOne(
       (request) =>
         request.url === 'api/metrics/components' &&
+        request.params.get('from') === '2026-01-01T00:00:00Z',
+    );
+    req.flush(stats);
+  });
+
+  it('getRouteMetrics hits /metrics/routes', () => {
+    const stats: RouteStat[] = [];
+    service
+      .getRouteMetrics({ from: '2026-01-01T00:00:00Z' })
+      .subscribe((result) => expect(result).toEqual(stats));
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === 'api/metrics/routes' &&
         request.params.get('from') === '2026-01-01T00:00:00Z',
     );
     req.flush(stats);
