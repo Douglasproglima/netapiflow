@@ -10,6 +10,7 @@ import {
   MetricsSummary,
   OpenApiDocument,
   PagedResult,
+  RouteStat,
   SpanDetail,
   StatsQuery,
   TraceQuery,
@@ -65,6 +66,12 @@ export class ApiService {
 
   getComponentMetrics(query: StatsQuery): Observable<ComponentStat[]> {
     return this.http.get<ComponentStat[]>(`${this.basePath}/metrics/components`, {
+      params: toHttpParams(query),
+    });
+  }
+
+  getRouteMetrics(query: StatsQuery): Observable<RouteStat[]> {
+    return this.http.get<RouteStat[]>(`${this.basePath}/metrics/routes`, {
       params: toHttpParams(query),
     });
   }

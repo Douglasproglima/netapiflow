@@ -220,6 +220,51 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         };
     }
 
+    public async ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+
+        await using var command = new NpgsqlCommand($"""
+            SELECT method, route_template, status, duration_micros
+            FROM {_tracesTable}
+            WHERE (@from::timestamptz IS NULL OR started_at >= @from) AND (@to::timestamptz IS NULL OR started_at <= @to)
+            """, connection);
+        command.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
+        command.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
+
+        var rows = new List<(string Method, string RouteTemplate, FlowStatus Status, long? Duration)>();
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add((
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    Enum.Parse<FlowStatus>(reader.GetString(2)),
+                    reader.IsDBNull(3) ? null : reader.GetInt64(3)));
+            }
+        }
+
+        return rows
+            .GroupBy(r => (r.Method, r.RouteTemplate))
+            .Select(group =>
+            {
+                var durations = group.Where(r => r.Duration is not null).Select(r => r.Duration!.Value).OrderBy(d => d).ToList();
+                return new RouteStat
+                {
+                    Method = group.Key.Method,
+                    RouteTemplate = group.Key.RouteTemplate,
+                    ExecutionCount = group.Count(),
+                    ErrorCount = group.Count(r => r.Status == FlowStatus.Error),
+                    MedianDurationMicros = Percentile(durations, 0.5),
+                    AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
+                    P95DurationMicros = Percentile(durations, 0.95),
+                    MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
+                };
+            })
+            .ToList<RouteStat>();
+    }
+
     public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
