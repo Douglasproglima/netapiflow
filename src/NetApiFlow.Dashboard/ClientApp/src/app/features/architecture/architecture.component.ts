@@ -43,6 +43,10 @@ export class ArchitectureComponent {
   readonly loading = signal(false);
   readonly error = signal<TranslationKey | null>(null);
   readonly map = signal<ArchitectureMap | null>(null);
+  readonly tailSamplingEnabled = signal(false);
+  readonly successSampleRate = signal(0);
+
+  readonly tailSamplingRateLabel = computed(() => `${Math.round(this.successSampleRate() * 100)}%`);
 
   private readonly graphHost = viewChild<ElementRef<HTMLElement>>('graphHost');
 
@@ -67,6 +71,11 @@ export class ArchitectureComponent {
 
   constructor() {
     this.api.getEndpoints().subscribe((endpoints) => this.endpoints.set(endpoints));
+
+    this.api.getConfig().subscribe((config) => {
+      this.tailSamplingEnabled.set(config.tailSamplingEnabled);
+      this.successSampleRate.set(config.successSampleRate);
+    });
 
     effect(() => {
       const route = this.selectedRoute();

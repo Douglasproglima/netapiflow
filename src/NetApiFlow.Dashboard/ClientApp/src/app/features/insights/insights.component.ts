@@ -37,6 +37,10 @@ export class InsightsComponent {
   readonly error = signal<TranslationKey | null>(null);
   readonly routeStats = signal<RouteStat[]>([]);
   readonly endpoints = signal<EndpointDescriptor[]>([]);
+  readonly tailSamplingEnabled = signal(false);
+  readonly successSampleRate = signal(0);
+
+  readonly tailSamplingRateLabel = computed(() => `${Math.round(this.successSampleRate() * 100)}%`);
 
   readonly slowestRoutes = computed(() =>
     [...this.routeStats()]
@@ -61,6 +65,11 @@ export class InsightsComponent {
   });
 
   constructor() {
+    this.api.getConfig().subscribe((config) => {
+      this.tailSamplingEnabled.set(config.tailSamplingEnabled);
+      this.successSampleRate.set(config.successSampleRate);
+    });
+
     effect(() => {
       const from = periodPresetFrom(this.window(), new Date());
       this.loading.set(true);

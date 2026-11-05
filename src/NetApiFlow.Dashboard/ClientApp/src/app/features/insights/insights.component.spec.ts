@@ -2,7 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { InsightsComponent } from './insights.component';
-import { EndpointDescriptor, RouteStat } from '../../core/models';
+import { DashboardConfig, EndpointDescriptor, RouteStat } from '../../core/models';
+
+const CONFIG: DashboardConfig = {
+  slowThresholdMicros: 250_000,
+  version: '0.1.0',
+  tailSamplingEnabled: false,
+  successSampleRate: 0.1,
+};
 
 const ROUTE_STATS: RouteStat[] = [
   {
@@ -37,9 +44,11 @@ function flushInitial(
   httpMock: HttpTestingController,
   stats: RouteStat[],
   endpoints: EndpointDescriptor[],
+  config: DashboardConfig = CONFIG,
 ): void {
   httpMock.expectOne((req) => req.url === 'api/metrics/routes').flush(stats);
   httpMock.expectOne((req) => req.url === 'api/endpoints').flush(endpoints);
+  httpMock.expectOne((req) => req.url === 'api/config').flush(config);
 }
 
 describe('InsightsComponent', () => {
@@ -54,6 +63,30 @@ describe('InsightsComponent', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('shows the tail-sampling banner when the backend reports it enabled', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS, {
+      ...CONFIG,
+      tailSamplingEnabled: true,
+      successSampleRate: 0.1,
+    });
+    await fixture.whenStable();
+
+    const banner = fixture.nativeElement.querySelector('.insights__tail-sampling-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('10%');
+  });
+
+  it('hides the tail-sampling banner when the backend reports it disabled', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS, { ...CONFIG, tailSamplingEnabled: false });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.insights__tail-sampling-banner')).toBeNull();
   });
 
   it('shows the slowest routes ordered by p95 duration descending', async () => {
@@ -112,6 +145,7 @@ describe('InsightsComponent', () => {
     const fixture = TestBed.createComponent(InsightsComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints');
+    httpMock.expectOne((req) => req.url === 'api/config');
     httpMock
       .expectOne((req) => req.url === 'api/metrics/routes')
       .flush('boom', { status: 500, statusText: 'Server Error' });
