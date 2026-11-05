@@ -16,22 +16,21 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Visão agregada "Insights" | D-60 (Pulse) | 🔴 Alto | Em planejamento (Fase 14) |
-| 2 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Backlog |
-| 3 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Backlog |
-| 4 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
-| 5 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
-| 6 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
-| 7 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
-| 8 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
-| 9 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
+| 1 | Sampling tail-based | D-58 item 3 | 🟡 Médio-alto | Backlog |
+| 2 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Backlog |
+| 3 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
+| 4 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
+| 5 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
+| 6 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
+| 7 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
+| 8 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
 | — | Visibilidade de cancelamento, anotação de deploy | D-60 (menores) | ⚪ Baixo | Backlog, sem posição fixa |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
 Interop OTel ingestão (Fase 8), detector de N+1 (Fase 9), servidor MCP (Fase 10), Impeccable
 (Fase 11, governança, não é item de roadmap de produto), tempo não explicado (Fase 12),
-exportação OTLP (Fase 13, era item 1 deste ranking).
+exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14, era item 1 deste ranking).
 
 ## Fora do ranking, decisão de escopo em aberto
 
