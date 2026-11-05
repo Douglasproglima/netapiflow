@@ -1,7 +1,6 @@
 namespace NetApiFlow;
 
 /// <summary>Summary of a <see cref="Domain.FlowTrace"/>, without its spans, for list views.</summary>
-/// <remarks>Provisional shape. The authoritative REST contract is frozen in Fase 3, tarefa 3.1.</remarks>
 public sealed record FlowTraceSummary
 {
     /// <summary>Trace id.</summary>

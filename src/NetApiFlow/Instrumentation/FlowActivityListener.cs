@@ -172,7 +172,7 @@ internal sealed class FlowActivityListener : IDisposable
     }
 
     /// <summary>
-    /// Maps the outbound call's method, status code and error onto the span (ADR-0012, D-69, risco
+    /// Maps the outbound call's method, status code and error onto the span (D-69, risco
     /// R-13). The URL is reduced to <c>host/path</c> before it ever reaches <see cref="FlowSpan.Operation"/>:
     /// query string and fragment are never recorded. A 4xx/5xx response marks the span as
     /// <see cref="FlowStatus.Error"/>; only a network-level failure (no response at all) marks it as

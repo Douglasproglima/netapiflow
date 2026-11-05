@@ -8,7 +8,7 @@ builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
 
-// Both mounted in the same run (tarefa 5.6): the first proves the default path, the second proves
+// Both mounted in the same run: the first proves the default path, the second proves
 // an arbitrary one. Open either in a browser, or let DashboardPackageVerification.Tests check both
 // with HttpClient.
 app.UseNetApiFlowDashboard("/flow");

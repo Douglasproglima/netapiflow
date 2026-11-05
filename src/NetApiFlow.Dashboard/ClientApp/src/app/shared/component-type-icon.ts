@@ -2,7 +2,7 @@ import { ComponentType } from '../core/models';
 
 /**
  * Which geometric glyph `flow-graph.component.html` draws for a node's `ComponentType`
- * (D-31, tarefa 7.0c): a node already shows a state icon (color + icon + text, seção 7.2 do
+ * (D-31): a node already shows a state icon (color + icon + text, seção 7.2 do
  * prompt); this adds a second, distinct icon for what kind of component it is, reusing the
  * `ComponentType` mapping `core/models.ts` already freezes instead of a new contract.
  */

@@ -60,7 +60,7 @@ export class App implements OnInit, OnDestroy {
   readonly sidenavOpened = signal(true);
 
   // Route `data.title`/`data.subtitle` are translation keys (app.routes.ts), looked up through
-  // the `t` pipe in the template, not literal text (ADR-0011).
+  // the `t` pipe in the template, not literal text.
   readonly pageTitle = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),

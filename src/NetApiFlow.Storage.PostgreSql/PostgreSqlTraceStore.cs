@@ -6,7 +6,7 @@ using NpgsqlTypes;
 namespace NetApiFlow.Storage.PostgreSql;
 
 /// <summary>
-/// <see cref="ITraceStore"/> backed by PostgreSQL via raw ADO.NET (ADR-0004, D-05). <see cref="SaveAsync"/>
+/// <see cref="ITraceStore"/> backed by PostgreSQL via raw ADO.NET (D-05). <see cref="SaveAsync"/>
 /// uses <see cref="NpgsqlBinaryImporter"/> (the <c>COPY</c> protocol) for the batch write of a
 /// trace and its spans.
 /// </summary>

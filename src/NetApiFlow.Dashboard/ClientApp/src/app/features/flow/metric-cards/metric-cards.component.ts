@@ -27,7 +27,7 @@ function splitDuration(formatted: string): { value: string; unit: string | null 
 }
 
 /**
- * The metric strip at the top of the `/flow` workspace (ADR-0010, guide seção 6.2): total traces,
+ * The metric strip at the top of the `/flow` workspace (guide seção 6.2): total traces,
  * success, errors, average/max latency and steps executed. `GET /metrics` already has every count
  * but steps executed, which is the sum of `executionCount` across `GET /metrics/components`
  * (D-30) — a legitimate derivation from data already exposed, not a new contract. The latency

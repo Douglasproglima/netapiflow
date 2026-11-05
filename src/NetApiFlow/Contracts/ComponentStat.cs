@@ -1,7 +1,6 @@
 namespace NetApiFlow;
 
 /// <summary>Aggregated statistics for a component/operation pair, across stored traces.</summary>
-/// <remarks>Provisional shape. The authoritative REST contract is frozen in Fase 3, tarefa 3.1.</remarks>
 public sealed record ComponentStat
 {
     /// <summary>Component name.</summary>

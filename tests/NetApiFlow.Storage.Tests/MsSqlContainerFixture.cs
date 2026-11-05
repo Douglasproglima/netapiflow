@@ -2,7 +2,7 @@ using Testcontainers.MsSql;
 
 namespace NetApiFlow.Storage.Tests;
 
-/// <summary>One SQL Server container shared by every test in the collection (tarefa 6.5), not per test.</summary>
+/// <summary>One SQL Server container shared by every test in the collection, not per test.</summary>
 public sealed class MsSqlContainerFixture : IAsyncLifetime
 {
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();

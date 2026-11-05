@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 namespace NetApiFlow.Dashboard.Endpoints;
 
 /// <summary>
-/// Shared gate for every dashboard route, API and static UI alike (ADR-0006, ADR-0015, risco
+/// Shared gate for every dashboard route, API and static UI alike (risco
 /// R-09): outside Development, a route 404s unless <c>RequireAuthorization</c> or an
 /// <see cref="IFlowAccessFilter"/> was configured. An <see cref="IFlowAccessFilter"/>, when
 /// registered, is always enforced (even in Development, since the host asked for it explicitly),
