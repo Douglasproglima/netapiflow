@@ -19,6 +19,28 @@ paths:
 Violação desta tabela é bloqueante: não "ajustar depois". Teste de arquitetura na Fase 1
 (tarefa 1.1) prova isso para o núcleo.
 
+## Organização de pastas em `NetApiFlow` (núcleo, D-84)
+
+Toda classe/interface/enum novo do núcleo entra numa pasta temática, nunca solto na raiz do
+projeto. Critério por categoria, não por fase:
+
+| Pasta | O que entra |
+|---|---|
+| `Contracts/` | DTO e enum público (modelo de requisição/resposta, não comportamento) |
+| `Configuration/` | Classe de opção pública (`*Options`) e setup/validador interno dela |
+| `DependencyInjection/` | Extensão pública de `IServiceCollection`/`IEndpointRouteBuilder` e serviço interno de wiring |
+| `Abstractions/` | Interface pública que o usuário implementa (ponto de extensão) |
+| `Domain/` | Só `FlowTrace`/`FlowSpan` (exceção consciente, D-84): os dois ficam isolados do resto da API pública, em `namespace NetApiFlow.Domain`, por serem o modelo de domínio mais puro. Não adicionar mais nada aqui sem avisar a Planejadora |
+| `Instrumentation/`, `Recording/`, `Marking/`, `Middleware/`, `Routing/`, `Sanitization/`, `Storage/`, `Events/` | Implementação interna por responsabilidade técnica, já existentes, continuam como estão |
+
+Só `NetApiFlow.cs` (fachada estática), `FlowStep.cs` (struct que ela devolve) e
+`AssemblyInfo.cs` ficam soltos na raiz, de propósito: são a porta de entrada do pacote e o
+arquivo de metadado de build, respectivamente.
+
+Namespace continua **plano** (`namespace NetApiFlow;`) para todo arquivo fora de `Domain/`,
+independente da pasta física: a pasta organiza o Solution Explorer, não muda o contrato público
+de quem consome o pacote.
+
 ## Visibilidade e API pública
 
 - A superfície pública de cada pacote é a definida em `docs/plano/contratos.md`. Nada além
