@@ -430,6 +430,26 @@ public class DashboardApiTests
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("slowThresholdMicros").GetInt64().ShouldBe(400_000);
         doc.RootElement.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
+        doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeFalse();
+        doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.1);
+    }
+
+    [Fact]
+    public async Task GetConfig_WithTailSamplingConfigured_ReturnsItsValues()
+    {
+        using var host = CreateHost(configure: options =>
+        {
+            options.TailSampling.Enabled = true;
+            options.TailSampling.SuccessSampleRate = 0.25;
+        });
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeTrue();
+        doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.25);
     }
 
     [Fact]

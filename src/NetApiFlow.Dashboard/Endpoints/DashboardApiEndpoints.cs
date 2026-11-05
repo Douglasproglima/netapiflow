@@ -277,6 +277,8 @@ internal static class DashboardApiEndpoints
         {
             SlowThresholdMicros = (long)options.Value.SlowThreshold.TotalMicroseconds,
             Version = GetCoreVersion(),
+            TailSamplingEnabled = options.Value.TailSampling.Enabled,
+            SuccessSampleRate = options.Value.TailSampling.SuccessSampleRate,
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);
