@@ -157,6 +157,70 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult<IReadOnlyList<RouteStat>>(stats);
     }
 
+    public ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    {
+        var entries = _entries.Values
+            .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
+            .Where(e => e.Trace.RouteTemplate == routeTemplate)
+            .Where(e => query.From is null || e.Trace.StartedAt >= query.From)
+            .Where(e => query.To is null || e.Trace.StartedAt <= query.To)
+            .ToList();
+
+        var nodeTypes = new Dictionary<(string Component, string Operation), ComponentType>();
+        var nodeExecutionCounts = new Dictionary<(string Component, string Operation), int>();
+        var edgeCallCounts = new Dictionary<(string FromComponent, string FromOperation, string ToComponent, string ToOperation), int>();
+
+        foreach (var entry in entries)
+        {
+            var spansBySpanId = entry.Spans.ToDictionary(s => s.SpanId);
+            var nodesInTrace = new HashSet<(string Component, string Operation)>();
+
+            foreach (var span in entry.Spans)
+            {
+                var nodeKey = (span.Component, span.Operation);
+                if (nodesInTrace.Add(nodeKey))
+                {
+                    nodeTypes[nodeKey] = span.Type;
+                    nodeExecutionCounts[nodeKey] = nodeExecutionCounts.GetValueOrDefault(nodeKey) + 1;
+                }
+
+                if (span.ParentSpanId is not null && spansBySpanId.TryGetValue(span.ParentSpanId, out var parent))
+                {
+                    var edgeKey = (parent.Component, parent.Operation, span.Component, span.Operation);
+                    edgeCallCounts[edgeKey] = edgeCallCounts.GetValueOrDefault(edgeKey) + 1;
+                }
+            }
+        }
+
+        var nodes = nodeExecutionCounts
+            .Select(kvp => new ArchitectureNode
+            {
+                Component = kvp.Key.Component,
+                Operation = kvp.Key.Operation,
+                Type = nodeTypes[kvp.Key],
+                ExecutionCount = kvp.Value,
+            })
+            .ToList<ArchitectureNode>();
+
+        var edges = edgeCallCounts
+            .Select(kvp => new ArchitectureEdge
+            {
+                FromComponent = kvp.Key.FromComponent,
+                FromOperation = kvp.Key.FromOperation,
+                ToComponent = kvp.Key.ToComponent,
+                ToOperation = kvp.Key.ToOperation,
+                CallCount = kvp.Value,
+            })
+            .ToList<ArchitectureEdge>();
+
+        return ValueTask.FromResult(new ArchitectureMap
+        {
+            TotalExecutions = entries.Count,
+            Nodes = nodes,
+            Edges = edges,
+        });
+    }
+
     public ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken)
     {
         var cutoff = DateTime.UtcNow - policy.MaxAge;

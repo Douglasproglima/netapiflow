@@ -217,6 +217,128 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetArchitectureMapAsync_SingleTrace_BuildsSimpleGraphWithCountsOfOne()
+    {
+        var store = CreateStore();
+        var trace = MakeTrace("arch-1", route: "/api/orders/{id}");
+        var spans = new[]
+        {
+            MakeSpan("arch-1", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-1", "service", "root", 1, component: "OrderService", operation: "FindAsync"),
+            MakeSpan("arch-1", "repository", "service", 2, component: "OrderRepository", operation: "FindAsync"),
+        };
+        await store.SaveAsync(trace, spans, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+        map.Nodes.Count.ShouldBe(3);
+        map.Nodes.ShouldAllBe(n => n.ExecutionCount == 1);
+        map.Edges.Count.ShouldBe(2);
+        map.Edges.ShouldAllBe(e => e.CallCount == 1);
+        map.Edges.ShouldContain(e => e.FromComponent == "OrdersController" && e.ToComponent == "OrderService");
+        map.Edges.ShouldContain(e => e.FromComponent == "OrderService" && e.ToComponent == "OrderRepository");
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_TwoExecutionsSamePath_DoublesCountsWithoutDuplicatingNodesOrEdges()
+    {
+        var store = CreateStore();
+        for (var i = 0; i < 2; i++)
+        {
+            var traceId = $"arch-same-{i}";
+            await store.SaveAsync(MakeTrace(traceId, route: "/api/orders/{id}"), new[]
+            {
+                MakeSpan(traceId, "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+                MakeSpan(traceId, "service", "root", 1, component: "OrderService", operation: "FindAsync"),
+            }, CancellationToken.None);
+        }
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(2);
+        map.Nodes.Count.ShouldBe(2);
+        map.Nodes.ShouldAllBe(n => n.ExecutionCount == 2);
+        map.Edges.ShouldHaveSingleItem().CallCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_DifferentPaths_NonSharedStepsHaveCountsBelowTotalExecutions()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("arch-cache-hit", route: "/api/orders/{id}"), new[]
+        {
+            MakeSpan("arch-cache-hit", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-cache-hit", "cache", "root", 1, component: "OrderCache", operation: "TryGetAsync"),
+        }, CancellationToken.None);
+        await store.SaveAsync(MakeTrace("arch-cache-miss", route: "/api/orders/{id}"), new[]
+        {
+            MakeSpan("arch-cache-miss", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-cache-miss", "repo", "root", 1, component: "OrderRepository", operation: "FindAsync"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(2);
+        map.Nodes.ShouldContain(n => n.Component == "OrdersController" && n.ExecutionCount == 2);
+        map.Nodes.ShouldContain(n => n.Component == "OrderCache" && n.ExecutionCount == 1);
+        map.Nodes.ShouldContain(n => n.Component == "OrderRepository" && n.ExecutionCount == 1);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_RouteWithNoExecutionsInWindow_ReturnsZeroAndEmptyLists()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("arch-other-route", route: "/api/orders/{id}"), [], CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/never-called", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(0);
+        map.Nodes.ShouldBeEmpty();
+        map.Edges.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_FiltersByFromAndTo()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeTrace("arch-outside", route: "/api/orders/{id}", startedAt: now.AddDays(-10)), new[]
+        {
+            MakeSpan("arch-outside", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+        }, CancellationToken.None);
+        await store.SaveAsync(MakeTrace("arch-inside", route: "/api/orders/{id}", startedAt: now), new[]
+        {
+            MakeSpan("arch-inside", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync(
+            "GET", "/api/orders/{id}",
+            new StatsQuery { From = now.AddHours(-1), To = now.AddHours(1) },
+            CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_SameStepCalledRepeatedlyInOneTrace_NodeCountsTraceOnceEdgeCountsEveryCall()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("arch-loop", route: "/api/orders/{id}"), new[]
+        {
+            MakeSpan("arch-loop", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-loop", "r1", "root", 1, component: "OrderRepository", operation: "FindAsync"),
+            MakeSpan("arch-loop", "r2", "root", 2, component: "OrderRepository", operation: "FindAsync"),
+            MakeSpan("arch-loop", "r3", "root", 3, component: "OrderRepository", operation: "FindAsync"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.Nodes.ShouldContain(n => n.Component == "OrderRepository" && n.ExecutionCount == 1);
+        map.Edges.ShouldContain(e => e.FromComponent == "OrdersController" && e.ToComponent == "OrderRepository" && e.CallCount == 3);
+    }
+
+    [Fact]
     public async Task GetLastSuccessfulAsync_ReturnsMostRecentSuccessForThatEndpoint()
     {
         var store = CreateStore();

@@ -27,6 +27,12 @@ export const routes: Routes = [
     data: { title: 'nav.insights', subtitle: 'topbar.subtitle.insights' },
   },
   {
+    path: 'architecture',
+    loadComponent: () =>
+      import('./features/architecture/architecture.component').then((m) => m.ArchitectureComponent),
+    data: { title: 'nav.architecture', subtitle: 'topbar.subtitle.architecture' },
+  },
+  {
     path: 'runner',
     loadComponent: () =>
       import('./features/runner/runner.component').then((m) => m.RunnerComponent),

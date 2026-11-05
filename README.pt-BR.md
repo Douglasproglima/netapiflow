@@ -146,6 +146,22 @@ não rodaram na janela escolhida. As três vêm de `GET /metrics/routes` e `GET 
 mais lentas e top erros são duas ordenações diferentes do mesmo payload, e rotas mortas é o
 dashboard cruzando esse payload com toda rota que a API hospedeira expõe.
 
+## Mapa de arquitetura
+
+`/architecture` é o grafo estático de chamadas de uma rota (método HTTP e route template),
+montado a partir de todas as execuções registradas numa janela de tempo escolhida, não só a
+última: a mesma pergunta que o `/blueprint` responde a partir de uma trace ("o que essa rota
+normalmente faz"), generalizada para a janela inteira. Escolha uma rota e uma janela. Um passo que
+não rodou em toda execução mostra o percentual de ocorrência no próprio texto (ex.:
+`TryGetAsync (14%)`), para um caminho condicional como um acerto de cache se destacar. Exporte o
+grafo como Mermaid ou SVG, os dois gerados no navegador a partir do dado já carregado, sem
+requisição extra.
+
+> **O mapa reflete o que foi persistido, não necessariamente toda execução real.** Com a
+> amostragem tail-based (abaixo) ligada e um `SuccessSampleRate` baixo, a maioria das execuções
+> persistidas de uma rota é de erro ou lentas, então o mapa pende para esse caminho em vez do
+> caminho de sucesso típico. Consequência esperada da amostragem, não um bug.
+
 ## Configuração
 
 ```csharp
@@ -290,11 +306,13 @@ chegar ao `ITraceStore`:
 > não do storage. Uma trace descartada pela amostragem continua aparecendo enquanto roda. Só o
 > histórico persistido é afetado.
 
-> **`/blueprint` e as métricas agregadas passam a refletir a amostra, não o tráfego real, uma vez
-> ligado.** Um `SuccessSampleRate` baixo pode deixar o `/blueprint` sem nenhuma trace de sucesso
-> recente para repetir. `/metrics`, `/metrics/components` e `/metrics/routes` contam só o que foi
-> guardado. Esse é o resultado esperado da amostragem, não um bug. `GET /config` expõe o estado
-> atual para o `/history` mostrar uma faixa visível quando a amostragem está ligada.
+> **`/blueprint`, `/architecture` e as métricas agregadas passam a refletir a amostra, não o
+> tráfego real, uma vez ligado.** Um `SuccessSampleRate` baixo pode deixar o `/blueprint` sem
+> nenhuma trace de sucesso recente para repetir, faz o `/architecture` pender para as execuções de
+> erro e lentas, que são sempre guardadas, e `/metrics`, `/metrics/components` e `/metrics/routes`
+> contam só o que foi guardado. Esse é o resultado esperado da amostragem, não um bug. `GET
+> /config` expõe o estado atual para o `/history` mostrar uma faixa visível quando a amostragem
+> está ligada.
 
 ## Dados sensíveis
 

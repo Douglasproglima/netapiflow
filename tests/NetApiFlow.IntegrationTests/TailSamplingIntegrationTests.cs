@@ -97,6 +97,62 @@ public class TailSamplingIntegrationTests
     }
 
     [Fact]
+    public async Task GetArchitecture_WithTailSamplingEnabled_ReflectsOnlyPersistedExecutions_DroppedFastSuccessPathNeverAppears()
+    {
+        using var host = CreateHost(options =>
+        {
+            options.SlowThreshold = TimeSpan.FromMilliseconds(1);
+            options.TailSampling.Enabled = true;
+            options.TailSampling.SuccessSampleRate = 0.0;
+        });
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+        var client = host.GetTestServer().CreateClient();
+
+        RecordTraceWithRootSpan(recorder, "r19-error", FlowStatus.Error, 500, "boom", DateTime.UtcNow, "ErrorRepository", "Query");
+        RecordTraceWithRootSpan(recorder, "r19-slow", FlowStatus.Success, 200, null, DateTime.UtcNow.AddMilliseconds(-10), "ErrorRepository", "Query");
+
+        for (var i = 0; i < 5; i++)
+        {
+            RecordTraceWithRootSpan(recorder, $"r19-fast-{i}", FlowStatus.Success, 200, null, DateTime.UtcNow, "FastCache", "Hit");
+        }
+
+        await WaitForTraceIdsAsync(client, expectedCount: 2, TimeSpan.FromSeconds(5));
+
+        var response = await client.GetAsync("/flow/api/architecture?method=GET&route=%2Fapi%2Forders");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("totalExecutions").GetInt32().ShouldBe(2);
+        var components = doc.RootElement.GetProperty("nodes").EnumerateArray()
+            .Select(node => node.GetProperty("component").GetString())
+            .ToList();
+        components.ShouldContain("ErrorRepository");
+        components.ShouldNotContain("FastCache");
+    }
+
+    private static void RecordTraceWithRootSpan(FlowRecorder recorder, string traceId, FlowStatus status, int httpStatus, string? errorMessage, DateTime startedAt, string component, string operation)
+    {
+        recorder.TryStartTrace(traceId, "GET", "/api/orders", startedAt);
+        var span = new FlowSpan
+        {
+            TraceId = traceId,
+            SpanId = "root",
+            ParentSpanId = null,
+            Sequence = 0,
+            Component = component,
+            Operation = operation,
+            Type = ComponentType.Repository,
+            StartedAt = startedAt,
+            EndedAt = startedAt,
+            DurationMicros = 100,
+            Status = status,
+        };
+        recorder.TryAddSpan(traceId, span);
+        recorder.CompleteSpan(traceId, span);
+        recorder.CompleteTrace(traceId, httpStatus, status, errorMessage);
+    }
+
+    [Fact]
     public async Task GetTracesLive_WhenTailSamplingWouldDropTheTrace_StillShowsItWhileRunning()
     {
         using var host = CreateHost(options =>

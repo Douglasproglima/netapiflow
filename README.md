@@ -143,6 +143,21 @@ never ran in the chosen window. All three come from `GET /metrics/routes` and `G
 slowest and top errors are two different sortings of the same payload, and dead routes is the
 dashboard cross-referencing it against every route the host API exposes.
 
+## Architecture map
+
+`/architecture` is the static call graph of a single route (HTTP method and route template),
+built from every execution recorded within a chosen time window, not just the last one: the same
+question `/blueprint` answers from one trace ("what does this route normally do"), generalized to
+the whole window. Pick a route and a window; a step that didn't run on every execution shows its
+occurrence percentage right in its label (e.g. `TryGetAsync (14%)`), so a conditional path like a
+cache hit stands out. Export the graph as Mermaid or SVG, both generated in the browser from the
+data already loaded, no extra request.
+
+> **The map reflects what was persisted, not necessarily every real execution.** With tail
+> sampling (below) enabled and a low `SuccessSampleRate`, most persisted executions of a route are
+> its errors and slow runs, so the map skews toward that path instead of the typical successful
+> one. Expected consequence of sampling, not a bug.
+
 ## Configuration
 
 ```csharp
@@ -285,11 +300,12 @@ Enabled, the decision is made once, when a trace is ready to persist, before it 
 > recorder, not from the store, so a sampled-out trace still shows up while it runs. Only the
 > persisted history is affected.
 
-> **`/blueprint` and the aggregated metrics reflect the sample, not the real traffic, once
-> enabled.** A low `SuccessSampleRate` can leave `/blueprint` without a recent successful trace to
-> replay, and `/metrics`, `/metrics/components` and `/metrics/routes` count only what was kept.
-> This is the expected result of sampling, not a bug. `GET /config` exposes the current state so
-> `/history` shows a visible banner whenever tail sampling is on.
+> **`/blueprint`, `/architecture` and the aggregated metrics reflect the sample, not the real
+> traffic, once enabled.** A low `SuccessSampleRate` can leave `/blueprint` without a recent
+> successful trace to replay, skews `/architecture` toward the error and slow executions that are
+> always kept, and `/metrics`, `/metrics/components` and `/metrics/routes` count only what was
+> kept. This is the expected result of sampling, not a bug. `GET /config` exposes the current
+> state so `/history` shows a visible banner whenever tail sampling is on.
 
 ## Sensitive data
 

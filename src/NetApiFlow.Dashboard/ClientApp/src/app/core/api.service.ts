@@ -2,6 +2,7 @@ import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ArchitectureMap,
   ComponentStat,
   DashboardConfig,
   EndpointDescriptor,
@@ -73,6 +74,12 @@ export class ApiService {
   getRouteMetrics(query: StatsQuery): Observable<RouteStat[]> {
     return this.http.get<RouteStat[]>(`${this.basePath}/metrics/routes`, {
       params: toHttpParams(query),
+    });
+  }
+
+  getArchitecture(method: string, route: string, query: StatsQuery): Observable<ArchitectureMap> {
+    return this.http.get<ArchitectureMap>(`${this.basePath}/architecture`, {
+      params: toHttpParams({ ...query, method, route }),
     });
   }
 
