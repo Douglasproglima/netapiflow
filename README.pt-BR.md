@@ -160,6 +160,8 @@ builder.Services.AddNetApiFlow(options =>
     options.IncludePaths("/api/**"); // só rastreia rota que bater; por padrão rastreia tudo
     options.ExcludePaths("/api/health"); // excluída mesmo que também bata com um padrão de inclusão
     options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; padrão é None
+    options.TailSampling.Enabled = true; // opt-in; ver Amostragem tail-based abaixo
+    options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado
 });
 ```
 
@@ -264,6 +266,35 @@ builder.Services.AddNetApiFlowOtlpExport(options =>
 > desligado, limite de 500 traces atingido). Uma requisição que o NetApiFlow descarta cedo ainda
 > pode ser exportada. Nenhum dos dois pipelines bloqueia o outro. Isso é o resultado esperado de
 > dois `ActivityListener` independentes observando a mesma fonte, não um bug.
+
+## Amostragem tail-based
+
+```csharp
+builder.Services.AddNetApiFlow(options =>
+{
+    options.TailSampling.Enabled = true; // padrão: false, toda trace completa é persistida
+    options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado, guarda 10% do resto
+});
+```
+
+Desligado por padrão. Toda trace completa é persistida, igual a antes dessa opção existir.
+Ligado, a decisão é tomada uma vez, quando a trace está pronta para persistência, antes de
+chegar ao `ITraceStore`:
+
+- Trace com erro é sempre persistida.
+- Trace no limiar de `SlowThreshold` ou acima dele é sempre persistida. É o mesmo limiar já
+  usado para colorir a UI, não um segundo conceito de "lento".
+- Qualquer outra trace (sucesso, não lenta) é persistida com probabilidade `SuccessSampleRate`.
+
+> **A visão ao vivo nunca muda.** `GET /traces/live` e o stream SSE leem do gravador em memória,
+> não do storage. Uma trace descartada pela amostragem continua aparecendo enquanto roda. Só o
+> histórico persistido é afetado.
+
+> **`/blueprint` e as métricas agregadas passam a refletir a amostra, não o tráfego real, uma vez
+> ligado.** Um `SuccessSampleRate` baixo pode deixar o `/blueprint` sem nenhuma trace de sucesso
+> recente para repetir. `/metrics`, `/metrics/components` e `/metrics/routes` contam só o que foi
+> guardado. Esse é o resultado esperado da amostragem, não um bug. `GET /config` expõe o estado
+> atual para o `/history` mostrar uma faixa visível quando a amostragem está ligada.
 
 ## Dados sensíveis
 
