@@ -143,6 +143,30 @@ export interface RouteStat {
   maxDurationMicros: number;
 }
 
+/** GET /architecture node: a distinct component/operation step observed while executing a route. */
+export interface ArchitectureNode {
+  component: string;
+  operation: string;
+  type: ComponentType;
+  executionCount: number;
+}
+
+/** GET /architecture edge: a distinct parent-child relationship observed between two steps. */
+export interface ArchitectureEdge {
+  fromComponent: string;
+  fromOperation: string;
+  toComponent: string;
+  toOperation: string;
+  callCount: number;
+}
+
+/** GET /architecture: static graph of a route, built from every execution within the queried window. */
+export interface ArchitectureMap {
+  totalExecutions: number;
+  nodes: ArchitectureNode[];
+  edges: ArchitectureEdge[];
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;

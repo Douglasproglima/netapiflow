@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { ApiService } from './api.service';
 import {
+  ArchitectureMap,
   ComponentStat,
   FlowTraceDetail,
   FlowTraceSummary,
@@ -170,6 +171,22 @@ describe('ApiService', () => {
         request.params.get('from') === '2026-01-01T00:00:00Z',
     );
     req.flush(stats);
+  });
+
+  it('getArchitecture sends method, route and the stats query as params', () => {
+    const map: ArchitectureMap = { totalExecutions: 0, nodes: [], edges: [] };
+    service
+      .getArchitecture('GET', '/api/orders/{id}', { from: '2026-01-01T00:00:00Z' })
+      .subscribe((result) => expect(result).toEqual(map));
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === 'api/architecture' &&
+        request.params.get('method') === 'GET' &&
+        request.params.get('route') === '/api/orders/{id}' &&
+        request.params.get('from') === '2026-01-01T00:00:00Z',
+    );
+    req.flush(map);
   });
 
   it('deleteTraces issues a DELETE to /traces', () => {
