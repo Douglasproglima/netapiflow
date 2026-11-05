@@ -16,20 +16,20 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Mapa de arquitetura vivo | D-60 item E | 🟡 Médio-alto | Em planejamento (Fase 16) |
-| 2 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
-| 3 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
-| 4 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
-| 5 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
-| 6 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
-| 7 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
+| 1 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
+| 2 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
+| 3 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
+| 4 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
+| 5 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
+| 6 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
 | — | Visibilidade de cancelamento, anotação de deploy | D-60 (menores) | ⚪ Baixo | Backlog, sem posição fixa |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
 Interop OTel ingestão (Fase 8), detector de N+1 (Fase 9), servidor MCP (Fase 10), Impeccable
 (Fase 11, governança, não é item de roadmap de produto), tempo não explicado (Fase 12),
-exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14), sampling tail-based (Fase 15).
+exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14), sampling tail-based (Fase 15),
+mapa de arquitetura vivo (Fase 16).
 
 ## Fora do ranking, decisão de escopo em aberto
 
