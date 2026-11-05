@@ -32,6 +32,17 @@ public readonly struct FlowStep : IDisposable
     public void Dispose();
 }
 
+/// <summary>A single <c>ILogger</c> call correlated to the span active when it happened (ADR-0017).
+/// Never populates <c>FlowSpan.Tags</c>: a separate field, its own opt-in, its own sanitization.</summary>
+public sealed record LogEntry
+{
+    public required DateTime Timestamp { get; init; }
+    public required string Level { get; init; }
+    public required string Message { get; init; }
+    public string? ExceptionType { get; init; }
+    public string? ExceptionMessage { get; init; }
+}
+
 public enum ComponentType { Endpoint, Controller, UseCase, Service, Repository, Database, Http, Custom }
 public enum FlowStatus { Running, Success, Error }
 
@@ -67,6 +78,7 @@ public sealed class NetApiFlowOptions
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
+    public LogCorrelationOptions LogCorrelation { get; }
     public IReadOnlyList<string> IncludePatterns { get; }
     public IReadOnlyList<string> ExcludePatterns { get; }
     public NetApiFlowOptions IncludePaths(params string[] patterns);
@@ -84,6 +96,18 @@ public sealed class TailSamplingOptions
     /// <see cref="FlowStatus.Error"/> or a duration at or above <see cref="NetApiFlowOptions.SlowThreshold"/>
     /// is always persisted, regardless of this value. Default: <c>0.1</c> (keep 10%).</summary>
     public double SuccessSampleRate { get; set; } = 0.1;
+}
+
+/// <summary>Log and exception correlation per step, via an internal <c>ILoggerProvider</c> (ADR-0017).
+/// Default: disabled.</summary>
+public sealed class LogCorrelationOptions
+{
+    /// <summary>Enables log correlation. Default: <see langword="false"/>.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Minimum <see cref="Microsoft.Extensions.Logging.LogLevel"/> captured. Default:
+    /// <see cref="Microsoft.Extensions.Logging.LogLevel.Warning"/>.</summary>
+    public LogLevel MinLevel { get; set; } = LogLevel.Warning;
 }
 
 /// <summary>Ecosystem <c>ActivitySource</c> instances NetApiFlow also listens to (ADR-0012). Opt-in, "None" by default.</summary>
@@ -105,6 +129,10 @@ public sealed class RetentionOptions
 public sealed class LimitsOptions
 {
     public int MaxSpansPerTrace { get; set; } = 300;
+
+    /// <summary>Maximum log entries correlated per span (ADR-0017), before extra entries are
+    /// discarded. Default: 20.</summary>
+    public int MaxLogEntriesPerSpan { get; set; } = 20;
 }
 
 public static class NetApiFlowServiceCollectionExtensions
@@ -402,7 +430,8 @@ Corpo do `data`, JSON camelCase:
     "errorType": null,
     "errorMessage": null,
     "isErrorOrigin": false,
-    "tags": {}
+    "tags": {},
+    "logs": []
   }
 }
 ```
@@ -552,11 +581,24 @@ Resposta `200`:
       "errorType": null,
       "errorMessage": null,
       "isErrorOrigin": false,
-      "tags": {}
+      "tags": {},
+      "logs": [
+        {
+          "timestamp": "2026-10-19T13:42:11.130000Z",
+          "level": "Warning",
+          "message": "Order total recalculated after a discount rule conflict",
+          "exceptionType": null,
+          "exceptionMessage": null
+        }
+      ]
     }
   ]
 }
 ```
+
+`logs` (Fase 17, ADR-0017) é só preenchido com `NetApiFlowOptions.LogCorrelation.Enabled = true`
+(padrão `false`); com a feature desligada, vem sempre `[]`, nunca ausente. `message` e
+`exceptionMessage` passam pelo mesmo `ErrorMessageSanitizer` já usado em `errorMessage`.
 
 Campos de nível superior = `FlowTrace` (seção 1), mais `spans: FlowSpan[]` na ordem de
 `Sequence`. `404` se o `traceId` não existir em nenhum dos dois.

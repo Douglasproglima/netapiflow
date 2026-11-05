@@ -26,3 +26,4 @@ comunidade, sem reabrir a decisão sem justificativa técnica nova).
 | [ADR-0014](0014-impeccable-como-ferramenta-de-qualidade-visual.md) | Impeccable como guarda de qualidade visual do dashboard, ferramenta de dev only | Aceito | [#94](https://github.com/Douglasproglima/netapiflow/issues/94) |
 | [ADR-0015](0015-filtro-de-acesso-unico-no-nucleo.md) | `IFlowAccessFilter` único no núcleo, compartilhado por Dashboard e MCP | Aceito | [#96](https://github.com/Douglasproglima/netapiflow/issues/96) |
 | [ADR-0016](0016-exportacao-otlp-pacote-opcional.md) | Exportação OTLP (`NetApiFlow.OpenTelemetry`) como pacote opcional, sobre a própria `ActivitySource` | Aceito | [#110](https://github.com/Douglasproglima/netapiflow/issues/110) |
+| [ADR-0017](0017-correlacao-de-log-e-excecao-por-etapa.md) | Correlação de log e exceção por etapa, via `ILoggerProvider` opt-in | Aceito | [#125](https://github.com/Douglasproglima/netapiflow/issues/125) |
