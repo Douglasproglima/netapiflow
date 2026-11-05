@@ -24,6 +24,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow.Mcp`: a new optional package embedding a read-only MCP (Model Context Protocol)
+  server over the existing `ITraceStore`, so an AI agent can list recent traces, get a trace by
+  id, and read per-component statistics without any REST client code. Same Development-only gate
+  as the dashboard (`IFlowAccessFilter`, ADR-0015); no write tool exists (ADR-0013). Published
+  alongside the other six packages on the same tag from this release onward.
+- `NetApiFlow`: outbound `HttpClient` calls can now be ingested as `Http` spans, opt-in via
+  `NetApiFlowOptions.ExternalSources = ExternalActivitySource.HttpClient` (ADR-0012). The outbound
+  URL is always reduced to `scheme://host[:port]/path`; query string and fragment are never
+  recorded.
+- `NetApiFlow.Dashboard`: the flow graph flags a suspected N+1 query pattern, a badge on every
+  `Database` step whose component and operation repeat three or more times anywhere in the trace
+  (not just under the same parent, since a classic N+1 loop puts each query under a different
+  instance of the looped step). The span details panel shows the group's size and a shortcut to
+  the first occurrence.
 - Impeccable (ADR-0014) adopted as a dev-only visual quality guard: installed skill and hook for
   Claude Code sessions, `DESIGN.md` now generated from `docs/brand/tokens.md`, and a warn-only CI
   job runs the detector against a live sample on every PR that touches
