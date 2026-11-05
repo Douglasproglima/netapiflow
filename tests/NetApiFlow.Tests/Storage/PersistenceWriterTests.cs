@@ -45,8 +45,9 @@ public class PersistenceWriterTests
     [Fact]
     public void Enqueue_WhenQueueIsFull_IncrementsDroppedCounter()
     {
-        var recorder = new FlowRecorder(Options.Create(new NetApiFlowOptions()));
-        using var subject = new PersistenceWriter(recorder, new FakeTraceStore(), NullLogger<PersistenceWriter>.Instance);
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        using var subject = new PersistenceWriter(recorder, new FakeTraceStore(), options, NullLogger<PersistenceWriter>.Instance);
 
         for (var i = 0; i < 1000; i++)
         {
@@ -65,9 +66,10 @@ public class PersistenceWriterTests
     [Fact]
     public async Task ExecuteAsync_SavesEnqueuedTracesToStore()
     {
-        var recorder = new FlowRecorder(Options.Create(new NetApiFlowOptions()));
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
         var store = new FakeTraceStore();
-        using var subject = new PersistenceWriter(recorder, store, NullLogger<PersistenceWriter>.Instance);
+        using var subject = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
 
         await subject.StartAsync(CancellationToken.None);
         try
@@ -83,6 +85,57 @@ public class PersistenceWriterTests
         }
 
         store.Saved.Single().TraceId.ShouldBe("trace-1");
+    }
+
+    [Fact]
+    public void Enqueue_WhenTailSamplingDiscardsTrace_NeverWritesToChannel()
+    {
+        var options = Options.Create(new NetApiFlowOptions
+        {
+            TailSampling = { Enabled = true, SuccessSampleRate = 0.0 },
+        });
+        var recorder = new FlowRecorder(options);
+        var store = new FakeTraceStore();
+        using var subject = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
+
+        recorder.TryStartTrace("fast-success", "GET", "/api/orders", DateTime.UtcNow);
+        recorder.CompleteTrace("fast-success", 200, FlowStatus.Success, null);
+
+        subject.DroppedCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTailSamplingEnabled_StillPersistsErrorsAndSlowTraces()
+    {
+        var options = Options.Create(new NetApiFlowOptions
+        {
+            SlowThreshold = TimeSpan.FromMilliseconds(1),
+            TailSampling = { Enabled = true, SuccessSampleRate = 0.0 },
+        });
+        var recorder = new FlowRecorder(options);
+        var store = new FakeTraceStore();
+        using var subject = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
+
+        await subject.StartAsync(CancellationToken.None);
+        try
+        {
+            recorder.TryStartTrace("error-trace", "GET", "/api/orders", DateTime.UtcNow);
+            recorder.CompleteTrace("error-trace", 500, FlowStatus.Error, "boom");
+
+            recorder.TryStartTrace("slow-trace", "GET", "/api/orders", DateTime.UtcNow.AddMilliseconds(-10));
+            recorder.CompleteTrace("slow-trace", 200, FlowStatus.Success, null);
+
+            recorder.TryStartTrace("fast-success", "GET", "/api/orders", DateTime.UtcNow);
+            recorder.CompleteTrace("fast-success", 200, FlowStatus.Success, null);
+
+            await WaitUntilAsync(() => store.Saved.Count == 2, TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            await subject.StopAsync(CancellationToken.None);
+        }
+
+        store.Saved.Select(trace => trace.TraceId).ShouldBe(["error-trace", "slow-trace"], ignoreOrder: true);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)

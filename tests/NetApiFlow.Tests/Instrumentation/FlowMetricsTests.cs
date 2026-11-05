@@ -85,8 +85,9 @@ public class FlowMetricsTests
         using var listener = CreateListener(totals);
 
         var store = new NoOpTraceStore();
-        var recorder = new FlowRecorder(Options.Create(new NetApiFlowOptions()));
-        using var writer = new PersistenceWriter(recorder, store, NullLogger<PersistenceWriter>.Instance);
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        using var writer = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
 
         for (var i = 0; i < 1001; i++)
         {
@@ -95,6 +96,26 @@ public class FlowMetricsTests
         }
 
         totals.GetValueOrDefault("netapiflow.persistence.failures").ShouldBe(1);
+    }
+
+    [Fact]
+    public void SampledOutTraces_IncrementsWhenTailSamplingDiscardsATrace()
+    {
+        var totals = new ConcurrentDictionary<string, long>();
+        using var listener = CreateListener(totals);
+
+        var store = new NoOpTraceStore();
+        var options = Options.Create(new NetApiFlowOptions
+        {
+            TailSampling = { Enabled = true, SuccessSampleRate = 0.0 },
+        });
+        var recorder = new FlowRecorder(options);
+        using var writer = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
+
+        recorder.TryStartTrace("fast-success", "GET", "/api/orders", DateTime.UtcNow);
+        recorder.CompleteTrace("fast-success", 200, FlowStatus.Success, null);
+
+        totals.GetValueOrDefault("netapiflow.traces.sampled_out").ShouldBe(1);
     }
 
     private sealed class NoOpTraceStore : ITraceStore
