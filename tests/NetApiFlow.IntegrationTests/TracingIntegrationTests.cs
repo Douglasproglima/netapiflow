@@ -87,7 +87,7 @@ public class TracingIntegrationTests
             .Start();
     }
 
-    private static List<FlowSpan> CaptureSpans(FlowRecorder recorder, string traceId, ConcurrentDictionary<string, List<FlowSpan>> spansByTrace)
+    private static ConcurrentBag<FlowSpan> CaptureSpans(FlowRecorder recorder, string traceId, ConcurrentDictionary<string, ConcurrentBag<FlowSpan>> spansByTrace)
     {
         return spansByTrace.GetOrAdd(traceId, _ => []);
     }
@@ -97,7 +97,7 @@ public class TracingIntegrationTests
     {
         using var host = CreateHost();
         var recorder = host.Services.GetRequiredService<FlowRecorder>();
-        var spansByTrace = new ConcurrentDictionary<string, List<FlowSpan>>();
+        var spansByTrace = new ConcurrentDictionary<string, ConcurrentBag<FlowSpan>>();
         void OnSpan(FlowSpan span) => CaptureSpans(recorder, span.TraceId, spansByTrace).Add(span);
         recorder.SpanCompleted += OnSpan;
         recorder.SpanFailed += OnSpan;
@@ -123,7 +123,7 @@ public class TracingIntegrationTests
     {
         using var host = CreateHost();
         var recorder = host.Services.GetRequiredService<FlowRecorder>();
-        var spansByTrace = new ConcurrentDictionary<string, List<FlowSpan>>();
+        var spansByTrace = new ConcurrentDictionary<string, ConcurrentBag<FlowSpan>>();
         void OnSpan(FlowSpan span) => CaptureSpans(recorder, span.TraceId, spansByTrace).Add(span);
         recorder.SpanCompleted += OnSpan;
         recorder.SpanFailed += OnSpan;
@@ -143,11 +143,40 @@ public class TracingIntegrationTests
     }
 
     [Fact]
+    public async Task Request_WithManyConcurrentTaskWhenAllRequests_NeverLosesAWorkerSpan()
+    {
+        using var host = CreateHost();
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+        var spansByTrace = new ConcurrentDictionary<string, ConcurrentBag<FlowSpan>>();
+        void OnSpan(FlowSpan span) => CaptureSpans(recorder, span.TraceId, spansByTrace).Add(span);
+        recorder.SpanCompleted += OnSpan;
+        recorder.SpanFailed += OnSpan;
+
+        var client = host.GetTestServer().CreateClient();
+        var traceIds = await Task.WhenAll(Enumerable.Range(0, 50).Select(async _ =>
+        {
+            var response = await client.GetAsync("/api/parallel");
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+            return response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        }));
+
+        foreach (var traceId in traceIds)
+        {
+            var spans = spansByTrace[traceId];
+            var controllerSpan = spans.Single(s => s.Component == "ParallelController");
+            var workerSpans = spans.Where(s => s.Component == "Worker").ToList();
+
+            workerSpans.Count.ShouldBe(2);
+            workerSpans.ShouldAllBe(s => s.ParentSpanId == controllerSpan.SpanId);
+        }
+    }
+
+    [Fact]
     public async Task Request_WithExceptionInSpan_MarksOriginAndAncestorsAsError()
     {
         using var host = CreateHost();
         var recorder = host.Services.GetRequiredService<FlowRecorder>();
-        var spansByTrace = new ConcurrentDictionary<string, List<FlowSpan>>();
+        var spansByTrace = new ConcurrentDictionary<string, ConcurrentBag<FlowSpan>>();
         void OnSpan(FlowSpan span) => CaptureSpans(recorder, span.TraceId, spansByTrace).Add(span);
         recorder.SpanCompleted += OnSpan;
         recorder.SpanFailed += OnSpan;
