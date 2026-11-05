@@ -182,6 +182,31 @@ rota, limite), obter uma trace por id, obter estatísticas por componente. Não 
 `NetApiFlow.Dashboard`: os dois dependem só de `NetApiFlow` (núcleo) para `IFlowAccessFilter`.
 Formalizado na revisão da Fase 10.
 
+### `NetApiFlow.OpenTelemetry`: superfície pública
+
+```csharp
+namespace NetApiFlow.OpenTelemetry;
+
+public static class NetApiFlowOpenTelemetryServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlowOtlpExport(
+        this IServiceCollection services,
+        Action<NetApiFlowOtlpExportOptions>? configure = null);
+}
+
+public sealed class NetApiFlowOtlpExportOptions
+{
+    public bool IncludeHttpClientSource { get; set; }
+    public Action<OtlpExporterOptions>? ConfigureOtlpExporter { get; set; }
+}
+```
+
+`AddNetApiFlowOtlpExport` registra o SDK do OpenTelemetry (`AddOpenTelemetry().WithTracing(...)`)
+observando a fonte `"NetApiFlow"` (a mesma `ActivitySource` do núcleo, ADR-0002) e, se
+`IncludeHttpClientSource` for `true`, também `"System.Net.Http"` (ADR-0012), antes de
+`AddOtlpExporter`. Não lê nem reescreve `FlowSpan`/`ITraceStore`: exporta a `Activity` nativa
+diretamente, sem depender do pipeline do dashboard. ADR-0016. Formalizado na revisão da Fase 13.
+
 ### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
 
 ```csharp
