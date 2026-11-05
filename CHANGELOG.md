@@ -24,6 +24,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow.OpenTelemetry`: a new optional package exporting NetApiFlow traces to any
+  OTLP-compatible backend (Jaeger, Tempo, Aspire Dashboard, Honeycomb, a collector), via
+  `AddNetApiFlowOtlpExport()`. Points the OpenTelemetry SDK at the existing `"NetApiFlow"`
+  `ActivitySource` (ADR-0002), no custom serialization. `IncludeHttpClientSource` (default
+  `false`) optionally observes the native `"System.Net.Http"` source, which is not sanitized by
+  NetApiFlow's own URL sanitizer (ADR-0016, R-16). Published alongside the other seven packages
+  on the same tag from this release onward.
 - `NetApiFlow.Mcp`: a new optional package embedding a read-only MCP (Model Context Protocol)
   server over the existing `ITraceStore`, so an AI agent can list recent traces, get a trace by
   id, and read per-component statistics without any REST client code. Same Development-only gate
