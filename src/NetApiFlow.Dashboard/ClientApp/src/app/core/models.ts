@@ -111,10 +111,12 @@ export interface MetricsSummary {
   maxDurationMicros: number;
 }
 
-/** GET /config (D-24, `version` added by D-33). */
+/** GET /config (D-24, `version` added by D-33, tail sampling fields added by D-82). */
 export interface DashboardConfig {
   slowThresholdMicros: number;
   version: string;
+  tailSamplingEnabled: boolean;
+  successSampleRate: number;
 }
 
 /** GET /metrics/components list item. */

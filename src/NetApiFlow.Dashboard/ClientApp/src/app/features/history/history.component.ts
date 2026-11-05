@@ -219,6 +219,8 @@ export class HistoryComponent {
   );
 
   readonly slowThresholdMicros = signal<number | null>(null);
+  readonly tailSamplingEnabled = signal(false);
+  readonly successSampleRate = signal(0);
   readonly filtersOpen = signal(false);
 
   readonly loading = signal(true);
@@ -226,6 +228,8 @@ export class HistoryComponent {
   readonly result = signal<PagedResult<FlowTraceSummary> | null>(null);
 
   readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
+
+  readonly tailSamplingRateLabel = computed(() => `${Math.round(this.successSampleRate() * 100)}%`);
 
   readonly viewState = computed<ViewState>(() => {
     if (this.loading()) {
@@ -295,6 +299,8 @@ export class HistoryComponent {
 
     this.api.getConfig().subscribe((config) => {
       this.slowThresholdMicros.set(config.slowThresholdMicros);
+      this.tailSamplingEnabled.set(config.tailSamplingEnabled);
+      this.successSampleRate.set(config.successSampleRate);
     });
 
     effect(() => {
