@@ -16,7 +16,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Backlog |
+| 1 | Log/exceção correlacionados por etapa | D-58 item 5 | 🟡 Médio | Em planejamento (Fase 17) |
 | 2 | Trace portátil (export/import) | D-60 item C | 🟢 Médio | Backlog |
 | 3 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
 | 4 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
