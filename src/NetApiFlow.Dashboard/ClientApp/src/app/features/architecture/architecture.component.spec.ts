@@ -2,11 +2,18 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ArchitectureComponent } from './architecture.component';
-import { ArchitectureMap, EndpointDescriptor } from '../../core/models';
+import { ArchitectureMap, DashboardConfig, EndpointDescriptor } from '../../core/models';
 
 const ENDPOINTS: EndpointDescriptor[] = [
   { method: 'GET', routeTemplate: '/api/orders/{id}', displayName: 'GET /api/orders/{id}' },
 ];
+
+const CONFIG: DashboardConfig = {
+  slowThresholdMicros: 250_000,
+  version: '0.1.0',
+  tailSamplingEnabled: false,
+  successSampleRate: 0.1,
+};
 
 function selectRoute(
   fixture: ComponentFixture<ArchitectureComponent>,
@@ -59,6 +66,7 @@ describe('ArchitectureComponent', () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain(
@@ -66,10 +74,37 @@ describe('ArchitectureComponent', () => {
     );
   });
 
+  it('shows the tail-sampling banner when the backend reports it enabled', async () => {
+    const fixture = TestBed.createComponent(ArchitectureComponent);
+    await fixture.whenStable();
+    httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock
+      .expectOne((req) => req.url === 'api/config')
+      .flush({ ...CONFIG, tailSamplingEnabled: true, successSampleRate: 0.1 });
+    await fixture.whenStable();
+
+    const banner = fixture.nativeElement.querySelector('.architecture__tail-sampling-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('10%');
+  });
+
+  it('hides the tail-sampling banner when the backend reports it disabled', async () => {
+    const fixture = TestBed.createComponent(ArchitectureComponent);
+    await fixture.whenStable();
+    httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock
+      .expectOne((req) => req.url === 'api/config')
+      .flush({ ...CONFIG, tailSamplingEnabled: false });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.architecture__tail-sampling-banner')).toBeNull();
+  });
+
   it('shows an explicit empty state when the selected route had no execution in the window', async () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
     await fixture.whenStable();
 
     selectRoute(fixture, 'GET', '/api/orders/{id}');
@@ -88,6 +123,7 @@ describe('ArchitectureComponent', () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
     await fixture.whenStable();
 
     selectRoute(fixture, 'GET', '/api/orders/{id}');
@@ -105,6 +141,7 @@ describe('ArchitectureComponent', () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
     await fixture.whenStable();
 
     selectRoute(fixture, 'GET', '/api/orders/{id}');
@@ -142,6 +179,7 @@ describe('ArchitectureComponent', () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
     await fixture.whenStable();
     await selectRouteWithGraph(fixture, httpMock);
 
@@ -167,6 +205,7 @@ describe('ArchitectureComponent', () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
     await fixture.whenStable();
     await selectRouteWithGraph(fixture, httpMock);
 

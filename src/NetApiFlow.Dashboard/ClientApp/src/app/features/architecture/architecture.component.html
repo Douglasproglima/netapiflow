@@ -1,4 +1,10 @@
 <section class="architecture">
+  @if (tailSamplingEnabled()) {
+    <p class="naf-banner architecture__tail-sampling-banner">
+      {{ 'history.tailSampling.banner' | t: { rate: tailSamplingRateLabel() } }}
+    </p>
+  }
+
   <div class="architecture__controls">
     <label class="architecture__field">
       {{ 'architecture.route.label' | t }}

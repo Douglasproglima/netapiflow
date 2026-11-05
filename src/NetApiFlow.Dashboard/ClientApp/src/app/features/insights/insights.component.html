@@ -1,4 +1,10 @@
 <section class="insights">
+  @if (tailSamplingEnabled()) {
+    <p class="naf-banner insights__tail-sampling-banner">
+      {{ 'history.tailSampling.banner' | t: { rate: tailSamplingRateLabel() } }}
+    </p>
+  }
+
   <div class="insights__window">
     <span class="insights__window-label" id="insights-window-label">{{
       'insights.window.label' | t
