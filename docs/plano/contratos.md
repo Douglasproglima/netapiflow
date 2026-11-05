@@ -65,10 +65,24 @@ public sealed class NetApiFlowOptions
     public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
+    public TailSamplingOptions TailSampling { get; }
     public IReadOnlyList<string> IncludePatterns { get; }
     public IReadOnlyList<string> ExcludePatterns { get; }
     public NetApiFlowOptions IncludePaths(params string[] patterns);
     public NetApiFlowOptions ExcludePaths(params string[] patterns);
+}
+
+/// <summary>Tail-based sampling of persisted traces (D-82). Default: disabled, every completed
+/// trace is persisted, same behavior as before this option existed.</summary>
+public sealed class TailSamplingOptions
+{
+    /// <summary>Enables tail-based sampling. Default: <see langword="false"/>.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Fraction (0.0-1.0) of successful, non-slow traces to persist. A trace with
+    /// <see cref="FlowStatus.Error"/> or a duration at or above <see cref="NetApiFlowOptions.SlowThreshold"/>
+    /// is always persisted, regardless of this value. Default: <c>0.1</c> (keep 10%).</summary>
+    public double SuccessSampleRate { get; set; } = 0.1;
 }
 
 /// <summary>Ecosystem <c>ActivitySource</c> instances NetApiFlow also listens to (ADR-0012). Opt-in, "None" by default.</summary>
@@ -660,13 +674,19 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
 ```json
 {
   "slowThresholdMicros": 250000,
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "tailSamplingEnabled": false,
+  "successSampleRate": 0.1
 }
 ```
 
 `version` (D-33) é lido de `AssemblyInformationalVersionAttribute` do assembly `NetApiFlow`, o
 mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do dashboard (tarefa
 7.0c, item 4).
+
+`tailSamplingEnabled`/`successSampleRate` (Fase 15, D-82) espelham
+`NetApiFlowOptions.TailSampling`, para o dashboard avisar quando o histórico persistido não é
+100% do tráfego real.
 
 ---
 
