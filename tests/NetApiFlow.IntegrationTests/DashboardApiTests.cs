@@ -392,6 +392,33 @@ public class DashboardApiTests
     }
 
     [Fact]
+    public async Task GetRouteMetrics_ReturnsStatsOrderedByExecutionCountDescending_AndAppliesFromTo()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(CreateTrace("rm-1", "GET", "/api/orders/{id}", FlowStatus.Success, now, 1_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("rm-2", "GET", "/api/orders/{id}", FlowStatus.Success, now, 2_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("rm-3", "GET", "/api/customers", FlowStatus.Success, now.AddDays(-10), 500), [], CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/metrics/routes");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement[0].GetProperty("method").GetString().ShouldBe("GET");
+        doc.RootElement[0].GetProperty("routeTemplate").GetString().ShouldBe("/api/orders/{id}");
+        doc.RootElement[0].GetProperty("executionCount").GetInt32().ShouldBe(2);
+
+        var filteredResponse = await client.GetAsync(
+            $"/flow/api/metrics/routes?from={Uri.EscapeDataString(now.AddHours(-1).ToString("O"))}");
+        using var filteredDoc = JsonDocument.Parse(await filteredResponse.Content.ReadAsStringAsync());
+        var routes = filteredDoc.RootElement.EnumerateArray().Select(e => e.GetProperty("routeTemplate").GetString()).ToList();
+        routes.ShouldContain("/api/orders/{id}");
+        routes.ShouldNotContain("/api/customers");
+    }
+
+    [Fact]
     public async Task GetConfig_ReturnsSlowThresholdConfiguredOnTheHost()
     {
         using var host = CreateHost(configure: options => options.SlowThreshold = TimeSpan.FromMilliseconds(400));
@@ -432,6 +459,7 @@ public class DashboardApiTests
         (await client.GetAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.DeleteAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/metrics")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync("/flow/api/metrics/routes")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
