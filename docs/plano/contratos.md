@@ -48,6 +48,7 @@ public interface ITraceStore
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken);
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
@@ -299,6 +300,45 @@ public sealed record RouteStat
     public required long MaxDurationMicros { get; init; }
 }
 ```
+
+`GetArchitectureMapAsync` e `ArchitectureMap` foram acrescentados a `ITraceStore` na Fase 16
+(D-83): grafo estático da rota (`method`, `routeTemplate`), união de todas as execuções
+registradas na janela de `StatsQuery`, não um trace em particular. Nó por `(Component,
+Operation)` distinto observado; aresta por relação pai-filho distinta observada entre nós.
+`ExecutionCount` de um nó é quantas execuções da rota, na janela, passaram por aquele passo;
+`TotalExecutions` é o total de execuções da rota na janela (mesmo denominador para todo nó e
+aresta); o nó raiz (sem pai) tem sempre `ExecutionCount == TotalExecutions`. Base do mapa de
+arquitetura vivo (D-60 item E).
+
+```csharp
+public sealed record ArchitectureNode
+{
+    public required string Component { get; init; }
+    public required string Operation { get; init; }
+    public required ComponentType Type { get; init; }
+    public required int ExecutionCount { get; init; }
+}
+
+public sealed record ArchitectureEdge
+{
+    public required string FromComponent { get; init; }
+    public required string FromOperation { get; init; }
+    public required string ToComponent { get; init; }
+    public required string ToOperation { get; init; }
+    public required int CallCount { get; init; }
+}
+
+public sealed record ArchitectureMap
+{
+    public required int TotalExecutions { get; init; }
+    public required IReadOnlyList<ArchitectureNode> Nodes { get; init; }
+    public required IReadOnlyList<ArchitectureEdge> Edges { get; init; }
+}
+```
+
+`TotalExecutions`, `Nodes` e `Edges` vêm vazios/zero (`TotalExecutions = 0`, as duas listas
+vazias) quando a rota não tem nenhuma execução na janela, nunca `null`: mesma convenção de
+`/metrics` (campos de duração vêm `0`, nunca ausentes).
 
 `GetAsync` e `GetLastSuccessfulAsync` passaram a devolver `FlowTraceDetail?` em vez de
 `FlowTrace?` (D-19 em `docs/plano/decisoes.md`), achado durante a tarefa 3.2: os três
@@ -654,6 +694,39 @@ lentas" e "top erros" são ordenações diferentes do mesmo payload, feitas pelo
 endpoints separados. "Rotas mortas" (rota sem nenhuma execução na janela) não é campo deste
 payload: o frontend cruza esta lista com `GET /endpoints`, que já lista toda rota rastreável da
 API hospedeira independente de ter sido executada ou não.
+
+### GET `/architecture`
+
+Acrescentada na Fase 16 (D-83), base do mapa de arquitetura vivo (D-60 item E). Mapa estático de
+uma rota, forma de `ArchitectureMap`.
+
+Query string: `method` (obrigatório), `route` (obrigatório, route template exato, mesma
+convenção de `/blueprint`), `from`/`to` (opcionais, forma de `StatsQuery`).
+
+Resposta `200`:
+
+```json
+{
+  "totalExecutions": 412,
+  "nodes": [
+    { "component": "OrdersController", "operation": "GetOrder", "type": "Controller", "executionCount": 412 },
+    { "component": "OrderService", "operation": "FindAsync", "type": "Service", "executionCount": 412 },
+    { "component": "OrderCache", "operation": "TryGetAsync", "type": "Custom", "executionCount": 58 },
+    { "component": "OrderRepository", "operation": "FindAsync", "type": "Repository", "executionCount": 354 }
+  ],
+  "edges": [
+    { "fromComponent": "OrdersController", "fromOperation": "GetOrder", "toComponent": "OrderService", "toOperation": "FindAsync", "callCount": 412 },
+    { "fromComponent": "OrderService", "fromOperation": "FindAsync", "toComponent": "OrderCache", "toOperation": "TryGetAsync", "callCount": 58 },
+    { "fromComponent": "OrderService", "fromOperation": "FindAsync", "toComponent": "OrderRepository", "toOperation": "FindAsync", "callCount": 354 }
+  ]
+}
+```
+
+`400` se faltar `method` ou `route`, mesma régua de `/blueprint`. Nunca `404`/`204`: rota sem
+nenhuma execução na janela devolve `200` com `totalExecutions: 0` e as duas listas vazias, mesma
+convenção de `/metrics`. A percentagem de ocorrência de cada nó/aresta (`executionCount`/
+`callCount` dividido por `totalExecutions`) é calculada pelo frontend, não pela API, mesmo
+tratamento de `errorRate` em `/metrics`.
 
 ### DELETE `/traces`
 
