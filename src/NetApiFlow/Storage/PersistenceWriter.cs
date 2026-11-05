@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
@@ -25,15 +26,17 @@ internal sealed partial class PersistenceWriter : BackgroundService
 
     private readonly FlowRecorder _recorder;
     private readonly ITraceStore _store;
+    private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ILogger<PersistenceWriter> _logger;
     private readonly Action<FlowTrace, IReadOnlyList<FlowSpan>> _onTraceReady;
     private long _droppedCount;
     private long _failureCount;
 
-    public PersistenceWriter(FlowRecorder recorder, ITraceStore store, ILogger<PersistenceWriter> logger)
+    public PersistenceWriter(FlowRecorder recorder, ITraceStore store, IOptions<NetApiFlowOptions> options, ILogger<PersistenceWriter> logger)
     {
         _recorder = recorder;
         _store = store;
+        _options = options;
         _logger = logger;
         _onTraceReady = Enqueue;
         _recorder.TraceReadyForPersistence += _onTraceReady;
@@ -50,6 +53,13 @@ internal sealed partial class PersistenceWriter : BackgroundService
 
     private void Enqueue(FlowTrace trace, IReadOnlyList<FlowSpan> spans)
     {
+        var options = _options.Value;
+        if (!TailSampleDecision.ShouldPersist(trace, options.TailSampling, options.SlowThreshold, Random.Shared.NextDouble()))
+        {
+            FlowMetrics.SampledOutTraces.Add(1);
+            return;
+        }
+
         if (!_channel.Writer.TryWrite((trace, spans)))
         {
             Interlocked.Increment(ref _droppedCount);

@@ -157,6 +157,8 @@ builder.Services.AddNetApiFlow(options =>
     options.IncludePaths("/api/**"); // only trace matching routes; default traces everything
     options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
     options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; default is None
+    options.TailSampling.Enabled = true; // opt-in; see Tail sampling below
+    options.TailSampling.SuccessSampleRate = 0.1; // default shown
 });
 ```
 
@@ -259,6 +261,35 @@ builder.Services.AddNetApiFlowOtlpExport(options =>
 > reached). A request NetApiFlow discards early can still be exported. Neither pipeline blocks
 > the other; this is the expected result of two independent `ActivityListener` instances
 > observing the same source, not a bug.
+
+## Tail sampling
+
+```csharp
+builder.Services.AddNetApiFlow(options =>
+{
+    options.TailSampling.Enabled = true; // default: false, every completed trace is persisted
+    options.TailSampling.SuccessSampleRate = 0.1; // default shown, keep 10% of the rest
+});
+```
+
+Disabled by default: every completed trace is persisted, same as before this option existed.
+Enabled, the decision is made once, when a trace is ready to persist, before it ever reaches the
+`ITraceStore`:
+
+- A trace with an error is always persisted.
+- A trace at or above `SlowThreshold` is always persisted (the same threshold already used to
+  color the UI, not a second concept of "slow").
+- Any other trace (successful, not slow) is persisted with probability `SuccessSampleRate`.
+
+> **The live view never changes.** `GET /traces/live` and the SSE stream read from the in-memory
+> recorder, not from the store, so a sampled-out trace still shows up while it runs. Only the
+> persisted history is affected.
+
+> **`/blueprint` and the aggregated metrics reflect the sample, not the real traffic, once
+> enabled.** A low `SuccessSampleRate` can leave `/blueprint` without a recent successful trace to
+> replay, and `/metrics`, `/metrics/components` and `/metrics/routes` count only what was kept.
+> This is the expected result of sampling, not a bug. `GET /config` exposes the current state so
+> `/history` shows a visible banner whenever tail sampling is on.
 
 ## Sensitive data
 

@@ -30,6 +30,9 @@ public sealed class NetApiFlowOptions
     /// <summary>In-process limits for tracing overhead.</summary>
     public LimitsOptions Limits { get; } = new();
 
+    /// <summary>Tail-based sampling of persisted traces (D-82).</summary>
+    public TailSamplingOptions TailSampling { get; } = new();
+
     /// <summary>Route glob patterns (<c>*</c> for one segment, <c>**</c> for any depth) a request must match to be traced.</summary>
     public IReadOnlyList<string> IncludePatterns => _includePatterns;
 
