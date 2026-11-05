@@ -763,7 +763,7 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 
 ---
 
-Autorização vale para as onze rotas acima, sem exceção (ADR-0006): fora de
+Autorização vale para as treze rotas acima, sem exceção (ADR-0006): fora de
 `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
 `IDashboardAuthorizationFilter` configurado, toda rota responde `404`. Com um dos dois
 configurado e o usuário sem a claim exigida, `403` (risco R-09, mitigação na Fase 5).
