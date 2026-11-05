@@ -6,6 +6,7 @@ using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Marking;
 using NetApiFlow.Mcp;
 using NetApiFlow.Mcp.Endpoints;
+using NetApiFlow.OpenTelemetry;
 using SampleApi.Controllers.Application;
 using SampleApi.Controllers.Data;
 
@@ -21,6 +22,11 @@ builder.Services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
 builder.Services.AddNetApiFlowDashboard();
 builder.Services.AddNetApiFlowMcp();
 builder.Services.AddNetApiFlowEntityFrameworkCore();
+
+if (builder.Configuration.GetValue<bool>("OtlpExport:Enabled"))
+{
+    builder.Services.AddNetApiFlowOtlpExport(o => o.IncludeHttpClientSource = true);
+}
 
 builder.Services.AddDbContext<SampleDbContext>((sp, options) =>
 {

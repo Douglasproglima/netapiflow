@@ -38,3 +38,22 @@ the available tools. It should show `list_recent_traces`, `get_trace` and `get_c
 Call a few endpoints on the sample (`GET /api/orders`, `GET /api/orders/{id}`) to generate
 traces, then ask Claude Code to list recent traces or inspect one by id: the tool responses
 should reflect the real requests just made.
+
+## Exporting traces to an OTLP collector
+
+Set `OtlpExport:Enabled` to `true` in `appsettings.json` (or `OtlpExport__Enabled=true` as an
+environment variable) to export traces to an OTLP collector. The sample does not start a
+collector itself, so point it at one you run separately.
+
+Aspire Dashboard, as a standalone container:
+
+```bash
+docker run --rm -it -p 18888:18888 -p 4317:18889 \
+  mcr.microsoft.com/dotnet/aspire-dashboard:latest
+```
+
+Open `http://localhost:18888` to watch traces arrive while you call the sample's endpoints. The
+`TraceId` shown there matches the one in the NetApiFlow dashboard, since both read the same
+`Activity`.
+
+An `otel/opentelemetry-collector` container works the same way, listening on `4317` by default.

@@ -22,10 +22,12 @@ requisição gastou tempo, dentro do *meu* código", para um único processo ASP
 
 Ele **não é**:
 
-- Um sistema de tracing distribuído (sem propagação de contexto entre serviços, sem exportação
-  OTLP). Se você precisa disso, use OpenTelemetry. O `ActivityListener` próprio do NetApiFlow
-  convive bem com ele, sem conflito (veja
-  [`docs/adr/0002-activitysource-nativo-sem-otel-sdk.md`](docs/adr/0002-activitysource-nativo-sem-otel-sdk.md)).
+- Um sistema de tracing distribuído (sem propagação de contexto entre serviços). O
+  `ActivityListener` próprio do NetApiFlow convive bem com o SDK do OpenTelemetry, sem conflito
+  (veja
+  [`docs/adr/0002-activitysource-nativo-sem-otel-sdk.md`](docs/adr/0002-activitysource-nativo-sem-otel-sdk.md)),
+  e o `NetApiFlow.OpenTelemetry` exporta seus traces para qualquer backend OTLP (veja
+  [Exportação OTLP](#exportação-otlp)).
 - Um APM (sem alerta, sem dashboard além do que ele mesmo entrega, sem armazenamento de métrica de
   longo prazo além do que você configurar via um pacote de storage).
 - Um profiler (ele mede as etapas que você marca, não cada chamada de método do processo).
@@ -92,6 +94,7 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 | [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persiste traces no PostgreSQL em vez de memória |
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persiste traces no SQL Server em vez de memória |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | Um servidor MCP só leitura para um agente de IA consultar traces direto |
+| [`NetApiFlow.OpenTelemetry`](https://www.nuget.org/packages/NetApiFlow.OpenTelemetry) | Exporta traces para qualquer backend OTLP (Jaeger, Tempo, Aspire Dashboard, Honeycomb, um coletor) |
 
 O núcleo (`NetApiFlow`) não tem nenhuma dependência além do shared framework do ASP.NET Core.
 Cada item acima é opcional.
@@ -215,6 +218,43 @@ trace nem dispara um replay via MCP.
 
 Veja `samples/SampleApi.Controllers/README.md` para como apontar um cliente MCP real (ex.:
 Claude Code) para uma instância rodando.
+
+## Exportação OTLP
+
+```bash
+dotnet add package NetApiFlow.OpenTelemetry
+```
+
+```csharp
+builder.Services.AddNetApiFlowOtlpExport();
+```
+
+O núcleo do NetApiFlow já produz `Activity` reais na `ActivitySource` `"NetApiFlow"` (ADR-0002).
+`AddNetApiFlowOtlpExport` aponta o SDK do OpenTelemetry para essa fonte e exporta via OTLP, para
+qualquer backend compatível: Jaeger, Tempo, Aspire Dashboard, Honeycomb, ou um OpenTelemetry
+Collector. Não existe serialização própria do NetApiFlow aqui. O SDK exporta a mesma `Activity`
+que o dashboard lê.
+
+```csharp
+builder.Services.AddNetApiFlowOtlpExport(options =>
+{
+    options.IncludeHttpClientSource = true; // padrão: false, ver aviso abaixo
+    options.ConfigureOtlpExporter = otlp => otlp.Endpoint = new Uri("http://localhost:4317");
+});
+```
+
+> **`IncludeHttpClientSource` exporta a URL de saída inteira, inclusive query string.**
+> Habilitá-lo também observa a `ActivitySource` nativa `"System.Net.Http"`, espelhando
+> `NetApiFlowOptions.ExternalSources`, para o trace exportado ter os mesmos spans de HTTP de
+> saída que o dashboard mostra. Essa `Activity` nativa nunca passa pelo sanitizador de URL do
+> NetApiFlow (que só sanitiza o `FlowSpan`). O backend OTel recebe a URL como está. O padrão é
+> `false` por esse motivo.
+
+> **O volume exportado pode ser maior que o que o dashboard mostra.** O SDK do OpenTelemetry
+> amostra de forma independente da decisão de amostragem do próprio NetApiFlow (tracing
+> desligado, limite de 500 traces atingido). Uma requisição que o NetApiFlow descarta cedo ainda
+> pode ser exportada. Nenhum dos dois pipelines bloqueia o outro. Isso é o resultado esperado de
+> dois `ActivityListener` independentes observando a mesma fonte, não um bug.
 
 ## Dados sensíveis
 
