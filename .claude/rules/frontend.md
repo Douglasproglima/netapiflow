@@ -53,8 +53,8 @@ src/app/
   (histórico, componentes, detalhes).
 - Replay: duração exibida é sempre a medida real, nunca ajustada pela velocidade de reprodução
   (seção 7.3 do prompt). Só a cadência da animação muda com a velocidade.
-- **Comentário só quando o código sozinho não explica o porquê.** Nome de variável, método e
-  tipo bem escolhido substitui comentário que descreve o quê. Nunca comentar o óbvio.
+- Comentário segue a regra de ouro do `CLAUDE.md`: sintoma de nome ruim, não solução. Nunca cita
+  fase, etapa de plano ou número de ADR.
 
 ## Antes de finalizar
 

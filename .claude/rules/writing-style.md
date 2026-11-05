@@ -28,8 +28,8 @@ commit de governança) e para texto em inglês visível a quem usa o pacote (REA
 - Elogio vago ("robusto", "poderoso", "incrível").
 - Dizer que algo é importante sem dizer por quê.
 - Negrito em todo item de lista.
-- Citar fase ou etapa de plano em comentário de código. Comentário pode citar ADR
-  (`// see ADR-0007`).
+- Citar fase, etapa de plano ou número de ADR em comentário de código (regra de ouro do
+  `CLAUDE.md`, sem exceção desde D-87).
 
 ## Antes de entregar texto
 
