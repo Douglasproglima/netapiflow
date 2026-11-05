@@ -2,7 +2,7 @@ using Microsoft.Data.SqlClient;
 
 namespace NetApiFlow.Storage.SqlServer;
 
-/// <summary>Creates the schema (tarefa 6.1) on first use, equivalent to <c>schema.sql</c>.</summary>
+/// <summary>Creates the schema on first use, equivalent to <c>schema.sql</c>.</summary>
 internal static class SqlServerSchemaInitializer
 {
     public static async Task EnsureCreatedAsync(SqlConnection connection, string tracesTable, string spansTable, CancellationToken cancellationToken)

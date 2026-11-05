@@ -18,7 +18,7 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the dashboard's access gate (tarefa 5.4, risco R-09, ADR-0006, ADR-0015): outside
+/// Verifies the dashboard's access gate (risco R-09): outside
 /// Development, every route (API and static UI alike) 404s unless the host configured
 /// <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>; with one configured and
 /// denied, it 403s.

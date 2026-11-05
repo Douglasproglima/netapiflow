@@ -172,10 +172,10 @@ export interface PagedResult<T> {
   totalCount: number;
 }
 
-/** Sort field accepted by GET /traces (D-41, tarefa 7.9). */
+/** Sort field accepted by GET /traces (D-41). */
 export type TraceSortField = 'startedAt' | 'duration' | 'httpStatus' | 'method' | 'route';
 
-/** Sort direction accepted by GET /traces (D-41, tarefa 7.9). */
+/** Sort direction accepted by GET /traces (D-41). */
 export type SortDirection = 'asc' | 'desc';
 
 /** Query string accepted by GET /traces. */
@@ -200,7 +200,7 @@ export interface StatsQuery {
 }
 
 /**
- * Minimal OpenAPI 3.x subset read by the Runner (tarefa 4.11): only the fields needed to list
+ * Minimal OpenAPI 3.x subset read by the Runner: only the fields needed to list
  * endpoints and build a request form, not a full spec of the format.
  */
 export interface OpenApiParameter {

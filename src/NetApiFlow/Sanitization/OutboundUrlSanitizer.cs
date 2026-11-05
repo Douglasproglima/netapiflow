@@ -2,7 +2,7 @@ namespace NetApiFlow.Sanitization;
 
 /// <summary>
 /// Reduces an outbound URL to <c>host[:port]/path</c>, dropping query string and fragment
-/// (ADR-0007, risco R-13), truncated to the same 300-character limit as error messages.
+/// (risco R-13), truncated to the same 300-character limit as error messages.
 /// </summary>
 internal static class OutboundUrlSanitizer
 {

@@ -7,7 +7,7 @@ import { TranslationKey } from '../core/i18n/translations';
  * with color blindness, or a black-and-white printout).
  */
 export interface NodeStatePresentation {
-  /** Relative to the dashboard's own base path, per `docs/brand/node-states/` (ADR-0009). */
+  /** Relative to the dashboard's own base path, per `docs/brand/node-states/`. */
   readonly iconSrc: string;
   readonly labelKey: TranslationKey;
 }

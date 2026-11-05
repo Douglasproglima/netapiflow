@@ -3,13 +3,13 @@ using OpenTelemetry.Trace;
 
 namespace NetApiFlow.OpenTelemetry;
 
-/// <summary>Registers the OpenTelemetry SDK to export NetApiFlow traces to an OTLP backend (ADR-0016).</summary>
+/// <summary>Registers the OpenTelemetry SDK to export NetApiFlow traces to an OTLP backend.</summary>
 public static class NetApiFlowOpenTelemetryServiceCollectionExtensions
 {
     /// <summary>
     /// Registers a <c>TracerProvider</c> observing the <c>"NetApiFlow"</c> <see cref="System.Diagnostics.ActivitySource"/>
-    /// (ADR-0002) and exports it via OTLP. The OTel SDK samples independently of
-    /// <c>FlowActivityListener.Sample()</c>, so exported volume can exceed what the dashboard shows (ADR-0016).
+    /// and exports it via OTLP. The OTel SDK samples independently of
+    /// <c>FlowActivityListener.Sample()</c>, so exported volume can exceed what the dashboard shows.
     /// </summary>
     public static IServiceCollection AddNetApiFlowOtlpExport(
         this IServiceCollection services,

@@ -21,7 +21,7 @@ using Sample = SampleApi.MinimalMediatR;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the MinimalMediatR sample (tarefa 2.9) produces the full
+/// Verifies the MinimalMediatR sample produces the full
 /// Endpoint → UseCase → Service → Repository → Database flow automatically, with no manual
 /// <c>NetApiFlow.Step(...)</c> call anywhere in the sample's business code.
 /// </summary>

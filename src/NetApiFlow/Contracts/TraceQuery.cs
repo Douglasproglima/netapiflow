@@ -1,7 +1,6 @@
 namespace NetApiFlow;
 
 /// <summary>Filter and pagination for <see cref="ITraceStore.QueryAsync"/>.</summary>
-/// <remarks>Provisional shape. The authoritative REST contract is frozen in Fase 3, tarefa 3.1.</remarks>
 public sealed record TraceQuery
 {
     /// <summary>Filters by trace status.</summary>

@@ -4,7 +4,7 @@ import { EndpointFormComponent } from './endpoint-form.component';
 
 /**
  * Standalone `/runner` route: the endpoint form (shared with the `/flow` workspace's action
- * panel, ADR-0010) plus its own `LiveTracePlayerService`, tracking whatever trace the form just
+ * panel) plus its own `LiveTracePlayerService`, tracking whatever trace the form just
  * dispatched.
  */
 @Component({

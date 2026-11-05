@@ -19,7 +19,7 @@ using Sample = SampleApi.Controllers;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the Controllers sample (tarefa 2.8) produces the full
+/// Verifies the Controllers sample produces the full
 /// Controller → Service → Repository → Database flow automatically, with no manual
 /// <c>NetApiFlow.Step(...)</c> call anywhere in the sample's business code.
 ///

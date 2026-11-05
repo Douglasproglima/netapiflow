@@ -21,7 +21,7 @@ function inputValue(event: Event): string {
 }
 
 /**
- * Generalizes /blueprint (Fase 5: last successful execution of a route) to the union of every
+ * Generalizes /blueprint (last successful execution of a route) to the union of every
  * execution of a route within a window (D-83): same question ("what does this route normally
  * do"), answered from GET /architecture instead of a single trace.
  */

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace NetApiFlow.IntegrationTests;
 
-/// <summary>Verifies the Angular client's dist/ is embedded and resolvable (tarefa 5.2, ADR-0005).</summary>
+/// <summary>Verifies the Angular client's dist/ is embedded and resolvable.</summary>
 public class DashboardEmbeddedFilesTests
 {
     [Fact]

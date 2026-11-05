@@ -2,7 +2,7 @@ using Testcontainers.PostgreSql;
 
 namespace NetApiFlow.Storage.Tests;
 
-/// <summary>One PostgreSQL container shared by every test in the collection (tarefa 6.5), not per test.</summary>
+/// <summary>One PostgreSQL container shared by every test in the collection, not per test.</summary>
 public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16-alpine").Build();

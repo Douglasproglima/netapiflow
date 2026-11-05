@@ -1,6 +1,6 @@
 namespace NetApiFlow;
 
-/// <summary>Ecosystem <c>ActivitySource</c> instances NetApiFlow also listens to (ADR-0012). Opt-in, <see cref="None"/> by default.</summary>
+/// <summary>Ecosystem <c>ActivitySource</c> instances NetApiFlow also listens to. Opt-in, <see cref="None"/> by default.</summary>
 [Flags]
 public enum ExternalActivitySource
 {

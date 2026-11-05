@@ -14,7 +14,7 @@
 
 // Brand typeface, embedded locally as variable fonts (one file covers every weight below) so the
 // dashboard renders its real typography without a Google Fonts request: it has to work offline,
-// behind a restrictive CSP, or on the client's own network (docs/brand/tokens.md, ADR-0009).
+// behind a restrictive CSP, or on the client's own network (docs/brand/tokens.md).
 @font-face {
   font-family: 'Plus Jakarta Sans';
   src: url('assets/fonts/PlusJakartaSans-Variable.ttf') format('truetype-variations');
@@ -36,7 +36,7 @@
   font-display: swap;
 }
 
-// Brand tokens (docs/brand/tokens.md, ADR-0009), as the --mat-sys-*/--mat-card-*/--flow-*
+// Brand tokens (docs/brand/tokens.md), as the --mat-sys-*/--mat-card-*/--flow-*
 // variables every mat-* component and the graph/waterfall actually read. Mixins so the same
 // values can apply unconditionally (dark, the default), behind `prefers-color-scheme` (no saved
 // preference), and behind the manual `data-theme` attribute the theme toggle writes (D-36) —
@@ -161,7 +161,7 @@ html {
   // roles this file doesn't override.
   @include naf-mat-theme-dark;
 
-  // Card and button recipe from the brand guide (D-31, tarefa 7.0c): radius-lg (18px) cards,
+  // Card and button recipe from the brand guide (D-31): radius-lg (18px) cards,
   // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
   // just its stock color palette. Shape/sizing doesn't change between themes.
   --mat-card-elevated-container-shape: 18px;
