@@ -349,6 +349,15 @@ code,
   min-width: 0;
 }
 
+.naf-banner {
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--naf-radius-sm);
+  background: var(--naf-flow-tint);
+  color: var(--naf-flow-text);
+  font-size: 0.8125rem;
+}
+
 .naf-btn {
   height: 36px;
   padding: 0 0.875rem;

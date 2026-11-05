@@ -24,6 +24,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: tail-based sampling of persisted traces (`NetApiFlowOptions.TailSampling`, D-82).
+  Disabled by default. Enabled, a trace with an error or a duration at or above `SlowThreshold`
+  is always persisted, and any other trace is kept with probability `SuccessSampleRate` (default
+  `0.1`). The decision is made in `PersistenceWriter`, before a trace reaches `ITraceStore`; the
+  live view (`GET /traces/live`, SSE) is unaffected. `GET /config` exposes the current state so
+  `/history` shows a banner when tail sampling is on. New `netapiflow.traces.sampled_out` counter.
 - `NetApiFlow.OpenTelemetry`: a new optional package exporting NetApiFlow traces to any
   OTLP-compatible backend (Jaeger, Tempo, Aspire Dashboard, Honeycomb, a collector), via
   `AddNetApiFlowOtlpExport()`. Points the OpenTelemetry SDK at the existing `"NetApiFlow"`

@@ -20,4 +20,8 @@ internal static class FlowMetrics
     /// <summary>Traces that failed to persist, because the persistence queue was full or the store threw.</summary>
     public static readonly Counter<long> PersistenceFailures =
         Meter.CreateCounter<long>("netapiflow.persistence.failures", description: "Traces that failed to persist.");
+
+    /// <summary>Traces discarded by tail-based sampling (D-82) before reaching the persistence queue.</summary>
+    public static readonly Counter<long> SampledOutTraces =
+        Meter.CreateCounter<long>("netapiflow.traces.sampled_out", description: "Traces discarded by tail-based sampling before reaching the persistence queue.");
 }

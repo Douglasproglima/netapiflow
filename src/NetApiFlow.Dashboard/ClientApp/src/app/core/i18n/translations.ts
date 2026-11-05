@@ -239,6 +239,8 @@ const en = {
   'history.sort.ascending': 'ascending',
   'history.sort.descending': 'descending',
   'history.sort.mobileLabel': 'Sort by',
+  'history.tailSampling.banner':
+    'Tail-based sampling active: errors and slow routes always appear, {rate} of the rest is kept.',
 };
 
 const ptBr: Record<keyof typeof en, string> = {
@@ -474,6 +476,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'history.sort.ascending': 'crescente',
   'history.sort.descending': 'decrescente',
   'history.sort.mobileLabel': 'Ordenar por',
+  'history.tailSampling.banner':
+    'Amostragem tail-based ativa: erros e rotas lentas sempre aparecem, {rate} das demais são guardadas.',
 };
 
 export type TranslationKey = keyof typeof en;

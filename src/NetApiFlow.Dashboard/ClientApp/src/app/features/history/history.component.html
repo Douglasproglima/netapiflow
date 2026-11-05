@@ -1,4 +1,10 @@
 <section class="history">
+  @if (tailSamplingEnabled()) {
+    <p class="naf-banner history__tail-sampling-banner">
+      {{ 'history.tailSampling.banner' | t: { rate: tailSamplingRateLabel() } }}
+    </p>
+  }
+
   <button
     type="button"
     class="naf-btn history__filter-toggle"

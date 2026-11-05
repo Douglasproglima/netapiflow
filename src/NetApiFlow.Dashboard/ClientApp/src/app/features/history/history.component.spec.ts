@@ -7,7 +7,12 @@ import { HistoryComponent } from './history.component';
 import { PagedResult, FlowTraceSummary } from '../../core/models';
 
 const EMPTY_PAGE: PagedResult<FlowTraceSummary> = { items: [], totalCount: 0 };
-const CONFIG = { slowThresholdMicros: 250_000, version: '0.1.0' };
+const CONFIG = {
+  slowThresholdMicros: 250_000,
+  version: '0.1.0',
+  tailSamplingEnabled: false,
+  successSampleRate: 0.1,
+};
 
 describe('HistoryComponent', () => {
   let httpMock: HttpTestingController;
@@ -332,5 +337,29 @@ describe('HistoryComponent', () => {
     expect(invalid.filters().order).toBeUndefined();
     expect(invalid.activeSort()).toBe('startedAt');
     expect(invalid.activeOrder()).toBe('desc');
+  });
+
+  it('shows the tail-sampling banner when the backend reports it enabled', async () => {
+    await mount();
+    flushConfig({ ...CONFIG, tailSamplingEnabled: true, successSampleRate: 0.1 });
+    flushTraces();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    const banner = harness.fixture.nativeElement.querySelector('.history__tail-sampling-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('10%');
+  });
+
+  it('hides the tail-sampling banner when the backend reports it disabled', async () => {
+    await mount();
+    flushConfig({ ...CONFIG, tailSamplingEnabled: false });
+    flushTraces();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(
+      harness.fixture.nativeElement.querySelector('.history__tail-sampling-banner'),
+    ).toBeNull();
   });
 });
