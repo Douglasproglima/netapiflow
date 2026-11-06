@@ -174,6 +174,8 @@ builder.Services.AddNetApiFlow(options =>
     options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; default is None
     options.TailSampling.Enabled = true; // opt-in; see Tail sampling below
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
+    options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
+    options.Limits.MaxLogEntriesPerSpan = 20; // default shown
 });
 ```
 
@@ -306,6 +308,30 @@ Enabled, the decision is made once, when a trace is ready to persist, before it 
 > always kept, and `/metrics`, `/metrics/components` and `/metrics/routes` count only what was
 > kept. This is the expected result of sampling, not a bug. `GET /config` exposes the current
 > state so `/history` shows a visible banner whenever tail sampling is on.
+
+## Log correlation
+
+```csharp
+builder.Services.AddNetApiFlow(options =>
+{
+    options.LogCorrelation.Enabled = true; // default: false
+    options.LogCorrelation.MinLevel = LogLevel.Warning; // default shown
+});
+```
+
+Disabled by default. Enabled, every `ILogger` call made at or above `MinLevel` while a `FlowStep`
+is active is correlated to that span's `Logs`, right next to its error, no second tool to open to
+see what the application logged while that step ran. The mechanism is a second `ILoggerProvider`,
+registered alongside whatever providers your app already has (Console, Serilog, Application
+Insights, etc.): it never replaces or filters them, logging to your usual destinations keeps
+working exactly as before. A log call outside a tracked step (startup, an uninstrumented
+background job) is never observed by this provider.
+
+> **Sanitization here is the same best-effort regex already used for `FlowStep.MarkError`, not a
+> new or stronger guarantee.** A log message is free text your own code writes, and can in
+> principle contain anything, including data the regex-based sanitizer doesn't recognize. This is
+> why the feature defaults to off and `MinLevel` defaults to `Warning`: lower the blast radius
+> before you decide the trade-off is worth it for your application.
 
 ## Sensitive data
 
