@@ -39,6 +39,7 @@ function makeSpan(spanId: string, overrides: Partial<FlowSpan> = {}): FlowSpan {
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
     ...overrides,
   };
 }

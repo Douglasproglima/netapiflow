@@ -22,6 +22,7 @@ function span(
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
     ...overrides,
   };
 }

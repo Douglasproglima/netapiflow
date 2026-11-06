@@ -35,6 +35,7 @@ function makeSpan(overrides: Partial<FlowSpan> & Pick<FlowSpan, 'spanId' | 'star
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
     ...overrides,
   };
 }

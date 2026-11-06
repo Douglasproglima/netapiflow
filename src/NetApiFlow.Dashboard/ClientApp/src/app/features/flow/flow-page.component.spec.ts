@@ -45,6 +45,7 @@ function makeTrace(traceId: string): FlowTraceDetail {
         errorMessage: null,
         isErrorOrigin: false,
         tags: {},
+        logs: [],
       },
     ],
   };
