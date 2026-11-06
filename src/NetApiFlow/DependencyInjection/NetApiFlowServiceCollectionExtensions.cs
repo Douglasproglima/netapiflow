@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Configuration;
 using NetApiFlow.DependencyInjection;
 using NetApiFlow.Events;
@@ -46,6 +47,13 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddHostedService(sp => sp.GetRequiredService<PersistenceWriter>());
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();
+
+        var probedOptions = new NetApiFlowOptions();
+        configure?.Invoke(probedOptions);
+        if (probedOptions.LogCorrelation.Enabled)
+        {
+            services.AddSingleton<ILoggerProvider, FlowLoggerProvider>();
+        }
 
         return services;
     }

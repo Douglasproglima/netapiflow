@@ -19,6 +19,7 @@ function makeTrace(): FlowTraceDetail {
       errorMessage: null,
       isErrorOrigin: false,
       tags: {},
+      logs: [],
     },
   ];
 
@@ -56,6 +57,7 @@ function makeSpanDetail(): SpanDetail {
       errorMessage: null,
       isErrorOrigin: false,
       tags: {},
+      logs: [],
     },
     ancestors: [],
     children: [{ spanId: 'child', component: 'OrderService', operation: 'GetAsync' }],
@@ -80,6 +82,7 @@ function dbSpan(spanId: string, sequence: number): FlowSpan {
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
   };
 }
 
@@ -154,6 +157,55 @@ describe('FlowDetailsPanelComponent', () => {
     expect(text).toContain('OrderService.GetAsync');
     expect(text).toContain('+20 ms');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(0);
+  });
+
+  describe('span logs (ADR-0017)', () => {
+    it('shows no logs section when the span has no correlated logs', async () => {
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', makeTrace());
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      fixture.componentRef.setInput('selectedSpan', makeSpanDetail());
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.flow-details__logs')).toBeNull();
+    });
+
+    it('shows level, message and exception for each correlated log', async () => {
+      const spanDetail = makeSpanDetail();
+      spanDetail.span.logs = [
+        {
+          timestamp: '2026-01-01T00:00:00.050000Z',
+          level: 'Warning',
+          message: 'stock running low',
+          exceptionType: null,
+          exceptionMessage: null,
+        },
+        {
+          timestamp: '2026-01-01T00:00:00.060000Z',
+          level: 'Error',
+          message: 'order confirmation failed',
+          exceptionType: 'System.InvalidOperationException',
+          exceptionMessage: 'boom',
+        },
+      ];
+
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', makeTrace());
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      fixture.componentRef.setInput('selectedSpan', spanDetail);
+      await fixture.whenStable();
+
+      const entries = fixture.nativeElement.querySelectorAll('.flow-details__log');
+      expect(entries).toHaveLength(2);
+
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('stock running low');
+      expect(text).toContain('order confirmation failed');
+      expect(text).toContain('System.InvalidOperationException');
+      expect(text).toContain('boom');
+      expect(entries[0].classList.contains('flow-details__log--warning')).toBe(true);
+      expect(entries[1].classList.contains('flow-details__log--warning')).toBe(false);
+    });
   });
 
   describe('N+1 group (D-71)', () => {

@@ -80,4 +80,19 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
             }
         }
     }
+
+    public bool TryAddLogEntry(string spanId, LogEntry entry, int maxLogEntriesPerSpan)
+    {
+        lock (_lock)
+        {
+            var index = _spans.FindIndex(s => s.SpanId == spanId);
+            if (index < 0 || _spans[index].Logs.Count >= maxLogEntriesPerSpan)
+            {
+                return false;
+            }
+
+            _spans[index] = _spans[index] with { Logs = [.. _spans[index].Logs, entry] };
+            return true;
+        }
+    }
 }

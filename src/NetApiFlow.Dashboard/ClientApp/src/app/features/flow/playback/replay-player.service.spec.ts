@@ -23,6 +23,7 @@ function makeSpan(
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
   };
 }
 

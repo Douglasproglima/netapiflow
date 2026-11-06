@@ -6,6 +6,8 @@ public sealed record FlowSpan
     private static readonly IReadOnlyDictionary<string, string> EmptyTags =
         new Dictionary<string, string>();
 
+    private static readonly IReadOnlyList<LogEntry> EmptyLogs = [];
+
     /// <summary>Id of the <see cref="FlowTrace"/> this span belongs to.</summary>
     public required string TraceId { get; init; }
 
@@ -50,4 +52,7 @@ public sealed record FlowSpan
 
     /// <summary>Explicit tags attached to the span via <c>FlowStep.Tag(...)</c>.</summary>
     public IReadOnlyDictionary<string, string> Tags { get; init; } = EmptyTags;
+
+    /// <summary><c>ILogger</c> calls correlated to this span (ADR-0017).</summary>
+    public IReadOnlyList<LogEntry> Logs { get; init; } = EmptyLogs;
 }

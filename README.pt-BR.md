@@ -178,6 +178,8 @@ builder.Services.AddNetApiFlow(options =>
     options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; padrão é None
     options.TailSampling.Enabled = true; // opt-in; ver Amostragem tail-based abaixo
     options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado
+    options.LogCorrelation.Enabled = true; // opt-in; ver Correlação de log abaixo
+    options.Limits.MaxLogEntriesPerSpan = 20; // valor padrão mostrado
 });
 ```
 
@@ -313,6 +315,31 @@ chegar ao `ITraceStore`:
 > contam só o que foi guardado. Esse é o resultado esperado da amostragem, não um bug. `GET
 > /config` expõe o estado atual para o `/history` mostrar uma faixa visível quando a amostragem
 > está ligada.
+
+## Correlação de log
+
+```csharp
+builder.Services.AddNetApiFlow(options =>
+{
+    options.LogCorrelation.Enabled = true; // padrão: false
+    options.LogCorrelation.MinLevel = LogLevel.Warning; // valor padrão mostrado
+});
+```
+
+Desligado por padrão. Ligado, toda chamada de `ILogger` feita no nível de `MinLevel` ou acima,
+enquanto um `FlowStep` está ativo, é correlacionada ao `Logs` daquele span. Fica ao lado do erro
+do span, sem precisar abrir uma segunda ferramenta para ver o que a aplicação logou durante
+aquela etapa. O mecanismo é um segundo `ILoggerProvider`, registrado ao lado dos provedores que a
+sua aplicação já tem (Console, Serilog, Application Insights etc). Ele nunca substitui nem filtra
+esses provedores. O log continua indo para o destino de sempre, sem mudança. Uma chamada de log
+fora de uma etapa rastreada (startup, um job de background não instrumentado) nunca é observada
+por este provider.
+
+> **A sanitização aqui é o mesmo regex melhor esforço já usado em `FlowStep.MarkError`, não uma
+> garantia nova ou mais forte.** Mensagem de log é texto livre escrito pelo seu próprio código, e
+> pode em princípio conter qualquer coisa, inclusive dado que o sanitizador baseado em regex não
+> reconhece. Por isso a feature nasce desligada, e `MinLevel` nasce em `Warning`: reduza o raio de
+> impacto antes de decidir se o trade-off vale a pena para a sua aplicação.
 
 ## Dados sensíveis
 

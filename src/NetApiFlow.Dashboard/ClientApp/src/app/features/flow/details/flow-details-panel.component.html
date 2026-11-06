@@ -98,6 +98,50 @@
           }
         </ul>
       }
+
+      @if (detail.span.logs.length > 0) {
+        <p class="flow-details__section-label">{{ 'details.span.logs' | t }}</p>
+        <ul class="flow-details__logs">
+          @for (log of detail.span.logs; track $index) {
+            <li
+              class="flow-details__log"
+              [class.flow-details__log--warning]="isWarningLevel(log.level)"
+            >
+              <div class="flow-details__log-head">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  width="14"
+                  height="14"
+                >
+                  @if (isWarningLevel(log.level)) {
+                    <path d="M12 3.5 L21 19.5 H3 Z" stroke-linejoin="round" />
+                    <path d="M12 9.5v5.3M12 17.3v.1" stroke-linecap="round" />
+                  } @else {
+                    <circle cx="12" cy="12" r="8.5" />
+                    <path d="M12 7.5v5.5M12 16.4v.1" />
+                  }
+                </svg>
+                <b>{{ log.level }}</b>
+                <span class="flow-details__log-time" [attr.title]="log.timestamp">{{
+                  formatLocalTime(log.timestamp)
+                }}</span>
+              </div>
+              <p class="flow-details__log-message">{{ log.message }}</p>
+              @if (log.exceptionType) {
+                <p class="flow-details__log-exception">
+                  <b>{{ log.exceptionType }}</b>
+                  @if (log.exceptionMessage) {
+                    {{ log.exceptionMessage }}
+                  }
+                </p>
+              }
+            </li>
+          }
+        </ul>
+      }
     </div>
   </section>
 } @else {

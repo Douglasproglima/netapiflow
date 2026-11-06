@@ -24,4 +24,8 @@ internal static class FlowMetrics
     /// <summary>Traces discarded by tail-based sampling (D-82) before reaching the persistence queue.</summary>
     public static readonly Counter<long> SampledOutTraces =
         Meter.CreateCounter<long>("netapiflow.traces.sampled_out", description: "Traces discarded by tail-based sampling before reaching the persistence queue.");
+
+    /// <summary>Log entries discarded because the per-span log limit was reached (ADR-0017).</summary>
+    public static readonly Counter<long> DroppedLogs =
+        Meter.CreateCounter<long>("netapiflow.logs.dropped", description: "Log entries discarded because the per-span log limit was reached.");
 }
