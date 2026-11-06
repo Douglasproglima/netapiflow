@@ -60,6 +60,10 @@ export class FlowDetailsPanelComponent {
     return httpMethodTagClass(method);
   }
 
+  isWarningLevel(level: string): boolean {
+    return level === 'Warning';
+  }
+
   formatDuration(micros: number | null): string {
     return formatDurationMicros(micros);
   }

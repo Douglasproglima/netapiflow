@@ -94,6 +94,7 @@ describe('ApiService', () => {
         errorMessage: null,
         isErrorOrigin: false,
         tags: {},
+        logs: [],
       },
       ancestors: [],
       children: [],

@@ -44,6 +44,15 @@ export interface FlowSpan {
   errorMessage: string | null;
   isErrorOrigin: boolean;
   tags: Record<string, string>;
+  logs: LogEntry[];
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  exceptionType: string | null;
+  exceptionMessage: string | null;
 }
 
 /** Shape shared by GET /traces/{traceId} and the SSE "trace" key: a trace without its spans. */

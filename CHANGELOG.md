@@ -24,6 +24,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: log and exception correlation per step, via a second `ILoggerProvider` registered
+  alongside the host's own providers (`NetApiFlowOptions.LogCorrelation`, ADR-0017). Disabled by
+  default; enabled, every `ILogger` call at or above `MinLevel` (default `Warning`) made while a
+  `FlowStep` is active is recorded on that span's new `Logs` field, sanitized by the same
+  `ErrorMessageSanitizer` already used for `FlowStep.MarkError`. Bounded by
+  `LimitsOptions.MaxLogEntriesPerSpan` (default 20), extra entries discarded and counted (new
+  `netapiflow.logs.dropped` counter). `NetApiFlow.Dashboard`'s span details panel shows a new
+  "Logs" section; `NetApiFlow.Mcp`'s `get_trace` returns the field with no extra wiring needed.
+  `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer` persist the field in a new
+  `logs` column on the spans table, same `jsonb`/`nvarchar(max)` treatment already used for `tags`.
 - `NetApiFlow.Dashboard`: a new "Architecture map" page (`/architecture`, D-83), the static call
   graph of a single route built from every execution recorded within a chosen time window, not
   just the last one. `ITraceStore.GetArchitectureMapAsync` and `ArchitectureMap` (nodes by

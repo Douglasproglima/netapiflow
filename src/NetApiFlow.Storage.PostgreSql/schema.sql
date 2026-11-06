@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS netapiflow_spans (
     error_message text NULL,
     is_error_origin boolean NOT NULL,
     tags jsonb NOT NULL,
+    logs jsonb NOT NULL,
     PRIMARY KEY (trace_id, span_id)
 );
 

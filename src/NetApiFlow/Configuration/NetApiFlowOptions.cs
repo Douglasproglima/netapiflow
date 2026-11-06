@@ -33,6 +33,9 @@ public sealed class NetApiFlowOptions
     /// <summary>Tail-based sampling of persisted traces (D-82).</summary>
     public TailSamplingOptions TailSampling { get; } = new();
 
+    /// <summary>Log and exception correlation per step (ADR-0017).</summary>
+    public LogCorrelationOptions LogCorrelation { get; } = new();
+
     /// <summary>Route glob patterns (<c>*</c> for one segment, <c>**</c> for any depth) a request must match to be traced.</summary>
     public IReadOnlyList<string> IncludePatterns => _includePatterns;
 

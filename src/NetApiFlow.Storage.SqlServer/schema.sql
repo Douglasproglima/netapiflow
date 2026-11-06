@@ -44,6 +44,7 @@ BEGIN
         error_message nvarchar(max) NULL,
         is_error_origin bit NOT NULL,
         tags nvarchar(max) NOT NULL,
+        logs nvarchar(max) NOT NULL,
         CONSTRAINT pk_netapiflow_spans PRIMARY KEY (trace_id, span_id),
         CONSTRAINT fk_netapiflow_spans_trace FOREIGN KEY (trace_id)
             REFERENCES dbo.netapiflow_traces (trace_id) ON DELETE CASCADE
