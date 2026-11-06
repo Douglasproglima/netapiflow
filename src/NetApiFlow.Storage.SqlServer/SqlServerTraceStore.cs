@@ -450,7 +450,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
     private async Task<List<FlowSpan>> ReadSpansAsync(SqlConnection connection, string traceId, CancellationToken cancellationToken)
     {
         await using var command = new SqlCommand($"""
-            SELECT trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags
+            SELECT trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs
             FROM {_spansTable} WHERE trace_id = @traceId ORDER BY sequence
             """, connection);
         command.Parameters.AddWithValue("traceId", traceId);
@@ -498,6 +498,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         ErrorMessage = reader.IsDBNull(12) ? null : reader.GetString(12),
         IsErrorOrigin = reader.GetBoolean(13),
         Tags = DeserializeTags(reader.GetString(14)),
+        Logs = DeserializeLogs(reader.GetString(15)),
     };
 
     private static DateTime ReadUtc(SqlDataReader reader, int ordinal) =>
@@ -554,6 +555,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         table.Columns.Add("error_message", typeof(string));
         table.Columns.Add("is_error_origin", typeof(bool));
         table.Columns.Add("tags", typeof(string));
+        table.Columns.Add("logs", typeof(string));
 
         foreach (var span in spans)
         {
@@ -572,7 +574,8 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
                 (object?)span.ErrorType ?? DBNull.Value,
                 (object?)span.ErrorMessage ?? DBNull.Value,
                 span.IsErrorOrigin,
-                SerializeTags(span.Tags));
+                SerializeTags(span.Tags),
+                SerializeLogs(span.Logs));
         }
 
         return table;
@@ -596,7 +599,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         {
             "trace_id", "span_id", "parent_span_id", "sequence", "component", "operation", "type",
             "started_at", "ended_at", "duration_micros", "status", "error_type", "error_message",
-            "is_error_origin", "tags",
+            "is_error_origin", "tags", "logs",
         })
         {
             bulkCopy.ColumnMappings.Add(column, column);
@@ -607,6 +610,11 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
     private static Dictionary<string, string> DeserializeTags(string json) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
+
+    private static string SerializeLogs(IReadOnlyList<LogEntry> logs) => JsonSerializer.Serialize(logs);
+
+    private static List<LogEntry> DeserializeLogs(string json) =>
+        JsonSerializer.Deserialize<List<LogEntry>>(json) ?? [];
 
     /// <summary>
     /// Same aggregation as <c>InMemoryTraceStore.GetArchitectureMapAsync</c>, kept consistent across

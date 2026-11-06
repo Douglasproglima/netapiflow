@@ -54,7 +54,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         }
 
         await using var spanImporter = await connection.BeginBinaryImportAsync(
-            $"COPY {_spansTable} (trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags) FROM STDIN (FORMAT BINARY)",
+            $"COPY {_spansTable} (trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs) FROM STDIN (FORMAT BINARY)",
             cancellationToken);
 
         foreach (var span in spans)
@@ -75,6 +75,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             await WriteNullableAsync(spanImporter, span.ErrorMessage, NpgsqlDbType.Text, cancellationToken);
             await spanImporter.WriteAsync(span.IsErrorOrigin, NpgsqlDbType.Boolean, cancellationToken);
             await spanImporter.WriteAsync(SerializeTags(span.Tags), NpgsqlDbType.Jsonb, cancellationToken);
+            await spanImporter.WriteAsync(SerializeLogs(span.Logs), NpgsqlDbType.Jsonb, cancellationToken);
         }
 
         await spanImporter.CompleteAsync(cancellationToken);
@@ -487,7 +488,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
     private async Task<List<FlowSpan>> ReadSpansAsync(NpgsqlConnection connection, string traceId, CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand($"""
-            SELECT trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags
+            SELECT trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs
             FROM {_spansTable} WHERE trace_id = @traceId ORDER BY sequence
             """, connection);
         command.Parameters.AddWithValue("traceId", traceId);
@@ -535,6 +536,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         ErrorMessage = reader.IsDBNull(12) ? null : reader.GetString(12),
         IsErrorOrigin = reader.GetBoolean(13),
         Tags = DeserializeTags(reader.GetString(14)),
+        Logs = DeserializeLogs(reader.GetString(15)),
     };
 
     private static DateTime ReadUtc(NpgsqlDataReader reader, int ordinal) =>
@@ -569,6 +571,11 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 
     private static Dictionary<string, string> DeserializeTags(string json) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
+
+    private static string SerializeLogs(IReadOnlyList<LogEntry> logs) => JsonSerializer.Serialize(logs);
+
+    private static List<LogEntry> DeserializeLogs(string json) =>
+        JsonSerializer.Deserialize<List<LogEntry>>(json) ?? [];
 
     public void Dispose() => _schemaLock.Dispose();
 

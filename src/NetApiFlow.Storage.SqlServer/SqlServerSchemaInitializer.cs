@@ -49,6 +49,7 @@ internal static class SqlServerSchemaInitializer
                     error_message nvarchar(max) NULL,
                     is_error_origin bit NOT NULL,
                     tags nvarchar(max) NOT NULL,
+                    logs nvarchar(max) NOT NULL,
                     CONSTRAINT pk_{SafeIndexName(spansTable)} PRIMARY KEY (trace_id, span_id),
                     CONSTRAINT fk_{SafeIndexName(spansTable)}_trace FOREIGN KEY (trace_id)
                         REFERENCES {tracesTable} (trace_id) ON DELETE CASCADE

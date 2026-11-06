@@ -46,6 +46,15 @@ public abstract class TraceStoreTestsBase
         ErrorMessage = status == FlowStatus.Error ? "boom" : null,
         IsErrorOrigin = status == FlowStatus.Error,
         Tags = new Dictionary<string, string> { ["key"] = "value" },
+        Logs =
+        [
+            new LogEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                Level = "Warning",
+                Message = "stock running low",
+            },
+        ],
     };
 
     [Fact]
@@ -66,6 +75,8 @@ public abstract class TraceStoreTestsBase
         detail.Spans[0].SpanId.ShouldBe("span-root");
         detail.Spans[1].ParentSpanId.ShouldBe("span-root");
         detail.Spans[1].Tags["key"].ShouldBe("value");
+        detail.Spans[1].Logs.Single().Message.ShouldBe("stock running low");
+        detail.Spans[1].Logs.Single().Level.ShouldBe("Warning");
     }
 
     [Fact]
