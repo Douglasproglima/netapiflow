@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Configuration;
 using Shouldly;
@@ -36,6 +37,9 @@ public class NetApiFlowOptionsTests
         options.ExternalSources.ShouldBe(ExternalActivitySource.None);
         options.TailSampling.Enabled.ShouldBeFalse();
         options.TailSampling.SuccessSampleRate.ShouldBe(0.1);
+        options.Limits.MaxLogEntriesPerSpan.ShouldBe(20);
+        options.LogCorrelation.Enabled.ShouldBeFalse();
+        options.LogCorrelation.MinLevel.ShouldBe(LogLevel.Warning);
     }
 
     [Fact]
@@ -98,5 +102,17 @@ public class NetApiFlowOptionsTests
 
         var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
         exception.Message.ShouldContain("TailSampling.SuccessSampleRate");
+    }
+
+    [Fact]
+    public void Value_WithMaxLogEntriesPerSpanZeroOrLess_ThrowsOptionsValidationException()
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:Limits:MaxLogEntriesPerSpan"] = "0",
+        });
+
+        var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
+        exception.Message.ShouldContain("Limits.MaxLogEntriesPerSpan");
     }
 }

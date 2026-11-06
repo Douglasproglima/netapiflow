@@ -37,6 +37,12 @@ internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOp
                 $"NetApiFlow: TailSampling.SuccessSampleRate must be between 0.0 and 1.0 (was {options.TailSampling.SuccessSampleRate}).");
         }
 
+        if (options.Limits.MaxLogEntriesPerSpan <= 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: Limits.MaxLogEntriesPerSpan must be greater than zero (was {options.Limits.MaxLogEntriesPerSpan}).");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }
