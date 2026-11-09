@@ -46,7 +46,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.21" />
 
     <!-- NetApiFlow.MediatR -->
-    <PackageVersion Include="MediatR" Version="12.4.1" />
+    <PackageVersion Include="MediatR" Version="14.3.0" />
 
     <!-- NetApiFlow.OpenTelemetry -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
@@ -56,16 +56,16 @@
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />
 
     <!-- NetApiFlow.Mcp -->
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
 
     <!-- tests/NetApiFlow.Mcp.Tests: real MCP client against the HTTP transport -->
-    <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.4.0" />
 
     <!-- NetApiFlow.Storage.PostgreSql -->
-    <PackageVersion Include="Npgsql" Version="8.0.5" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
 
     <!-- NetApiFlow.Storage.SqlServer -->
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
 
     <!-- SourceLink (every src/ package) -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
