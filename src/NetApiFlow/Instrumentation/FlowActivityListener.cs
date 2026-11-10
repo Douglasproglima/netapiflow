@@ -51,11 +51,13 @@ internal sealed class FlowActivityListener : IDisposable
     private bool ShouldListenTo(ActivitySource source) =>
         source.Name == FlowActivitySource.Name ||
         (source.Name == HttpClientActivityTagNames.SourceName &&
-            _options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient));
+            _options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient)) ||
+        (source.Name == NpgsqlActivityTagNames.SourceName &&
+            _options.Value.ExternalSources.HasFlag(ExternalActivitySource.Npgsql));
 
     private ActivitySamplingResult Sample(ref ActivityCreationOptions<ActivityContext> options)
     {
-        if (!_options.Value.Enabled)
+        if (!_options.Value.Enabled || IsCommandAlreadyCoveredByAStep(options.Source.Name, Activity.Current))
         {
             return ActivitySamplingResult.None;
         }
@@ -66,8 +68,25 @@ internal sealed class FlowActivityListener : IDisposable
             : ActivitySamplingResult.AllDataAndRecorded;
     }
 
+    /// <summary>
+    /// A NetApiFlow step wrapping the SQL command already represents it as a span, typically the
+    /// one <c>FlowDbCommandInterceptor</c> opens, so the driver's own activity is a duplicate.
+    /// Checked while sampling, where dropping it is cheapest, and again once started: any other
+    /// <see cref="ActivityListener"/> in the process that samples the same source as recorded
+    /// (an OpenTelemetry exporter, for instance) is enough for the activity to be created and
+    /// reported to every listener, whatever this one answered while sampling.
+    /// </summary>
+    private static bool IsCommandAlreadyCoveredByAStep(string sourceName, Activity? step) =>
+        sourceName == NpgsqlActivityTagNames.SourceName &&
+        step?.Source.Name == FlowActivitySource.Name;
+
     private void OnActivityStarted(Activity activity)
     {
+        if (IsCommandAlreadyCoveredByAStep(activity.Source.Name, activity.Parent))
+        {
+            return;
+        }
+
         var traceId = activity.TraceId.ToString();
         var trace = _recorder.GetActiveTrace(traceId);
         if (trace is null)
@@ -75,9 +94,12 @@ internal sealed class FlowActivityListener : IDisposable
             return;
         }
 
-        var span = activity.Source.Name == HttpClientActivityTagNames.SourceName
-            ? BuildHttpClientSpan(activity, traceId, trace)
-            : BuildFlowSpan(activity, traceId, trace);
+        var span = activity.Source.Name switch
+        {
+            HttpClientActivityTagNames.SourceName => BuildHttpClientSpan(activity, traceId, trace),
+            NpgsqlActivityTagNames.SourceName => BuildNpgsqlSpan(activity, traceId, trace),
+            _ => BuildFlowSpan(activity, traceId, trace),
+        };
 
         _recorder.TryAddSpan(traceId, span);
     }
@@ -123,6 +145,24 @@ internal sealed class FlowActivityListener : IDisposable
             Status = FlowStatus.Running,
         };
 
+    /// <summary>
+    /// The command text only lands on the <see cref="Activity"/> while the command runs, so the
+    /// span starts with a generic name and is finalized on completion.
+    /// </summary>
+    private static FlowSpan BuildNpgsqlSpan(Activity activity, string traceId, ActiveTrace trace) =>
+        new()
+        {
+            TraceId = traceId,
+            SpanId = activity.SpanId.ToString(),
+            ParentSpanId = ResolveParentSpanId(activity, trace),
+            Sequence = trace.NextSequence(),
+            Component = NpgsqlActivityTagNames.SourceName,
+            Operation = "SQL command",
+            Type = ComponentType.Database,
+            StartedAt = activity.StartTimeUtc,
+            Status = FlowStatus.Running,
+        };
+
     private void OnActivityStopped(Activity activity)
     {
         var traceId = activity.TraceId.ToString();
@@ -139,9 +179,12 @@ internal sealed class FlowActivityListener : IDisposable
             return;
         }
 
-        var (updated, isErrorOrigin) = activity.Source.Name == HttpClientActivityTagNames.SourceName
-            ? CompleteHttpClientSpan(activity, existing)
-            : CompleteFlowSpan(activity, existing);
+        var (updated, isErrorOrigin) = activity.Source.Name switch
+        {
+            HttpClientActivityTagNames.SourceName => CompleteHttpClientSpan(activity, existing),
+            NpgsqlActivityTagNames.SourceName => CompleteNpgsqlSpan(activity, existing),
+            _ => CompleteFlowSpan(activity, existing),
+        };
 
         _recorder.CompleteSpan(traceId, updated);
 
@@ -205,6 +248,37 @@ internal sealed class FlowActivityListener : IDisposable
 
         return (updated, isErrorOrigin);
     }
+
+    /// <summary>
+    /// Tags are curated, never copied wholesale: the driver also reports connection string,
+    /// database user, peer address and port, none of which NetApiFlow's own instrumentation is
+    /// allowed to record. The full command text is kept only behind
+    /// <see cref="NetApiFlowOptions.CaptureSqlText"/>, the same rule the EF Core interceptor follows.
+    /// </summary>
+    private (FlowSpan Span, bool IsErrorOrigin) CompleteNpgsqlSpan(Activity activity, FlowSpan existing)
+    {
+        var statement = activity.GetTagItem(NpgsqlActivityTagNames.Statement) as string;
+        var failure = NpgsqlCommandFailure.From(activity);
+
+        var updated = existing with
+        {
+            Operation = statement is null ? existing.Operation : SqlCommandDescriber.Describe(statement),
+            EndedAt = activity.StartTimeUtc + activity.Duration,
+            DurationMicros = (long)activity.Duration.TotalMicroseconds,
+            Status = failure is null ? FlowStatus.Success : FlowStatus.Error,
+            ErrorType = failure?.Type,
+            ErrorMessage = ErrorMessageSanitizer.Sanitize(failure?.Message),
+            IsErrorOrigin = failure is not null,
+            Tags = BuildCapturedSqlTags(statement, existing),
+        };
+
+        return (updated, failure is not null);
+    }
+
+    private IReadOnlyDictionary<string, string> BuildCapturedSqlTags(string? statement, FlowSpan existing) =>
+        _options.Value.CaptureSqlText && statement is not null
+            ? new Dictionary<string, string>(StringComparer.Ordinal) { ["sql"] = statement }
+            : existing.Tags;
 
     private static int? TryGetStatusCode(Activity activity) =>
         activity.GetTagItem(HttpClientActivityTagNames.StatusCode) switch
