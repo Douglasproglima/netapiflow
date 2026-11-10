@@ -118,6 +118,11 @@ public enum ExternalActivitySource
 
     /// <summary>Outbound calls from <see cref="System.Net.Http.HttpClient"/>, mapped to a <see cref="ComponentType.Http"/> span.</summary>
     HttpClient = 1,
+
+    /// <summary>SQL commands from Npgsql's own <c>ActivitySource</c> (ADR-0018), mapped to a
+    /// <see cref="ComponentType.Database"/> span. Deduplicated against <c>NetApiFlow.EntityFrameworkCore</c>'s
+    /// own span for the same command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.</summary>
+    Npgsql = 2,
 }
 
 public sealed class RetentionOptions

@@ -1,91 +1,116 @@
-# Fase 19: Interop Npgsql, investigação antes de implementar (R-06)
+# Fase 19: Interop Npgsql (R-06)
 
-Projeto tocado na tarefa 19.1: só investigação, nenhum código de produção ainda. Tarefas 19.2 em
-diante **não estão especificadas neste arquivo de propósito**: o desenho real depende do que a
-tarefa 19.1 encontrar. A Planejadora escreve o resto do plano depois de ler o relatório da
-investigação, não antes.
+Projetos tocados: `src/NetApiFlow` (núcleo: `FlowActivityListener`, `ExternalActivitySource`),
+`tests/NetApiFlow.IntegrationTests`. `tests/NetApiFlow.NpgsqlInteropSpike` (tarefa 19.1, já
+concluída) é descartável, sem relação com as tarefas de produção abaixo.
 
-Pré-requisito: nenhum funcional. Último item do "ataque aos riscos em aberto" (D-88), depois da
-Fase 18. R-06 está aberto desde a Fase 2 (bootstrap do projeto), nunca investigado de verdade.
+Pré-requisito: Fase 2 aceita (`NetApiFlow.EntityFrameworkCore`, `FlowDbCommandInterceptor`).
+Último item do "ataque aos riscos em aberto" (D-88), depois da Fase 18. R-06 estava aberto desde
+a Fase 2, nunca investigado de verdade até esta fase.
 
-## Contexto (ler antes de começar)
+Contrato congelado em `docs/plano/contratos.md`: `ExternalActivitySource.Npgsql`. Decisão de
+arquitetura (dedup por cadeia de `Parent`, decidida em `Sample`, curadoria de tag) travada em
+ADR-0018/D-92, não renegociável dentro desta fase.
 
-R-06, do jeito que está registrado hoje, parte de duas suposições nunca confirmadas:
+## Tarefa 19.1: Spike de investigação, concluída (D-92)
 
-1. Que a `ActivitySource` nativa `"Npgsql"` se comporta como a do `HttpClient` (ADR-0012):
-   sempre presente, só precisa de um `ActivityListener`. **Isso é falso.** Pesquisa da Planejadora
-   confirmou que o Npgsql só emite `Activity` nessa fonte se a aplicação hospedeira referenciar o
-   pacote `Npgsql.OpenTelemetry` e chamar `NpgsqlDataSourceBuilder.ConfigureTracing(...)` por
-   conta própria. Sem isso, a fonte existe mas nunca emite nada. Isso não quebra a regra de
-   núcleo sem dependência nova (o núcleo só escuta uma fonte que pode nunca emitir nada, nunca
-   referencia o pacote do Npgsql), mas muda a moldura: é um **pré-requisito do lado do usuário**,
-   a ser documentado, não algo que o NetApiFlow liga sozinho.
-2. Que dedup por `Activity.Id` resolveria o problema de duplicação com
-   `NetApiFlow.EntityFrameworkCore`. **Já descartado antes desta fase** (são duas `Activity`
-   distintas, de fontes diferentes, para a mesma operação lógica). A hipótese mais provável é
-   dedup por **cadeia de `Parent`**: a `Activity` nativa do Npgsql deveria nascer com
-   `Parent = Activity.Current` no momento em que o driver a inicia, e se o
-   `FlowDbCommandInterceptor` já abriu um `NetApiFlow.Step` (`ComponentType.Database`) em volta
-   daquela mesma chamada, esse step seria o `Activity.Current` naquele instante, viraria o `Parent`
-   da `Activity` nativa, e dessa forma dá pra detectar "esse Npgsql Activity é duplicata de um
-   step que já existe" sem precisar de `Activity.Id`. **Mas há relato real da comunidade de que
-   essa cadeia de `Parent` pode quebrar sob pool de conexão e código assíncrono** (exatamente o
-   padrão de uso real do Npgsql), e isso nunca foi confirmado contra a versão do Npgsql deste
-   projeto.
+Já rodada e relatada. Resultado resumido (detalhe completo em D-92 e ADR-0018):
 
-Uma terceira dúvida real: a convenção semântica do OTel diz que a tag `db.statement` do Npgsql
-deve conter só o texto parametrizado (`$1`, `$2`), nunca o valor do parâmetro, cumprindo a mesma
-regra dura que `.claude/rules/tracing.md` já exige para tudo que o NetApiFlow grava. Mas é um
-"SHOULD" da especificação, não uma garantia, e o D-69 (Fase 8) já provou uma vez que a BCL pode
-divergir do que a documentação promete na prática (`net8.0` sem tag nenhuma na `Activity` do
-`HttpClient`, contra o esperado). Não confiar na documentação sem prova empírica.
+- A fonte `"Npgsql"` emite `Activity` sozinha, sem nenhum pacote extra (premissa original do
+  risco estava errada).
+- Cadeia de `Parent` estável sob pool de conexão, multiplexing e concorrência real
+  (`Task.WhenAll`), `net8.0` e `net10.0`, mais de 3800 `Activity` observadas, zero divergência.
+- `db.statement` não vaza valor de parâmetro quando o EF Core parametriza de verdade; um valor de
+  `const`/`static readonly` vira literal embutido no SQL pelo próprio EF Core, mesmo risco de
+  sempre do `CaptureSqlText`, não um vazamento novo.
+- Sem `NetApiFlow.EntityFrameworkCore`, a `Activity` nativa não tem `Parent` da fonte
+  `"NetApiFlow"`: nada a deduplicar nesse caso, ingestão direta.
 
-## Tarefa 19.1: Spike de investigação (sem código de produção)
+`tests/NetApiFlow.NpgsqlInteropSpike`: remover a `PackageReference`/`PackageVersion` de
+`Npgsql.OpenTelemetry` e o override de `OpenTelemetry.Api` em `Directory.Packages.props` (a
+premissa que justificava os dois caiu). O projeto continua existindo como spike descartável, sem
+precisar ser apagado: documenta a investigação, não precisa virar teste permanente.
 
-Objetivo: responder três perguntas com prova real, não com leitura de documentação.
+## Tarefa 19.2: `ExternalActivitySource.Npgsql` e dedup em `Sample`
 
-1. **A cadeia de `Parent` funciona na prática?** Montar um teste de integração descartável
-   (pode morar em `tests/NetApiFlow.IntegrationTests`, mas claramente marcado como spike no nome
-   do método, ex. `Spike_...`, para a Planejadora reconhecer que não é prova de feature nenhuma
-   ainda) com: `NetApiFlow.EntityFrameworkCore` configurado normalmente (`FlowDbCommandInterceptor`
-   ativo), um `NpgsqlDataSource` com `ConfigureTracing(...)` ligado (referenciar
-   `Npgsql.OpenTelemetry` só neste projeto de teste, nunca em `src/`), um `ActivityListener` de
-   teste escutando a fonte `"Npgsql"`, e Postgres real via Testcontainers (mesmo padrão já usado
-   em `NetApiFlow.Storage.Tests`). Rodar uma consulta EF Core real, sob pool de conexão padrão e
-   `async`/`await` real (não sequencial e sincronizado), e inspecionar: o `Parent` da `Activity`
-   nativa do Npgsql é mesmo a `Activity` do `NetApiFlow.Step`? Repetir com pelo menos duas
-   consultas concorrentes (`Task.WhenAll`), que é onde a quebra de `Parent` é mais provável de
-   acontecer segundo os relatos da comunidade.
-2. **O que a tag `db.statement` carrega de verdade?** Na mesma consulta, com um parâmetro
-   contendo um valor claramente identificável (ex. um e-mail de teste), inspecionar o valor cru da
-   tag `db.statement` da `Activity` nativa. Confirmar se é só o texto parametrizado (`$1`) ou se o
-   valor do parâmetro vaza, mesmo padrão de verificação que `HttpClientActivityTagBackfillTests`
-   já fez para a tag crua do `HttpClient` (Fase 8, R-13).
-3. **O que acontece sem `NetApiFlow.EntityFrameworkCore`?** Repetir o mesmo teste usando Npgsql
-   puro (sem EF Core, sem `FlowDbCommandInterceptor`), confirmando que a `Activity` nativa nasce
-   sem nenhum `Parent` da fonte `"NetApiFlow"` (cenário onde a ingestão deveria capturar
-   normalmente, sem duplicação possível, já que não existe span concorrente pra mesma operação).
+`ExternalActivitySource` ganha `Npgsql = 2` (`[Flags]`, mesma forma do contrato).
+`FlowActivityListener.ShouldListenTo` passa a observar `"Npgsql"` quando o flag está ligado,
+mesmo padrão de `"System.Net.Http"` (ADR-0012).
 
-**Parar aqui e relatar à Planejadora** os três achados, com evidência real (valor de `Parent.Source.Name`
-observado, texto cru de `db.statement` observado), antes de qualquer linha de código de produção
-ou ADR. Se a cadeia de `Parent` se mostrar frágil sob pool/async (cenário 1 falhar de forma
-inconsistente), isso é achado que muda a decisão de arquitetura, não um detalhe de implementação:
-a Planejadora decide se vale a pena seguir com dedup por `Parent`, se existe uma segunda opção
-(ex. dedup por timing/janela de sobreposição, mais caro e mais impreciso), ou se o escopo precisa
-encolher (ex. só suportar quando `NetApiFlow.EntityFrameworkCore` não está em uso, documentando a
-limitação em vez de resolvê-la).
+Dedup acontece em `Sample`, não em `ActivityStarted` (mesmo princípio de custo de R-05): quando
+`options.Source.Name == "Npgsql"` e `Activity.Current?.Source.Name == FlowActivitySource.Name`,
+devolver `ActivitySamplingResult.None`. Sem esse `Parent`, seguir a amostragem normal (tracing
+ligado + trace ativo, mesma checagem que já existe para as outras fontes).
 
-## Fora de escopo desta fase, de propósito
+**Pronto quando:** teste unitário cobre a decisão de `Sample` isoladamente (sem precisar de
+Postgres real): com um `Activity.Current` da fonte `"NetApiFlow"` ativo, uma `Activity` criada na
+fonte `"Npgsql"` recebe `ActivitySamplingResult.None`; sem esse `Parent`, recebe
+`AllDataAndRecorded` (com trace ativo e tracing ligado).
 
-- Qualquer código de produção além do spike da tarefa 19.1.
-- MassTransit (mencionado em D-58/ADR-0012 como outro item descartado por falta de pesquisa):
-  continua fora, não faz parte deste risco.
-- Decisão de ADR: só depois do relatório da tarefa 19.1, escrita pela Planejadora.
+## Tarefa 19.3: `BuildNpgsqlSpan`/`CompleteNpgsqlSpan`
 
-## Ao terminar a tarefa 19.1
+Espelhar a estrutura já usada para `BuildHttpClientSpan`/`CompleteHttpClientSpan`
+(`FlowActivityListener.cs`): nome genérico no `ActivityStarted`, nome real finalizado no
+`ActivityStopped`. `Component = "Npgsql"`, `Type = ComponentType.Database`. `Operation` derivado
+de `db.statement` por um método interno equivalente a
+`FlowDbCommandInterceptor.DescribeCommand` ("{CommandType} {MainTable}" via regex, mesma forma,
+duplicado no núcleo porque o núcleo não pode depender do pacote `NetApiFlow.EntityFrameworkCore`).
+Status de erro via `Activity.Status`/`ActivityStatusCode` nativo do .NET (não parsing de tag),
+mesmo mecanismo que `FlowStep.MarkError` já usa.
 
-Resumo para a Planejadora: as três respostas com evidência real (não impressão, não "parece que
-funciona"), incluindo qualquer falha intermitente observada ao repetir o teste de concorrência
-várias vezes (mesmo rigor que o D-54 usou: rodar em loop antes de concluir que é estável). A
-Planejadora escreve o restante do plano da Fase 19 (ADR, se a cadeia de `Parent` se confirmar
-viável; tarefas de implementação) só depois de ler esse relatório.
+Curadoria de tag, não cópia: `FlowSpan.Tags["sql"]` só recebe o `db.statement` cru quando
+`NetApiFlowOptions.CaptureSqlText` está ligado, mesma régua do `FlowDbCommandInterceptor`.
+Nenhuma outra tag nativa (`db.connection_string`, `db.user`, `net.peer.ip`, `net.peer.port`,
+etc.) é copiada para `FlowSpan`, em nenhuma circunstância.
+
+**Pronto quando:** teste de integração com Postgres real (Testcontainers) cobre: consulta EF Core
+com `NetApiFlow.EntityFrameworkCore` ativo e `ExternalActivitySource.Npgsql` ligado não gera span
+duplicado (só o do `FlowDbCommandInterceptor` aparece); consulta Npgsql puro (sem EF Core) gera
+exatamente um span `Database`/`"Npgsql"` com `Operation` correta; `CaptureSqlText = false` (padrão)
+não grava `sql` em `Tags`, `CaptureSqlText = true` grava; uma consulta que falha de verdade (ex.
+tabela inexistente) marca o span como `FlowStatus.Error` (confirma o comportamento de
+`Activity.Status` não testado pelo spike).
+
+## Tarefa 19.4: Prova do risco mitigado (R-06)
+
+Teste de concorrência real equivalente ao spike (`Task.WhenAll`, múltiplas consultas), agora
+contra o código de produção, não o descartável: confirma que nenhum span duplicado aparece sob
+carga concorrente real, mesmo rigor do D-54 (rodar em loop antes de considerar estável).
+
+**Pronto quando:** teste descrito acima passa de forma consistente (mínimo 10 execuções em loop,
+sem falha intermitente). R-06 passa de "Planejado" para "Mitigado" na revisão da Planejadora.
+
+## Tarefa 19.5: Documentação
+
+README e README.pt-BR.md ganham uma seção curta sobre `ExternalActivitySource.Npgsql`, mesmo
+padrão da seção de `HttpClient` já existente: o que é, como ligar, a nota sobre
+`CaptureSqlText` controlando o texto completo do SQL (reaproveitar a seção "Sensitive data" já
+existente, só adicionar a referência). `CHANGELOG.md`, seção `[Unreleased]` → `### Added`.
+
+**Pronto quando:** README e README.pt-BR.md atualizados, conteúdo equivalente. `CHANGELOG.md`
+atualizado.
+
+## Fora de escopo, de propósito (ADR-0018)
+
+- `NpgsqlDataSource` registrado via DI do ASP.NET, transação explícita (`BeginTransaction`),
+  `NpgsqlBatch`: não cobertos pelo spike. Se a tarefa 19.3 encontrar comportamento diferente do
+  esperado nesses casos durante a implementação, é achado novo, parar e relatar antes de
+  prosseguir, não assumir que o mesmo padrão vale sem testar.
+- MassTransit: continua fora (ADR-0012), falta de pesquisa própria, sem relação com esta fase.
+- Qualquer mudança em `NetApiFlow.EntityFrameworkCore`: `FlowDbCommandInterceptor` não muda,
+  continua sendo a fonte de verdade quando está ativo.
+
+## Aceite da fase
+
+Todos os critérios de pronto acima. `dotnet build`/`test`/`format --verify-no-changes` limpos nos
+dois TFMs. R-06 mitigado e provado. `tests/NetApiFlow.NpgsqlInteropSpike` sem o pacote
+`Npgsql.OpenTelemetry`/override de `OpenTelemetry.Api`. Nenhuma mudança em `ITraceStore`,
+`NetApiFlow.EntityFrameworkCore`, `NetApiFlow.Mcp` ou `NetApiFlow.OpenTelemetry`.
+
+## Ao terminar
+
+Resumo para a Planejadora: o que foi feito, como verificar (comando exato, incluindo como gerar
+uma consulta real com e sem `NetApiFlow.EntityFrameworkCore` para ver a dedup funcionando),
+confirmação do comportamento de `Activity.Status` numa falha real (não coberto pelo spike), o que
+ficou pendente. A Planejadora roda `/revisar-fase 19` antes de decidir a próxima fatia do roadmap
+(`docs/plano/roadmap-valor.md`).
