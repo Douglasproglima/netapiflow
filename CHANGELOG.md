@@ -24,6 +24,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: `ExternalActivitySource.Npgsql`, ingesting the SQL command `Activity` the Npgsql
+  driver already emits as a `Database` span (ADR-0018). Opt-in, `None` still the default. When
+  `NetApiFlow.EntityFrameworkCore` is also in use, the driver's activity is dropped instead of
+  producing a second span for the same command. Only the command type and the main table reach the
+  span; the full SQL text still requires `CaptureSqlText`, and the connection string, database user
+  and peer address the driver reports are never copied.
 - `NetApiFlow`: log and exception correlation per step, via a second `ILoggerProvider` registered
   alongside the host's own providers (`NetApiFlowOptions.LogCorrelation`, ADR-0017). Disabled by
   default; enabled, every `ILogger` call at or above `MinLevel` (default `Warning`) made while a
