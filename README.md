@@ -171,7 +171,7 @@ builder.Services.AddNetApiFlow(options =>
     options.Limits.MaxSpansPerTrace = 300;
     options.IncludePaths("/api/**"); // only trace matching routes; default traces everything
     options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
-    options.ExternalSources = ExternalActivitySource.HttpClient; // opt-in; default is None
+    options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; default is None
     options.TailSampling.Enabled = true; // opt-in; see Tail sampling below
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
     options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
@@ -179,10 +179,21 @@ builder.Services.AddNetApiFlow(options =>
 });
 ```
 
-`ExternalSources` ingests the `Activity` instances the .NET runtime itself already produces for
-outbound calls (ADR-0012), with no code change in your services. Only `HttpClient` is supported
-today. The outbound URL is reduced to `scheme://host[:port]/path` before it is ever recorded:
-query string and fragment are never captured, same guarantee as every other span.
+`ExternalSources` ingests the `Activity` instances the .NET runtime and the Npgsql driver already
+produce, with no code change in your services.
+
+`HttpClient` covers outbound calls (ADR-0012). The outbound URL is reduced to
+`scheme://host[:port]/path` before it is ever recorded: query string and fragment are never
+captured, same guarantee as every other span.
+
+`Npgsql` covers SQL commands (ADR-0018), recorded as a `Database` span named after the command
+type and the main table it touches, for example `SELECT Users`. When you also use
+`NetApiFlow.EntityFrameworkCore`, the two never record the same command twice: the driver's own
+`Activity` is dropped whenever a NetApiFlow step already wraps the call, which is exactly what
+`FlowDbCommandInterceptor` does. Without that package (plain Npgsql, or Dapper over Npgsql), the
+driver's `Activity` is the only record of the call and is ingested normally. The full SQL text
+only reaches the span when `CaptureSqlText` is enabled, the same rule the EF Core interceptor
+follows.
 
 Mounting the dashboard at a path other than the default, and protecting it:
 
@@ -345,6 +356,8 @@ NetApiFlow never captures, under any configuration:
   text and the main table it touches).
 - Query strings or fragments of outbound URLs, when `ExternalSources` is enabled (same reduction
   to `scheme://host[:port]/path` as routes).
+- Connection string, database user or peer address, when `ExternalActivitySource.Npgsql` is
+  enabled. The driver reports all of them on its own `Activity`; none is ever copied onto a span.
 
 Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
 CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.

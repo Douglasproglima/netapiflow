@@ -167,4 +167,159 @@ public class FlowActivityListenerTests
         outerSpan.Status.ShouldBe(FlowStatus.Error);
         outerSpan.IsErrorOrigin.ShouldBeFalse();
     }
+
+    [Fact]
+    public void Sample_WithNpgsqlActivityUnderAnOpenStep_DropsItAsADuplicate()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (NetApiFlow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
+        {
+            using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
+            npgsqlActivity.ShouldBeNull();
+        }
+
+        var spans = recorder.GetActiveTrace(traceId)!.Spans;
+        spans.Count.ShouldBe(1);
+        spans[0].Component.ShouldBe("EntityFrameworkCore");
+    }
+
+    [Fact]
+    public void Sample_WithNpgsqlActivityUnderAnOpenStepAndAnotherRecordingListener_StillDropsTheDuplicate()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var otherListener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == NpgsqlActivityTagNames.SourceName,
+            Sample = static (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+        };
+        ActivitySource.AddActivityListener(otherListener);
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (NetApiFlow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
+        {
+            using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
+            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u");
+        }
+
+        var spans = recorder.GetActiveTrace(traceId)!.Spans;
+        spans.Count.ShouldBe(1);
+        spans[0].Component.ShouldBe("EntityFrameworkCore");
+    }
+
+    [Fact]
+    public void Sample_WithNpgsqlActivityWithoutAnOpenStep_RecordsADatabaseSpan()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
+        }
+
+        var spans = recorder.GetActiveTrace(traceId)!.Spans;
+        spans.Count.ShouldBe(1);
+        spans[0].Component.ShouldBe("Npgsql");
+        spans[0].Operation.ShouldBe("SELECT Users");
+        spans[0].Type.ShouldBe(ComponentType.Database);
+        spans[0].Tags.Keys.ShouldNotContain("sql");
+    }
+
+    [Fact]
+    public void ActivityStopped_WithNpgsqlActivityAndCaptureSqlText_RecordsTheCommandTextAsATag()
+    {
+        const string statement = "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1";
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions
+        {
+            ExternalSources = ExternalActivitySource.Npgsql,
+            CaptureSqlText = true,
+        });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
+        {
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, statement);
+            npgsqlActivity.SetTag("db.connection_string", "Host=127.0.0.1;Port=5432;Database=app;Username=postgres");
+            npgsqlActivity.SetTag("db.user", "postgres");
+            npgsqlActivity.SetTag("net.peer.ip", "127.0.0.1");
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.Tags["sql"].ShouldBe(statement);
+        span.Tags.Keys.ShouldBe(["sql"]);
+    }
+
+    [Fact]
+    public void ActivityStopped_WithFailedNpgsqlActivity_MarksTheSpanAsTheErrorOrigin()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
+        {
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity.SetStatus(ActivityStatusCode.Error, "relation \"Missing\" does not exist");
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.Status.ShouldBe(FlowStatus.Error);
+        span.IsErrorOrigin.ShouldBeTrue();
+        span.ErrorMessage.ShouldBe("relation \"Missing\" does not exist");
+    }
+
+    [Fact]
+    public void ActivityStopped_WithFailedNpgsqlActivityUsingTheLegacyConvention_MarksTheSpanAsTheErrorOrigin()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
+        {
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity.SetTag("otel.status_code", "ERROR");
+            npgsqlActivity.SetTag("otel.status_description", "42P01");
+            npgsqlActivity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection
+            {
+                ["exception.type"] = "Npgsql.PostgresException",
+                ["exception.message"] = "42P01: relation \"Missing\" does not exist",
+                ["exception.stacktrace"] = "at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(...)",
+            }));
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.Status.ShouldBe(FlowStatus.Error);
+        span.IsErrorOrigin.ShouldBeTrue();
+        span.ErrorType.ShouldBe("Npgsql.PostgresException");
+        span.ErrorMessage.ShouldBe("42P01: relation \"Missing\" does not exist");
+    }
+
+    [Fact]
+    public void ActivityStarted_WithDefaultExternalSources_DoesNotObserveNpgsqlActivity()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (npgsqlSource.StartActivity("postgres"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldBeEmpty();
+    }
 }
