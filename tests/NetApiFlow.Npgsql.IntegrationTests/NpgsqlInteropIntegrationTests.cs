@@ -10,10 +10,9 @@ using Npgsql;
 using Shouldly;
 using Xunit.Abstractions;
 
-namespace NetApiFlow.IntegrationTests;
+namespace NetApiFlow.Npgsql.IntegrationTests;
 
 [Collection(NpgsqlTestGroup.Name)]
-[Trait("RequiresDocker", "true")]
 public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture, ITestOutputHelper output)
 {
     private const string UserByEmailSql = "SELECT \"Id\" FROM \"Users\" WHERE \"Email\" = $1";

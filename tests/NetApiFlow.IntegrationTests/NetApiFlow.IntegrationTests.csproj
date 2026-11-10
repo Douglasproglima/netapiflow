@@ -9,8 +9,6 @@
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="MediatR" />
   </ItemGroup>
 

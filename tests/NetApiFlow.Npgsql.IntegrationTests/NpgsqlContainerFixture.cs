@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
-namespace NetApiFlow.IntegrationTests;
+namespace NetApiFlow.Npgsql.IntegrationTests;
 
 public sealed class NpgsqlContainerFixture : IAsyncLifetime
 {
