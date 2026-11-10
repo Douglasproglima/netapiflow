@@ -57,11 +57,19 @@ instrumentação do NetApiFlow já se permite.
 `FlowActivityListener.ShouldListenTo` passa a observar também a fonte `"Npgsql"` quando o flag
 está ligado, mesmo padrão já usado para `"System.Net.Http"` (ADR-0012).
 
-**Dedup acontece em `Sample`, não em `ActivityStarted`** (mesmo princípio de custo de R-05):
-quando a fonte da `Activity` sendo criada é `"Npgsql"` e `Activity.Current?.Source.Name ==
-"NetApiFlow"` (ou seja, já existe um `NetApiFlow.Step` aberto em volta, tipicamente o do
-`FlowDbCommandInterceptor`), o sampler devolve `ActivitySamplingResult.None`: nenhum `FlowSpan` é
-criado para aquela `Activity` nativa, o span do `FlowDbCommandInterceptor` já representa a
+**Dedup em duas camadas, não só em `Sample`.** A implementação real da tarefa 19.2 encontrou um
+caso que a decisão original (dedup só em `Sample`) não cobria: com um segundo
+`ActivityListener` no processo amostrando a fonte `"Npgsql"` como gravada (um exportador
+OpenTelemetry, o próprio cenário que esta ADR existe para suportar), a `Activity` nasce mesmo
+quando o `Sample` do NetApiFlow devolve `None`, porque a API do .NET cria a `Activity` quando
+**qualquer** listener do processo pede gravação, e chama `ActivityStarted` em todos eles,
+independente da resposta de cada um. O sampler barato continua existindo (é o caminho vencedor
+quando o NetApiFlow é o único listener da fonte), mas deixa de ser suficiente sozinho: a mesma
+checagem (chamada que a `Activity` representa já tem um `NetApiFlow.Step` em volta) é repetida em
+`OnActivityStarted`, olhando `activity.Parent` em vez de `Activity.Current` (o `Parent` já está
+resolvido nesse ponto, `Activity.Current` não necessariamente). Quando a fonte da `Activity` é
+`"Npgsql"` e o `Parent` é uma `Activity` da fonte `"NetApiFlow"` (tipicamente a aberta por
+`FlowDbCommandInterceptor`), nenhum `FlowSpan` é criado: o span do interceptor já representa a
 chamada sozinho. Sem esse `Parent` (uso de Npgsql puro, ou Dapper sobre Npgsql, sem
 `NetApiFlow.EntityFrameworkCore`), a `Activity` nativa é a única representação da chamada e é
 ingerida normalmente.
@@ -77,17 +85,30 @@ Texto completo de `db.statement` só vira `FlowSpan.Tags["sql"]` quando
 `FlowDbCommandInterceptor`. Nenhuma outra tag nativa (`db.connection_string`, `db.user`,
 `net.peer.ip`, etc.) é copiada para `FlowSpan`, em nenhuma circunstância.
 
-Status de erro vem de `Activity.Status`/`ActivityStatusCode` (API nativa do .NET, não parsing de
-tag), mesmo mecanismo que `FlowStep.MarkError` já usa via `SetStatus(ActivityStatusCode.Error)`.
+**Status de erro não é só `Activity.Status`.** A decisão original previa ler só o `Activity.Status`
+nativo, mesmo mecanismo de `FlowStep.MarkError`. A implementação real encontrou outro desvio: numa
+consulta que falha de verdade, o Npgsql 9.0.3 deixa `Activity.Status` como `Unset` e reporta o
+resultado pela convenção antiga do OpenTelemetry, uma tag `otel.status_code = "ERROR"` mais um
+evento `exception` carregando `exception.type`/`exception.message`. Marcar como sucesso uma
+consulta que lançou exceção seria pior do que não ter o recurso, então a leitura passa a conferir
+`Activity.Status` primeiro (continua valendo se o driver migrar para a convenção atual) e cai para
+a tag legada quando o nativo está `Unset`. Tipo e mensagem do erro vêm do evento `exception`, nunca
+de stack trace, e a mensagem passa pelo `ErrorMessageSanitizer` como qualquer outro erro gravado
+pelo NetApiFlow.
 
 ## Consequências
-- Risco R-06 passa de "nunca investigado" para "mitigado, com prova real de 3800+ `Activity` sob
-  condição adversa". Fica a cargo da Fase 19 (tarefas 19.2 em diante) a implementação de
-  produção, incluindo confirmar o comportamento de `Activity.Status` numa consulta que falha de
-  verdade (não testado pelo spike).
+- Risco R-06 passa de "nunca investigado" para "mitigado, com prova real": 3800+ `Activity`
+  observadas no spike sob condição adversa (pool de conexão, multiplexing, concorrência), mais
+  1920 consultas na implementação de produção (tarefa 19.4), zero span duplicado.
 - Nenhuma dependência nova em `NetApiFlow` (núcleo): a fonte `"Npgsql"` é observada sem referenciar
   nenhum pacote do Npgsql; se a aplicação hospedeira não usa Npgsql, a fonte nunca existe e nada
   acontece.
+- `tests/NetApiFlow.NpgsqlInteropSpike` deixa de ser descartável: vira a prova permanente da
+  suposição 1 (a fonte emite sozinha, sem `Npgsql.OpenTelemetry`) e passa a hospedar também os
+  testes de integração com Postgres real da tarefa 19.3/19.4, pelo mesmo motivo que já o isolava
+  do `dotnet test` de `NetApiFlow.IntegrationTests`: falta de Docker no runner Windows. Projeto
+  renomeado (sem "Spike" no nome, já não é descartável), `.claude/rules/testing.md` ganha a
+  segunda exceção documentada à regra de banco real só em `NetApiFlow.Storage.Tests`.
 - MassTransit continua fora de escopo (ADR-0012), falta de pesquisa própria, sem relação com esta
   ADR.
 - `.claude/rules/tracing.md` ganha uma nota sobre a nuance de `const`/literal embutido, aplicável
