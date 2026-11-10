@@ -42,6 +42,12 @@
     <!-- samples/SampleApi.Controllers -->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
 
+    <!-- tests/NetApiFlow.NpgsqlInteropSpike only: the host application is what turns Npgsql tracing on, never NetApiFlow -->
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="9.0.3" />
+
+    <!-- Npgsql.OpenTelemetry pulls OpenTelemetry.Api 1.7.0, which carries GHSA-g94r-2vxg-569j -->
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.20.1" />
+
     <!-- samples/* (Runner tab of the dashboard reads each sample's own OpenAPI document) -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.21" />
 

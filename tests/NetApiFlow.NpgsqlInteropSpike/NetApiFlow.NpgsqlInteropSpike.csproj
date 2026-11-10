@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Condition="'$(SpikeWithoutNpgsqlOpenTelemetry)' == 'true'">
+    <DefineConstants>$(DefineConstants);SPIKE_WITHOUT_NPGSQL_OPENTELEMETRY</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql.OpenTelemetry" Condition="'$(SpikeWithoutNpgsqlOpenTelemetry)' != 'true'" />
+    <PackageReference Include="OpenTelemetry.Api" Condition="'$(SpikeWithoutNpgsqlOpenTelemetry)' != 'true'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+</Project>
