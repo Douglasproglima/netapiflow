@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup Condition="'$(SpikeWithoutNpgsqlOpenTelemetry)' == 'true'">
-    <DefineConstants>$(DefineConstants);SPIKE_WITHOUT_NPGSQL_OPENTELEMETRY</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
@@ -11,8 +7,6 @@
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="Npgsql.OpenTelemetry" Condition="'$(SpikeWithoutNpgsqlOpenTelemetry)' != 'true'" />
-    <PackageReference Include="OpenTelemetry.Api" Condition="'$(SpikeWithoutNpgsqlOpenTelemetry)' != 'true'" />
   </ItemGroup>
 
   <ItemGroup>

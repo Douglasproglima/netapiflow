@@ -19,7 +19,7 @@ public sealed class PostgresSpikeFixture : IAsyncLifetime
     {
         await _container.StartAsync();
 
-        await using var dataSource = CreateUntracedDataSource();
+        await using var dataSource = CreateDataSource();
         await using var context = SpikeDbContext.Create(dataSource);
         await context.Database.EnsureCreatedAsync();
 
@@ -36,25 +36,12 @@ public sealed class PostgresSpikeFixture : IAsyncLifetime
 
     public static string ConcurrentEmail(int index) => $"spike-concurrent-{index}@example.com";
 
-    public NpgsqlDataSource CreateTracedDataSource()
-    {
-        var builder = new NpgsqlDataSourceBuilder(ConnectionString);
-#if !SPIKE_WITHOUT_NPGSQL_OPENTELEMETRY
-        builder.ConfigureTracing(tracing => tracing.EnableFirstResponseEvent(false));
-#endif
-        return builder.Build();
-    }
-
-    public NpgsqlDataSource CreateUntracedDataSource() => new NpgsqlDataSourceBuilder(ConnectionString).Build();
+    public NpgsqlDataSource CreateDataSource() => new NpgsqlDataSourceBuilder(ConnectionString).Build();
 
     public NpgsqlDataSource CreateMultiplexingDataSource()
     {
         var connectionString = new NpgsqlConnectionStringBuilder(ConnectionString) { Multiplexing = true }.ConnectionString;
-        var builder = new NpgsqlDataSourceBuilder(connectionString);
-#if !SPIKE_WITHOUT_NPGSQL_OPENTELEMETRY
-        builder.ConfigureTracing(tracing => tracing.EnableFirstResponseEvent(false));
-#endif
-        return builder.Build();
+        return new NpgsqlDataSourceBuilder(connectionString).Build();
     }
 }
 

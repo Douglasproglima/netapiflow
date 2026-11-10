@@ -18,10 +18,10 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
     private const int ConcurrencyRounds = 30;
 
     [Fact]
-    public async Task Spike_WithoutConfigureTracing_ReportsWhetherNpgsqlEmitsAnything()
+    public async Task Spike_WithoutAnyOpenTelemetryPackage_ReportsWhetherNpgsqlEmitsAnything()
     {
         using var recorder = new ActivitySnapshotRecorder();
-        await using var dataSource = fixture.CreateUntracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
         var probeEmail = PostgresSpikeFixture.LeakProbeEmail;
 
         await using (var context = SpikeDbContext.Create(dataSource, NewInterceptor()))
@@ -31,7 +31,7 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
         }
 
         ReportSources(recorder);
-        ReportSnapshots(recorder, "every activity recorded without ConfigureTracing");
+        ReportSnapshots(recorder, "every activity recorded with no OpenTelemetry package referenced");
 
         var npgsql = recorder.From(NpgsqlSourceName);
         foreach (var snapshot in npgsql)
@@ -39,14 +39,14 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
             output.WriteLine(snapshot.DescribeTags());
         }
 
-        output.WriteLine($"ANSWER premise(1): Npgsql activities without ConfigureTracing = {npgsql.Count}");
+        output.WriteLine($"ANSWER premise(1): Npgsql activities with no OpenTelemetry package = {npgsql.Count}");
     }
 
     [Fact]
     public async Task Spike_SequentialEfCoreQuery_ReportsNpgsqlActivityParent()
     {
         using var recorder = new ActivitySnapshotRecorder();
-        await using var dataSource = fixture.CreateTracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
 
         await using (var context = SpikeDbContext.Create(dataSource, NewInterceptor()))
         {
@@ -66,7 +66,7 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
     [Fact]
     public async Task Spike_ConcurrentEfCoreQueries_ReportsParentChainStabilityAcrossRounds()
     {
-        await using var dataSource = fixture.CreateTracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
         await MeasureConcurrentParentChainAsync(dataSource, "question(1) concurrent, pooled");
     }
 
@@ -150,7 +150,7 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
     public async Task Spike_ParameterizedQuery_ReportsRawDbStatementTag()
     {
         using var recorder = new ActivitySnapshotRecorder();
-        await using var dataSource = fixture.CreateTracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
         var probeEmail = PostgresSpikeFixture.LeakProbeEmail;
 
         await using (var context = SpikeDbContext.Create(dataSource, NewInterceptor()))
@@ -166,7 +166,7 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
     public async Task Spike_EfCoreFilterOnStaticReadonlyField_ReportsLiteralInlinedIntoDbStatement()
     {
         using var recorder = new ActivitySnapshotRecorder();
-        await using var dataSource = fixture.CreateTracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
 
         await using (var context = SpikeDbContext.Create(dataSource, NewInterceptor()))
         {
@@ -196,7 +196,7 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
     public async Task Spike_RawNpgsqlParameterizedCommand_ReportsRawDbStatementTag()
     {
         using var recorder = new ActivitySnapshotRecorder();
-        await using var dataSource = fixture.CreateTracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
 
         using (var root = StartRoot("spike-db-statement-raw"))
         {
@@ -241,7 +241,7 @@ public sealed class NpgsqlInteropSpikeTests(PostgresSpikeFixture fixture, ITestO
     public async Task Spike_RawNpgsqlWithoutEntityFrameworkCore_ReportsParentOfNativeActivity()
     {
         using var recorder = new ActivitySnapshotRecorder();
-        await using var dataSource = fixture.CreateTracedDataSource();
+        await using var dataSource = fixture.CreateDataSource();
 
         using (var root = StartRoot("spike-raw-npgsql"))
         {
