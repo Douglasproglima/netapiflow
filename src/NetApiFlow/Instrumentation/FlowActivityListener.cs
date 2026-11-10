@@ -126,10 +126,10 @@ internal sealed class FlowActivityListener : IDisposable
     }
 
     /// <summary>
-    /// The real method/host/path only become reliably available in <see cref="OnActivityStopped"/>
-    /// (D-69: on <c>net8.0</c> they are backfilled by a <c>HttpClientActivityTagBackfill</c>
-    /// subscriber whose ordering relative to this callback is not guaranteed). The span starts with
-    /// a generic name and is finalized on completion.
+    /// The real method/host/path only become reliably available in <see cref="OnActivityStopped"/>:
+    /// on <c>net8.0</c> they are backfilled by a <c>HttpClientActivityTagBackfill</c> subscriber
+    /// whose ordering relative to this callback is not guaranteed. The span starts with a generic
+    /// name and is finalized on completion.
     /// </summary>
     private static FlowSpan BuildHttpClientSpan(Activity activity, string traceId, ActiveTrace trace) =>
         new()
