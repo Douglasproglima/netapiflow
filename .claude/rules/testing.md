@@ -21,8 +21,12 @@ teste de integração e pelos quatro/dez cenários que cada fase exige.
 4. Limites e descarte (seção 6.7 do prompt).
 
 **Não fazer:**
-- Banco de dados real em teste unitário. Só `NetApiFlow.Storage.Tests` usa banco real, via
-  Testcontainers.
+- Banco de dados real em teste unitário. Só `NetApiFlow.Storage.Tests` e
+  `NetApiFlow.Npgsql.IntegrationTests` usam banco real, via Testcontainers. O segundo existe
+  porque `NetApiFlow.IntegrationTests` continua documentado como só `InMemoryTraceStore` (seção
+  abaixo) e porque validar a interop com o driver Npgsql real (ADR-0018) não é teste de
+  `ITraceStore`: fica no próprio projeto que antes era o spike descartável da Fase 19.1, já
+  isolado do runner Windows por falta de Docker.
 - Testar implementação em vez de comportamento (ex.: verificar que um método privado foi chamado
   em vez de verificar o efeito observável).
 - Mock excessivo que torna o teste frágil a refactor que não muda comportamento.
@@ -121,5 +125,5 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   não só o valor de retorno.
 - Teste de glob (`IncludePaths`/`ExcludePaths`) e de sanitização usa `[Theory]` com `[InlineData]`
   ou `[MemberData]`, nunca um `[Fact]` por combinação.
-- Nunca usar banco real fora de `NetApiFlow.Storage.Tests`.
+- Nunca usar banco real fora de `NetApiFlow.Storage.Tests`/`NetApiFlow.Npgsql.IntegrationTests`.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
