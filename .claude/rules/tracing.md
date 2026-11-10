@@ -17,7 +17,11 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
   (`/api/orders/42`).
 - Span `Database` grava só tipo de comando e tabela principal. SQL completo (sem parâmetros) só
   quando `CaptureSqlText = true` (desligado por padrão). Valor de parâmetro de comando SQL nunca
-  é gravado, mesmo com `CaptureSqlText = true`.
+  é gravado, mesmo com `CaptureSqlText = true`. Nuance confirmada na investigação do ADR-0018: um
+  valor lido de `const`/`static readonly` numa consulta LINQ do EF Core não vira parâmetro, o EF
+  Core embute o valor como literal na própria consulta antes de chegar no driver. Isso não é falha
+  de sanitização (não existe parâmetro para sanitizar), é o SQL de verdade contendo o valor; o
+  mesmo risco de sempre do texto completo, não um caso novo.
 - Mensagem de erro é truncada (300 caracteres) **antes** de sanitizar, e sanitizada removendo
   e-mail, CPF, CNPJ, sequência numérica longa e os pares `password=`/`token=`/`authorization`/
   `api-key`/`secret`.
