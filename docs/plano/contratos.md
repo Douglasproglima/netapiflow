@@ -75,6 +75,10 @@ public sealed class NetApiFlowOptions
     public TimeSpan SlowThreshold { get; set; } = TimeSpan.FromMilliseconds(250);
     public bool CaptureSqlText { get; set; }
     public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
+
+    /// <summary>Captures Authorization and Resource filter stages (MVC Controllers only) as
+    /// steps, via <c>DiagnosticListener</c>/native filter (ADR-0019). Default: <see langword="false"/>.</summary>
+    public bool CapturePrePipelineSteps { get; set; }
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }

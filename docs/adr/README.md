@@ -28,3 +28,4 @@ comunidade, sem reabrir a decisão sem justificativa técnica nova).
 | [ADR-0016](0016-exportacao-otlp-pacote-opcional.md) | Exportação OTLP (`NetApiFlow.OpenTelemetry`) como pacote opcional, sobre a própria `ActivitySource` | Aceito | [#110](https://github.com/Douglasproglima/netapiflow/issues/110) |
 | [ADR-0017](0017-correlacao-de-log-e-excecao-por-etapa.md) | Correlação de log e exceção por etapa, via `ILoggerProvider` opt-in | Aceito | [#125](https://github.com/Douglasproglima/netapiflow/issues/125) |
 | [ADR-0018](0018-ingestao-npgsql-dedup-por-parent.md) | Ingestão nativa da `ActivitySource` do Npgsql, dedup por cadeia de `Parent` | Aceito | [#140](https://github.com/Douglasproglima/netapiflow/issues/140) |
+| [ADR-0019](0019-visibilidade-pre-pipeline.md) | Visibilidade de pré-pipeline: Authorization via `DiagnosticSource`, Resource via filtro nativo | Aceito | [#156](https://github.com/Douglasproglima/netapiflow/issues/156) |
