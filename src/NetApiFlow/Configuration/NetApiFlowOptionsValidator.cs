@@ -43,6 +43,18 @@ internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOp
                 $"NetApiFlow: Limits.MaxLogEntriesPerSpan must be greater than zero (was {options.Limits.MaxLogEntriesPerSpan}).");
         }
 
+        if (options.Limits.MaxTagsPerSpan <= 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: Limits.MaxTagsPerSpan must be greater than zero (was {options.Limits.MaxTagsPerSpan}).");
+        }
+
+        if (options.Limits.MaxTagValueLength <= 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: Limits.MaxTagValueLength must be greater than zero (was {options.Limits.MaxTagValueLength}).");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }
