@@ -16,7 +16,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Backlog |
+| 1 | Diff entre execuções | D-58 item 4 | 🟢 Médio-baixo | Em planejamento (Fase 22) |
 | 2 | Visibilidade de pré-pipeline | D-60 item D | 🟢 Médio-baixo | Backlog |
 | 3 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Backlog |
 | 4 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
