@@ -196,4 +196,114 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.actionDrawer.close();
     expect(fixture.componentInstance.actionDrawer.open()).toBe(false);
   });
+
+  it('exportTrace downloads the loaded trace as JSON', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    fixture.componentInstance.exportTrace();
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('application/json');
+    expect(JSON.parse(await blob.text())).toEqual(makeTrace('t1'));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    click.mockRestore();
+  });
+
+  function fileSelectEvent(content: string, name = 'trace.json'): Event {
+    const file = new File([content], name, { type: 'application/json' });
+    return { target: { files: [file], value: '' } } as unknown as Event;
+  }
+
+  it('imports a trace from a file and renders it without calling the API', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const imported = makeTrace('imported-1');
+    await fixture.componentInstance.onImportFileSelected(fileSelectEvent(JSON.stringify(imported)));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importedTrace()?.traceId).toBe('imported-1');
+    expect(fixture.componentInstance.trace()?.traceId).toBe('imported-1');
+    expect(fixture.componentInstance.importErrorKey()).toBeNull();
+
+    fixture.componentInstance.onNodeSelected('s1');
+    expect(fixture.componentInstance.selectedSpanDetail()?.span.spanId).toBe('s1');
+    expect(fixture.componentInstance.selectedSpanDetail()?.medianDurationMicros).toBeNull();
+  });
+
+  it('shows an error and keeps the current view when the imported file is not valid JSON', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.onImportFileSelected(fileSelectEvent('{ not json'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importErrorKey()).toBe('import.error.invalidJson');
+    expect(fixture.componentInstance.trace()).toBeNull();
+  });
+
+  it('shows an error when the imported file is valid JSON but not a trace export', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.onImportFileSelected(fileSelectEvent('{}'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importErrorKey()).toBe('import.error.invalidShape');
+    expect(fixture.componentInstance.trace()).toBeNull();
+  });
+
+  it('exits imported mode back to the live list', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.onImportFileSelected(
+      fileSelectEvent(JSON.stringify(makeTrace('imported-1'))),
+    );
+    await fixture.whenStable();
+    expect(fixture.componentInstance.trace()).not.toBeNull();
+
+    fixture.componentInstance.exitImportedTrace();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importedTrace()).toBeNull();
+    expect(fixture.componentInstance.trace()).toBeNull();
+  });
 });

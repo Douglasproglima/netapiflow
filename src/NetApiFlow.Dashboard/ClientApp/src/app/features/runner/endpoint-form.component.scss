@@ -42,12 +42,17 @@
 
 .endpoint-form__status--error {
   color: var(--naf-danger);
+  opacity: 1;
 }
 
 .endpoint-form__status-hint {
   margin: 0.25rem 0 0;
   font-size: 0.75rem;
   opacity: 0.8;
+}
+
+.endpoint-form__status--error .endpoint-form__status-hint {
+  opacity: 1;
 }
 
 .endpoint-form__search {
