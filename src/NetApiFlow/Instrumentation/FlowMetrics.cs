@@ -28,4 +28,8 @@ internal static class FlowMetrics
     /// <summary>Log entries discarded because the per-span log limit was reached (ADR-0017).</summary>
     public static readonly Counter<long> DroppedLogs =
         Meter.CreateCounter<long>("netapiflow.logs.dropped", description: "Log entries discarded because the per-span log limit was reached.");
+
+    /// <summary>Tags discarded because the per-span tag limit was reached.</summary>
+    public static readonly Counter<long> DroppedTags =
+        Meter.CreateCounter<long>("netapiflow.tags.dropped", description: "Tags discarded because the per-span tag limit was reached.");
 }

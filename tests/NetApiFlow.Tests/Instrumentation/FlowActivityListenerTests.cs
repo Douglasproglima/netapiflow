@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
@@ -166,6 +167,96 @@ public class FlowActivityListenerTests
         innerSpan.IsErrorOrigin.ShouldBeTrue();
         outerSpan.Status.ShouldBe(FlowStatus.Error);
         outerSpan.IsErrorOrigin.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ActivityStopped_WithCustomTag_CopiesItToSpanTagsAndExcludesReservedNetApiFlowTags()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+
+        using (var step = NetApiFlow.Step("OrdersService", "Reserve", ComponentType.Service))
+        {
+            step.Tag("order_id", "123");
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.Tags["order_id"].ShouldBe("123");
+        span.Tags.Keys.ShouldNotContain(key => key.StartsWith("netapiflow.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ActivityStopped_WithTagValueLongerThanMaxTagValueLength_TruncatesTheValue()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+        var longValue = new string('a', 5000);
+
+        using (var step = NetApiFlow.Step("Component", "Operation"))
+        {
+            step.Tag("payload", longValue);
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.Tags["payload"].ShouldBe(longValue[..4000]);
+    }
+
+    [Fact]
+    public void ActivityStopped_WithMoreTagsThanMaxTagsPerSpan_KeepsOnlyTheFirstTagsInArrivalOrder()
+    {
+        var (recorder, subject, traceId, root) = Arrange();
+        using var _ = subject;
+        using var __ = root;
+
+        using (var step = NetApiFlow.Step("Component", "Operation"))
+        {
+            for (var i = 0; i < 25; i++)
+            {
+                step.Tag($"tag-{i}", i.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
+        span.Tags.Count.ShouldBe(20);
+        span.Tags.Keys.ShouldContain("tag-0");
+        span.Tags.Keys.ShouldNotContain("tag-24");
+    }
+
+    [Fact]
+    public void ActivityStopped_ComparedToASpanWithACustomTag_TheNoTagCaseAllocatesLess()
+    {
+        var (_, subject, _, root) = Arrange();
+        using var __ = subject;
+        using var ___ = root;
+
+        // Warm up: let the JIT compile both paths once before measuring.
+        using (NetApiFlow.Step("Component", "Operation"))
+        {
+        }
+
+        using (var warmupStep = NetApiFlow.Step("Component", "Operation"))
+        {
+            warmupStep.Tag("order_id", "123");
+        }
+
+        var beforeNoTag = GC.GetAllocatedBytesForCurrentThread();
+        using (NetApiFlow.Step("Component", "Operation"))
+        {
+        }
+
+        var noTagAllocation = GC.GetAllocatedBytesForCurrentThread() - beforeNoTag;
+
+        var beforeWithTag = GC.GetAllocatedBytesForCurrentThread();
+        using (var step = NetApiFlow.Step("Component", "Operation"))
+        {
+            step.Tag("order_id", "123");
+        }
+
+        var withTagAllocation = GC.GetAllocatedBytesForCurrentThread() - beforeWithTag;
+
+        noTagAllocation.ShouldBeLessThan(withTagAllocation);
     }
 
     [Fact]

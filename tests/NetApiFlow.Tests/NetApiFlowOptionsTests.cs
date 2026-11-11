@@ -38,6 +38,8 @@ public class NetApiFlowOptionsTests
         options.TailSampling.Enabled.ShouldBeFalse();
         options.TailSampling.SuccessSampleRate.ShouldBe(0.1);
         options.Limits.MaxLogEntriesPerSpan.ShouldBe(20);
+        options.Limits.MaxTagsPerSpan.ShouldBe(20);
+        options.Limits.MaxTagValueLength.ShouldBe(4000);
         options.LogCorrelation.Enabled.ShouldBeFalse();
         options.LogCorrelation.MinLevel.ShouldBe(LogLevel.Warning);
     }
@@ -114,5 +116,29 @@ public class NetApiFlowOptionsTests
 
         var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
         exception.Message.ShouldContain("Limits.MaxLogEntriesPerSpan");
+    }
+
+    [Fact]
+    public void Value_WithMaxTagsPerSpanZeroOrLess_ThrowsOptionsValidationException()
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:Limits:MaxTagsPerSpan"] = "0",
+        });
+
+        var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
+        exception.Message.ShouldContain("Limits.MaxTagsPerSpan");
+    }
+
+    [Fact]
+    public void Value_WithMaxTagValueLengthZeroOrLess_ThrowsOptionsValidationException()
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:Limits:MaxTagValueLength"] = "0",
+        });
+
+        var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
+        exception.Message.ShouldContain("Limits.MaxTagValueLength");
     }
 }

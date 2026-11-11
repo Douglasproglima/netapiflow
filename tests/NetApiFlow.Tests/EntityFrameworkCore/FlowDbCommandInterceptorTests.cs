@@ -73,6 +73,43 @@ public class FlowDbCommandInterceptorTests
         spans.ShouldContain(s => s.Operation.StartsWith("SELECT", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Commands_WithCaptureSqlTextEnabled_RecordsTheCommandTextAsATagWithoutParameterValues()
+    {
+        var recorderOptions = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(recorderOptions);
+        using var listener = new FlowActivityListener(recorder, recorderOptions, NullLoggerFactory.Instance);
+
+        using var root = new Activity("TestRoot");
+        root.Start();
+        var traceId = root.TraceId.ToString();
+        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var interceptor = new FlowDbCommandInterceptor(Options.Create(new NetApiFlowOptions { CaptureSqlText = true }));
+        var dbOptions = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor)
+            .Options;
+
+        const string secret = "secret-customer-name";
+
+        await using (var context = new TestDbContext(dbOptions))
+        {
+            await context.Database.EnsureCreatedAsync();
+            context.Orders.Add(new Order { Id = 1, Name = secret });
+            await context.SaveChangesAsync();
+        }
+
+        var insertSpan = recorder.GetActiveTrace(traceId)!.Spans
+            .Single(s => s.Type == ComponentType.Database && s.Operation.StartsWith("INSERT", StringComparison.Ordinal));
+
+        insertSpan.Tags["sql"].ShouldContain("INSERT INTO");
+        insertSpan.Tags["sql"].ShouldNotContain(secret);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM \"Orders\" WHERE \"Id\" = @p0", "SELECT Orders")]
     [InlineData("INSERT INTO \"Orders\" (\"Id\", \"Name\") VALUES (@p0, @p1)", "INSERT Orders")]

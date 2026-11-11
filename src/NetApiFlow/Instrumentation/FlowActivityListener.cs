@@ -194,7 +194,7 @@ internal sealed class FlowActivityListener : IDisposable
         }
     }
 
-    private static (FlowSpan Span, bool IsErrorOrigin) CompleteFlowSpan(Activity activity, FlowSpan existing)
+    private (FlowSpan Span, bool IsErrorOrigin) CompleteFlowSpan(Activity activity, FlowSpan existing)
     {
         var isErrorOrigin = (string?)activity.GetTagItem(FlowTagNames.ErrorOrigin) == bool.TrueString;
         var status = isErrorOrigin || existing.Status == FlowStatus.Error
@@ -209,9 +209,50 @@ internal sealed class FlowActivityListener : IDisposable
             ErrorType = activity.GetTagItem(FlowTagNames.ErrorType) as string,
             ErrorMessage = ErrorMessageSanitizer.Sanitize(activity.GetTagItem(FlowTagNames.ErrorMessage) as string),
             IsErrorOrigin = isErrorOrigin,
+            Tags = BuildFlowSpanTags(activity, existing.Tags),
         };
 
         return (updated, isErrorOrigin);
+    }
+
+    /// <summary>
+    /// Copies every tag <c>FlowStep.Tag(...)</c> attached during the span's lifetime, since
+    /// a tag can be set at any point between <see cref="OnActivityStarted"/> and
+    /// <see cref="OnActivityStopped"/>. Reserved <see cref="FlowTagNames"/> are skipped: they are
+    /// already first-class <see cref="FlowSpan"/> properties, copying them again would duplicate
+    /// the same data in two places. Lazily allocates so the common case, a span with no custom
+    /// tag, keeps reusing <paramref name="existingTags"/> instead of paying for an empty
+    /// <see cref="Dictionary{TKey, TValue}"/>.
+    /// </summary>
+    private IReadOnlyDictionary<string, string> BuildFlowSpanTags(Activity activity, IReadOnlyDictionary<string, string> existingTags)
+    {
+        var limits = _options.Value.Limits;
+        Dictionary<string, string>? tags = null;
+        var droppedCount = 0;
+
+        foreach (var (key, value) in activity.Tags)
+        {
+            if (value is null || key.StartsWith(FlowTagNames.ReservedPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if ((tags?.Count ?? 0) >= limits.MaxTagsPerSpan)
+            {
+                droppedCount++;
+                continue;
+            }
+
+            (tags ??= new Dictionary<string, string>(StringComparer.Ordinal))[key] =
+                value.Length > limits.MaxTagValueLength ? value[..limits.MaxTagValueLength] : value;
+        }
+
+        if (droppedCount > 0)
+        {
+            FlowMetrics.DroppedTags.Add(droppedCount);
+        }
+
+        return tags ?? existingTags;
     }
 
     /// <summary>
