@@ -21,6 +21,10 @@ public sealed class NetApiFlowOptions
     /// <summary>Whether to record the SQL command text (without parameter values) for database spans. Default: <see langword="false"/>.</summary>
     public bool CaptureSqlText { get; set; }
 
+    /// <summary>Captures Authorization and Resource filter stages (MVC Controllers only) as steps, via
+    /// <c>DiagnosticListener</c>/native filter. Default: <see langword="false"/>.</summary>
+    public bool CapturePrePipelineSteps { get; set; }
+
     /// <summary>Ecosystem <c>ActivitySource</c> instances to also observe, besides NetApiFlow's own. Default: <see cref="ExternalActivitySource.None"/>.</summary>
     public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
 

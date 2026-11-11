@@ -19,6 +19,7 @@
     <Project Path="tests/NetApiFlow.Mcp.Tests/NetApiFlow.Mcp.Tests.csproj" />
     <Project Path="tests/NetApiFlow.Npgsql.IntegrationTests/NetApiFlow.Npgsql.IntegrationTests.csproj" />
     <Project Path="tests/NetApiFlow.OpenTelemetry.Tests/NetApiFlow.OpenTelemetry.Tests.csproj" />
+    <Project Path="tests/NetApiFlow.PrePipelineInteropSpike/NetApiFlow.PrePipelineInteropSpike.csproj" />
     <Project Path="tests/NetApiFlow.Storage.Tests/NetApiFlow.Storage.Tests.csproj" />
     <Project Path="tests/NetApiFlow.Tests/NetApiFlow.Tests.csproj" />
   </Folder>
