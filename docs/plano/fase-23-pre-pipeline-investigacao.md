@@ -1,78 +1,112 @@
-# Fase 23: Visibilidade de pré-pipeline, investigação (R-23)
+# Fase 23: Visibilidade de pré-pipeline (R-23)
 
-Projeto novo e descartável: `tests/NetApiFlow.PrePipelineInteropSpike`. Nenhum código de
-produção nesta fase. `tests/NetApiFlow.IntegrationTests` não é tocado.
+Projetos tocados: `src/NetApiFlow` (núcleo), `tests/NetApiFlow.Tests`,
+`tests/NetApiFlow.IntegrationTests`. `tests/NetApiFlow.PrePipelineInteropSpike` (tarefa 23.1, já
+concluída, duas rodadas) é descartável, sem relação direta com as tarefas de produção abaixo.
 
-Item 1 do roadmap de valor (D-60 item D), depois da Fase 22. R-23 aberto nesta fase, nunca
-investigado antes.
+Item 1 do roadmap de valor (D-58/D-60 item D), depois da Fase 22. R-23 aberto nesta fase, nunca
+investigado antes. Contrato congelado em `docs/plano/contratos.md`:
+`NetApiFlowOptions.CapturePrePipelineSteps`. Decisão de arquitetura travada em ADR-0019/D-102, não
+renegociável dentro desta fase.
 
-## Contexto: por que investigar antes de desenhar
+## Tarefa 23.1: spike de investigação, concluída em duas rodadas (D-101/D-102)
 
-D-60 item D previa visibilidade de routing, model binding e filtros via `DiagnosticSource`.
-Pesquisa da Planejadora (contra o código-fonte real do `dotnet/aspnetcore`, não memória de
-treinamento) encontrou um cenário mais restrito:
+Resultado resumido (detalhe completo em D-101/D-102 e ADR-0019):
 
-- **Routing**: só `Microsoft.AspNetCore.Routing.EndpointMatched`, um evento único (sem par
-  "antes"), `DiagnosticSource.Write` clássico, payload é o próprio `HttpContext`. Sem duração
-  possível, só presença.
-- **Filtros de ação MVC**: 30 eventos reais (`BeforeAction`/`AfterAction`,
-  `BeforeActionFilterOnActionExecuting`, etc.), todos `DiagnosticSource.Write` com payload de
-  **tipo interno** do `dotnet/aspnetcore` (não público, sem garantia de versionamento
-  semântico). Só existem para Controllers; Minimal API não tem equivalente nenhum.
-- **Model binding**: nenhuma instrumentação embutida, em nenhum dos dois estilos.
+- Routing (`EndpointMatched`) só tem presença, sem duração possível.
+- `src/NetApiFlow/Middleware/FlowControllerActionFilter.cs` já cobre o estágio de ação: os
+  eventos desse estágio (`BeforeAction`/`OnActionExecuting`/etc.) são redundantes, não entram no
+  desenho final.
+- Authorization e Resource filters (únicos estágios antes da ação nunca vistos hoje) têm payload
+  **público** (`BeforeAuthorizationFilterOnAuthorizationEventData`,
+  `AfterResourceFilterOnResourceExecutionEventData`, etc., `Microsoft.AspNetCore.Mvc.Core`),
+  confirmado por reflexão, idêntico em `net8.0`/`net10.0`. Correlação por `TraceId` confirmada sob
+  30 requisições concorrentes reais, zero cruzamento.
+- Minimal API confirmado vazio: nenhum evento de filtro MVC, só `EndpointMatched` e quatro
+  eventos de hosting (não úteis, mesma janela que a `Activity` raiz HTTP já cobre).
+- Model binding: sem instrumentação em nenhum estilo, fora de alcance, confirmado.
 
-Nenhum desses é `Activity`/`ActivitySource` como `HttpClient`/Npgsql (ADR-0012/ADR-0018). Captar
-qualquer um exige `DiagnosticListener.AllListeners` com reflexão sobre tipo interno, mecanismo
-mais frágil que o `ActivityListener` já usado no resto do produto (R-23). A correlação com
-`Activity.Current` no momento desses eventos não tem fonte que confirme nem contradiga: fica pra
-verificar, não assumir, mesmo lição do D-69/D-91.
+`tests/NetApiFlow.PrePipelineInteropSpike` continua existindo como spike descartável, documenta a
+investigação, não precisa virar teste permanente nem ser apagado.
 
-## Tarefa 23.1: spike de investigação
+## Tarefa 23.2: `NetApiFlowOptions.CapturePrePipelineSteps` e `FlowResourceFilter`
 
-Projeto xUnit próprio, com `ProjectReference` pra `samples/SampleApi.Controllers` e
-`samples/SampleApi.MinimalMediatR` (os dois, pra comparar). Sobe cada sample via
-`WebApplicationFactory`, assina `DiagnosticListener.AllListeners`, filtra pelo nome
-`"Microsoft.AspNetCore"`, e faz requisições HTTP reais contra endpoints de cada sample.
+`CapturePrePipelineSteps` (`bool`, padrão `false`), mesmo padrão de opt-in de
+`CaptureSqlText`/`LogCorrelation.Enabled`.
 
-Três perguntas a responder com evidência real, uma por uma:
+`FlowResourceFilter : IAsyncResourceFilter`, mesma pasta/padrão de `FlowControllerActionFilter`
+(`src/NetApiFlow/Middleware/`), registrado condicionalmente (só quando `CapturePrePipelineSteps`
+está ligado) com `Order` mínimo entre os filtros de recurso, pra embrulhar tudo que vem depois no
+pipeline via `next()`. `Component = "ResourceFilters"`, `Operation` com o nome do filtro de
+recurso mais específico disponível (ou um nome genérico se não houver um claro, decisão de
+implementação), `Type = ComponentType.Service`. Zero `DiagnosticSource`, zero reflexão: mesmo
+mecanismo de `FlowControllerActionFilter`, só copiado pro estágio de recurso.
 
-1. **Correlação.** No momento em que `EndpointMatched` e pelo menos dois eventos de filtro
-   (`BeforeAction`, um de `OnActionExecuting`) chegam no assinante, `Activity.Current` é a
-   `Activity` correta (mesmo `TraceId` da requisição HTTP em curso)? Testar sequencial e sob
-   concorrência real (`Task.WhenAll`, mesma ordem de grandeza do spike da Fase 19), `net8.0` e
-   `net10.0`.
-2. **Shape real do payload.** Pra `EndpointMatched` e os mesmos dois eventos de filtro, dump via
-   reflexão (nome do tipo do payload, nomes de propriedade pública e não pública) em vez de
-   assumir os nomes documentados. Confirmar se o tipo e o shape são idênticos entre `net8.0` e
-   `net10.0`, ou se há qualquer divergência.
-3. **Minimal API confirmado vazio.** Rodar a mesma assinatura contra `SampleApi.MinimalMediatR`
-   e confirmar que nenhum dos 30 eventos de filtro MVC chega (só `EndpointMatched`, que é
-   compartilhado), fechando a suposição da pesquisa com prova própria em vez de só documentação
-   de terceiro.
+**Pronto quando:** com `CapturePrePipelineSteps = true`, uma requisição real contra
+`SampleApi.Controllers` produz um span `"ResourceFilters"` que é pai do span `"Controller"` já
+existente (aninhamento, não duplicação). Com `CapturePrePipelineSteps = false` (padrão), nenhum
+span novo aparece, zero mudança de comportamento pra quem não ligou a flag.
 
-Medição complementar, não bloqueante pro ponto de parada: custo de só assinar
-`DiagnosticListener.AllListeners` e filtrar por nome, comparado a um processo sem assinatura
-nenhuma (mesmo espírito do R-05, decidir cedo e barato é o padrão do produto, mas aqui a pergunta
-é se a própria assinatura já tem custo visível antes de qualquer processamento).
+## Tarefa 23.3: Authorization filters via `DiagnosticListener`
 
-**Ponto de parada explícito**: a Executora reporta os achados reais (correlação sob concorrência,
-shape real do payload nos dois TFMs, confirmação vazia em Minimal API, custo da assinatura) antes
-de qualquer ADR ou código de produção ser travado. Tarefas 23.2 em diante não estão especificadas
-neste arquivo de propósito: dependem do que a investigação encontrar. Se a correlação não se
-sustentar sob concorrência, ou o shape divergir entre TFMs, isso muda o desenho inteiro, mesmo
-padrão que já aconteceu no D-91/D-92.
+Novo assinante interno, só ativo quando `CapturePrePipelineSteps` está ligado, inscrito em
+`DiagnosticListener.AllListeners` filtrando por `"Microsoft.AspNetCore"`. Em
+`BeforeOnAuthorization`, cast forte pra `BeforeAuthorizationFilterOnAuthorizationEventData`
+(tipo público confirmado pelo spike), abre `NetApiFlow.Step("AuthorizationFilters",
+filter.GetType().Name, ComponentType.Service)` e guarda a `FlowStep` resultante (struct, pode ser
+armazenada fora do bloco `using` convencional). Em `AfterOnAuthorization`, cast forte pra
+`AfterAuthorizationFilterOnAuthorizationEventData`, localiza a `FlowStep` guardada e descarta.
 
-## Fora de escopo desta tarefa
+**Pareamento Before/After por `(TraceId, referência do `Filter`)`, nunca só pela referência do
+`Filter`** (pode ser singleton reaproveitado entre requisições concorrentes, o spike não provou
+isso, só que o evento dispara e o `TraceId` bate). Teste de concorrência real (múltiplas
+requisições simultâneas, cada uma com um filtro de autorização que efetivamente atrasa um pouco,
+ex. `Task.Delay` curto) precisa provar que nenhuma `FlowStep` é fechada pelo par errado.
 
-- Qualquer código em `src/NetApiFlow`, `NetApiFlow.EntityFrameworkCore` ou qualquer pacote.
-- Decidir já o `ExternalActivitySource`/flag de opt-in que o mecanismo final vai usar: essa é uma
-  decisão de ADR, pendente do resultado da investigação.
-- Model binding: pesquisa já fechou essa pergunta (sem instrumentação possível), nenhum spike
-  precisa confirmar de novo.
+Curadoria de tag: só o nome do filtro (`Component`/`Operation`). Nenhum campo de
+`AuthorizationFilterContext` (resultado da autorização, usuário autenticado, claims, etc.) é lido
+ou copiado, em nenhuma circunstância.
+
+**Pronto quando:** com `CapturePrePipelineSteps = true` e um filtro de autorização real registrado
+(mesma técnica do spike, filtro de teste próprio), o span `"AuthorizationFilters"` aparece como
+irmão anterior do span `"ResourceFilters"` (autorização roda antes de recurso), com duração real
+medida. Sob concorrência real, nenhuma `FlowStep` é fechada pelo par errado. Teste de curadoria
+confirma que nenhum campo de `AuthorizationFilterContext` além do nome do filtro chega no
+`FlowSpan`.
+
+## Tarefa 23.4: prova de erro/exceção
+
+Um filtro de autorização ou recurso que lança exceção real marca o span correspondente como
+`FlowStatus.Error` (mesmo mecanismo de `FlowStep.MarkError` já usado em
+`FlowControllerActionFilter`). Para `FlowResourceFilter`, igual ao padrão já existente (captura a
+exceção do `next()`, marca e relança). Para o caminho via `DiagnosticListener`, confirmar que uma
+exceção lançada dentro de um filtro de autorização ainda dispara `AfterOnAuthorization` (ou se o
+comportamento é diferente, ex. a exceção pula direto pro pipeline de erro sem o evento "depois"),
+e tratar os dois casos.
+
+**Pronto quando:** teste com um filtro de autorização/recurso que lança de propósito confirma o
+span correspondente marcado como erro, com `ErrorType`/`ErrorMessage` preenchidos.
+
+## Fora de escopo, de propósito (ADR-0019)
+
+- Routing (`EndpointMatched`): sem duração possível, sinal fraco demais. Se o usuário quiser essa
+  visibilidade no futuro, decisão nova.
+- Model binding: confirmado impossível pela investigação.
+- Minimal API: sem equivalente de Authorization/Resource filter instrumentado pelo framework,
+  mesma assimetria que já existe hoje com `FlowControllerActionFilter`.
+- Qualquer mudança em `FlowControllerActionFilter` ou `ExternalActivitySource`: continuam
+  exatamente como estão.
+
+## Aceite da fase
+
+Todos os critérios de pronto acima. `dotnet build`/`test`/`format --verify-no-changes` limpos nos
+dois TFMs. R-23 mitigado e provado. `NetApiFlow.Mcp`/`NetApiFlow.Dashboard` sem mudança nenhuma
+(os novos spans aparecem automaticamente em qualquer consumidor de `FlowSpan`, mesmo contrato).
 
 ## Ao terminar
 
-Resumo pra Planejadora: os achados reais das três perguntas, o custo medido da assinatura, e
-qualquer coisa inesperada (mesmo critério do D-92: corrigir a premissa publicamente, não só
-seguir em frente). Aguarda decisão da Planejadora sobre as tarefas 23.2 em diante antes de
-qualquer implementação.
+Resumo para a Planejadora: o que foi feito, como verificar (comando exato, incluindo como gerar
+uma requisição real com `CapturePrePipelineSteps` ligado e ver os dois spans novos aparecendo
+aninhados), confirmação do comportamento de exceção dentro de um filtro de autorização (tarefa
+23.4), o que ficou pendente. A Planejadora roda `/revisar-fase 23` antes de decidir o próximo item
+do roadmap de valor (`docs/plano/roadmap-valor.md`).
