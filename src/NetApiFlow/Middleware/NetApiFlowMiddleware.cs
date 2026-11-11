@@ -66,15 +66,17 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                     context.Response.Headers[TraceIdHeaderName] = traceId;
                 }
 
-                // A pre-pipeline step (ADR-0019) opened via DiagnosticListener can be left pending
-                // when its filter throws: the matching "after" diagnostic event never fires
-                // (confirmed empirically, Fase 23 tarefa 23.4). A downstream UseExceptionHandler
-                // middleware can also swallow the exception before it ever reaches the catch block
-                // above, so IExceptionHandlerFeature is the fallback source for it. Done before
-                // CompleteTrace below, which removes the trace from the recorder's active set:
-                // closing the step any later would make FlowActivityListener silently drop the span.
-                var exception = caughtException ?? context.Features.Get<IExceptionHandlerFeature>()?.Error;
-                context.RequestServices?.GetService<FlowAuthorizationFilterListener>()?.CloseOrphanedSteps(traceId, exception);
+                // An Authorization-filter step opened via DiagnosticListener can be left pending
+                // when its own filter throws: the matching "after" diagnostic event never fires.
+                // A downstream UseExceptionHandler middleware can also swallow the exception before
+                // it ever reaches the catch block above, so IExceptionHandlerFeature is the fallback
+                // source, used only to close that orphaned step, never to decide this trace's own
+                // status below (an exception a downstream middleware already translated into a
+                // non-5xx response is not this trace's error). Done before CompleteTrace, which
+                // removes the trace from the recorder's active set: closing the step any later would
+                // make FlowActivityListener silently drop the span.
+                var orphanedStepException = caughtException ?? context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                context.RequestServices?.GetService<FlowAuthorizationFilterListener>()?.CloseOrphanedSteps(traceId, orphanedStepException);
 
                 var routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
                 if (routeTemplate is not null)
@@ -82,11 +84,11 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                     recorder.UpdateRouteTemplate(traceId, routeTemplate);
                 }
 
-                var status = exception is not null || context.Response.StatusCode >= 500
+                var status = caughtException is not null || context.Response.StatusCode >= 500
                     ? FlowStatus.Error
                     : FlowStatus.Success;
 
-                recorder.CompleteTrace(traceId, context.Response.StatusCode, status, exception?.Message);
+                recorder.CompleteTrace(traceId, context.Response.StatusCode, status, caughtException?.Message);
             }
         }
     }
