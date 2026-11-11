@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using NetApiFlow.Routing;
 
@@ -42,14 +44,14 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
             }
         }
 
-        string? errorMessage = null;
+        Exception? caughtException = null;
         try
         {
             await next(context);
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            caughtException = ex;
             throw;
         }
         finally
@@ -64,17 +66,27 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                     context.Response.Headers[TraceIdHeaderName] = traceId;
                 }
 
+                // A pre-pipeline step (ADR-0019) opened via DiagnosticListener can be left pending
+                // when its filter throws: the matching "after" diagnostic event never fires
+                // (confirmed empirically, Fase 23 tarefa 23.4). A downstream UseExceptionHandler
+                // middleware can also swallow the exception before it ever reaches the catch block
+                // above, so IExceptionHandlerFeature is the fallback source for it. Done before
+                // CompleteTrace below, which removes the trace from the recorder's active set:
+                // closing the step any later would make FlowActivityListener silently drop the span.
+                var exception = caughtException ?? context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                context.RequestServices?.GetService<FlowAuthorizationFilterListener>()?.CloseOrphanedSteps(traceId, exception);
+
                 var routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
                 if (routeTemplate is not null)
                 {
                     recorder.UpdateRouteTemplate(traceId, routeTemplate);
                 }
 
-                var status = errorMessage is not null || context.Response.StatusCode >= 500
+                var status = exception is not null || context.Response.StatusCode >= 500
                     ? FlowStatus.Error
                     : FlowStatus.Success;
 
-                recorder.CompleteTrace(traceId, context.Response.StatusCode, status, errorMessage);
+                recorder.CompleteTrace(traceId, context.Response.StatusCode, status, exception?.Message);
             }
         }
     }
