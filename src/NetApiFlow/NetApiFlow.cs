@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using NetApiFlow.Instrumentation;
+using NetApiFlow.Recording;
 
 namespace NetApiFlow;
 
@@ -31,4 +33,13 @@ public static class NetApiFlow
 
     /// <summary>Trace id of the request currently executing, or <see langword="null"/> when tracing is disabled or there is no ambient trace.</summary>
     public static string? CurrentTraceId => Activity.Current?.TraceId.ToString();
+
+    /// <summary>A trace that finished recently, read straight from memory, without waiting for the persistence
+    /// queue. Meant for an integration test that just awaited its own HTTP call and needs the result immediately:
+    /// read <c>X-NetApiFlow-TraceId</c> off the response, then call this. Only looks at the in-memory buffer of
+    /// recently-completed traces, never falls back to <see cref="ITraceStore"/>, so it never races the
+    /// persistence queue. <see langword="null"/> when the trace already aged out of the buffer or tracing was
+    /// never registered.</summary>
+    public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId) =>
+        services.GetService<FlowRecorder>()?.GetRecentlyCompleted(traceId);
 }
