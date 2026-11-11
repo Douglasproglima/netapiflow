@@ -84,6 +84,12 @@ const en = {
   'node.nPlusOneAria': 'Suspected N+1, {count} queries with the same shape in this trace',
 
   'export.button': 'Download trace (.json)',
+  'import.button': 'Import trace (.json)',
+  'import.badge': 'Imported trace',
+  'import.exit': 'Back to live traces',
+  'import.error.invalidJson': 'This file is not valid JSON.',
+  'import.error.invalidShape': 'This file is not a NetApiFlow trace export.',
+  'import.error.readFailed': 'Could not read the selected file.',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Restart',
@@ -340,6 +346,12 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.nPlusOneAria': 'Possível N+1, {count} consultas com o mesmo formato neste trace',
 
   'export.button': 'Baixar trace (.json)',
+  'import.button': 'Importar trace (.json)',
+  'import.badge': 'Trace importado',
+  'import.exit': 'Voltar aos traces ao vivo',
+  'import.error.invalidJson': 'Este arquivo não é um JSON válido.',
+  'import.error.invalidShape': 'Este arquivo não é uma exportação de trace do NetApiFlow.',
+  'import.error.readFailed': 'Não foi possível ler o arquivo selecionado.',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Reiniciar',
