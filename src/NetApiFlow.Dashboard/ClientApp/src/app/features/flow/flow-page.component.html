@@ -63,6 +63,9 @@
             </button>
           </span>
           <span class="flow-workspace__graph-header-end">
+            <button mat-stroked-button type="button" (click)="exportTrace()">
+              {{ 'export.button' | t }}
+            </button>
             <button mat-stroked-button type="button" (click)="toggleReplay()">
               {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
             </button>

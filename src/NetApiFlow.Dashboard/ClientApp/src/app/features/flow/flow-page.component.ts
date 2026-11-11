@@ -18,8 +18,10 @@ import { RecentExecutionsComponent } from './recent-executions/recent-executions
 import { EndpointFormComponent } from '../runner/endpoint-form.component';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import { formatDurationMicros } from '../../shared/duration-format';
+import { downloadTextFile } from '../../shared/download-file';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
+import { traceExportFileName } from './trace-file';
 
 export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
@@ -193,6 +195,19 @@ export class FlowPageComponent {
 
   openTrace(traceId: string): void {
     this.router.navigate([], { queryParams: { trace: traceId } });
+  }
+
+  exportTrace(): void {
+    const trace = this.trace();
+    if (!trace) {
+      return;
+    }
+
+    downloadTextFile(
+      JSON.stringify(trace, null, 2),
+      traceExportFileName(trace.traceId),
+      'application/json',
+    );
   }
 
   onNodeSelected(nodeId: string): void {

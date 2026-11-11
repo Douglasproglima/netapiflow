@@ -202,6 +202,8 @@
 .flow-workspace__graph-header-end {
   margin-left: auto;
   flex: none;
+  display: inline-flex;
+  gap: 0.5rem;
 }
 
 .flow-workspace__banner {

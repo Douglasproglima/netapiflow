@@ -83,6 +83,8 @@ const en = {
   'node.nPlusOneBadge': '×{count}',
   'node.nPlusOneAria': 'Suspected N+1, {count} queries with the same shape in this trace',
 
+  'export.button': 'Download trace (.json)',
+
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Restart',
   'replay.previousStep': 'Previous step',
@@ -336,6 +338,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.state.notExecuted': 'Não executado',
   'node.nPlusOneBadge': '×{count}',
   'node.nPlusOneAria': 'Possível N+1, {count} consultas com o mesmo formato neste trace',
+
+  'export.button': 'Baixar trace (.json)',
 
   'replay.chip.replay': 'REPLAY',
   'replay.restart': 'Reiniciar',

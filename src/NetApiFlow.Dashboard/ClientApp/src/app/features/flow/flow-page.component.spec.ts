@@ -196,4 +196,33 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.actionDrawer.close();
     expect(fixture.componentInstance.actionDrawer.open()).toBe(false);
   });
+
+  it('exportTrace downloads the loaded trace as JSON', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    fixture.componentInstance.exportTrace();
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('application/json');
+    expect(JSON.parse(await blob.text())).toEqual(makeTrace('t1'));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    click.mockRestore();
+  });
 });
