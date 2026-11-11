@@ -83,6 +83,41 @@ builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
+## Asserting on flow in tests
+
+An integration test built on `WebApplicationFactory<TEntryPoint>` already has the response its
+own request just produced. `NetApiFlow.GetRecentTrace` reads that trace straight from the
+in-memory buffer kept while persistence catches up, so there's no `Task.Delay` or retry loop
+waiting for the asynchronous write to finish:
+
+```csharp
+public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task GetOrder_DoesNotTriggerMoreThanOneDatabaseQuery()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var trace = NetApiFlow.GetRecentTrace(factory.Services, traceId);
+
+        Assert.NotNull(trace);
+        Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
+    }
+}
+```
+
+`GetRecentTrace` returns a plain `FlowTraceDetail` (the `FlowTrace` and the `FlowSpan`s it
+recorded), not an assertion DSL: query `trace.Spans` with whatever LINQ expresses the rule
+("no more than N database calls", "this route never calls that repository", "no step failed")
+and whatever assertion library the test project already uses, xUnit's own `Assert` included.
+It returns `null` when the trace already aged out of the in-memory buffer (500 traces completed
+between the call and the assertion) or when NetApiFlow was never registered, never when the HTTP
+call itself failed.
+
 ## Optional packages
 
 | Package | Adds |
