@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
@@ -76,6 +78,32 @@ public class FlowMetricsTests
         recorder.TryAddSpan("trace-1", span with { SpanId = "span-2" });
 
         totals.GetValueOrDefault("netapiflow.spans.dropped").ShouldBe(1);
+    }
+
+    [Fact]
+    public void DroppedTags_IncrementsWhenTagLimitIsReached()
+    {
+        var totals = new ConcurrentDictionary<string, long>();
+        using var listener = CreateListener(totals);
+
+        var wrappedOptions = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(wrappedOptions);
+        using var subject = new FlowActivityListener(recorder, wrappedOptions, NullLoggerFactory.Instance);
+
+        using var root = new Activity("TestRoot");
+        root.Start();
+        var traceId = root.TraceId.ToString();
+        recorder.TryStartTrace(traceId, "GET", "/api/orders", DateTime.UtcNow);
+
+        using (var step = NetApiFlow.Step("Component", "Operation"))
+        {
+            for (var i = 0; i < 25; i++)
+            {
+                step.Tag($"tag-{i}", i.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        totals.GetValueOrDefault("netapiflow.tags.dropped").ShouldBe(5);
     }
 
     [Fact]
