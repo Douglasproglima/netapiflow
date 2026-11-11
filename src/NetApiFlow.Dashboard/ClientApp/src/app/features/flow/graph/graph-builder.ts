@@ -89,6 +89,14 @@ export function isGhostNodeId(id: string): boolean {
   return id.startsWith(GHOST_ID_PREFIX);
 }
 
+/**
+ * Matches spans across executions (same route, different runs) or within one execution (N+1
+ * siblings): a `spanId` is unique per execution and never repeats, so it can't be the key.
+ */
+export function spanGroupKey(component: string, operation: string): string {
+  return `${component}::${operation}`;
+}
+
 interface MergedNode {
   id: string;
   component: string;
@@ -221,7 +229,7 @@ function computeNPlusOneCounts(nodes: MergedNode[]): Map<string, number> {
       continue;
     }
 
-    const key = `${node.component}::${node.operation}`;
+    const key = spanGroupKey(node.component, node.operation);
     const ids = idsByGroupKey.get(key) ?? [];
     ids.push(node.id);
     idsByGroupKey.set(key, ids);

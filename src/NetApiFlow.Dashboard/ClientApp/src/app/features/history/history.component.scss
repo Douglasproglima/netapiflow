@@ -157,8 +157,15 @@
   font-size: 0.75rem;
 }
 
-.history__card-header-end {
+.history__card-header-end,
+.history__foot-end {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.history__card-header-end {
+  gap: 0.625rem;
 }
 
 .history__table-wrap {
@@ -202,6 +209,12 @@
       background: var(--naf-surface-2);
     }
   }
+}
+
+.history__col-select {
+  width: 36px;
+  position: relative;
+  z-index: 1;
 }
 
 .history__col-status {
@@ -334,9 +347,6 @@
 }
 
 .history__foot-end {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
 }
 
