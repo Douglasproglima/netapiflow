@@ -34,6 +34,35 @@
     }
 
     <div class="flow-workspace__center">
+      <div class="flow-workspace__toolbar">
+        <input
+          #importFileInput
+          type="file"
+          accept=".json"
+          class="flow-workspace__import-input"
+          tabindex="-1"
+          aria-hidden="true"
+          (change)="onImportFileSelected($event)"
+        />
+        <button type="button" mat-stroked-button (click)="importFileInput.click()">
+          {{ 'import.button' | t }}
+        </button>
+
+        @if (importedTrace()) {
+          <span class="naf-chip naf-chip--warning">
+            <span class="naf-chip__dot"></span>
+            {{ 'import.badge' | t }}
+          </span>
+          <button type="button" mat-stroked-button (click)="exitImportedTrace()">
+            {{ 'import.exit' | t }}
+          </button>
+        }
+      </div>
+
+      @if (importErrorKey(); as errorKey) {
+        <p class="flow-workspace__import-error" role="alert">{{ errorKey | t }}</p>
+      }
+
       @if (trace(); as trace) {
         <div class="flow-workspace__graph-header">
           <h2>{{ 'graph.title' | t }}</h2>
@@ -63,6 +92,9 @@
             </button>
           </span>
           <span class="flow-workspace__graph-header-end">
+            <button mat-stroked-button type="button" (click)="exportTrace()">
+              {{ 'export.button' | t }}
+            </button>
             <button mat-stroked-button type="button" (click)="toggleReplay()">
               {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
             </button>
