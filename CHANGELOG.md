@@ -24,6 +24,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: `NetApiFlow.GetRecentTrace(services, traceId)`, reading a trace that finished
+  recently straight from the in-memory buffer the dashboard's `GET /traces/{traceId}` already
+  uses, never falling back to `ITraceStore`. Built for an integration test that just awaited its
+  own HTTP call: read `X-NetApiFlow-TraceId` off the response, call this, assert on `FlowSpan`s
+  with plain LINQ and whatever assertion library the test project already uses. Returns `null`
+  when the trace already aged out of the buffer or NetApiFlow was never registered.
 - `NetApiFlow`: `ExternalActivitySource.Npgsql`, ingesting the SQL command `Activity` the Npgsql
   driver already emits as a `Database` span (ADR-0018). Opt-in, `None` still the default. When
   `NetApiFlow.EntityFrameworkCore` is also in use, the driver's activity is dropped instead of

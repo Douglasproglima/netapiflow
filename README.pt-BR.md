@@ -84,6 +84,41 @@ builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
+## Asserção de fluxo em teste
+
+Um teste de integração construído sobre `WebApplicationFactory<TEntryPoint>` já tem a resposta
+que a própria requisição acabou de produzir. `NetApiFlow.GetRecentTrace` lê essa trace direto do
+buffer em memória, mantido enquanto a persistência ainda não processou. Não precisa de
+`Task.Delay` nem de laço de retentativa esperando a escrita assíncrona terminar:
+
+```csharp
+public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task GetOrder_DoesNotTriggerMoreThanOneDatabaseQuery()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var trace = NetApiFlow.GetRecentTrace(factory.Services, traceId);
+
+        Assert.NotNull(trace);
+        Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
+    }
+}
+```
+
+`GetRecentTrace` devolve um `FlowTraceDetail` puro (o `FlowTrace` e os `FlowSpan` que ele
+registrou), não uma DSL de asserção. A consulta sobre `trace.Spans` é LINQ comum, para expressar
+qualquer regra ("no máximo N consultas de banco", "esta rota nunca chama aquele repositório",
+"nenhuma etapa falhou"). A biblioteca de asserção é a que o projeto de teste já usa, incluindo o
+`Assert` do próprio xUnit. Devolve `null` quando a trace já saiu do buffer em memória (500 traces
+completadas entre a chamada e a asserção) ou quando o NetApiFlow nunca foi registrado. Nunca
+devolve `null` só porque a chamada HTTP falhou.
+
 ## Pacotes opcionais
 
 | Pacote | Acrescenta |
