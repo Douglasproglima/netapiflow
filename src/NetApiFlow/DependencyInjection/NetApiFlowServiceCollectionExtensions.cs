@@ -55,6 +55,13 @@ public static class NetApiFlowServiceCollectionExtensions
             services.AddSingleton<ILoggerProvider, FlowLoggerProvider>();
         }
 
+        if (probedOptions.CapturePrePipelineSteps)
+        {
+            services.Configure<MvcOptions>(options => options.Filters.Add<FlowResourceFilter>());
+            services.AddSingleton<FlowAuthorizationFilterListener>();
+            services.AddHostedService<FlowAuthorizationFilterListenerWarmupHostedService>();
+        }
+
         return services;
     }
 }
