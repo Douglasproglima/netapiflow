@@ -19,7 +19,7 @@ function describeError(error: HttpErrorResponse): string {
   return error.status ? `HTTP ${error.status} ${error.statusText}`.trim() : error.message;
 }
 
-/** `/diff?a=<traceId>&b=<traceId>` (Fase 22, D-99): side-by-side comparison of two executions. */
+/** `/diff?a=<traceId>&b=<traceId>`: side-by-side comparison of two executions. */
 @Component({
   selector: 'app-diff-page',
   templateUrl: './diff-page.component.html',
