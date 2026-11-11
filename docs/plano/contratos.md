@@ -23,6 +23,13 @@ public static class NetApiFlow
     /// <summary>Trace id of the request currently executing, or <c>null</c> when tracing is
     /// disabled or there is no ambient trace.</summary>
     public static string? CurrentTraceId { get; }
+
+    /// <summary>A trace that finished recently, read straight from memory, without waiting for
+    /// the persistence queue. Built for integration tests asserting on the trace their own
+    /// request just produced (D-58 item 6): read <c>X-NetApiFlow-TraceId</c> off the response,
+    /// then call this. Only looks at the in-memory buffer, never falls back to
+    /// <see cref="ITraceStore"/>: <c>null</c> if the trace already aged out of it.</summary>
+    public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId);
 }
 
 public readonly struct FlowStep : IDisposable
