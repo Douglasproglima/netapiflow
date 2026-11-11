@@ -10,7 +10,7 @@ using SampleApi.Controllers.Data;
 
 namespace NetApiFlow.PrePipelineInteropSpike;
 
-internal sealed class ControllersSampleFactory : WebApplicationFactory<OrdersController>
+internal class ControllersSampleFactory : WebApplicationFactory<OrdersController>
 {
     private readonly string _connectionString = $"Data Source={Guid.NewGuid():N};Mode=Memory;Cache=Shared";
     private readonly SqliteConnection _keepAliveConnection;
