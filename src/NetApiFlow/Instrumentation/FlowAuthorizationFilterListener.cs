@@ -7,7 +7,7 @@ namespace NetApiFlow.Instrumentation;
 
 /// <summary>
 /// Opens a <see cref="ComponentType.Service"/> step per Authorization filter instance, via
-/// <see cref="DiagnosticListener.AllListeners"/> (ADR-0019). <see cref="Microsoft.AspNetCore.Mvc.Filters.IAsyncAuthorizationFilter"/>
+/// <see cref="DiagnosticListener.AllListeners"/>. <see cref="Microsoft.AspNetCore.Mvc.Filters.IAsyncAuthorizationFilter"/>
 /// has no <c>next()</c> delegate, so a native filter cannot wrap it the way
 /// <see cref="Middleware.FlowResourceFilter"/> wraps the Resource stage.
 /// </summary>
@@ -37,14 +37,14 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     /// <summary>
     /// Closes any step still pending for <paramref name="traceId"/>, marked as failed. An exception
-    /// thrown inside an Authorization filter's own body never reaches <c>AfterOnAuthorization</c>
-    /// (confirmed empirically, Fase 23 tarefa 23.4): the diagnostic event pair is only written
-    /// around a normal return, so the step opened in <c>BeforeOnAuthorization</c> would otherwise
-    /// never close. Called from <see cref="Middleware.NetApiFlowMiddleware"/>'s
-    /// <c>HttpContext.Response.OnCompleted</c> callback, the only hook that still runs when a
-    /// downstream <c>UseExceptionHandler</c> middleware already caught the exception. A step found
-    /// pending at that point is, by construction, always the result of a failure, even when
-    /// <paramref name="exception"/> itself could not be recovered.
+    /// thrown inside an Authorization filter's own body never reaches <c>AfterOnAuthorization</c>:
+    /// the diagnostic event pair is only written around a normal return, so the step opened in
+    /// <c>BeforeOnAuthorization</c> would otherwise never close. Called from the <c>finally</c>
+    /// block of <see cref="Middleware.NetApiFlowMiddleware"/>, the only place that still runs
+    /// (before the trace itself is completed) when a downstream <c>UseExceptionHandler</c>
+    /// middleware already caught the exception. A step found pending at that point is, by
+    /// construction, always the result of a failure, even when <paramref name="exception"/> itself
+    /// could not be recovered.
     /// </summary>
     internal void CloseOrphanedSteps(string traceId, Exception? exception)
     {
@@ -108,6 +108,14 @@ internal sealed partial class FlowAuthorizationFilterListener
         }
 
         var step = NetApiFlow.Step("AuthorizationFilters", data.Filter.GetType().Name, ComponentType.Service);
+        if (step.IsNoOp)
+        {
+            // Not tracked by NetApiFlow (route excluded, or tracing disabled): storing it would
+            // leak forever if this same filter instance later throws for an untracked request,
+            // since AfterOnAuthorization never fires for it, and nothing closes an untracked trace.
+            return;
+        }
+
         _pendingSteps[(traceId, data.Filter)] = step;
     }
 

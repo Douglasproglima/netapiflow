@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 namespace NetApiFlow.Middleware;
 
 /// <summary>Wraps the Resource filter stage, and everything downstream of it, in a
-/// <see cref="ComponentType.Service"/> step (ADR-0019). Only registered when
+/// <see cref="ComponentType.Service"/> step. Only registered when
 /// <see cref="NetApiFlowOptions.CapturePrePipelineSteps"/> is enabled.</summary>
 internal sealed class FlowResourceFilter : IAsyncResourceFilter, IOrderedFilter
 {

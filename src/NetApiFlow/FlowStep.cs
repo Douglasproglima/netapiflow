@@ -18,6 +18,10 @@ public readonly struct FlowStep : IDisposable
         _activity = activity;
     }
 
+    /// <summary>Whether this step is backed by no <see cref="Activity"/>, because its trace was not
+    /// being tracked when it was opened. Every member is then a no-op.</summary>
+    internal bool IsNoOp => _activity is null;
+
     /// <summary>Attaches an explicit tag to the step.</summary>
     public void Tag(string key, string value) => _activity?.SetTag(key, value);
 
