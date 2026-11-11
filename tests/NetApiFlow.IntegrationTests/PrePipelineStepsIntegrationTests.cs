@@ -21,16 +21,17 @@ using Sample = SampleApi.Controllers;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies Authorization and Resource filter steps (ADR-0019, Fase 23) against the Controllers
-/// sample. Neither stage is exercised by the sample's own <c>Program.cs</c> (no <c>[Authorize]</c>,
-/// no resource filter configured), so a test-local Authorization filter stands in for one, same
-/// technique the pre-pipeline spike used to avoid touching the shared sample.
+/// Verifies Authorization and Resource filter steps against the Controllers sample. Neither stage
+/// is exercised by the sample's own <c>Program.cs</c> (no <c>[Authorize]</c>, no resource filter
+/// configured), so a test-local Authorization filter stands in for one instead of touching the
+/// shared sample.
 /// </summary>
 public class PrePipelineStepsIntegrationTests
 {
     private static (IHost Host, SqliteConnection Connection) CreateHost(
         bool capturePrePipelineSteps,
-        IFilterMetadata? authorizationFilter = null)
+        IFilterMetadata? authorizationFilter = null,
+        int exceptionHandlerStatusCode = StatusCodes.Status500InternalServerError)
     {
         // A shared-cache in-memory database (one connection string, a separate physical
         // connection per DbContext) instead of a single shared connection: genuine concurrent
@@ -75,7 +76,7 @@ public class PrePipelineStepsIntegrationTests
                     app.UseExceptionHandler(exceptionApp => exceptionApp.Run(
                         context =>
                         {
-                            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                            context.Response.StatusCode = exceptionHandlerStatusCode;
                             return Task.CompletedTask;
                         }));
                     app.UseRouting();
@@ -233,6 +234,35 @@ public class PrePipelineStepsIntegrationTests
         authorizationSpan.IsErrorOrigin.ShouldBeTrue();
 
         spans.ShouldNotContain(s => s.Component == "ResourceFilters");
+    }
+
+    [Fact]
+    public async Task Get_WithThrowingAuthorizationFilterHandledAsClientError_MarksSpanErrorButNotTheWholeTrace()
+    {
+        var (host, connection) = CreateHost(
+            capturePrePipelineSteps: true,
+            authorizationFilter: new ThrowingAuthorizationFilter(),
+            exceptionHandlerStatusCode: StatusCodes.Status400BadRequest);
+        using var _ = host;
+        using var __ = connection;
+
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+        var spansByTrace = TrackSpans(recorder);
+        FlowTrace? completedTrace = null;
+        recorder.TraceCompleted += trace => completedTrace = trace;
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/api/orders/1");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var authorizationSpan = spansByTrace[traceId].Single(s => s.Component == "AuthorizationFilters");
+
+        authorizationSpan.Status.ShouldBe(FlowStatus.Error);
+
+        completedTrace.ShouldNotBeNull();
+        completedTrace.Status.ShouldBe(FlowStatus.Success);
+        completedTrace.ErrorMessage.ShouldBeNull();
     }
 
     [Fact]
