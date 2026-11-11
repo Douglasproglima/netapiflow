@@ -17,7 +17,9 @@ internal static class PayloadShapeDumper
             .OrderBy(property => property.Name, StringComparer.Ordinal)
             .Select(property =>
                 $"{(property.GetMethod?.IsPublic == true ? "public" : "non-public")} {property.PropertyType.Name} {property.Name}");
+        var interfaces = type.GetInterfaces().OrderBy(i => i.Name, StringComparer.Ordinal).Select(i => i.Name);
 
-        return $"{type.FullName} {{ {string.Join(", ", properties)} }}";
+        return $"{type.FullName} (isPublic={type.IsPublic}, interfaces=[{string.Join(", ", interfaces)}]) " +
+            $"{{ {string.Join(", ", properties)} }}";
     }
 }
