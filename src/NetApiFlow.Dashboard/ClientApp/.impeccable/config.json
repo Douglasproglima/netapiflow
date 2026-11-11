@@ -7,7 +7,9 @@
     }
   },
   "detector": {
-    "ignoreRules": ["ai-color-palette"],
+    "ignoreRules": [
+      "ai-color-palette"
+    ],
     "ignoreFiles": [],
     "ignoreValues": [
       {
@@ -15,6 +17,15 @@
         "value": "inter",
         "createdAt": "2026-11-04T18:57:51.912Z",
         "reason": "ADR-0009, ADR-0014"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/app/features/flow/diff/diff-page.component.html"
+        ],
+        "createdAt": "2026-11-11T14:37:38.100Z",
+        "reason": "false positive: static file analysis can't resolve Angular [src] bindings (stateIconSrc()); same pattern already exists unflagged in history.component.html when scanned as a rendered URL"
       }
     ]
   }

@@ -21,6 +21,7 @@ const en = {
   'topbar.subtitle.insights': 'Routes overview',
   'topbar.subtitle.architecture': 'Route call graph',
   'topbar.subtitle.runner': 'Try an endpoint',
+  'topbar.subtitle.diff': 'Side-by-side comparison',
   'topbar.tryEndpoint': 'Try an endpoint',
   'topbar.inProgress': '{count} in progress',
   'topbar.slowThreshold': 'slow threshold {value}',
@@ -266,6 +267,22 @@ const en = {
   'history.sort.mobileLabel': 'Sort by',
   'history.tailSampling.banner':
     'Tail-based sampling active: errors and slow routes always appear, {rate} of the rest is kept.',
+  'history.compare.selectAria': 'Select to compare',
+  'history.compare.count': '{count}/2 selected',
+  'history.compare.action': 'Compare',
+  'history.compare.routeMismatch': 'The two selected executions are not the same route.',
+
+  'diff.title': 'Compare executions',
+  'diff.vs': 'vs',
+  'diff.loading': 'Loading…',
+  'diff.missingParams.title': 'No executions selected',
+  'diff.missingParams.body': 'Pick two executions on the history page to compare them.',
+  'diff.error.title': 'Could not load one of the executions',
+  'diff.backToHistory': 'Back to history',
+  'diff.routeMismatch': 'These two executions are not the same route.',
+  'diff.table.step': 'Step',
+  'diff.table.delta': 'Delta',
+  'diff.table.count': '×{a} / ×{b}',
 };
 
 const ptBr: Record<keyof typeof en, string> = {
@@ -282,6 +299,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'topbar.subtitle.insights': 'Visão geral das rotas',
   'topbar.subtitle.architecture': 'Grafo de chamadas da rota',
   'topbar.subtitle.runner': 'Testar um endpoint',
+  'topbar.subtitle.diff': 'Comparação lado a lado',
   'topbar.tryEndpoint': 'Testar um endpoint',
   'topbar.inProgress': '{count} em andamento',
   'topbar.slowThreshold': 'limiar de lentidão {value}',
@@ -528,6 +546,22 @@ const ptBr: Record<keyof typeof en, string> = {
   'history.sort.mobileLabel': 'Ordenar por',
   'history.tailSampling.banner':
     'Amostragem tail-based ativa: erros e rotas lentas sempre aparecem, {rate} das demais são guardadas.',
+  'history.compare.selectAria': 'Selecionar para comparar',
+  'history.compare.count': '{count}/2 selecionadas',
+  'history.compare.action': 'Comparar',
+  'history.compare.routeMismatch': 'As duas execuções selecionadas não são da mesma rota.',
+
+  'diff.title': 'Comparar execuções',
+  'diff.vs': 'vs',
+  'diff.loading': 'Carregando…',
+  'diff.missingParams.title': 'Nenhuma execução selecionada',
+  'diff.missingParams.body': 'Marque duas execuções na página de histórico para compará-las.',
+  'diff.error.title': 'Não foi possível carregar uma das execuções',
+  'diff.backToHistory': 'Voltar ao histórico',
+  'diff.routeMismatch': 'Estas duas execuções não são da mesma rota.',
+  'diff.table.step': 'Etapa',
+  'diff.table.delta': 'Diferença',
+  'diff.table.count': '×{a} / ×{b}',
 };
 
 export type TranslationKey = keyof typeof en;

@@ -1,0 +1,135 @@
+<section class="diff-page">
+  @switch (viewState()) {
+    @case ('missing-params') {
+      <div class="diff-page__state">
+        <strong>{{ 'diff.missingParams.title' | t }}</strong>
+        <p>{{ 'diff.missingParams.body' | t }}</p>
+        <a class="naf-btn naf-btn--primary" routerLink="/history">{{ 'diff.backToHistory' | t }}</a>
+      </div>
+    }
+    @case ('error') {
+      <div class="diff-page__state" role="alert">
+        <strong>{{ 'diff.error.title' | t }}</strong>
+        <p>{{ errorMessage() }}</p>
+        <a class="naf-btn naf-btn--primary" routerLink="/history">{{ 'diff.backToHistory' | t }}</a>
+      </div>
+    }
+    @case ('loading') {
+      <p class="diff-page__state" role="status">{{ 'diff.loading' | t }}</p>
+    }
+    @case ('data') {
+      <div class="diff-page__header">
+        <div class="diff-page__trace-card">
+          <span class="diff-page__trace-label naf-mono">A</span>
+          <span class="naf-tag" [class]="methodTagClass(traceA()!.method)">{{
+            traceA()!.method
+          }}</span>
+          <span class="diff-page__trace-route">{{ traceA()!.routeTemplate }}</span>
+          <span class="diff-page__trace-state">
+            <img
+              [src]="stateIconSrc(traceState(traceA()!))"
+              [attr.alt]="stateLabelKey(traceState(traceA()!)) | t"
+              width="14"
+              height="14"
+            />
+            {{ stateLabelKey(traceState(traceA()!)) | t }}
+          </span>
+          <span class="naf-mono diff-page__trace-time">{{
+            startedAtShort(traceA()!.startedAt)
+          }}</span>
+        </div>
+
+        <span class="diff-page__vs naf-mono">{{ 'diff.vs' | t }}</span>
+
+        <div class="diff-page__trace-card">
+          <span class="diff-page__trace-label naf-mono">B</span>
+          <span class="naf-tag" [class]="methodTagClass(traceB()!.method)">{{
+            traceB()!.method
+          }}</span>
+          <span class="diff-page__trace-route">{{ traceB()!.routeTemplate }}</span>
+          <span class="diff-page__trace-state">
+            <img
+              [src]="stateIconSrc(traceState(traceB()!))"
+              [attr.alt]="stateLabelKey(traceState(traceB()!)) | t"
+              width="14"
+              height="14"
+            />
+            {{ stateLabelKey(traceState(traceB()!)) | t }}
+          </span>
+          <span class="naf-mono diff-page__trace-time">{{
+            startedAtShort(traceB()!.startedAt)
+          }}</span>
+        </div>
+      </div>
+
+      @if (routeMismatch()) {
+        <p class="naf-banner diff-page__mismatch">{{ 'diff.routeMismatch' | t }}</p>
+      }
+
+      <div class="naf-card diff-page__table-wrap">
+        <div class="diff-page__table-scroll">
+          <table class="diff-page__table">
+            <thead>
+              <tr>
+                <th class="diff-page__col-step">{{ 'diff.table.step' | t }}</th>
+                <th>A</th>
+                <th>B</th>
+                <th class="diff-page__col-delta">{{ 'diff.table.delta' | t }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of diffRows(); track row.key) {
+                <tr class="diff-page__row" [class]="'diff-page__row--' + row.kind">
+                  <td class="diff-page__col-step">
+                    <span class="diff-page__step-content">
+                      <span class="diff-page__step-component">{{ row.component }}</span>
+                      <span class="naf-mono diff-page__step-operation">{{ row.operation }}</span>
+                      @if (row.countA > 1 || row.countB > 1) {
+                        <span class="naf-mono diff-page__count">
+                          {{ 'diff.table.count' | t: { a: row.countA, b: row.countB } }}
+                        </span>
+                      }
+                    </span>
+                  </td>
+                  <td class="diff-page__col-side">
+                    <span class="diff-page__side-content">
+                      <img
+                        [src]="stateIconSrc(row.stateA)"
+                        [attr.alt]="stateLabelKey(row.stateA) | t"
+                        width="14"
+                        height="14"
+                      />
+                      <span>{{ stateLabelKey(row.stateA) | t }}</span>
+                      @if (row.durationMicrosA !== null) {
+                        <span class="naf-mono">{{ formatDuration(row.durationMicrosA) }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td class="diff-page__col-side">
+                    <span class="diff-page__side-content">
+                      <img
+                        [src]="stateIconSrc(row.stateB)"
+                        [attr.alt]="stateLabelKey(row.stateB) | t"
+                        width="14"
+                        height="14"
+                      />
+                      <span>{{ stateLabelKey(row.stateB) | t }}</span>
+                      @if (row.durationMicrosB !== null) {
+                        <span class="naf-mono">{{ formatDuration(row.durationMicrosB) }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td class="diff-page__col-delta naf-mono">
+                    @if (row.deltaMicros !== null) {
+                      {{ formatDelta(row.deltaMicros) }}
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</section>

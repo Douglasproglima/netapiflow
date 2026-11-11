@@ -15,6 +15,12 @@ export const routes: Routes = [
     data: { title: 'nav.history', subtitle: 'topbar.subtitle.history' },
   },
   {
+    path: 'diff',
+    loadComponent: () =>
+      import('./features/flow/diff/diff-page.component').then((m) => m.DiffPageComponent),
+    data: { title: 'diff.title', subtitle: 'topbar.subtitle.diff' },
+  },
+  {
     path: 'components',
     loadComponent: () =>
       import('./features/components/components.component').then((m) => m.ComponentsComponent),
