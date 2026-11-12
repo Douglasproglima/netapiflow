@@ -17,6 +17,7 @@ function span(
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
     ...overrides,
   };
 }
@@ -297,5 +298,62 @@ describe('FlowGraphComponent', () => {
     await fixture.whenStable();
 
     expect(zoomLayer.getAttribute('transform')).toBe('translate(0,0) scale(1)');
+  });
+
+  describe('N+1 badge (D-71)', () => {
+    it('renders the badge only on nodes with a non-null nPlusOneCount, with the real count in its text', async () => {
+      const spans: FlowSpan[] = [
+        span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),
+        span({
+          spanId: 'query-1',
+          parentSpanId: 'root',
+          sequence: 1,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'query-2',
+          parentSpanId: 'root',
+          sequence: 2,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+        span({
+          spanId: 'query-3',
+          parentSpanId: 'root',
+          sequence: 3,
+          component: 'OrderRepository',
+          operation: 'SELECT Orders',
+          type: 'Database' as ComponentType,
+        }),
+      ];
+      const { nodes, edges } = buildGraph({
+        spans,
+        traceStatus: 'Success',
+        slowThresholdMicros: 250_000,
+      });
+
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', nodes);
+      fixture.componentRef.setInput('edges', edges);
+      await fixture.whenStable();
+
+      const nodeElements: Element[] = Array.from(
+        fixture.nativeElement.querySelectorAll('.flow-graph__node'),
+      );
+      const rootNode = nodeElements.find(
+        (el) => el.querySelector('.flow-graph__node-operation')?.textContent === 'Op',
+      );
+      const queryNode = nodeElements.find(
+        (el) => el.querySelector('.flow-graph__node-badge') !== null,
+      );
+
+      expect(rootNode?.querySelector('.flow-graph__node-badge')).toBeNull();
+      expect(queryNode?.querySelector('.flow-graph__node-badge-text')?.textContent?.trim()).toBe(
+        '×3',
+      );
+    });
   });
 });

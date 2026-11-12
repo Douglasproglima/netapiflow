@@ -3,7 +3,7 @@ using SampleApi.Controllers.Data;
 
 namespace SampleApi.Controllers.Application;
 
-public sealed class OrderService(IOrderRepository repository, IServiceScopeFactory scopeFactory) : IOrderService
+public sealed class OrderService(IOrderRepository repository, IServiceScopeFactory scopeFactory, IHttpClientFactory httpClientFactory) : IOrderService
 {
     public Task<Order?> GetAsync(int id, CancellationToken cancellationToken) =>
         repository.FindAsync(id, cancellationToken);
@@ -39,5 +39,18 @@ public sealed class OrderService(IOrderRepository repository, IServiceScopeFacto
         });
         var results = await Task.WhenAll(tasks);
         return [.. results.Where(o => o is not null).Select(o => o!)];
+    }
+
+    public Task<IReadOnlyList<Order>> GetManySequentiallyAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken) =>
+        repository.FindManyAsync(ids, cancellationToken);
+
+    public async Task<string> GetShippingStatusAsync(int id, CancellationToken cancellationToken)
+    {
+        using var client = httpClientFactory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/zen");
+        request.Headers.UserAgent.ParseAdd("NetApiFlow-Sample");
+        using var response = await client.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync(cancellationToken);
     }
 }

@@ -106,8 +106,18 @@ Diagrama completo em `docs/architecture.md` (Fase 7). Modelo de domínio e contr
 - **Nunca capturar dado sensível**: sem corpo, argumento, header, query string ou SQL com
   parâmetro. Rota sempre como template.
 - **API pública pequena e documentada.** Tudo que não precisa ser público é `internal`.
-- Comentário só para explicar um porquê não óbvio. Pode citar ADR (`ver ADR-0003`). Nunca citar
-  fase ou etapa de plano em comentário de código.
+- **Comentário é sintoma de nome ruim, não solução. Regra de ouro, sem exceção.** Se o código
+  precisa de comentário para ser entendido, o nome de classe, método, variável ou propriedade
+  está ruim. Resolve o nome. Não comenta por cima do nome ruim.
+  Comentário só existe no último caso, para um porquê que nenhum nome resolve: uma decisão
+  contraintuitiva, uma restrição externa (regra de negócio, bug de biblioteca, limite de API de
+  terceiro), uma condição de corrida, ou uma fonte de pesquisa que sustenta a regra de negócio.
+  Nunca repete o que o código já diz. Nunca descreve o quê, só o porquê. Nunca cita fase, etapa
+  de plano ou número de ADR em comentário de código. Nunca serve de divisor de seção dentro de um
+  arquivo grande: arquivo grande demais para navegar sem comentário-âncora precisa ser dividido
+  em arquivos menores, não comentado.
+  Ao mexer num trecho antigo, remover todo comentário que não passa nesse crivo, mesmo que não
+  tenha sido pedido para mexer nele.
 
 ## Git
 

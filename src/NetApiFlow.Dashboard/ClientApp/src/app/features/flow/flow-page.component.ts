@@ -4,8 +4,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { map } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
-import { FlowTraceSummary, SpanDetail } from '../../core/models';
+import { FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
 import { buildGraph, GraphResult, isGhostNodeId } from './graph/graph-builder';
@@ -17,18 +18,22 @@ import { RecentExecutionsComponent } from './recent-executions/recent-executions
 import { EndpointFormComponent } from '../runner/endpoint-form.component';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import { formatDurationMicros } from '../../shared/duration-format';
+import { downloadTextFile } from '../../shared/download-file';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
+import { TranslationKey } from '../../core/i18n/translations';
+import { parseTraceFile, traceExportFileName } from './trace-file';
+import { buildLocalSpanDetail } from './details/local-span-detail';
 
 export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
 /**
- * Default screen (`/flow`, D-23): a dense workspace (ADR-0010) — metric cards always visible on
+ * Default screen (`/flow`, D-23): a dense workspace, metric cards always visible on
  * top, the action panel (shared `EndpointFormComponent`) on the left, the graph with replay
  * controls at the center, the details panel on the right, and the live event feed at the bottom.
  * With no `?trace=` query param the center column lists the traces currently in progress; with
- * one, it tracks that trace live (`LiveTracePlayerService`, tarefa 4.7) or replays it
- * (`ReplayPlayerService`, tarefa 4.9), rendering its graph and details panel either way.
+ * one, it tracks that trace live (`LiveTracePlayerService`) or replays it
+ * (`ReplayPlayerService`), rendering its graph and details panel either way.
  */
 @Component({
   selector: 'app-flow-page',
@@ -55,21 +60,13 @@ export class FlowPageComponent {
   readonly livePlayer = inject(LiveTracePlayerService);
   readonly replayPlayer = inject(ReplayPlayerService);
 
+  readonly actionDrawer = inject(ActionDrawerService);
+
   /** Below 1600px the action panel leaves the grid and becomes a drawer (guide seção 5.2). */
   readonly isActionDrawer = toSignal(
     this.breakpointObserver.observe('(max-width: 1599px)').pipe(map((state) => state.matches)),
     { initialValue: false },
   );
-
-  readonly actionDrawerOpen = signal(false);
-
-  toggleActionDrawer(): void {
-    this.actionDrawerOpen.update((open) => !open);
-  }
-
-  closeActionDrawer(): void {
-    this.actionDrawerOpen.set(false);
-  }
 
   readonly traceId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('trace'))), {
     initialValue: this.route.snapshot.queryParamMap.get('trace'),
@@ -84,7 +81,12 @@ export class FlowPageComponent {
 
   readonly isReplaying = signal(false);
 
-  readonly trace = this.livePlayer.trace;
+  readonly importedTrace = signal<FlowTraceDetail | null>(null);
+  readonly importErrorKey = signal<TranslationKey | null>(null);
+
+  readonly trace = computed<FlowTraceDetail | null>(
+    () => this.importedTrace() ?? this.livePlayer.trace(),
+  );
   readonly graph = computed<GraphResult>(() => {
     const trace = this.trace();
     const slowThresholdMicros = this.slowThresholdMicros();
@@ -110,12 +112,18 @@ export class FlowPageComponent {
       .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
 
     effect(() => {
+      this.actionDrawer.isDrawer.set(this.isActionDrawer());
+    });
+
+    effect(() => {
       const traceId = this.traceId();
       this.selectedNodeId.set(null);
       this.selectedSpanDetail.set(null);
       this.isReplaying.set(false);
 
       if (traceId) {
+        this.importedTrace.set(null);
+        this.importErrorKey.set(null);
         this.livePlayer.track(traceId);
       } else {
         this.livePlayer.stop();
@@ -135,6 +143,11 @@ export class FlowPageComponent {
 
   readonly notExecutedCount = computed(
     () => this.graph().nodes.filter((node) => node.state === 'not-executed').length,
+  );
+
+  readonly isFollowingLiveRunning = computed(
+    () =>
+      !this.importedTrace() && !this.isReplaying() && this.livePlayer.trace()?.status === 'Running',
   );
 
   readonly errorOrigin = computed(() => {
@@ -198,11 +211,59 @@ export class FlowPageComponent {
     this.router.navigate([], { queryParams: { trace: traceId } });
   }
 
+  exportTrace(): void {
+    const trace = this.trace();
+    if (!trace) {
+      return;
+    }
+
+    downloadTextFile(
+      JSON.stringify(trace, null, 2),
+      traceExportFileName(trace.traceId),
+      'application/json',
+    );
+  }
+
+  async onImportFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    let raw: string;
+    try {
+      raw = await file.text();
+    } catch {
+      this.importErrorKey.set('import.error.readFailed');
+      return;
+    }
+
+    this.applyImportedTraceFile(raw);
+  }
+
+  exitImportedTrace(): void {
+    this.importedTrace.set(null);
+    this.importErrorKey.set(null);
+  }
+
   onNodeSelected(nodeId: string): void {
     this.selectedNodeId.set(nodeId);
 
+    if (isGhostNodeId(nodeId)) {
+      this.selectedSpanDetail.set(null);
+      return;
+    }
+
+    const importedTrace = this.importedTrace();
+    if (importedTrace) {
+      this.selectedSpanDetail.set(buildLocalSpanDetail(importedTrace, nodeId));
+      return;
+    }
+
     const traceId = this.traceId();
-    if (!traceId || isGhostNodeId(nodeId)) {
+    if (!traceId) {
       this.selectedSpanDetail.set(null);
       return;
     }
@@ -213,6 +274,14 @@ export class FlowPageComponent {
   backToSummary(): void {
     this.selectedNodeId.set(null);
     this.selectedSpanDetail.set(null);
+  }
+
+  toggleLivePause(): void {
+    if (this.livePlayer.paused()) {
+      this.livePlayer.resume();
+    } else {
+      this.livePlayer.pause();
+    }
   }
 
   toggleReplay(): void {
@@ -242,5 +311,25 @@ export class FlowPageComponent {
       this.liveTraces.set(traces);
       this.liveTracesLoading.set(false);
     });
+  }
+
+  private applyImportedTraceFile(raw: string): void {
+    const result = parseTraceFile(raw);
+    if (!result.ok) {
+      this.importErrorKey.set(
+        result.reason === 'invalid-json' ? 'import.error.invalidJson' : 'import.error.invalidShape',
+      );
+      return;
+    }
+
+    this.importErrorKey.set(null);
+    this.selectedNodeId.set(null);
+    this.selectedSpanDetail.set(null);
+    this.isReplaying.set(false);
+    this.importedTrace.set(result.trace);
+
+    if (this.traceId()) {
+      this.router.navigate([], { queryParams: {} });
+    }
   }
 }

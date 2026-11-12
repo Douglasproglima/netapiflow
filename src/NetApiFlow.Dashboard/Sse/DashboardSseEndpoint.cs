@@ -8,7 +8,7 @@ namespace NetApiFlow.Dashboard.Sse;
 
 /// <summary>
 /// Maps <c>GET /stream</c>. The event-writing loop is isolated with <c>#if NET10_0_OR_GREATER</c>
-/// (ADR-0003, risco R-04): net10.0 uses <c>TypedResults.ServerSentEvents</c>; net8.0 writes
+/// (risco R-04): net10.0 uses <c>TypedResults.ServerSentEvents</c>; net8.0 writes
 /// <c>text/event-stream</c> frames by hand. Everything else (client limit, replay, heartbeat
 /// cadence) is shared.
 /// </summary>
@@ -22,7 +22,7 @@ internal static class DashboardSseEndpoint
     {
         // The header wins when both are present. The query string exists only because
         // EventSource cannot set headers on a connection created by application code, so a
-        // manually-reconnecting client (own exponential backoff, tarefa 4.7) has no other way
+        // manually-reconnecting client (own exponential backoff) has no other way
         // to send Last-Event-ID; the browser's own automatic reconnect keeps using the header (D-22).
         var lastEventId = ParseLastEventId(context.Request.Headers["Last-Event-ID"])
             ?? ParseLastEventId(context.Request.Query["lastEventId"]);

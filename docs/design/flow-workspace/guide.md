@@ -92,19 +92,10 @@ No tema claro, os tints usam a cor 700 correspondente com alpha `.10`.
 
 ### 3.3 Tipografia aplicada ao dashboard
 
-Fontes embutidas localmente (tarefa 7.0, sem CDN). Escala densa, própria para dashboard:
-
-| Papel | Família | Tamanho / altura | Peso |
-|---|---|---|---|
-| Título da página (topbar) | Plus Jakarta Sans | 18 / 24 | 700 |
-| Valor de métrica | Plus Jakarta Sans | 24 / 28, `tabular-nums` | 700 |
-| Título de card | Inter | 14 / 20 | 600 |
-| Corpo, itens de lista | Inter | 13 / 20 | 400 e 500 |
-| Rótulo, legenda | Inter | 12 / 16 | 500 |
-| Métrica pequena, duração, rota, trace id, verbo | JetBrains Mono | 12 / 16, `tabular-nums` | 400 e 500 |
-| Badge de verbo | JetBrains Mono | 11 / 16, `letter-spacing: .04em` | 600 |
-
-Nenhum texto do dashboard fica abaixo de 11 px. O texto dentro do nó do grafo fica no mínimo em 12 px **no zoom 100%**.
+Fontes embutidas localmente (tarefa 7.0, sem CDN). Escala por papel (tamanho, altura de linha,
+peso) em `docs/brand/tokens.md`, seção "Escala aplicada ao dashboard": única fonte, não duplicada
+aqui, para não divergir em silêncio (achado da Fase 11, `generate-design-md.js` lia as duas
+fontes antes dessa correção).
 
 ### 3.4 Espaçamento, raio, elevação
 
@@ -361,6 +352,19 @@ Consome o `SseService` existente. Cabeçalho: "Live events" e chip de conexão (
 | Alternador "seguir ao vivo" | Cabeçalho do card central, à direita |
 
 Se o usuário promover algum desses itens para a 0.1.0, a Planejadora registra a mudança em `decisoes.md` antes da implementação.
+
+Liberados para implementação em D-106: os seis itens, agrupados em `docs/plano/fase-25-grafo-controles-ao-vivo.md` (zoom, legenda, sparkline, seguir ao vivo) e `docs/plano/fase-26-cenarios-demo-e-delay.md` (cenários, atraso artificial). As posições da tabela acima continuam valendo como especificação normativa.
+
+**Achado real da Fase 25, corrige a frase acima:** a legenda e os controles de zoom são overlay
+sobre o canvas (painel opaco, `position: absolute` nos cantos inferiores), mas o ajuste
+automático do grafo (zoom/pan pra caber o conteúdo no canvas) centraliza sem saber que esses dois
+cantos estão ocupados. Um trace com poucos nós reais pode posicionar um nó exatamente atrás de um
+dos dois painéis, texto sobre texto. A posição normativa continua valendo (canto inferior
+esquerdo pra legenda, direito pros controles de zoom), mas o cálculo de ajuste automático precisa
+reservar uma margem de segurança nos dois cantos inferiores, do tamanho real de cada painel (a
+Executora mede o tamanho real renderizado, não assume um valor fixo), pra nenhum nó real
+renderizar atrás deles. Achado via Impeccable (`text-occlusion`) na própria Fase 25, confirmado
+por medição real de geometria, não suposição.
 
 ---
 

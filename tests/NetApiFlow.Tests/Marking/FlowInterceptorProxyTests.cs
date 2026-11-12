@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Marking;
@@ -62,7 +63,7 @@ public class FlowInterceptorProxyTests
     {
         var options = Options.Create(new NetApiFlowOptions());
         var recorder = new FlowRecorder(options);
-        var listener = new FlowActivityListener(recorder, options);
+        var listener = new FlowActivityListener(recorder, options, NullLoggerFactory.Instance);
 
         var root = new Activity("TestRoot");
         root.Start();

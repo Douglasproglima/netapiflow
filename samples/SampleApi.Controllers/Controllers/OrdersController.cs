@@ -38,4 +38,20 @@ public sealed class OrdersController(IOrderService orderService) : ControllerBas
         var orders = await orderService.GetManyInParallelAsync(ids, cancellationToken);
         return Ok(orders);
     }
+
+    /// <summary>Sequential scenario: demonstrates the N+1 anti-pattern by querying each order one by one in the same request.</summary>
+    [HttpGet("sequential")]
+    public async Task<IActionResult> GetSequential([FromQuery] int[] ids, CancellationToken cancellationToken)
+    {
+        var orders = await orderService.GetManySequentiallyAsync(ids, cancellationToken);
+        return Ok(orders);
+    }
+
+    /// <summary>External call scenario: calls an outbound HTTP service, observed via <c>ExternalSources.HttpClient</c>.</summary>
+    [HttpGet("{id:int}/shipping-status")]
+    public async Task<IActionResult> GetShippingStatus(int id, CancellationToken cancellationToken)
+    {
+        var status = await orderService.GetShippingStatusAsync(id, cancellationToken);
+        return Ok(status);
+    }
 }

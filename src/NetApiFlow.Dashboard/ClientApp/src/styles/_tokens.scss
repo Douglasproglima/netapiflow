@@ -25,6 +25,10 @@
   --naf-focus: #8b5cf6;
   --naf-grid-dot: rgba(148, 163, 184, 0.12);
 
+  --naf-danger-on-tint: #f87171;
+  --naf-warning-on-tint: var(--naf-warning);
+  --naf-success-on-tint: var(--naf-success);
+
   --naf-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --naf-font-ui: 'Inter', system-ui, sans-serif;
   --naf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -58,6 +62,10 @@
       --naf-idle-tint: rgba(100, 116, 139, 0.12);
       --naf-focus: #6d28d9;
       --naf-grid-dot: rgba(71, 85, 105, 0.14);
+
+      --naf-danger-on-tint: var(--naf-danger);
+      --naf-warning-on-tint: #92400e;
+      --naf-success-on-tint: #065f46;
     }
   }
 }
@@ -88,6 +96,10 @@
   --naf-idle-tint: rgba(100, 116, 139, 0.12);
   --naf-focus: #6d28d9;
   --naf-grid-dot: rgba(71, 85, 105, 0.14);
+
+  --naf-danger-on-tint: var(--naf-danger);
+  --naf-warning-on-tint: #92400e;
+  --naf-success-on-tint: #065f46;
 }
 
 :root[data-theme='dark'] {
@@ -114,4 +126,8 @@
   --naf-idle-tint: rgba(100, 116, 139, 0.14);
   --naf-focus: #8b5cf6;
   --naf-grid-dot: rgba(148, 163, 184, 0.12);
+
+  --naf-danger-on-tint: #f87171;
+  --naf-warning-on-tint: var(--naf-warning);
+  --naf-success-on-tint: var(--naf-success);
 }

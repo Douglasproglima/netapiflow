@@ -8,12 +8,20 @@ namespace NetApiFlow.Tests.Recording;
 
 public class FlowRecorderTests
 {
-    private static FlowRecorder CreateSubject(int maxSpansPerTrace = 300)
+    private static FlowRecorder CreateSubject(int maxSpansPerTrace = 300, int maxLogEntriesPerSpan = 20)
     {
         var options = new NetApiFlowOptions();
         options.Limits.MaxSpansPerTrace = maxSpansPerTrace;
+        options.Limits.MaxLogEntriesPerSpan = maxLogEntriesPerSpan;
         return new FlowRecorder(Options.Create(options));
     }
+
+    private static LogEntry CreateLogEntry(string message) => new()
+    {
+        Timestamp = DateTime.UtcNow,
+        Level = "Warning",
+        Message = message,
+    };
 
     private static FlowSpan CreateSpan(string traceId, int sequence) => new()
     {
@@ -76,5 +84,47 @@ public class FlowRecorderTests
         trace.ShouldNotBeNull();
         trace.Truncated.ShouldBeTrue();
         trace.Spans.Count.ShouldBe(maxSpans);
+    }
+
+    [Fact]
+    public void AddLogEntry_WhenBelowLimit_AddsEntryToSpan()
+    {
+        var subject = CreateSubject();
+        subject.TryStartTrace("trace-1", "GET", "/api/orders", DateTime.UtcNow);
+        subject.TryAddSpan("trace-1", CreateSpan("trace-1", 0));
+
+        subject.AddLogEntry("trace-1", "span-0", CreateLogEntry("something happened"));
+
+        subject.GetActiveTrace("trace-1")!.Spans.Single().Logs.Single().Message.ShouldBe("something happened");
+        subject.DroppedLogCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void AddLogEntry_WhenAtMaxLogEntriesPerSpan_DropsExtraEntryAndIncrementsCounter()
+    {
+        const int maxLogEntries = 2;
+        var subject = CreateSubject(maxLogEntriesPerSpan: maxLogEntries);
+        subject.TryStartTrace("trace-1", "GET", "/api/orders", DateTime.UtcNow);
+        subject.TryAddSpan("trace-1", CreateSpan("trace-1", 0));
+
+        for (var i = 0; i < maxLogEntries; i++)
+        {
+            subject.AddLogEntry("trace-1", "span-0", CreateLogEntry($"entry-{i}"));
+        }
+
+        subject.AddLogEntry("trace-1", "span-0", CreateLogEntry("overflow"));
+
+        subject.GetActiveTrace("trace-1")!.Spans.Single().Logs.Count.ShouldBe(maxLogEntries);
+        subject.DroppedLogCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AddLogEntry_WhenTraceIsNotTracked_DoesNothingAndDoesNotThrow()
+    {
+        var subject = CreateSubject();
+
+        Should.NotThrow(() => subject.AddLogEntry("unknown-trace", "span-0", CreateLogEntry("ignored")));
+
+        subject.DroppedLogCount.ShouldBe(0);
     }
 }

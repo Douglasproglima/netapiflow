@@ -33,6 +33,8 @@ internal sealed record SpanDto
 
     public required IReadOnlyDictionary<string, string> Tags { get; init; }
 
+    public required IReadOnlyList<LogEntry> Logs { get; init; }
+
     public static SpanDto From(FlowSpan span) => new()
     {
         SpanId = span.SpanId,
@@ -49,5 +51,6 @@ internal sealed record SpanDto
         ErrorMessage = span.ErrorMessage,
         IsErrorOrigin = span.IsErrorOrigin,
         Tags = span.Tags,
+        Logs = span.Logs,
     };
 }

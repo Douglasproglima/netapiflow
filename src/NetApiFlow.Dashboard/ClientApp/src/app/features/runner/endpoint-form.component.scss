@@ -35,6 +35,139 @@
   color: var(--naf-text-muted);
 }
 
+.endpoint-form__tabs {
+  flex: none;
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 1rem 0;
+  border-bottom: 1px solid var(--naf-border);
+}
+
+.endpoint-form__tab {
+  height: 32px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--naf-text-muted);
+  font-family: var(--naf-font-ui);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.endpoint-form__tab--active {
+  color: var(--naf-flow-text);
+  border-bottom-color: var(--naf-flow-fill);
+}
+
+.endpoint-form__custom {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.endpoint-form__scenarios {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem 1rem;
+  overflow-y: auto;
+}
+
+.endpoint-form__delay {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.endpoint-form__delay-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--naf-text-muted);
+}
+
+.endpoint-form__delay-options {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-sm);
+  overflow: hidden;
+}
+
+.endpoint-form__delay-option {
+  height: 32px;
+  padding: 0 0.625rem;
+  border: 0;
+  border-left: 1px solid var(--naf-border);
+  background: none;
+  color: var(--naf-text-muted);
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+
+  &:first-child {
+    border-left: 0;
+  }
+}
+
+.endpoint-form__delay-option--active {
+  background: var(--naf-flow-tint);
+  color: var(--naf-flow-text);
+}
+
+.endpoint-form__scenario-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.endpoint-form__scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--naf-radius-md);
+  border: 1px solid var(--naf-border);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: var(--naf-surface-2);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.endpoint-form__scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.endpoint-form__scenario-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.endpoint-form__scenario-description {
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+}
+
 .endpoint-form__status {
   padding: 0 1rem;
   opacity: 0.8;
@@ -42,12 +175,17 @@
 
 .endpoint-form__status--error {
   color: var(--naf-danger);
+  opacity: 1;
 }
 
 .endpoint-form__status-hint {
   margin: 0.25rem 0 0;
   font-size: 0.75rem;
   opacity: 0.8;
+}
+
+.endpoint-form__status--error .endpoint-form__status-hint {
+  opacity: 1;
 }
 
 .endpoint-form__search {
@@ -73,6 +211,11 @@
     padding: 0 0.75rem 0 2.125rem;
     font-size: 0.8125rem;
     font-family: var(--naf-font-ui);
+
+    &::placeholder {
+      color: var(--naf-text-muted);
+      opacity: 1;
+    }
   }
 }
 

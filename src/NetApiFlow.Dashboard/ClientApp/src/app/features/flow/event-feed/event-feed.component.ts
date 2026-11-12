@@ -9,7 +9,7 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 const MAX_VISIBLE_EVENTS = 200;
 
 /**
- * Raw live event log for the `/flow` workspace (ADR-0010): every event from `GET /stream` as it
+ * Raw live event log for the `/flow` workspace: every event from `GET /stream` as it
  * arrives, newest first, independent of whichever trace is currently tracked in the graph.
  * `SseService.connect()`/`disconnect()` are reference-counted precisely so this component can
  * keep the stream open on its own, alongside `LiveTracePlayerService`'s own connect/disconnect

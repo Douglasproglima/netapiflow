@@ -16,6 +16,7 @@ flowchart TD
     PW --> STORE[(ITraceStore<br/>in-memory · PostgreSQL · SQL Server)]
     STORE --> DASH[NetApiFlow.Dashboard<br/>REST /flow/api/* + embedded Angular UI]
     SSE --> DASH
+    STORE --> MCP[NetApiFlow.Mcp<br/>read-only MCP tools]
 ```
 
 ## Components
@@ -26,7 +27,9 @@ flowchart TD
 - **`FlowActivityListener`**: bridges `System.Diagnostics.Activity` into `FlowRecorder`. Every
   `NetApiFlow.Step(...)` call becomes an `Activity`; this listener is the only place that decides,
   per span, whether to record it (`ActivityListener.Sample`, risco R-05). No OpenTelemetry SDK
-  dependency — see [ADR-0002](adr/0002-activitysource-nativo-sem-otel-sdk.md).
+  dependency — see [ADR-0002](adr/0002-activitysource-nativo-sem-otel-sdk.md). When
+  `ExternalSources` is enabled, it also observes `HttpClient`'s own `ActivitySource` and maps
+  outbound calls to a sanitized `Http` span — see [ADR-0012](adr/0012-ingestao-httpclient-via-activitysource-externo.md).
 - **`FlowRecorder`**: in-memory state of every active and recently-completed trace. The single
   source of truth both the dashboard's live view and the persistence path read from.
 - **`PersistenceWriter`**: a `BackgroundService` draining a bounded `Channel` of completed traces.
@@ -40,8 +43,12 @@ flowchart TD
 - **`NetApiFlow.Dashboard`**: REST + SSE API under `{basePath}/api`, and the compiled Angular
   client served from the same assembly, embedded as a manifest resource — see
   [ADR-0005](adr/0005-dashboard-angular-embutido.md). Access is gated outside Development unless
-  `RequireAuthorization` or `IDashboardAuthorizationFilter` is configured — see
+  `RequireAuthorization` or `IFlowAccessFilter` is configured — see
   [ADR-0006](adr/0006-dashboard-restrito-a-development.md).
+- **`NetApiFlow.Mcp`**: three read-only MCP tools over the same `ITraceStore`, no dependency on
+  `NetApiFlow.Dashboard` — see [ADR-0013](adr/0013-servidor-mcp-somente-leitura.md). Shares the
+  dashboard's access gate via `IFlowAccessFilter` in the core, instead of duplicating it — see
+  [ADR-0015](adr/0015-filtro-de-acesso-unico-no-nucleo.md).
 
 ## Cross-cutting decisions
 

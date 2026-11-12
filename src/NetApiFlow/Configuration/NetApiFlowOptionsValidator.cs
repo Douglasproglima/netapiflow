@@ -31,6 +31,30 @@ internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOp
                 $"NetApiFlow: SlowThreshold must be greater than zero (was {options.SlowThreshold}).");
         }
 
+        if (options.TailSampling.SuccessSampleRate is < 0.0 or > 1.0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: TailSampling.SuccessSampleRate must be between 0.0 and 1.0 (was {options.TailSampling.SuccessSampleRate}).");
+        }
+
+        if (options.Limits.MaxLogEntriesPerSpan <= 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: Limits.MaxLogEntriesPerSpan must be greater than zero (was {options.Limits.MaxLogEntriesPerSpan}).");
+        }
+
+        if (options.Limits.MaxTagsPerSpan <= 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: Limits.MaxTagsPerSpan must be greater than zero (was {options.Limits.MaxTagsPerSpan}).");
+        }
+
+        if (options.Limits.MaxTagValueLength <= 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: Limits.MaxTagValueLength must be greater than zero (was {options.Limits.MaxTagValueLength}).");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }

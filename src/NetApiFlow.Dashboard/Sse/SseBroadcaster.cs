@@ -6,8 +6,8 @@ namespace NetApiFlow.Dashboard.Sse;
 
 /// <summary>
 /// Fans out <see cref="FlowEvent"/>s to every connected <c>GET /stream</c> client, keeping a
-/// circular replay buffer for <c>Last-Event-ID</c> reconnection (tarefa 3.6) and enforcing the
-/// client and per-client queue limits of risco R-10 (tarefa 3.7).
+/// circular replay buffer for <c>Last-Event-ID</c> reconnection and enforcing the
+/// client and per-client queue limits of risco R-10.
 /// </summary>
 internal sealed class SseBroadcaster : IFlowEventListener
 {
@@ -45,7 +45,7 @@ internal sealed class SseBroadcaster : IFlowEventListener
     /// <summary>
     /// Registers a new client, or returns <see langword="null"/> when <see cref="MaxClients"/> is already connected.
     /// Replay events are queued before the client is registered for live broadcast, so a reconnecting
-    /// client can miss an event born in that narrow window but never receives one twice (tarefa 3.6).
+    /// client can miss an event born in that narrow window but never receives one twice.
     /// </summary>
     public SseSubscription? TrySubscribe(long? lastEventId)
     {

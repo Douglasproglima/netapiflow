@@ -70,8 +70,8 @@ export interface EndpointForm {
 
 /**
  * Builds the form for one endpoint: one field per path/query parameter, plus a single JSON body
- * field when the operation declares a requestBody (seção "corpo JSON" da tarefa 4.11 - the body is
- * one raw JSON field, never decomposed into one field per schema property).
+ * field when the operation declares a requestBody: the body is
+ * one raw JSON field, never decomposed into one field per schema property.
  */
 export function buildEndpointForm(
   doc: OpenApiDocument,

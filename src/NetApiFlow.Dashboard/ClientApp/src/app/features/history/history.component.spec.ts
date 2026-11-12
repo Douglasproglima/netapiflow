@@ -1,13 +1,36 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { HistoryComponent } from './history.component';
 import { PagedResult, FlowTraceSummary } from '../../core/models';
 
+@Component({ template: '', selector: 'app-diff-dummy' })
+class DiffDummyComponent {}
+
 const EMPTY_PAGE: PagedResult<FlowTraceSummary> = { items: [], totalCount: 0 };
-const CONFIG = { slowThresholdMicros: 250_000, version: '0.1.0' };
+
+function makeSummary(traceId: string, overrides: Partial<FlowTraceSummary> = {}): FlowTraceSummary {
+  return {
+    traceId,
+    method: 'GET',
+    routeTemplate: '/api/orders/{id}',
+    httpStatus: 200,
+    status: 'Success',
+    startedAt: '2026-01-01T00:00:00.000000Z',
+    durationMicros: 100,
+    truncated: false,
+    ...overrides,
+  };
+}
+const CONFIG = {
+  slowThresholdMicros: 250_000,
+  version: '0.1.0',
+  tailSamplingEnabled: false,
+  successSampleRate: 0.1,
+};
 
 describe('HistoryComponent', () => {
   let httpMock: HttpTestingController;
@@ -18,7 +41,10 @@ describe('HistoryComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'history', component: HistoryComponent }]),
+        provideRouter([
+          { path: 'history', component: HistoryComponent },
+          { path: 'diff', component: DiffDummyComponent },
+        ]),
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
@@ -332,5 +358,110 @@ describe('HistoryComponent', () => {
     expect(invalid.filters().order).toBeUndefined();
     expect(invalid.activeSort()).toBe('startedAt');
     expect(invalid.activeOrder()).toBe('desc');
+  });
+
+  it('shows the tail-sampling banner when the backend reports it enabled', async () => {
+    await mount();
+    flushConfig({ ...CONFIG, tailSamplingEnabled: true, successSampleRate: 0.1 });
+    flushTraces();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    const banner = harness.fixture.nativeElement.querySelector('.history__tail-sampling-banner');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('10%');
+  });
+
+  it('hides the tail-sampling banner when the backend reports it disabled', async () => {
+    await mount();
+    flushConfig({ ...CONFIG, tailSamplingEnabled: false });
+    flushTraces();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(
+      harness.fixture.nativeElement.querySelector('.history__tail-sampling-banner'),
+    ).toBeNull();
+  });
+
+  it('cannot compare with fewer than 2 executions selected', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSelection(makeSummary('t1'));
+
+    expect(component.canCompare()).toBe(false);
+  });
+
+  it('can compare once exactly 2 executions are selected', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSelection(makeSummary('t1'));
+    component.toggleSelection(makeSummary('t2'));
+
+    expect(component.canCompare()).toBe(true);
+    expect(component.selectedTraces().map((trace) => trace.traceId)).toEqual(['t1', 't2']);
+  });
+
+  it('drops the oldest selection (FIFO) when a 3rd execution is picked', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSelection(makeSummary('t1'));
+    component.toggleSelection(makeSummary('t2'));
+    component.toggleSelection(makeSummary('t3'));
+
+    expect(component.selectedTraces().map((trace) => trace.traceId)).toEqual(['t2', 't3']);
+    expect(component.canCompare()).toBe(true);
+  });
+
+  it('unselects an execution clicked a second time', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSelection(makeSummary('t1'));
+    component.toggleSelection(makeSummary('t1'));
+
+    expect(component.selectedTraces()).toEqual([]);
+    expect(component.isSelected('t1')).toBe(false);
+  });
+
+  it('warns (without blocking) when the two selected executions are not the same route', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSelection(makeSummary('t1', { routeTemplate: '/api/orders/{id}' }));
+    component.toggleSelection(makeSummary('t2', { method: 'POST', routeTemplate: '/api/orders' }));
+
+    expect(component.compareRouteMismatch()).toBe(true);
+    expect(component.canCompare()).toBe(true);
+  });
+
+  it('navigates to /diff with both trace ids when comparing', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSelection(makeSummary('t1'));
+    component.toggleSelection(makeSummary('t2'));
+    component.compare();
+    await harness.fixture.whenStable();
+
+    const url = TestBed.inject(Router).url;
+    expect(url).toContain('/diff');
+    expect(url).toContain('a=t1');
+    expect(url).toContain('b=t2');
   });
 });

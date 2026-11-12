@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
@@ -79,14 +81,41 @@ public class FlowMetricsTests
     }
 
     [Fact]
+    public void DroppedTags_IncrementsWhenTagLimitIsReached()
+    {
+        var totals = new ConcurrentDictionary<string, long>();
+        using var listener = CreateListener(totals);
+
+        var wrappedOptions = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(wrappedOptions);
+        using var subject = new FlowActivityListener(recorder, wrappedOptions, NullLoggerFactory.Instance);
+
+        using var root = new Activity("TestRoot");
+        root.Start();
+        var traceId = root.TraceId.ToString();
+        recorder.TryStartTrace(traceId, "GET", "/api/orders", DateTime.UtcNow);
+
+        using (var step = NetApiFlow.Step("Component", "Operation"))
+        {
+            for (var i = 0; i < 25; i++)
+            {
+                step.Tag($"tag-{i}", i.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        totals.GetValueOrDefault("netapiflow.tags.dropped").ShouldBe(5);
+    }
+
+    [Fact]
     public void PersistenceFailures_IncrementsWhenQueueIsFull()
     {
         var totals = new ConcurrentDictionary<string, long>();
         using var listener = CreateListener(totals);
 
         var store = new NoOpTraceStore();
-        var recorder = new FlowRecorder(Options.Create(new NetApiFlowOptions()));
-        using var writer = new PersistenceWriter(recorder, store, NullLogger<PersistenceWriter>.Instance);
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        using var writer = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
 
         for (var i = 0; i < 1001; i++)
         {
@@ -95,6 +124,26 @@ public class FlowMetricsTests
         }
 
         totals.GetValueOrDefault("netapiflow.persistence.failures").ShouldBe(1);
+    }
+
+    [Fact]
+    public void SampledOutTraces_IncrementsWhenTailSamplingDiscardsATrace()
+    {
+        var totals = new ConcurrentDictionary<string, long>();
+        using var listener = CreateListener(totals);
+
+        var store = new NoOpTraceStore();
+        var options = Options.Create(new NetApiFlowOptions
+        {
+            TailSampling = { Enabled = true, SuccessSampleRate = 0.0 },
+        });
+        var recorder = new FlowRecorder(options);
+        using var writer = new PersistenceWriter(recorder, store, options, NullLogger<PersistenceWriter>.Instance);
+
+        recorder.TryStartTrace("fast-success", "GET", "/api/orders", DateTime.UtcNow);
+        recorder.CompleteTrace("fast-success", 200, FlowStatus.Success, null);
+
+        totals.GetValueOrDefault("netapiflow.traces.sampled_out").ShouldBe(1);
     }
 
     private sealed class NoOpTraceStore : ITraceStore
@@ -113,6 +162,12 @@ public class FlowMetricsTests
 
         public ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken) =>
             ValueTask.FromResult(new TraceStats { TotalTraces = 0, ErrorCount = 0, AverageDurationMicros = 0, P95DurationMicros = 0, MaxDurationMicros = 0 });
+
+        public ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<RouteStat>>([]);
+
+        public ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new ArchitectureMap { TotalExecutions = 0, Nodes = [], Edges = [] });
 
         public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken) =>
             ValueTask.FromResult<FlowTraceDetail?>(null);

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\samples\SampleApi.Controllers\SampleApi.Controllers.csproj" />
+    <ProjectReference Include="..\..\samples\SampleApi.MinimalMediatR\SampleApi.MinimalMediatR.csproj" />
+  </ItemGroup>
+
+</Project>

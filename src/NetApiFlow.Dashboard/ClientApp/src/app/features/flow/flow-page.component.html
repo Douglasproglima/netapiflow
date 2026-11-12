@@ -4,21 +4,21 @@
   <div class="flow-workspace__body" [class.flow-workspace__body--drawer]="isActionDrawer()">
     <app-endpoint-form
       class="flow-workspace__action"
-      [class.flow-workspace__action--open]="actionDrawerOpen()"
-      (traceDispatched)="openTrace($event); closeActionDrawer()"
+      [class.flow-workspace__action--open]="actionDrawer.open()"
+      (traceDispatched)="openTrace($event); actionDrawer.close()"
     />
-    @if (isActionDrawer() && actionDrawerOpen()) {
+    @if (isActionDrawer() && actionDrawer.open()) {
       <button
         type="button"
         class="flow-workspace__scrim"
         [attr.aria-label]="'action.closePanel' | t"
-        (click)="closeActionDrawer()"
+        (click)="actionDrawer.close()"
       ></button>
       <button
         type="button"
         class="flow-workspace__action-close"
         [attr.aria-label]="'action.closePanel' | t"
-        (click)="closeActionDrawer()"
+        (click)="actionDrawer.close()"
       >
         <svg
           viewBox="0 0 24 24"
@@ -34,21 +34,35 @@
     }
 
     <div class="flow-workspace__center">
-      @if (isActionDrawer()) {
-        <button type="button" class="flow-workspace__open-action" (click)="toggleActionDrawer()">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.75"
-            width="16"
-            height="16"
-          >
-            <path d="M7 4.5v15l12-7.5Z" />
-          </svg>
-          {{ 'action.openPanel' | t }}
+      <div class="flow-workspace__toolbar">
+        <input
+          #importFileInput
+          type="file"
+          accept=".json"
+          class="flow-workspace__import-input"
+          tabindex="-1"
+          aria-hidden="true"
+          (change)="onImportFileSelected($event)"
+        />
+        <button type="button" mat-stroked-button (click)="importFileInput.click()">
+          {{ 'import.button' | t }}
         </button>
+
+        @if (importedTrace()) {
+          <span class="naf-chip naf-chip--warning">
+            <span class="naf-chip__dot"></span>
+            {{ 'import.badge' | t }}
+          </span>
+          <button type="button" mat-stroked-button (click)="exitImportedTrace()">
+            {{ 'import.exit' | t }}
+          </button>
+        }
+      </div>
+
+      @if (importErrorKey(); as errorKey) {
+        <p class="flow-workspace__import-error" role="alert">{{ errorKey | t }}</p>
       }
+
       @if (trace(); as trace) {
         <div class="flow-workspace__graph-header">
           <h2>{{ 'graph.title' | t }}</h2>
@@ -78,6 +92,14 @@
             </button>
           </span>
           <span class="flow-workspace__graph-header-end">
+            @if (isFollowingLiveRunning()) {
+              <button mat-stroked-button type="button" (click)="toggleLivePause()">
+                {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
+              </button>
+            }
+            <button mat-stroked-button type="button" (click)="exportTrace()">
+              {{ 'export.button' | t }}
+            </button>
             <button mat-stroked-button type="button" (click)="toggleReplay()">
               {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
             </button>
@@ -299,6 +321,7 @@
         [slowThresholdMicros]="slowThresholdMicros() ?? 0"
         [notExecutedCount]="notExecutedCount()"
         (backToSummary)="backToSummary()"
+        (jumpToSpan)="onNodeSelected($event)"
       />
     }
   </div>

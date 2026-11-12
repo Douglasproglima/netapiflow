@@ -17,7 +17,7 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the eleven REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3 (tarefa 3.2),
+/// Verifies the eleven REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3,
 /// against a host running only NetApiFlow's own services (no sample app), seeding
 /// <see cref="InMemoryTraceStore"/> and <see cref="FlowRecorder"/> directly.
 /// </summary>
@@ -392,6 +392,79 @@ public class DashboardApiTests
     }
 
     [Fact]
+    public async Task GetRouteMetrics_ReturnsStatsOrderedByExecutionCountDescending_AndAppliesFromTo()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(CreateTrace("rm-1", "GET", "/api/orders/{id}", FlowStatus.Success, now, 1_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("rm-2", "GET", "/api/orders/{id}", FlowStatus.Success, now, 2_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("rm-3", "GET", "/api/customers", FlowStatus.Success, now.AddDays(-10), 500), [], CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/metrics/routes");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement[0].GetProperty("method").GetString().ShouldBe("GET");
+        doc.RootElement[0].GetProperty("routeTemplate").GetString().ShouldBe("/api/orders/{id}");
+        doc.RootElement[0].GetProperty("executionCount").GetInt32().ShouldBe(2);
+
+        var filteredResponse = await client.GetAsync(
+            $"/flow/api/metrics/routes?from={Uri.EscapeDataString(now.AddHours(-1).ToString("O"))}");
+        using var filteredDoc = JsonDocument.Parse(await filteredResponse.Content.ReadAsStringAsync());
+        var routes = filteredDoc.RootElement.EnumerateArray().Select(e => e.GetProperty("routeTemplate").GetString()).ToList();
+        routes.ShouldContain("/api/orders/{id}");
+        routes.ShouldNotContain("/api/customers");
+    }
+
+    [Fact]
+    public async Task GetArchitecture_WithConditionalPath_ReturnsGraphWithPerStepExecutionCounts()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        await store.SaveAsync(
+            CreateTrace("arch-hit", "GET", "/api/orders/{id}", FlowStatus.Success, DateTime.UtcNow, 1_000),
+            [
+                CreateSpan("arch-hit", "root", null, 0, "OrdersController", "GetOrder", 1_000),
+                CreateSpan("arch-hit", "cache", "root", 1, "OrderCache", "TryGetAsync", 200),
+            ],
+            CancellationToken.None);
+        await store.SaveAsync(
+            CreateTrace("arch-miss", "GET", "/api/orders/{id}", FlowStatus.Success, DateTime.UtcNow, 2_000),
+            [
+                CreateSpan("arch-miss", "root", null, 0, "OrdersController", "GetOrder", 2_000),
+                CreateSpan("arch-miss", "repo", "root", 1, "OrderRepository", "FindAsync", 1_500),
+            ],
+            CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/architecture?method=GET&route=%2Fapi%2Forders%2F%7Bid%7D");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("totalExecutions").GetInt32().ShouldBe(2);
+        var nodes = doc.RootElement.GetProperty("nodes").EnumerateArray().ToList();
+        nodes.ShouldContain(n => n.GetProperty("component").GetString() == "OrdersController" && n.GetProperty("executionCount").GetInt32() == 2);
+        nodes.ShouldContain(n => n.GetProperty("component").GetString() == "OrderCache" && n.GetProperty("executionCount").GetInt32() == 1);
+        nodes.ShouldContain(n => n.GetProperty("component").GetString() == "OrderRepository" && n.GetProperty("executionCount").GetInt32() == 1);
+        var edges = doc.RootElement.GetProperty("edges").EnumerateArray().ToList();
+        edges.ShouldContain(e => e.GetProperty("fromComponent").GetString() == "OrdersController" && e.GetProperty("toComponent").GetString() == "OrderCache" && e.GetProperty("callCount").GetInt32() == 1);
+        edges.ShouldContain(e => e.GetProperty("fromComponent").GetString() == "OrdersController" && e.GetProperty("toComponent").GetString() == "OrderRepository" && e.GetProperty("callCount").GetInt32() == 1);
+    }
+
+    [Fact]
+    public async Task GetArchitecture_MissingRequiredParameter_Returns400()
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/architecture?method=GET");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task GetConfig_ReturnsSlowThresholdConfiguredOnTheHost()
     {
         using var host = CreateHost(configure: options => options.SlowThreshold = TimeSpan.FromMilliseconds(400));
@@ -403,6 +476,26 @@ public class DashboardApiTests
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("slowThresholdMicros").GetInt64().ShouldBe(400_000);
         doc.RootElement.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
+        doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeFalse();
+        doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.1);
+    }
+
+    [Fact]
+    public async Task GetConfig_WithTailSamplingConfigured_ReturnsItsValues()
+    {
+        using var host = CreateHost(configure: options =>
+        {
+            options.TailSampling.Enabled = true;
+            options.TailSampling.SuccessSampleRate = 0.25;
+        });
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeTrue();
+        doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.25);
     }
 
     [Fact]
@@ -432,6 +525,7 @@ public class DashboardApiTests
         (await client.GetAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.DeleteAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/metrics")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync("/flow/api/metrics/routes")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 

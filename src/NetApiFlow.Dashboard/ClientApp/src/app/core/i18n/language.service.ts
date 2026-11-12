@@ -10,7 +10,7 @@ function readStoredLanguage(): SupportedLanguage {
 }
 
 /**
- * Runtime i18n (ADR-0011): a dictionary per language inside the same embedded bundle, swapped by
+ * Runtime i18n: a dictionary per language inside the same embedded bundle, swapped by
  * a signal, no page reload and no per-language `dist/` output.
  */
 @Injectable({ providedIn: 'root' })

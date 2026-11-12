@@ -3,7 +3,7 @@ using Microsoft.Extensions.FileProviders;
 
 namespace NetApiFlow.Dashboard.StaticFiles;
 
-/// <summary>Resolves the Angular client's compiled output, embedded in this assembly (ADR-0005).</summary>
+/// <summary>Resolves the Angular client's compiled output, embedded in this assembly.</summary>
 internal static class DashboardEmbeddedFiles
 {
     private static readonly Assembly Assembly = typeof(DashboardEmbeddedFiles).Assembly;

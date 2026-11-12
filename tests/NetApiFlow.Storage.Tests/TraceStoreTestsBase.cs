@@ -6,7 +6,7 @@ namespace NetApiFlow.Storage.Tests;
 /// <summary>
 /// Exercises the full <see cref="ITraceStore"/> contract against a real database. Each test calls
 /// <see cref="CreateStore"/>, which gives it a fresh, uniquely-prefixed set of tables on the same
-/// shared container (tarefa 6.5): tests never see each other's rows, without dropping tables
+/// shared container: tests never see each other's rows, without dropping tables
 /// between them.
 /// </summary>
 public abstract class TraceStoreTestsBase
@@ -46,6 +46,15 @@ public abstract class TraceStoreTestsBase
         ErrorMessage = status == FlowStatus.Error ? "boom" : null,
         IsErrorOrigin = status == FlowStatus.Error,
         Tags = new Dictionary<string, string> { ["key"] = "value" },
+        Logs =
+        [
+            new LogEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                Level = "Warning",
+                Message = "stock running low",
+            },
+        ],
     };
 
     [Fact]
@@ -66,6 +75,8 @@ public abstract class TraceStoreTestsBase
         detail.Spans[0].SpanId.ShouldBe("span-root");
         detail.Spans[1].ParentSpanId.ShouldBe("span-root");
         detail.Spans[1].Tags["key"].ShouldBe("value");
+        detail.Spans[1].Logs.Single().Message.ShouldBe("stock running low");
+        detail.Spans[1].Logs.Single().Level.ShouldBe("Warning");
     }
 
     [Fact]
@@ -150,6 +161,206 @@ public abstract class TraceStoreTestsBase
         stats.TotalTraces.ShouldBe(2);
         stats.ErrorCount.ShouldBe(1);
         stats.MaxDurationMicros.ShouldBe(3_000);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_AggregatesPerMethodAndRouteTemplate()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-1", method: "GET", route: "/api/orders/{id}", durationMicros: 1_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-2", method: "GET", route: "/api/orders/{id}", durationMicros: 3_000), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-3", method: "GET", route: "/api/orders/{id}", durationMicros: 2_000, status: FlowStatus.Error), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-4", method: "GET", route: "/api/customers", durationMicros: 500), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        stats.Count.ShouldBe(2);
+        var orders = stats.Single(s => s.RouteTemplate == "/api/orders/{id}");
+        orders.Method.ShouldBe("GET");
+        orders.ExecutionCount.ShouldBe(3);
+        orders.ErrorCount.ShouldBe(1);
+        orders.MedianDurationMicros.ShouldBe(2_000);
+        orders.MaxDurationMicros.ShouldBe(3_000);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_SameRouteDifferentMethod_TreatedAsSeparateEntries()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-get", method: "GET", route: "/api/orders/{id}"), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-delete", method: "DELETE", route: "/api/orders/{id}"), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        stats.Count.ShouldBe(2);
+        stats.ShouldContain(s => s.Method == "GET" && s.RouteTemplate == "/api/orders/{id}");
+        stats.ShouldContain(s => s.Method == "DELETE" && s.RouteTemplate == "/api/orders/{id}");
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_SameMethodDifferentCasing_TreatedAsOneEntryWithUppercaseMethod()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-upper", method: "GET", route: "/api/orders/{id}"), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-lower", method: "get", route: "/api/orders/{id}"), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.Method.ShouldBe("GET");
+        stat.ExecutionCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_FiltersByFromAndTo()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeTrace("rs-old", route: "/api/orders", startedAt: now.AddDays(-10)), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-new", route: "/api/orders", startedAt: now), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(
+            new StatsQuery { From = now.AddHours(-1), To = now.AddHours(1) },
+            CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.ExecutionCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_RunningTraceWithNullDuration_CountedButExcludedFromDurationStats()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeRawTrace("rs-running", DateTime.UtcNow, httpStatus: null, durationMicros: null), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.ExecutionCount.ShouldBe(1);
+        stat.MedianDurationMicros.ShouldBe(0);
+        stat.MaxDurationMicros.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_SingleTrace_BuildsSimpleGraphWithCountsOfOne()
+    {
+        var store = CreateStore();
+        var trace = MakeTrace("arch-1", route: "/api/orders/{id}");
+        var spans = new[]
+        {
+            MakeSpan("arch-1", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-1", "service", "root", 1, component: "OrderService", operation: "FindAsync"),
+            MakeSpan("arch-1", "repository", "service", 2, component: "OrderRepository", operation: "FindAsync"),
+        };
+        await store.SaveAsync(trace, spans, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+        map.Nodes.Count.ShouldBe(3);
+        map.Nodes.ShouldAllBe(n => n.ExecutionCount == 1);
+        map.Edges.Count.ShouldBe(2);
+        map.Edges.ShouldAllBe(e => e.CallCount == 1);
+        map.Edges.ShouldContain(e => e.FromComponent == "OrdersController" && e.ToComponent == "OrderService");
+        map.Edges.ShouldContain(e => e.FromComponent == "OrderService" && e.ToComponent == "OrderRepository");
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_TwoExecutionsSamePath_DoublesCountsWithoutDuplicatingNodesOrEdges()
+    {
+        var store = CreateStore();
+        for (var i = 0; i < 2; i++)
+        {
+            var traceId = $"arch-same-{i}";
+            await store.SaveAsync(MakeTrace(traceId, route: "/api/orders/{id}"), new[]
+            {
+                MakeSpan(traceId, "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+                MakeSpan(traceId, "service", "root", 1, component: "OrderService", operation: "FindAsync"),
+            }, CancellationToken.None);
+        }
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(2);
+        map.Nodes.Count.ShouldBe(2);
+        map.Nodes.ShouldAllBe(n => n.ExecutionCount == 2);
+        map.Edges.ShouldHaveSingleItem().CallCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_DifferentPaths_NonSharedStepsHaveCountsBelowTotalExecutions()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("arch-cache-hit", route: "/api/orders/{id}"), new[]
+        {
+            MakeSpan("arch-cache-hit", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-cache-hit", "cache", "root", 1, component: "OrderCache", operation: "TryGetAsync"),
+        }, CancellationToken.None);
+        await store.SaveAsync(MakeTrace("arch-cache-miss", route: "/api/orders/{id}"), new[]
+        {
+            MakeSpan("arch-cache-miss", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-cache-miss", "repo", "root", 1, component: "OrderRepository", operation: "FindAsync"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(2);
+        map.Nodes.ShouldContain(n => n.Component == "OrdersController" && n.ExecutionCount == 2);
+        map.Nodes.ShouldContain(n => n.Component == "OrderCache" && n.ExecutionCount == 1);
+        map.Nodes.ShouldContain(n => n.Component == "OrderRepository" && n.ExecutionCount == 1);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_RouteWithNoExecutionsInWindow_ReturnsZeroAndEmptyLists()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("arch-other-route", route: "/api/orders/{id}"), [], CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/never-called", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(0);
+        map.Nodes.ShouldBeEmpty();
+        map.Edges.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_FiltersByFromAndTo()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeTrace("arch-outside", route: "/api/orders/{id}", startedAt: now.AddDays(-10)), new[]
+        {
+            MakeSpan("arch-outside", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+        }, CancellationToken.None);
+        await store.SaveAsync(MakeTrace("arch-inside", route: "/api/orders/{id}", startedAt: now), new[]
+        {
+            MakeSpan("arch-inside", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync(
+            "GET", "/api/orders/{id}",
+            new StatsQuery { From = now.AddHours(-1), To = now.AddHours(1) },
+            CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_SameStepCalledRepeatedlyInOneTrace_NodeCountsTraceOnceEdgeCountsEveryCall()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("arch-loop", route: "/api/orders/{id}"), new[]
+        {
+            MakeSpan("arch-loop", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+            MakeSpan("arch-loop", "r1", "root", 1, component: "OrderRepository", operation: "FindAsync"),
+            MakeSpan("arch-loop", "r2", "root", 2, component: "OrderRepository", operation: "FindAsync"),
+            MakeSpan("arch-loop", "r3", "root", 3, component: "OrderRepository", operation: "FindAsync"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.Nodes.ShouldContain(n => n.Component == "OrderRepository" && n.ExecutionCount == 1);
+        map.Edges.ShouldContain(e => e.FromComponent == "OrdersController" && e.ToComponent == "OrderRepository" && e.CallCount == 3);
     }
 
     [Fact]

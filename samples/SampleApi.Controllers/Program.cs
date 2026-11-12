@@ -4,19 +4,30 @@ using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Marking;
+using NetApiFlow.Mcp;
+using NetApiFlow.Mcp.Endpoints;
+using NetApiFlow.OpenTelemetry;
+using SampleApi.Controllers;
 using SampleApi.Controllers.Application;
 using SampleApi.Controllers.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 #if NET10_0_OR_GREATER
 builder.Services.AddOpenApi();
 #endif
 
 builder.Services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
 builder.Services.AddNetApiFlowDashboard();
+builder.Services.AddNetApiFlowMcp();
 builder.Services.AddNetApiFlowEntityFrameworkCore();
+
+if (builder.Configuration.GetValue<bool>("OtlpExport:Enabled"))
+{
+    builder.Services.AddNetApiFlowOtlpExport(o => o.IncludeHttpClientSource = true);
+}
 
 builder.Services.AddDbContext<SampleDbContext>((sp, options) =>
 {
@@ -35,6 +46,7 @@ app.UseExceptionHandler(exceptionApp => exceptionApp.Run(
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         return Task.CompletedTask;
     }));
+app.UseMiddleware<DemoDelayMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -56,5 +68,6 @@ app.MapControllers();
 app.MapOpenApi();
 #endif
 app.UseNetApiFlowDashboard();
+app.UseNetApiFlowMcp();
 
 app.Run();

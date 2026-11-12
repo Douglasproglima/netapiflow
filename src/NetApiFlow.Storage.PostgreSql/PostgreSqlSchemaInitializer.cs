@@ -2,7 +2,7 @@ using Npgsql;
 
 namespace NetApiFlow.Storage.PostgreSql;
 
-/// <summary>Creates the schema (tarefa 6.1) on first use, equivalent to <c>schema.sql</c>.</summary>
+/// <summary>Creates the schema on first use, equivalent to <c>schema.sql</c>.</summary>
 internal static class PostgreSqlSchemaInitializer
 {
     public static async Task EnsureCreatedAsync(NpgsqlConnection connection, string tracesTable, string spansTable, CancellationToken cancellationToken)
@@ -44,6 +44,7 @@ internal static class PostgreSqlSchemaInitializer
                 error_message text NULL,
                 is_error_origin boolean NOT NULL,
                 tags jsonb NOT NULL,
+                logs jsonb NOT NULL,
                 PRIMARY KEY (trace_id, span_id)
             );
 

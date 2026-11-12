@@ -44,6 +44,15 @@ export interface FlowSpan {
   errorMessage: string | null;
   isErrorOrigin: boolean;
   tags: Record<string, string>;
+  logs: LogEntry[];
+}
+
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  exceptionType: string | null;
+  exceptionMessage: string | null;
 }
 
 /** Shape shared by GET /traces/{traceId} and the SSE "trace" key: a trace without its spans. */
@@ -111,10 +120,12 @@ export interface MetricsSummary {
   maxDurationMicros: number;
 }
 
-/** GET /config (D-24, `version` added by D-33). */
+/** GET /config (D-24, `version` added by D-33, tail sampling fields added by D-82). */
 export interface DashboardConfig {
   slowThresholdMicros: number;
   version: string;
+  tailSamplingEnabled: boolean;
+  successSampleRate: number;
 }
 
 /** GET /metrics/components list item. */
@@ -129,15 +140,51 @@ export interface ComponentStat {
   maxDurationMicros: number;
 }
 
+/** GET /metrics/routes list item. */
+export interface RouteStat {
+  method: string;
+  routeTemplate: string;
+  executionCount: number;
+  errorCount: number;
+  medianDurationMicros: number;
+  averageDurationMicros: number;
+  p95DurationMicros: number;
+  maxDurationMicros: number;
+}
+
+/** GET /architecture node: a distinct component/operation step observed while executing a route. */
+export interface ArchitectureNode {
+  component: string;
+  operation: string;
+  type: ComponentType;
+  executionCount: number;
+}
+
+/** GET /architecture edge: a distinct parent-child relationship observed between two steps. */
+export interface ArchitectureEdge {
+  fromComponent: string;
+  fromOperation: string;
+  toComponent: string;
+  toOperation: string;
+  callCount: number;
+}
+
+/** GET /architecture: static graph of a route, built from every execution within the queried window. */
+export interface ArchitectureMap {
+  totalExecutions: number;
+  nodes: ArchitectureNode[];
+  edges: ArchitectureEdge[];
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
 }
 
-/** Sort field accepted by GET /traces (D-41, tarefa 7.9). */
+/** Sort field accepted by GET /traces (D-41). */
 export type TraceSortField = 'startedAt' | 'duration' | 'httpStatus' | 'method' | 'route';
 
-/** Sort direction accepted by GET /traces (D-41, tarefa 7.9). */
+/** Sort direction accepted by GET /traces (D-41). */
 export type SortDirection = 'asc' | 'desc';
 
 /** Query string accepted by GET /traces. */
@@ -162,7 +209,7 @@ export interface StatsQuery {
 }
 
 /**
- * Minimal OpenAPI 3.x subset read by the Runner (tarefa 4.11): only the fields needed to list
+ * Minimal OpenAPI 3.x subset read by the Runner: only the fields needed to list
  * endpoints and build a request form, not a full spec of the format.
  */
 export interface OpenApiParameter {

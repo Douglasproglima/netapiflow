@@ -40,4 +40,7 @@ public sealed class OrderService(IOrderRepository repository, IServiceScopeFacto
         var results = await Task.WhenAll(tasks);
         return [.. results.Where(o => o is not null).Select(o => o!)];
     }
+
+    public Task<IReadOnlyList<Order>> GetManySequentiallyAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken) =>
+        repository.FindManyAsync(ids, cancellationToken);
 }

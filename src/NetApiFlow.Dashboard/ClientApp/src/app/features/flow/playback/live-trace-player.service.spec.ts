@@ -39,6 +39,7 @@ function makeSpan(spanId: string, overrides: Partial<FlowSpan> = {}): FlowSpan {
     errorMessage: null,
     isErrorOrigin: false,
     tags: {},
+    logs: [],
     ...overrides,
   };
 }
@@ -183,5 +184,56 @@ describe('LiveTracePlayerService', () => {
     service.stop();
 
     expect(service.trace()).toBeNull();
+  });
+
+  describe('pause/resume', () => {
+    it('buffers incoming events while paused, leaving the trace signal untouched', () => {
+      service.track('t1');
+      getTraceCalls[0].next(makeTrace([makeSpan('root')]));
+      getTraceCalls[0].complete();
+
+      service.pause();
+      events.next(spanEvent(2, makeSpan('s2', { status: 'Success', durationMicros: 100 })));
+
+      expect(service.trace()?.spans).toHaveLength(1);
+      expect(service.trace()?.spans.find((s) => s.spanId === 's2')).toBeUndefined();
+    });
+
+    it('applies the whole backlog in order as soon as it resumes', () => {
+      service.track('t1');
+      getTraceCalls[0].next(makeTrace([makeSpan('root')]));
+      getTraceCalls[0].complete();
+
+      service.pause();
+      const older = spanEvent(2, makeSpan('s2', { status: 'Running', durationMicros: null }));
+      const newer = spanEvent(5, makeSpan('s2', { status: 'Success', durationMicros: 100 }));
+      events.next(newer);
+      events.next(older);
+
+      service.resume();
+
+      const span = service.trace()?.spans.find((s) => s.spanId === 's2');
+      expect(span?.status).toBe('Success');
+      expect(span?.durationMicros).toBe(100);
+    });
+
+    it('does not flush the backlog on a reconnect baseline reload while still paused', () => {
+      service.track('t1');
+      getTraceCalls[0].next(makeTrace([makeSpan('root')]));
+      getTraceCalls[0].complete();
+
+      service.pause();
+      events.next(spanEvent(2, makeSpan('s2', { status: 'Success' })));
+
+      reconnected.next();
+      getTraceCalls[1].next(makeTrace([makeSpan('root')]));
+      getTraceCalls[1].complete();
+
+      expect(service.trace()?.spans.find((s) => s.spanId === 's2')).toBeUndefined();
+
+      service.resume();
+
+      expect(service.trace()?.spans.find((s) => s.spanId === 's2')?.status).toBe('Success');
+    });
   });
 });

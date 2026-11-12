@@ -21,6 +21,7 @@ internal sealed class FlowRecorder
     private readonly NetApiFlowOptions _options;
     private long _droppedTraceCount;
     private long _droppedSpanCount;
+    private long _droppedLogCount;
 
     public FlowRecorder(IOptions<NetApiFlowOptions> options)
     {
@@ -32,6 +33,8 @@ internal sealed class FlowRecorder
     public long DroppedTraceCount => Interlocked.Read(ref _droppedTraceCount);
 
     public long DroppedSpanCount => Interlocked.Read(ref _droppedSpanCount);
+
+    public long DroppedLogCount => Interlocked.Read(ref _droppedLogCount);
 
     /// <summary>Raised when a trace is opened.</summary>
     public event Action<FlowTrace>? TraceStarted;
@@ -182,6 +185,23 @@ internal sealed class FlowRecorder
         {
             SpanCompleted?.Invoke(span);
         }
+    }
+
+    /// <summary>Correlates a log entry to a span, dropping and counting it once <see cref="LimitsOptions.MaxLogEntriesPerSpan"/> is reached.</summary>
+    public void AddLogEntry(string traceId, string spanId, LogEntry entry)
+    {
+        if (!_activeTraces.TryGetValue(traceId, out var trace))
+        {
+            return;
+        }
+
+        if (trace.TryAddLogEntry(spanId, entry, _options.Limits.MaxLogEntriesPerSpan))
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref _droppedLogCount);
+        FlowMetrics.DroppedLogs.Add(1);
     }
 
     public ActiveTrace? GetActiveTrace(string traceId) =>

@@ -1,4 +1,10 @@
 <section class="history">
+  @if (tailSamplingEnabled()) {
+    <p class="naf-banner history__tail-sampling-banner">
+      {{ 'history.tailSampling.banner' | t: { rate: tailSamplingRateLabel() } }}
+    </p>
+  }
+
   <button
     type="button"
     class="naf-btn history__filter-toggle"
@@ -277,25 +283,43 @@
           {{ 'history.results.count' | t: { n: page.totalCount } }}
         </span>
       }
-      <button
-        type="button"
-        class="naf-icon-btn history__card-header-end"
-        [attr.aria-label]="'history.results.refresh' | t"
-        (click)="retry()"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          width="16"
-          height="16"
+      <div class="history__card-header-end">
+        @if (selectedTraces().length > 0) {
+          <span class="naf-mono history__muted">
+            {{ 'history.compare.count' | t: { count: selectedTraces().length } }}
+          </span>
+          @if (compareRouteMismatch()) {
+            <span class="naf-banner">{{ 'history.compare.routeMismatch' | t }}</span>
+          }
+          <button
+            type="button"
+            class="naf-btn naf-btn--primary"
+            [disabled]="!canCompare()"
+            (click)="compare()"
+          >
+            {{ 'history.compare.action' | t }}
+          </button>
+        }
+        <button
+          type="button"
+          class="naf-icon-btn"
+          [attr.aria-label]="'history.results.refresh' | t"
+          (click)="retry()"
         >
-          <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
-          <path d="M19.5 4.5v4h-4" />
-        </svg>
-      </button>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            width="16"
+            height="16"
+          >
+            <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
+            <path d="M19.5 4.5v4h-4" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     @switch (viewState()) {
@@ -443,6 +467,7 @@
           <table class="history__table">
             <thead>
               <tr>
+                <th class="history__col-select"></th>
                 <th class="history__col-status" [attr.aria-sort]="sortAriaSort('httpStatus')">
                   <button
                     type="button"
@@ -620,6 +645,14 @@
             <tbody>
               @for (trace of result()!.items; track trace.traceId) {
                 <tr class="history__row">
+                  <td class="history__col-select">
+                    <input
+                      type="checkbox"
+                      [attr.aria-label]="'history.compare.selectAria' | t"
+                      [checked]="isSelected(trace.traceId)"
+                      (change)="toggleSelection(trace)"
+                    />
+                  </td>
                   <td class="history__col-status">
                     <span class="history__status-pill" [class]="rowStatusTintClass(trace)">
                       <img

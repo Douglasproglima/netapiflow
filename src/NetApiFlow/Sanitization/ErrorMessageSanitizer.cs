@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace NetApiFlow.Sanitization;
 
 /// <summary>
-/// Truncates and sanitizes error messages before they enter the domain model (ADR-0007, risco R-07).
+/// Truncates and sanitizes error messages before they enter the domain model (risco R-07).
 /// Every pattern uses <see cref="RegexOptions.NonBacktracking"/>, which runs in linear time regardless
 /// of input, so no pattern here is vulnerable to catastrophic backtracking.
 /// </summary>

@@ -219,13 +219,25 @@ export class HistoryComponent {
   );
 
   readonly slowThresholdMicros = signal<number | null>(null);
+  readonly tailSamplingEnabled = signal(false);
+  readonly successSampleRate = signal(0);
   readonly filtersOpen = signal(false);
 
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly result = signal<PagedResult<FlowTraceSummary> | null>(null);
 
+  /** At most 2, in selection order: a 3rd pick drops the oldest (FIFO), same as a product compare picker. */
+  readonly selectedTraces = signal<FlowTraceSummary[]>([]);
+  readonly canCompare = computed(() => this.selectedTraces().length === 2);
+  readonly compareRouteMismatch = computed(() => {
+    const [a, b] = this.selectedTraces();
+    return !!a && !!b && (a.method !== b.method || a.routeTemplate !== b.routeTemplate);
+  });
+
   readonly activeFilterCount = computed(() => countActiveFilters(this.filters()));
+
+  readonly tailSamplingRateLabel = computed(() => `${Math.round(this.successSampleRate() * 100)}%`);
 
   readonly viewState = computed<ViewState>(() => {
     if (this.loading()) {
@@ -295,6 +307,8 @@ export class HistoryComponent {
 
     this.api.getConfig().subscribe((config) => {
       this.slowThresholdMicros.set(config.slowThresholdMicros);
+      this.tailSamplingEnabled.set(config.tailSamplingEnabled);
+      this.successSampleRate.set(config.successSampleRate);
     });
 
     effect(() => {
@@ -507,6 +521,30 @@ export class HistoryComponent {
   copyTraceId(traceId: string, event: Event): void {
     event.stopPropagation();
     void navigator.clipboard?.writeText(traceId);
+  }
+
+  isSelected(traceId: string): boolean {
+    return this.selectedTraces().some((trace) => trace.traceId === traceId);
+  }
+
+  toggleSelection(trace: FlowTraceSummary): void {
+    const current = this.selectedTraces();
+    if (this.isSelected(trace.traceId)) {
+      this.selectedTraces.set(current.filter((selected) => selected.traceId !== trace.traceId));
+      return;
+    }
+
+    const next = [...current, trace];
+    this.selectedTraces.set(next.length > 2 ? next.slice(1) : next);
+  }
+
+  compare(): void {
+    const [a, b] = this.selectedTraces();
+    if (!a || !b) {
+      return;
+    }
+
+    void this.router.navigate(['/diff'], { queryParams: { a: a.traceId, b: b.traceId } });
   }
 
   private patchFilters(patch: Partial<TraceQuery>): void {

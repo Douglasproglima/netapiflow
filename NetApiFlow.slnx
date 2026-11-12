@@ -6,7 +6,9 @@
   <Folder Name="/src/">
     <Project Path="src/NetApiFlow.Dashboard/NetApiFlow.Dashboard.csproj" />
     <Project Path="src/NetApiFlow.EntityFrameworkCore/NetApiFlow.EntityFrameworkCore.csproj" />
+    <Project Path="src/NetApiFlow.Mcp/NetApiFlow.Mcp.csproj" />
     <Project Path="src/NetApiFlow.MediatR/NetApiFlow.MediatR.csproj" />
+    <Project Path="src/NetApiFlow.OpenTelemetry/NetApiFlow.OpenTelemetry.csproj" />
     <Project Path="src/NetApiFlow.Storage.PostgreSql/NetApiFlow.Storage.PostgreSql.csproj" />
     <Project Path="src/NetApiFlow.Storage.SqlServer/NetApiFlow.Storage.SqlServer.csproj" />
     <Project Path="src/NetApiFlow/NetApiFlow.csproj" />
@@ -14,6 +16,10 @@
   <Folder Name="/tests/">
     <Project Path="tests/NetApiFlow.Benchmarks/NetApiFlow.Benchmarks.csproj" />
     <Project Path="tests/NetApiFlow.IntegrationTests/NetApiFlow.IntegrationTests.csproj" />
+    <Project Path="tests/NetApiFlow.Mcp.Tests/NetApiFlow.Mcp.Tests.csproj" />
+    <Project Path="tests/NetApiFlow.Npgsql.IntegrationTests/NetApiFlow.Npgsql.IntegrationTests.csproj" />
+    <Project Path="tests/NetApiFlow.OpenTelemetry.Tests/NetApiFlow.OpenTelemetry.Tests.csproj" />
+    <Project Path="tests/NetApiFlow.PrePipelineInteropSpike/NetApiFlow.PrePipelineInteropSpike.csproj" />
     <Project Path="tests/NetApiFlow.Storage.Tests/NetApiFlow.Storage.Tests.csproj" />
     <Project Path="tests/NetApiFlow.Tests/NetApiFlow.Tests.csproj" />
   </Folder>

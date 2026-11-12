@@ -25,6 +25,7 @@ function spanStarted(eventId: number): FlowEvent {
       errorMessage: null,
       isErrorOrigin: false,
       tags: {},
+      logs: [],
     },
   };
 }

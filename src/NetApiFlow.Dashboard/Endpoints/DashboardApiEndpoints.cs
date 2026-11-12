@@ -13,7 +13,7 @@ using NetApiFlow.Routing;
 
 namespace NetApiFlow.Dashboard.Endpoints;
 
-/// <summary>Maps the eleven REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
+/// <summary>Maps the twelve REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
 internal static class DashboardApiEndpoints
 {
     public static RouteGroupBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
@@ -33,6 +33,8 @@ internal static class DashboardApiEndpoints
         group.MapGet("/endpoints", GetEndpoints);
         group.MapGet("/metrics", GetMetrics);
         group.MapGet("/metrics/components", GetComponentMetrics);
+        group.MapGet("/metrics/routes", GetRouteMetrics);
+        group.MapGet("/architecture", GetArchitecture);
         group.MapGet("/config", GetConfig);
         group.MapStream();
 
@@ -263,12 +265,32 @@ internal static class DashboardApiEndpoints
         return Results.Json(ordered, DashboardJsonOptions.Rest);
     }
 
+    private static async Task<IResult> GetRouteMetrics(DateTime? from, DateTime? to, ITraceStore store, CancellationToken cancellationToken)
+    {
+        var stats = await store.GetRouteStatsAsync(new StatsQuery { From = from, To = to }, cancellationToken);
+        var ordered = stats.OrderByDescending(s => s.ExecutionCount).ToList();
+        return Results.Json(ordered, DashboardJsonOptions.Rest);
+    }
+
+    private static async Task<IResult> GetArchitecture(string? method, string? route, DateTime? from, DateTime? to, ITraceStore store, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(route))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var map = await store.GetArchitectureMapAsync(method, route, new StatsQuery { From = from, To = to }, cancellationToken);
+        return Results.Json(map, DashboardJsonOptions.Rest);
+    }
+
     private static IResult GetConfig(IOptions<NetApiFlowOptions> options)
     {
         var config = new DashboardConfig
         {
             SlowThresholdMicros = (long)options.Value.SlowThreshold.TotalMicroseconds,
             Version = GetCoreVersion(),
+            TailSamplingEnabled = options.Value.TailSampling.Enabled,
+            SuccessSampleRate = options.Value.TailSampling.SuccessSampleRate,
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);

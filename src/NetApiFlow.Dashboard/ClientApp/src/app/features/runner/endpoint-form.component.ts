@@ -1,5 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { OpenApiDocument } from '../../core/models';
@@ -13,10 +15,29 @@ import {
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
 
+type ActionTab = 'custom' | 'scenarios';
+
+interface Scenario {
+  key: 'success' | 'slow' | 'error' | 'sequential';
+  method: string;
+  path: string;
+}
+
+const SCENARIOS: readonly Scenario[] = [
+  { key: 'success', method: 'GET', path: '/api/orders/1' },
+  { key: 'slow', method: 'GET', path: '/api/orders/1/slow' },
+  { key: 'error', method: 'GET', path: '/api/orders/2/confirm' },
+  { key: 'sequential', method: 'GET', path: '/api/orders/sequential?ids=1&ids=2&ids=3' },
+];
+
+const DELAY_OPTIONS_MS: readonly number[] = [0, 250, 1000, 3000];
+
+const DEMO_DELAY_HEADER_NAME = 'X-NetApiFlow-Demo-Delay-Ms';
+
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
  * path/query parameters and JSON body, and dispatch it. Shared by the `/runner` route and the
- * `/flow` workspace's action panel (ADR-0010, guide seção 6.3): it only emits the dispatched
+ * `/flow` workspace's action panel (guide seção 6.3): it only emits the dispatched
  * trace id, leaving what to do with it (track it inline, navigate to it) to whichever page embeds
  * it. `openApiUrl` is root-relative on purpose: the host's OpenAPI document and the endpoints it
  * describes live at the application root, which is unrelated to wherever the dashboard itself is
@@ -83,6 +104,11 @@ export class EndpointFormComponent {
   readonly sendError = signal<TranslationKey | null>(null);
   readonly lastTraceId = signal<string | null>(null);
 
+  readonly activeTab = signal<ActionTab>('custom');
+  readonly scenarios = SCENARIOS;
+  readonly delayOptionsMs = DELAY_OPTIONS_MS;
+  readonly selectedDelayMs = signal(0);
+
   constructor() {
     this.api.loadOpenApiDocument(this.openApiUrl()).subscribe({
       next: (doc) => {
@@ -124,6 +150,24 @@ export class EndpointFormComponent {
     return httpMethodTagClass(method);
   }
 
+  setActiveTab(tab: ActionTab): void {
+    this.activeTab.set(tab);
+    this.sendError.set(null);
+    this.lastTraceId.set(null);
+  }
+
+  scenarioLabelKey(scenario: Scenario): TranslationKey {
+    return `action.scenario.${scenario.key}.label`;
+  }
+
+  scenarioDescriptionKey(scenario: Scenario): TranslationKey {
+    return `action.scenario.${scenario.key}.description`;
+  }
+
+  selectDelay(delayMs: number): void {
+    this.selectedDelayMs.set(delayMs);
+  }
+
   send(): void {
     const form = this.form();
     if (!form) {
@@ -151,22 +195,36 @@ export class EndpointFormComponent {
     }
 
     const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
+    this.dispatch(this.api.callEndpoint(form.method, fullPath, body));
+  }
 
+  sendScenario(scenario: Scenario): void {
+    const delayMs = this.selectedDelayMs();
+    const headers = delayMs > 0 ? { [DEMO_DELAY_HEADER_NAME]: String(delayMs) } : undefined;
+    this.dispatch(this.api.callEndpoint(scenario.method, scenario.path, undefined, headers));
+  }
+
+  private dispatch(request: Observable<HttpResponse<unknown>>): void {
     this.sending.set(true);
     this.sendError.set(null);
-    this.api.callEndpoint(form.method, fullPath, body).subscribe({
-      next: (response) => {
-        this.sending.set(false);
-        const traceId = response.headers.get('X-NetApiFlow-TraceId');
-        this.lastTraceId.set(traceId);
-        if (traceId) {
-          this.traceDispatched.emit(traceId);
+    request.subscribe({
+      next: (response) => this.onDispatched(response.headers.get('X-NetApiFlow-TraceId')),
+      error: (error: HttpErrorResponse) => {
+        // A non-2xx response still carries the trace id header, so the Error scenario stays followable.
+        const traceId = error.headers.get('X-NetApiFlow-TraceId');
+        if (!traceId) {
+          this.sendError.set('action.requestFailed');
         }
-      },
-      error: () => {
-        this.sending.set(false);
-        this.sendError.set('action.requestFailed');
+        this.onDispatched(traceId);
       },
     });
+  }
+
+  private onDispatched(traceId: string | null): void {
+    this.sending.set(false);
+    this.lastTraceId.set(traceId);
+    if (traceId) {
+      this.traceDispatched.emit(traceId);
+    }
   }
 }

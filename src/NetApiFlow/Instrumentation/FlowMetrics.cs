@@ -20,4 +20,16 @@ internal static class FlowMetrics
     /// <summary>Traces that failed to persist, because the persistence queue was full or the store threw.</summary>
     public static readonly Counter<long> PersistenceFailures =
         Meter.CreateCounter<long>("netapiflow.persistence.failures", description: "Traces that failed to persist.");
+
+    /// <summary>Traces discarded by tail-based sampling (D-82) before reaching the persistence queue.</summary>
+    public static readonly Counter<long> SampledOutTraces =
+        Meter.CreateCounter<long>("netapiflow.traces.sampled_out", description: "Traces discarded by tail-based sampling before reaching the persistence queue.");
+
+    /// <summary>Log entries discarded because the per-span log limit was reached (ADR-0017).</summary>
+    public static readonly Counter<long> DroppedLogs =
+        Meter.CreateCounter<long>("netapiflow.logs.dropped", description: "Log entries discarded because the per-span log limit was reached.");
+
+    /// <summary>Tags discarded because the per-span tag limit was reached.</summary>
+    public static readonly Counter<long> DroppedTags =
+        Meter.CreateCounter<long>("netapiflow.tags.dropped", description: "Tags discarded because the per-span tag limit was reached.");
 }

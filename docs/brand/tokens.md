@@ -41,6 +41,25 @@ comunicação que precise das cores, tipografia ou espaçamento oficiais do proj
 | Inter | Interface, corpo | Regular 400, Medium 500, SemiBold 600 |
 | JetBrains Mono | Métricas, código, HTTP | Regular 400, Medium 500, tabular nums |
 
+### Escala aplicada ao dashboard
+
+Única fonte da escala por papel (tamanho/altura de linha/peso): `docs/design/flow-workspace/guide.md`
+só referencia esta tabela, não a duplica, achado da Fase 11 (`generate-design-md.js` dependia das
+duas fontes, risco de divergência silenciosa). Escala densa, própria de dashboard:
+
+| Papel | Família | Tamanho / altura | Peso |
+|---|---|---|---|
+| Título da página (topbar) | Plus Jakarta Sans | 18 / 24 | 700 |
+| Valor de métrica | Plus Jakarta Sans | 24 / 28, `tabular-nums` | 700 |
+| Título de card | Inter | 14 / 20 | 600 |
+| Corpo, itens de lista | Inter | 13 / 20 | 400 e 500 |
+| Rótulo, legenda | Inter | 12 / 16 | 500 |
+| Métrica pequena, duração, rota, trace id, verbo | JetBrains Mono | 12 / 16, `tabular-nums` | 400 e 500 |
+| Badge de verbo | JetBrains Mono | 11 / 16, `letter-spacing: .04em` | 600 |
+
+Nenhum texto do dashboard fica abaixo de 11px. O texto dentro do nó do grafo fica no mínimo em
+12px **no zoom 100%**.
+
 ## Espaçamento (base 4)
 
 `space-1` 4px · `space-2` 8px · `space-3` 12px · `space-4` 16px · `space-6` 24px · `space-8` 32px ·
@@ -50,6 +69,30 @@ comunicação que precise das cores, tipografia ou espaçamento oficiais do proj
 
 `radius-sm` 8px (controles) · `radius-md` 12px (cards pequenos) · `radius-lg` 18px (cards) ·
 `pill` 999px (status).
+
+## Cores de texto sobre fundo tingido (on-tint)
+
+Achado do Impeccable (detector de qualidade visual, ver ADR-0014), 2026-11-04: banner, chip e
+etiqueta usam a cor semântica base (`--naf-danger`, `--naf-warning`, `--naf-success`) como texto
+sobre o próprio fundo tingido dela (`--naf-danger-tint` etc.), e esse par cai abaixo de 4,5:1 em
+alguns casos, mesmo a cor base passando em AA sobre fundo liso. Corrigido com um token de texto
+próprio para esse contexto, calculado contra o fundo tingido real (WCAG 2.1, fórmula de
+luminância relativa), não contra o fundo liso da tabela acima.
+
+| Token | Tema | Hex | Fundo tingido testado | Razão |
+|---|---|---|---|---|
+| `--naf-danger-on-tint` | Obsidian (escuro) | `#F87171` | `#2D1C26` (banner "Origem do erro") | 5,81:1 |
+| `--naf-danger-on-tint` | Obsidian (escuro) | `#F87171` | `#2B1A22` (etiqueta DELETE) | 5,96:1 |
+| `--naf-warning-on-tint` | Stage Light (claro) | `#92400E` | `#EBE5E1` (chip de lentidão) | 5,68:1 |
+| `--naf-warning-on-tint` | Stage Light (claro) | `#92400E` | `#EFE8E3` (etiqueta PUT) | 5,85:1 |
+| `--naf-success-on-tint` | Stage Light (claro) | `#065F46` | `#D9E9E9` (etiqueta POST) | 6,14:1 |
+| `--naf-success-on-tint` | Stage Light (claro) | `#065F46` | `#DDEBEB` (etiqueta POST, variante) | 6,28:1 |
+
+Pares não listados aqui (`--naf-danger-on-tint` no tema claro, `--naf-warning-on-tint` e
+`--naf-success-on-tint` no tema escuro) não foram reportados como falha pelo detector: o token
+`-on-tint` reaproveita a cor base (`--naf-danger-on-tint: var(--naf-danger)` etc.) até uma
+medição apontar o contrário. Qualquer componente novo que ponha texto semântico sobre um fundo
+tingido usa o token `-on-tint`, nunca a cor base diretamente.
 
 ## Estados de nó
 

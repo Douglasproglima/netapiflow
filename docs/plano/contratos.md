@@ -23,6 +23,13 @@ public static class NetApiFlow
     /// <summary>Trace id of the request currently executing, or <c>null</c> when tracing is
     /// disabled or there is no ambient trace.</summary>
     public static string? CurrentTraceId { get; }
+
+    /// <summary>A trace that finished recently, read straight from memory, without waiting for
+    /// the persistence queue. Built for integration tests asserting on the trace their own
+    /// request just produced (D-58 item 6): read <c>X-NetApiFlow-TraceId</c> off the response,
+    /// then call this. Only looks at the in-memory buffer, never falls back to
+    /// <see cref="ITraceStore"/>: <c>null</c> if the trace already aged out of it.</summary>
+    public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId);
 }
 
 public readonly struct FlowStep : IDisposable
@@ -30,6 +37,17 @@ public readonly struct FlowStep : IDisposable
     public void Tag(string key, string value);
     public void MarkError(Exception exception);
     public void Dispose();
+}
+
+/// <summary>A single <c>ILogger</c> call correlated to the span active when it happened (ADR-0017).
+/// Never populates <c>FlowSpan.Tags</c>: a separate field, its own opt-in, its own sanitization.</summary>
+public sealed record LogEntry
+{
+    public required DateTime Timestamp { get; init; }
+    public required string Level { get; init; }
+    public required string Message { get; init; }
+    public string? ExceptionType { get; init; }
+    public string? ExceptionMessage { get; init; }
 }
 
 public enum ComponentType { Endpoint, Controller, UseCase, Service, Repository, Database, Http, Custom }
@@ -47,24 +65,75 @@ public interface ITraceStore
     ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken);
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
 public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
-public interface IDashboardAuthorizationFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
+
+/// <summary>Shared gate for every diagnostic surface (Dashboard, MCP, any future one). ADR-0015.</summary>
+public interface IFlowAccessFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
 
 public sealed class NetApiFlowOptions
 {
     public bool Enabled { get; set; } = true;
     public TimeSpan SlowThreshold { get; set; } = TimeSpan.FromMilliseconds(250);
     public bool CaptureSqlText { get; set; }
+    public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
+
+    /// <summary>Captures Authorization and Resource filter stages (MVC Controllers only) as
+    /// steps, via <c>DiagnosticListener</c>/native filter (ADR-0019). Default: <see langword="false"/>.</summary>
+    public bool CapturePrePipelineSteps { get; set; }
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
+    public TailSamplingOptions TailSampling { get; }
+    public LogCorrelationOptions LogCorrelation { get; }
     public IReadOnlyList<string> IncludePatterns { get; }
     public IReadOnlyList<string> ExcludePatterns { get; }
     public NetApiFlowOptions IncludePaths(params string[] patterns);
     public NetApiFlowOptions ExcludePaths(params string[] patterns);
+}
+
+/// <summary>Tail-based sampling of persisted traces (D-82). Default: disabled, every completed
+/// trace is persisted, same behavior as before this option existed.</summary>
+public sealed class TailSamplingOptions
+{
+    /// <summary>Enables tail-based sampling. Default: <see langword="false"/>.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Fraction (0.0-1.0) of successful, non-slow traces to persist. A trace with
+    /// <see cref="FlowStatus.Error"/> or a duration at or above <see cref="NetApiFlowOptions.SlowThreshold"/>
+    /// is always persisted, regardless of this value. Default: <c>0.1</c> (keep 10%).</summary>
+    public double SuccessSampleRate { get; set; } = 0.1;
+}
+
+/// <summary>Log and exception correlation per step, via an internal <c>ILoggerProvider</c> (ADR-0017).
+/// Default: disabled.</summary>
+public sealed class LogCorrelationOptions
+{
+    /// <summary>Enables log correlation. Default: <see langword="false"/>.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Minimum <see cref="Microsoft.Extensions.Logging.LogLevel"/> captured. Default:
+    /// <see cref="Microsoft.Extensions.Logging.LogLevel.Warning"/>.</summary>
+    public LogLevel MinLevel { get; set; } = LogLevel.Warning;
+}
+
+/// <summary>Ecosystem <c>ActivitySource</c> instances NetApiFlow also listens to (ADR-0012). Opt-in, "None" by default.</summary>
+[Flags]
+public enum ExternalActivitySource
+{
+    None = 0,
+
+    /// <summary>Outbound calls from <see cref="System.Net.Http.HttpClient"/>, mapped to a <see cref="ComponentType.Http"/> span.</summary>
+    HttpClient = 1,
+
+    /// <summary>SQL commands from Npgsql's own <c>ActivitySource</c> (ADR-0018), mapped to a
+    /// <see cref="ComponentType.Database"/> span. Deduplicated against <c>NetApiFlow.EntityFrameworkCore</c>'s
+    /// own span for the same command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.</summary>
+    Npgsql = 2,
 }
 
 public sealed class RetentionOptions
@@ -76,6 +145,17 @@ public sealed class RetentionOptions
 public sealed class LimitsOptions
 {
     public int MaxSpansPerTrace { get; set; } = 300;
+
+    /// <summary>Maximum log entries correlated per span (ADR-0017), before extra entries are
+    /// discarded. Default: 20.</summary>
+    public int MaxLogEntriesPerSpan { get; set; } = 20;
+
+    /// <summary>Maximum custom tags recorded per span, before extra tags are discarded.
+    /// Default: 20.</summary>
+    public int MaxTagsPerSpan { get; set; } = 20;
+
+    /// <summary>Maximum length of a single tag value, before it is truncated. Default: 4000.</summary>
+    public int MaxTagValueLength { get; set; } = 4000;
 }
 
 public static class NetApiFlowServiceCollectionExtensions
@@ -129,21 +209,70 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
     public static IEndpointConventionBuilder UseNetApiFlowDashboard(
         this IEndpointRouteBuilder endpoints, string basePath = "/flow");
 }
-
-public interface IDashboardAuthorizationFilter
-{
-    ValueTask<bool> AuthorizeAsync(HttpContext context);
-}
 ```
 
 `UseNetApiFlowDashboard` monta a API REST/SSE sob `{basePath}/api` e a UI Angular embutida sob
 `basePath`, com fallback de SPA. Devolve um `IEndpointConventionBuilder` para encadear
 `RequireAuthorization(...)`, que vale para as duas partes juntas (ADR-0006). Fora de
-`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IDashboardAuthorizationFilter`
+`IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IFlowAccessFilter` (núcleo,
+ADR-0015; antes `IDashboardAuthorizationFilter`, declarado localmente aqui até a Fase 10)
 registrado no DI, toda rota do dashboard responde `404`; com um dos dois e a autorização negada,
 responde `403`. Tudo que não está nesta lista (`DashboardAccessGate`,
 `DashboardIndexHtmlCache`, `DashboardEmbeddedFiles`, `MapNetApiFlowDashboardApi`) é `internal`.
 Formalizado na revisão da Fase 5.
+
+### `NetApiFlow.Mcp`: superfície pública
+
+```csharp
+namespace NetApiFlow.Mcp;
+
+public static class NetApiFlowMcpServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlowMcp(this IServiceCollection services);
+}
+
+namespace NetApiFlow.Mcp.Endpoints;
+
+public static class NetApiFlowMcpEndpointRouteBuilderExtensions
+{
+    public static IEndpointConventionBuilder UseNetApiFlowMcp(
+        this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp");
+}
+```
+
+`UseNetApiFlowMcp` monta o servidor MCP (transporte HTTP, `ModelContextProtocol.AspNetCore`) sob
+`basePath`. Mesma régua da Dashboard (ADR-0006/ADR-0013), com o filtro compartilhado do núcleo
+(ADR-0015): fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization(...)` nem
+`IFlowAccessFilter` registrado no DI, toda rota do MCP responde `404`. Três tools na v1, todas só
+leitura, implementadas sobre `ITraceStore`: listar traces recentes (filtro por status, método,
+rota, limite), obter uma trace por id, obter estatísticas por componente. Não depende de
+`NetApiFlow.Dashboard`: os dois dependem só de `NetApiFlow` (núcleo) para `IFlowAccessFilter`.
+Formalizado na revisão da Fase 10.
+
+### `NetApiFlow.OpenTelemetry`: superfície pública
+
+```csharp
+namespace NetApiFlow.OpenTelemetry;
+
+public static class NetApiFlowOpenTelemetryServiceCollectionExtensions
+{
+    public static IServiceCollection AddNetApiFlowOtlpExport(
+        this IServiceCollection services,
+        Action<NetApiFlowOtlpExportOptions>? configure = null);
+}
+
+public sealed class NetApiFlowOtlpExportOptions
+{
+    public bool IncludeHttpClientSource { get; set; }
+    public Action<OtlpExporterOptions>? ConfigureOtlpExporter { get; set; }
+}
+```
+
+`AddNetApiFlowOtlpExport` registra o SDK do OpenTelemetry (`AddOpenTelemetry().WithTracing(...)`)
+observando a fonte `"NetApiFlow"` (a mesma `ActivitySource` do núcleo, ADR-0002) e, se
+`IncludeHttpClientSource` for `true`, também `"System.Net.Http"` (ADR-0012), antes de
+`AddOtlpExporter`. Não lê nem reescreve `FlowSpan`/`ITraceStore`: exporta a `Activity` nativa
+diretamente, sem depender do pipeline do dashboard. ADR-0016. Formalizado na revisão da Fase 13.
 
 ### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
 
@@ -204,6 +333,63 @@ public sealed record TraceStats
 
 `errorRate` do payload de `/metrics` é calculado pela camada de API (`ErrorCount / TotalTraces`,
 `0` quando `TotalTraces` é `0`), não pelo `ITraceStore`.
+
+`GetRouteStatsAsync` e `RouteStat` foram acrescentados a `ITraceStore` na Fase 14 (D-81): agregado
+por rota do trace (`Method`, `RouteTemplate`), mesmo molde de `ComponentStat` mas sobre
+`FlowTrace`, não `FlowSpan`. Base da visão agregada estilo Pulse (`GET /metrics/routes`).
+
+```csharp
+public sealed record RouteStat
+{
+    public required string Method { get; init; }
+    public required string RouteTemplate { get; init; }
+    public required int ExecutionCount { get; init; }
+    public required int ErrorCount { get; init; }
+    public required long MedianDurationMicros { get; init; }
+    public required long AverageDurationMicros { get; init; }
+    public required long P95DurationMicros { get; init; }
+    public required long MaxDurationMicros { get; init; }
+}
+```
+
+`GetArchitectureMapAsync` e `ArchitectureMap` foram acrescentados a `ITraceStore` na Fase 16
+(D-83): grafo estático da rota (`method`, `routeTemplate`), união de todas as execuções
+registradas na janela de `StatsQuery`, não um trace em particular. Nó por `(Component,
+Operation)` distinto observado; aresta por relação pai-filho distinta observada entre nós.
+`ExecutionCount` de um nó é quantas execuções da rota, na janela, passaram por aquele passo;
+`TotalExecutions` é o total de execuções da rota na janela (mesmo denominador para todo nó e
+aresta); o nó raiz (sem pai) tem sempre `ExecutionCount == TotalExecutions`. Base do mapa de
+arquitetura vivo (D-60 item E).
+
+```csharp
+public sealed record ArchitectureNode
+{
+    public required string Component { get; init; }
+    public required string Operation { get; init; }
+    public required ComponentType Type { get; init; }
+    public required int ExecutionCount { get; init; }
+}
+
+public sealed record ArchitectureEdge
+{
+    public required string FromComponent { get; init; }
+    public required string FromOperation { get; init; }
+    public required string ToComponent { get; init; }
+    public required string ToOperation { get; init; }
+    public required int CallCount { get; init; }
+}
+
+public sealed record ArchitectureMap
+{
+    public required int TotalExecutions { get; init; }
+    public required IReadOnlyList<ArchitectureNode> Nodes { get; init; }
+    public required IReadOnlyList<ArchitectureEdge> Edges { get; init; }
+}
+```
+
+`TotalExecutions`, `Nodes` e `Edges` vêm vazios/zero (`TotalExecutions = 0`, as duas listas
+vazias) quando a rota não tem nenhuma execução na janela, nunca `null`: mesma convenção de
+`/metrics` (campos de duração vêm `0`, nunca ausentes).
 
 `GetAsync` e `GetLastSuccessfulAsync` passaram a devolver `FlowTraceDetail?` em vez de
 `FlowTrace?` (D-19 em `docs/plano/decisoes.md`), achado durante a tarefa 3.2: os três
@@ -267,7 +453,8 @@ Corpo do `data`, JSON camelCase:
     "errorType": null,
     "errorMessage": null,
     "isErrorOrigin": false,
-    "tags": {}
+    "tags": {},
+    "logs": []
   }
 }
 ```
@@ -417,11 +604,24 @@ Resposta `200`:
       "errorType": null,
       "errorMessage": null,
       "isErrorOrigin": false,
-      "tags": {}
+      "tags": {},
+      "logs": [
+        {
+          "timestamp": "2026-10-19T13:42:11.130000Z",
+          "level": "Warning",
+          "message": "Order total recalculated after a discount rule conflict",
+          "exceptionType": null,
+          "exceptionMessage": null
+        }
+      ]
     }
   ]
 }
 ```
+
+`logs` (Fase 17, ADR-0017) é só preenchido com `NetApiFlowOptions.LogCorrelation.Enabled = true`
+(padrão `false`); com a feature desligada, vem sempre `[]`, nunca ausente. `message` e
+`exceptionMessage` passam pelo mesmo `ErrorMessageSanitizer` já usado em `errorMessage`.
 
 Campos de nível superior = `FlowTrace` (seção 1), mais `spans: FlowSpan[]` na ordem de
 `Sequence`. `404` se o `traceId` não existir em nenhum dos dois.
@@ -530,6 +730,69 @@ Resposta `200`:
 
 Ordenado por `executionCount` decrescente.
 
+### GET `/metrics/routes`
+
+Acrescentada na Fase 14 (D-81), base da visão agregada estilo Pulse (D-60). Estatísticas por
+rota da própria API hospedeira, forma de `RouteStat[]`.
+
+Query string: `from`, `to` (opcionais, forma de `StatsQuery`, mesmo contrato de `/metrics/components`).
+
+Resposta `200`:
+
+```json
+[
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id}",
+    "executionCount": 612,
+    "errorCount": 9,
+    "medianDurationMicros": 18200,
+    "averageDurationMicros": 21500,
+    "p95DurationMicros": 88200,
+    "maxDurationMicros": 412000
+  }
+]
+```
+
+Ordenado por `executionCount` decrescente, mesma convenção de `/metrics/components`. "Rotas mais
+lentas" e "top erros" são ordenações diferentes do mesmo payload, feitas pelo frontend, não dois
+endpoints separados. "Rotas mortas" (rota sem nenhuma execução na janela) não é campo deste
+payload: o frontend cruza esta lista com `GET /endpoints`, que já lista toda rota rastreável da
+API hospedeira independente de ter sido executada ou não.
+
+### GET `/architecture`
+
+Acrescentada na Fase 16 (D-83), base do mapa de arquitetura vivo (D-60 item E). Mapa estático de
+uma rota, forma de `ArchitectureMap`.
+
+Query string: `method` (obrigatório), `route` (obrigatório, route template exato, mesma
+convenção de `/blueprint`), `from`/`to` (opcionais, forma de `StatsQuery`).
+
+Resposta `200`:
+
+```json
+{
+  "totalExecutions": 412,
+  "nodes": [
+    { "component": "OrdersController", "operation": "GetOrder", "type": "Controller", "executionCount": 412 },
+    { "component": "OrderService", "operation": "FindAsync", "type": "Service", "executionCount": 412 },
+    { "component": "OrderCache", "operation": "TryGetAsync", "type": "Custom", "executionCount": 58 },
+    { "component": "OrderRepository", "operation": "FindAsync", "type": "Repository", "executionCount": 354 }
+  ],
+  "edges": [
+    { "fromComponent": "OrdersController", "fromOperation": "GetOrder", "toComponent": "OrderService", "toOperation": "FindAsync", "callCount": 412 },
+    { "fromComponent": "OrderService", "fromOperation": "FindAsync", "toComponent": "OrderCache", "toOperation": "TryGetAsync", "callCount": 58 },
+    { "fromComponent": "OrderService", "fromOperation": "FindAsync", "toComponent": "OrderRepository", "toOperation": "FindAsync", "callCount": 354 }
+  ]
+}
+```
+
+`400` se faltar `method` ou `route`, mesma régua de `/blueprint`. Nunca `404`/`204`: rota sem
+nenhuma execução na janela devolve `200` com `totalExecutions: 0` e as duas listas vazias, mesma
+convenção de `/metrics`. A percentagem de ocorrência de cada nó/aresta (`executionCount`/
+`callCount` dividido por `totalExecutions`) é calculada pelo frontend, não pela API, mesmo
+tratamento de `errorRate` em `/metrics`.
+
 ### DELETE `/traces`
 
 Limpa todos os dados do `ITraceStore` e os traces em andamento do `FlowRecorder`. Só em
@@ -549,7 +812,9 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
 ```json
 {
   "slowThresholdMicros": 250000,
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "tailSamplingEnabled": false,
+  "successSampleRate": 0.1
 }
 ```
 
@@ -557,9 +822,13 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
 mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do dashboard (tarefa
 7.0c, item 4).
 
+`tailSamplingEnabled`/`successSampleRate` (Fase 15, D-82) espelham
+`NetApiFlowOptions.TailSampling`, para o dashboard avisar quando o histórico persistido não é
+100% do tráfego real.
+
 ---
 
-Autorização vale para as onze rotas acima, sem exceção (ADR-0006): fora de
+Autorização vale para as treze rotas acima, sem exceção (ADR-0006): fora de
 `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
 `IDashboardAuthorizationFilter` configurado, toda rota responde `404`. Com um dos dois
 configurado e o usuário sem a claim exigida, `403` (risco R-09, mitigação na Fase 5).

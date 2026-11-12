@@ -1,0 +1,71 @@
+<section class="architecture">
+  @if (tailSamplingEnabled()) {
+    <p class="naf-banner architecture__tail-sampling-banner">
+      {{ 'history.tailSampling.banner' | t: { rate: tailSamplingRateLabel() } }}
+    </p>
+  }
+
+  <div class="architecture__controls">
+    <label class="architecture__field">
+      {{ 'architecture.route.label' | t }}
+      <select (change)="selectRoute($event)">
+        <option value="">{{ 'architecture.route.placeholder' | t }}</option>
+        @for (endpoint of endpoints(); track trackByEndpoint($index, endpoint)) {
+          <option
+            [value]="routeKeyOf(endpoint)"
+            [selected]="selectedRouteKey() === routeKeyOf(endpoint)"
+          >
+            {{ endpoint.method }} {{ endpoint.routeTemplate }}
+          </option>
+        }
+      </select>
+    </label>
+
+    <div class="architecture__window">
+      <span class="architecture__window-label" id="architecture-window-label">{{
+        'architecture.window.label' | t
+      }}</span>
+      <div class="naf-seg" role="radiogroup" aria-labelledby="architecture-window-label">
+        @for (w of windows; track w) {
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="window() === w"
+            (click)="selectWindow(w)"
+          >
+            {{ windowLabelKey(w) | t }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (!selectedRoute()) {
+    <p class="architecture__status">{{ 'architecture.noRoute' | t }}</p>
+  } @else if (loading()) {
+    <p class="architecture__status" role="status">{{ 'architecture.loading' | t }}</p>
+  } @else if (error()) {
+    <p class="architecture__status architecture__status--error" role="alert">{{ error() | t }}</p>
+  } @else if (map(); as map) {
+    @if (map.totalExecutions === 0) {
+      <p class="architecture__status">{{ 'architecture.empty' | t }}</p>
+    } @else {
+      <div class="architecture__summary">
+        <p class="architecture__total">
+          {{ 'architecture.totalExecutions' | t: { count: map.totalExecutions } }}
+        </p>
+        <div class="architecture__exports">
+          <button type="button" class="naf-btn" (click)="exportMermaid()">
+            {{ 'architecture.export.mermaid' | t }}
+          </button>
+          <button type="button" class="naf-btn" (click)="exportSvg()">
+            {{ 'architecture.export.svg' | t }}
+          </button>
+        </div>
+      </div>
+      <div class="architecture__canvas" #graphHost>
+        <app-flow-graph [nodes]="graph().nodes" [edges]="graph().edges" />
+      </div>
+    }
+  }
+</section>

@@ -60,5 +60,40 @@
         </div>
       </div>
     }
+
+    <div class="metric-cards__card metric-cards__card--sparkline">
+      <div class="metric-cards__tile metric-cards__tile--flow">
+        <svg
+          class="metric-cards__icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M3 16l5-6 4 3 4-7 5 6" />
+        </svg>
+      </div>
+      <div class="metric-cards__text">
+        <div class="metric-cards__value">
+          {{ p95Value().value }}
+          @if (p95Value().unit) {
+            <small>{{ p95Value().unit }}</small>
+          }
+        </div>
+        <div class="metric-cards__label">{{ 'metrics.p95Latency' | t }}</div>
+      </div>
+      <svg
+        class="metric-cards__sparkline"
+        viewBox="0 0 120 32"
+        preserveAspectRatio="none"
+        role="img"
+        [attr.aria-label]="'metrics.sparklineAria' | t: { n: sparklineSampleSize }"
+      >
+        <polyline [attr.points]="sparklinePoints()" />
+      </svg>
+    </div>
   </div>
 }

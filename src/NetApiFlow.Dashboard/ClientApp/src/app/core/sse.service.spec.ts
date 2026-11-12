@@ -73,6 +73,7 @@ function makeSpanStarted(eventId: number, traceId = 't1'): FlowEvent {
       errorMessage: null,
       isErrorOrigin: false,
       tags: {},
+      logs: [],
     },
   };
 }

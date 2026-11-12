@@ -2,6 +2,7 @@ import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ArchitectureMap,
   ComponentStat,
   DashboardConfig,
   EndpointDescriptor,
@@ -10,6 +11,7 @@ import {
   MetricsSummary,
   OpenApiDocument,
   PagedResult,
+  RouteStat,
   SpanDetail,
   StatsQuery,
   TraceQuery,
@@ -69,6 +71,18 @@ export class ApiService {
     });
   }
 
+  getRouteMetrics(query: StatsQuery): Observable<RouteStat[]> {
+    return this.http.get<RouteStat[]>(`${this.basePath}/metrics/routes`, {
+      params: toHttpParams(query),
+    });
+  }
+
+  getArchitecture(method: string, route: string, query: StatsQuery): Observable<ArchitectureMap> {
+    return this.http.get<ArchitectureMap>(`${this.basePath}/architecture`, {
+      params: toHttpParams({ ...query, method, route }),
+    });
+  }
+
   deleteTraces(): Observable<void> {
     return this.http.delete<void>(`${this.basePath}/traces`);
   }
@@ -83,8 +97,13 @@ export class ApiService {
    * `path` is root-relative, exactly as declared in the host's OpenAPI document (never prefixed
    * with `basePath`, since it does not belong to the dashboard's own API namespace).
    */
-  callEndpoint(method: string, path: string, body?: unknown): Observable<HttpResponse<unknown>> {
-    return this.http.request(method, path, { body, observe: 'response' });
+  callEndpoint(
+    method: string,
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Observable<HttpResponse<unknown>> {
+    return this.http.request(method, path, { body, headers, observe: 'response' });
   }
 
   /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */

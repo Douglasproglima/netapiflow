@@ -125,6 +125,102 @@ internal sealed class InMemoryTraceStore : ITraceStore
         });
     }
 
+    public ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken)
+    {
+        var traces = _entries.Values
+            .Select(e => e.Trace)
+            .Where(trace => query.From is null || trace.StartedAt >= query.From)
+            .Where(trace => query.To is null || trace.StartedAt <= query.To)
+            .GroupBy(trace => (Method: trace.Method.ToUpperInvariant(), trace.RouteTemplate));
+
+        var stats = traces.Select(group =>
+        {
+            var durations = group
+                .Where(t => t.DurationMicros is not null)
+                .Select(t => t.DurationMicros!.Value)
+                .OrderBy(d => d)
+                .ToList();
+
+            return new RouteStat
+            {
+                Method = group.Key.Method,
+                RouteTemplate = group.Key.RouteTemplate,
+                ExecutionCount = group.Count(),
+                ErrorCount = group.Count(t => t.Status == FlowStatus.Error),
+                MedianDurationMicros = Percentile(durations, 0.5),
+                AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
+                P95DurationMicros = Percentile(durations, 0.95),
+                MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
+            };
+        }).ToList();
+
+        return ValueTask.FromResult<IReadOnlyList<RouteStat>>(stats);
+    }
+
+    public ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    {
+        var entries = _entries.Values
+            .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
+            .Where(e => e.Trace.RouteTemplate == routeTemplate)
+            .Where(e => query.From is null || e.Trace.StartedAt >= query.From)
+            .Where(e => query.To is null || e.Trace.StartedAt <= query.To)
+            .ToList();
+
+        var nodeTypes = new Dictionary<(string Component, string Operation), ComponentType>();
+        var nodeExecutionCounts = new Dictionary<(string Component, string Operation), int>();
+        var edgeCallCounts = new Dictionary<(string FromComponent, string FromOperation, string ToComponent, string ToOperation), int>();
+
+        foreach (var entry in entries)
+        {
+            var spansBySpanId = entry.Spans.ToDictionary(s => s.SpanId);
+            var nodesInTrace = new HashSet<(string Component, string Operation)>();
+
+            foreach (var span in entry.Spans)
+            {
+                var nodeKey = (span.Component, span.Operation);
+                if (nodesInTrace.Add(nodeKey))
+                {
+                    nodeTypes[nodeKey] = span.Type;
+                    nodeExecutionCounts[nodeKey] = nodeExecutionCounts.GetValueOrDefault(nodeKey) + 1;
+                }
+
+                if (span.ParentSpanId is not null && spansBySpanId.TryGetValue(span.ParentSpanId, out var parent))
+                {
+                    var edgeKey = (parent.Component, parent.Operation, span.Component, span.Operation);
+                    edgeCallCounts[edgeKey] = edgeCallCounts.GetValueOrDefault(edgeKey) + 1;
+                }
+            }
+        }
+
+        var nodes = nodeExecutionCounts
+            .Select(kvp => new ArchitectureNode
+            {
+                Component = kvp.Key.Component,
+                Operation = kvp.Key.Operation,
+                Type = nodeTypes[kvp.Key],
+                ExecutionCount = kvp.Value,
+            })
+            .ToList<ArchitectureNode>();
+
+        var edges = edgeCallCounts
+            .Select(kvp => new ArchitectureEdge
+            {
+                FromComponent = kvp.Key.FromComponent,
+                FromOperation = kvp.Key.FromOperation,
+                ToComponent = kvp.Key.ToComponent,
+                ToOperation = kvp.Key.ToOperation,
+                CallCount = kvp.Value,
+            })
+            .ToList<ArchitectureEdge>();
+
+        return ValueTask.FromResult(new ArchitectureMap
+        {
+            TotalExecutions = entries.Count,
+            Nodes = nodes,
+            Edges = edges,
+        });
+    }
+
     public ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken)
     {
         var cutoff = DateTime.UtcNow - policy.MaxAge;

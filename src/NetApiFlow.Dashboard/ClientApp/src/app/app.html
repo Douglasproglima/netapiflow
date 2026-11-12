@@ -20,6 +20,21 @@
   <h1 class="app-topbar__title">{{ pageTitle() | t }}</h1>
   <span class="app-topbar__sub">{{ pageSubtitle() | t }}</span>
   <div class="app-topbar__right">
+    @if (onFlowRoute() && actionDrawer.isDrawer()) {
+      <button type="button" class="app-topbar__try-endpoint" (click)="actionDrawer.toggle()">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          width="16"
+          height="16"
+        >
+          <path d="M7 4.5v15l12-7.5Z" />
+        </svg>
+        {{ 'topbar.tryEndpoint' | t }}
+      </button>
+    }
     <span class="app-topbar__meta">{{
       'topbar.inProgress' | t: { count: inProgressCount() }
     }}</span>
@@ -215,6 +230,51 @@
         <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
       </svg>
       <span>{{ 'nav.components' | t }}</span>
+    </a>
+    <a
+      class="app-rail__item"
+      routerLink="/insights"
+      routerLinkActive="app-rail__item--active"
+      [attr.title]="'nav.insights' | t"
+      (click)="closeSidenavIfNarrow()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        width="20"
+        height="20"
+      >
+        <path d="M4 19.5V13M10 19.5V8.5M16 19.5V4.5M4 9.5l6-4 6 4 4-2.5" />
+      </svg>
+      <span>{{ 'nav.insights' | t }}</span>
+    </a>
+    <a
+      class="app-rail__item"
+      routerLink="/architecture"
+      routerLinkActive="app-rail__item--active"
+      [attr.title]="'nav.architecture' | t"
+      (click)="closeSidenavIfNarrow()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        width="20"
+        height="20"
+      >
+        <circle cx="6" cy="6" r="2.2" />
+        <circle cx="18" cy="6" r="2.2" />
+        <circle cx="12" cy="18" r="2.2" />
+        <path d="M8 6h8M7.8 7.4 11.2 16.2M16.2 7.4 12.8 16.2" />
+      </svg>
+      <span>{{ 'nav.architecture' | t }}</span>
     </a>
     <a
       class="app-rail__item"

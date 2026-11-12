@@ -14,7 +14,7 @@
 
 // Brand typeface, embedded locally as variable fonts (one file covers every weight below) so the
 // dashboard renders its real typography without a Google Fonts request: it has to work offline,
-// behind a restrictive CSP, or on the client's own network (docs/brand/tokens.md, ADR-0009).
+// behind a restrictive CSP, or on the client's own network (docs/brand/tokens.md).
 @font-face {
   font-family: 'Plus Jakarta Sans';
   src: url('assets/fonts/PlusJakartaSans-Variable.ttf') format('truetype-variations');
@@ -36,7 +36,7 @@
   font-display: swap;
 }
 
-// Brand tokens (docs/brand/tokens.md, ADR-0009), as the --mat-sys-*/--mat-card-*/--flow-*
+// Brand tokens (docs/brand/tokens.md), as the --mat-sys-*/--mat-card-*/--flow-*
 // variables every mat-* component and the graph/waterfall actually read. Mixins so the same
 // values can apply unconditionally (dark, the default), behind `prefers-color-scheme` (no saved
 // preference), and behind the manual `data-theme` attribute the theme toggle writes (D-36) —
@@ -161,7 +161,7 @@ html {
   // roles this file doesn't override.
   @include naf-mat-theme-dark;
 
-  // Card and button recipe from the brand guide (D-31, tarefa 7.0c): radius-lg (18px) cards,
+  // Card and button recipe from the brand guide (D-31): radius-lg (18px) cards,
   // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
   // just its stock color palette. Shape/sizing doesn't change between themes.
   --mat-card-elevated-container-shape: 18px;
@@ -227,28 +227,19 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-// Heading scale (brand guide, Seção 03), scaled down from the guide's own marketing/hero sizes
-// to what a dense dashboard's panel and section titles actually need.
-h1,
-h2,
-h3 {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+h1 {
+  font-family: var(--naf-font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
   letter-spacing: -0.01em;
 }
 
-h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-}
-
-h2 {
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
+h2,
 h3 {
-  font-size: 1rem;
-  font-weight: 700;
+  font-family: var(--naf-font-ui);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
 }
 
 code,
@@ -293,18 +284,18 @@ code,
 }
 
 .naf-tag--post {
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
   background: var(--naf-success-tint);
 }
 
 .naf-tag--put,
 .naf-tag--patch {
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   background: var(--naf-warning-tint);
 }
 
 .naf-tag--delete {
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
   background: var(--naf-danger-tint);
 }
 
@@ -333,17 +324,17 @@ code,
 }
 
 .naf-chip--live {
-  color: var(--naf-success);
+  color: var(--naf-success-on-tint);
   background: var(--naf-success-tint);
 }
 
 .naf-chip--warning {
-  color: var(--naf-warning);
+  color: var(--naf-warning-on-tint);
   background: var(--naf-warning-tint);
 }
 
 .naf-chip--danger {
-  color: var(--naf-danger);
+  color: var(--naf-danger-on-tint);
   background: var(--naf-danger-tint);
 }
 
@@ -356,6 +347,15 @@ code,
   border: 1px solid var(--naf-border);
   border-radius: var(--naf-radius-lg);
   min-width: 0;
+}
+
+.naf-banner {
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--naf-radius-sm);
+  background: var(--naf-flow-tint);
+  color: var(--naf-flow-text);
+  font-size: 0.8125rem;
 }
 
 .naf-btn {
@@ -450,6 +450,11 @@ code,
   &:focus-visible {
     outline: 2px solid var(--naf-focus);
     outline-offset: 2px;
+  }
+
+  &::placeholder {
+    color: var(--naf-text-muted);
+    opacity: 1;
   }
 }
 

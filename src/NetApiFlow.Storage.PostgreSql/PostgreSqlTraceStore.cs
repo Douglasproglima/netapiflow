@@ -6,7 +6,7 @@ using NpgsqlTypes;
 namespace NetApiFlow.Storage.PostgreSql;
 
 /// <summary>
-/// <see cref="ITraceStore"/> backed by PostgreSQL via raw ADO.NET (ADR-0004, D-05). <see cref="SaveAsync"/>
+/// <see cref="ITraceStore"/> backed by PostgreSQL via raw ADO.NET (D-05). <see cref="SaveAsync"/>
 /// uses <see cref="NpgsqlBinaryImporter"/> (the <c>COPY</c> protocol) for the batch write of a
 /// trace and its spans.
 /// </summary>
@@ -54,7 +54,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         }
 
         await using var spanImporter = await connection.BeginBinaryImportAsync(
-            $"COPY {_spansTable} (trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags) FROM STDIN (FORMAT BINARY)",
+            $"COPY {_spansTable} (trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs) FROM STDIN (FORMAT BINARY)",
             cancellationToken);
 
         foreach (var span in spans)
@@ -75,6 +75,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             await WriteNullableAsync(spanImporter, span.ErrorMessage, NpgsqlDbType.Text, cancellationToken);
             await spanImporter.WriteAsync(span.IsErrorOrigin, NpgsqlDbType.Boolean, cancellationToken);
             await spanImporter.WriteAsync(SerializeTags(span.Tags), NpgsqlDbType.Jsonb, cancellationToken);
+            await spanImporter.WriteAsync(SerializeLogs(span.Logs), NpgsqlDbType.Jsonb, cancellationToken);
         }
 
         await spanImporter.CompleteAsync(cancellationToken);
@@ -218,6 +219,97 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             P95DurationMicros = Percentile(durations, 0.95),
             MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
         };
+    }
+
+    public async ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+
+        await using var command = new NpgsqlCommand($"""
+            SELECT method, route_template, status, duration_micros
+            FROM {_tracesTable}
+            WHERE (@from::timestamptz IS NULL OR started_at >= @from) AND (@to::timestamptz IS NULL OR started_at <= @to)
+            """, connection);
+        command.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
+        command.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
+
+        var rows = new List<(string Method, string RouteTemplate, FlowStatus Status, long? Duration)>();
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add((
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    Enum.Parse<FlowStatus>(reader.GetString(2)),
+                    reader.IsDBNull(3) ? null : reader.GetInt64(3)));
+            }
+        }
+
+        return rows
+            .GroupBy(r => (Method: r.Method.ToUpperInvariant(), r.RouteTemplate))
+            .Select(group =>
+            {
+                var durations = group.Where(r => r.Duration is not null).Select(r => r.Duration!.Value).OrderBy(d => d).ToList();
+                return new RouteStat
+                {
+                    Method = group.Key.Method,
+                    RouteTemplate = group.Key.RouteTemplate,
+                    ExecutionCount = group.Count(),
+                    ErrorCount = group.Count(r => r.Status == FlowStatus.Error),
+                    MedianDurationMicros = Percentile(durations, 0.5),
+                    AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
+                    P95DurationMicros = Percentile(durations, 0.95),
+                    MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
+                };
+            })
+            .ToList<RouteStat>();
+    }
+
+    public async ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenConnectionAsync(cancellationToken);
+
+        await using var totalCommand = new NpgsqlCommand($"""
+            SELECT COUNT(*) FROM {_tracesTable}
+            WHERE method ILIKE @method AND route_template = @route
+              AND (@from::timestamptz IS NULL OR started_at >= @from) AND (@to::timestamptz IS NULL OR started_at <= @to)
+            """, connection);
+        totalCommand.Parameters.AddWithValue("method", method);
+        totalCommand.Parameters.AddWithValue("route", routeTemplate);
+        totalCommand.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
+        totalCommand.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
+        var totalExecutions = (int)(long)(await totalCommand.ExecuteScalarAsync(cancellationToken))!;
+
+        await using var command = new NpgsqlCommand($"""
+            SELECT s.trace_id, s.component, s.operation, s.type, p.component, p.operation
+            FROM {_spansTable} s
+            JOIN {_tracesTable} t ON s.trace_id = t.trace_id
+            LEFT JOIN {_spansTable} p ON s.parent_span_id = p.span_id AND s.trace_id = p.trace_id
+            WHERE t.method ILIKE @method AND t.route_template = @route
+              AND (@from::timestamptz IS NULL OR t.started_at >= @from) AND (@to::timestamptz IS NULL OR t.started_at <= @to)
+            """, connection);
+        command.Parameters.AddWithValue("method", method);
+        command.Parameters.AddWithValue("route", routeTemplate);
+        command.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
+        command.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
+
+        var rows = new List<(string TraceId, string Component, string Operation, ComponentType Type, string? ParentComponent, string? ParentOperation)>();
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add((
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    Enum.Parse<ComponentType>(reader.GetString(3)),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5)));
+            }
+        }
+
+        return BuildArchitectureMap(totalExecutions, rows);
     }
 
     public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
@@ -396,7 +488,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
     private async Task<List<FlowSpan>> ReadSpansAsync(NpgsqlConnection connection, string traceId, CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand($"""
-            SELECT trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags
+            SELECT trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs
             FROM {_spansTable} WHERE trace_id = @traceId ORDER BY sequence
             """, connection);
         command.Parameters.AddWithValue("traceId", traceId);
@@ -444,6 +536,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         ErrorMessage = reader.IsDBNull(12) ? null : reader.GetString(12),
         IsErrorOrigin = reader.GetBoolean(13),
         Tags = DeserializeTags(reader.GetString(14)),
+        Logs = DeserializeLogs(reader.GetString(15)),
     };
 
     private static DateTime ReadUtc(NpgsqlDataReader reader, int ordinal) =>
@@ -479,7 +572,68 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
     private static Dictionary<string, string> DeserializeTags(string json) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
 
+    private static string SerializeLogs(IReadOnlyList<LogEntry> logs) => JsonSerializer.Serialize(logs);
+
+    private static List<LogEntry> DeserializeLogs(string json) =>
+        JsonSerializer.Deserialize<List<LogEntry>>(json) ?? [];
+
     public void Dispose() => _schemaLock.Dispose();
+
+    /// <summary>
+    /// Same aggregation as <c>InMemoryTraceStore.GetArchitectureMapAsync</c>, kept consistent across
+    /// every <see cref="ITraceStore"/> implementation: a node's <c>ExecutionCount</c> counts the
+    /// distinct traces that touched it, an edge's <c>CallCount</c> counts every occurrence of that
+    /// parent-child relationship.
+    /// </summary>
+    private static ArchitectureMap BuildArchitectureMap(
+        int totalExecutions,
+        List<(string TraceId, string Component, string Operation, ComponentType Type, string? ParentComponent, string? ParentOperation)> rows)
+    {
+        var nodeTypes = new Dictionary<(string Component, string Operation), ComponentType>();
+        var nodeExecutionCounts = new Dictionary<(string Component, string Operation), int>();
+
+        foreach (var traceGroup in rows.GroupBy(r => r.TraceId))
+        {
+            var seen = new HashSet<(string Component, string Operation)>();
+            foreach (var row in traceGroup)
+            {
+                var nodeKey = (row.Component, row.Operation);
+                if (seen.Add(nodeKey))
+                {
+                    nodeTypes[nodeKey] = row.Type;
+                    nodeExecutionCounts[nodeKey] = nodeExecutionCounts.GetValueOrDefault(nodeKey) + 1;
+                }
+            }
+        }
+
+        var edgeCallCounts = rows
+            .Where(r => r.ParentComponent is not null)
+            .GroupBy(r => (FromComponent: r.ParentComponent!, FromOperation: r.ParentOperation!, ToComponent: r.Component, ToOperation: r.Operation))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var nodes = nodeExecutionCounts
+            .Select(kvp => new ArchitectureNode
+            {
+                Component = kvp.Key.Component,
+                Operation = kvp.Key.Operation,
+                Type = nodeTypes[kvp.Key],
+                ExecutionCount = kvp.Value,
+            })
+            .ToList<ArchitectureNode>();
+
+        var edges = edgeCallCounts
+            .Select(kvp => new ArchitectureEdge
+            {
+                FromComponent = kvp.Key.FromComponent,
+                FromOperation = kvp.Key.FromOperation,
+                ToComponent = kvp.Key.ToComponent,
+                ToOperation = kvp.Key.ToOperation,
+                CallCount = kvp.Value,
+            })
+            .ToList<ArchitectureEdge>();
+
+        return new ArchitectureMap { TotalExecutions = totalExecutions, Nodes = nodes, Edges = edges };
+    }
 
     /// <summary>Same formula as <c>InMemoryTraceStore</c>, kept consistent across every <see cref="ITraceStore"/> implementation.</summary>
     private static long Percentile(List<long> sortedValues, double percentile)

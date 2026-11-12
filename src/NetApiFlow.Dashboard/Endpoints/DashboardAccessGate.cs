@@ -6,18 +6,18 @@ using Microsoft.Extensions.Hosting;
 namespace NetApiFlow.Dashboard.Endpoints;
 
 /// <summary>
-/// Shared gate for every dashboard route, API and static UI alike (ADR-0006, risco R-09): outside
-/// Development, a route 404s unless <c>RequireAuthorization</c> or an
-/// <see cref="IDashboardAuthorizationFilter"/> was configured. An <see cref="IDashboardAuthorizationFilter"/>,
-/// when registered, is always enforced (even in Development, since the host asked for it
-/// explicitly), returning <c>403</c> when it denies the request.
+/// Shared gate for every dashboard route, API and static UI alike (risco
+/// R-09): outside Development, a route 404s unless <c>RequireAuthorization</c> or an
+/// <see cref="IFlowAccessFilter"/> was configured. An <see cref="IFlowAccessFilter"/>, when
+/// registered, is always enforced (even in Development, since the host asked for it explicitly),
+/// returning <c>403</c> when it denies the request.
 /// </summary>
 internal static class DashboardAccessGate
 {
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
-        var customFilter = httpContext.RequestServices.GetService<IDashboardAuthorizationFilter>();
+        var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
         {

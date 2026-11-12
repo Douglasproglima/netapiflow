@@ -45,6 +45,7 @@ function makeTrace(traceId: string): FlowTraceDetail {
         errorMessage: null,
         isErrorOrigin: false,
         tags: {},
+        logs: [],
       },
     ],
   };
@@ -76,14 +77,18 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
-  /** Both FlowPageComponent and the metric cards (ADR-0010) read GET /config independently. */
+  /** Both FlowPageComponent and the metric cards read GET /config independently. */
   function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
     for (const request of httpMock.match('api/config')) {
       request.flush({ slowThresholdMicros, version: '0.1.0' });
     }
   }
 
-  /** The workspace's metric cards and action panel (ADR-0010) fire their own requests on mount. */
+  /**
+   * The workspace's metric cards and action panel fire their own requests on mount. Both
+   * RecentExecutionsComponent (pageSize 8) and the metric cards' sparkline (pageSize 50) call
+   * GET /traces independently, so both must be matched and flushed.
+   */
   function flushWorkspaceChildRequests(): void {
     httpMock.expectOne('api/metrics').flush({
       totalTraces: 0,
@@ -95,9 +100,9 @@ describe('FlowPageComponent', () => {
     });
     httpMock.expectOne('api/metrics/components').flush([]);
     httpMock.expectOne('/openapi/v1.json').flush({ paths: {} });
-    httpMock
-      .expectOne((request) => request.url === 'api/traces')
-      .flush({ totalCount: 0, items: [] });
+    for (const request of httpMock.match((request) => request.url === 'api/traces')) {
+      request.flush({ totalCount: 0, items: [] });
+    }
   }
 
   it('loads the trace from the ?trace= query param on mount', async () => {
@@ -180,6 +185,36 @@ describe('FlowPageComponent', () => {
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
   });
 
+  it('shows the live pause toggle only while following a Running trace live, not during replay', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(true);
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain('Pausar ao vivo');
+
+    fixture.componentInstance.toggleLivePause();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.livePlayer.paused()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Retomar ao vivo');
+
+    fixture.componentInstance.toggleReplay();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(false);
+  });
+
   it('toggles and closes the action drawer', async () => {
     configure(null);
     const fixture = TestBed.createComponent(FlowPageComponent);
@@ -189,10 +224,120 @@ describe('FlowPageComponent', () => {
     flushWorkspaceChildRequests();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
-    fixture.componentInstance.toggleActionDrawer();
-    expect(fixture.componentInstance.actionDrawerOpen()).toBe(true);
-    fixture.componentInstance.closeActionDrawer();
-    expect(fixture.componentInstance.actionDrawerOpen()).toBe(false);
+    expect(fixture.componentInstance.actionDrawer.open()).toBe(false);
+    fixture.componentInstance.actionDrawer.toggle();
+    expect(fixture.componentInstance.actionDrawer.open()).toBe(true);
+    fixture.componentInstance.actionDrawer.close();
+    expect(fixture.componentInstance.actionDrawer.open()).toBe(false);
+  });
+
+  it('exportTrace downloads the loaded trace as JSON', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    fixture.componentInstance.exportTrace();
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect(blob.type).toBe('application/json');
+    expect(JSON.parse(await blob.text())).toEqual(makeTrace('t1'));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    click.mockRestore();
+  });
+
+  function fileSelectEvent(content: string, name = 'trace.json'): Event {
+    const file = new File([content], name, { type: 'application/json' });
+    return { target: { files: [file], value: '' } } as unknown as Event;
+  }
+
+  it('imports a trace from a file and renders it without calling the API', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const imported = makeTrace('imported-1');
+    await fixture.componentInstance.onImportFileSelected(fileSelectEvent(JSON.stringify(imported)));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importedTrace()?.traceId).toBe('imported-1');
+    expect(fixture.componentInstance.trace()?.traceId).toBe('imported-1');
+    expect(fixture.componentInstance.importErrorKey()).toBeNull();
+
+    fixture.componentInstance.onNodeSelected('s1');
+    expect(fixture.componentInstance.selectedSpanDetail()?.span.spanId).toBe('s1');
+    expect(fixture.componentInstance.selectedSpanDetail()?.medianDurationMicros).toBeNull();
+  });
+
+  it('shows an error and keeps the current view when the imported file is not valid JSON', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.onImportFileSelected(fileSelectEvent('{ not json'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importErrorKey()).toBe('import.error.invalidJson');
+    expect(fixture.componentInstance.trace()).toBeNull();
+  });
+
+  it('shows an error when the imported file is valid JSON but not a trace export', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.onImportFileSelected(fileSelectEvent('{}'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importErrorKey()).toBe('import.error.invalidShape');
+    expect(fixture.componentInstance.trace()).toBeNull();
+  });
+
+  it('exits imported mode back to the live list', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    await fixture.componentInstance.onImportFileSelected(
+      fileSelectEvent(JSON.stringify(makeTrace('imported-1'))),
+    );
+    await fixture.whenStable();
+    expect(fixture.componentInstance.trace()).not.toBeNull();
+
+    fixture.componentInstance.exitImportedTrace();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.importedTrace()).toBeNull();
+    expect(fixture.componentInstance.trace()).toBeNull();
   });
 });
