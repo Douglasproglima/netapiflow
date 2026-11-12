@@ -111,11 +111,36 @@ antes de propor qualquer correção. Se reproduzir, a fase 29 pode fechar sem es
 causa raiz exigir mais investigação do que cabe aqui: registrar como risco novo, não forçar uma
 correção às pressas num defeito que corrompe dado silenciosamente.
 
+## Tarefa 29.6: redirecionamento `/flow` → `/flow/flow`
+
+`app.routes.ts` define a página principal do dashboard em `path: 'flow'`, com
+`{ path: '', pathMatch: 'full', redirectTo: 'flow' }` cobrindo o caminho vazio. O `<base href>` já
+é reescrito pro caminho de montagem real (`DashboardIndexHtmlCache`, `/flow/` por padrão). Visitar
+o caminho de montagem sem mais nada faz o Angular resolver o caminho vazio relativo a essa base,
+disparar o redirecionamento pra `flow`, e o navegador terminar em `/flow/flow`: o nome da rota
+principal (`flow`) coincide com o nome do caminho de montagem padrão (`/flow`), daí a duplicação
+visível. Num mount customizado (ex. `UseNetApiFlowDashboard("/diagnostics")`) isso não aparece,
+porque os dois nomes não colidem; é só no padrão de fábrica que fica esquisito.
+
+**Correção**: mover `FlowPageComponent` pra `path: ''` (sem redirecionamento, a página principal
+é a raiz do roteador do dashboard), removendo a entrada `path: 'flow'` e a regra de redirecionamento.
+Atualizar toda referência interna que usa `/flow` como caminho absoluto do roteador Angular
+(não confundir com o caminho de montagem do lado do servidor, que continua `/flow` por padrão e
+não muda): `routerLink="/flow"` (duas ocorrências em `app.html`, logo e item de navegação),
+`['/flow']` (um `routerLink` em `history.component.html`, o link de volta pro trace a partir do
+histórico), e a comparação `this.router.url.split('?')[0] === '/flow'` em `app.ts`
+(`onFlowRoute`). Todas viram `/` (raiz do roteador), mantendo `routerLinkActive` e os
+`queryParams` existentes intactos.
+
+**Pronto quando**: visitar o caminho de montagem do dashboard (`/flow` no padrão de fábrica, ou
+qualquer caminho customizado) mostra a página principal sem nenhum redirecionamento visível na
+barra de endereço. O logo, o item de navegação "Flow" e o link de volta a partir de `/history`
+continuam levando pro mesmo lugar de antes, só sem duplicar o segmento.
+
 ## Fora de escopo, de propósito
 
-- Item 5 (redirecionamento cosmético `/flow` → `/flow/flow`) e item 7 (regra de negócio tratada
-  como `BadRequest` aparece como trace "Success", consequência prevista do próprio desenho, não
-  defeito): registrados em D-111, sem tarefa nesta fase, baixa prioridade.
+- Item 7 (regra de negócio tratada como `BadRequest` aparece como trace "Success", consequência
+  prevista do próprio desenho, não defeito): registrado em D-111, sem tarefa nesta fase.
 - Ruído em `GET /flow/api/endpoints` (rotas do Quartz, arquivos estáticos e health somadas às
   rotas de negócio, alimentando "rotas mortas" de `/insights` com falso positivo): achado real do
   teste, mas sem solução óbvia nem urgência de lançamento, backlog sem fase atribuída.
@@ -123,8 +148,9 @@ correção às pressas num defeito que corrompe dado silenciosamente.
 ## Aceite da fase
 
 Tarefa 29.1 com teste de regressão provando o cenário real (rota com valor sensível, 404, zero
-vazamento). Tarefas 29.2 a 29.4 com os critérios de pronto acima. Tarefa 29.5 reporta achado, com
-ou sem correção dependendo do que a investigação achar. Build/test/format dos dois lados.
+vazamento). Tarefas 29.2 a 29.4 e 29.6 com os critérios de pronto acima. Tarefa 29.5 reporta
+achado, com ou sem correção dependendo do que a investigação achar. Build/test/format dos dois
+lados.
 
 ## Ao terminar
 
