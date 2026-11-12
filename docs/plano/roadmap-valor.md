@@ -16,8 +16,9 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Fase 27: visibilidade de cancelamento (cliente vs. timeout) | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-27-visibilidade-cancelamento.md`), próxima a iniciar |
-| 2 | Fase 28: anotação de deploy na timeline do histórico | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-28-anotacao-deploy.md`) |
+| 1 | Fase 29: correções pré-lançamento (defeito de segurança bloqueante + lacunas de doc achadas em teste real) | D-111 | 🔴 Alto, bloqueante de divulgação pública | Planejada (`docs/plano/fase-29-correcoes-pre-lancamento.md`), próxima a iniciar |
+| 2 | Fase 27: visibilidade de cancelamento (cliente vs. timeout) | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-27-visibilidade-cancelamento.md`) |
+| 3 | Fase 28: anotação de deploy na timeline do histórico | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-28-anotacao-deploy.md`) |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
