@@ -353,7 +353,18 @@ Consome o `SseService` existente. Cabeçalho: "Live events" e chip de conexão (
 
 Se o usuário promover algum desses itens para a 0.1.0, a Planejadora registra a mudança em `decisoes.md` antes da implementação.
 
-Liberados para implementação em D-106: os seis itens, agrupados em `docs/plano/fase-25-grafo-controles-ao-vivo.md` (zoom, legenda, sparkline, seguir ao vivo) e `docs/plano/fase-26-cenarios-demo-e-delay.md` (cenários, atraso artificial). As posições da tabela acima continuam valendo como especificação normativa, não como reserva de espaço.
+Liberados para implementação em D-106: os seis itens, agrupados em `docs/plano/fase-25-grafo-controles-ao-vivo.md` (zoom, legenda, sparkline, seguir ao vivo) e `docs/plano/fase-26-cenarios-demo-e-delay.md` (cenários, atraso artificial). As posições da tabela acima continuam valendo como especificação normativa.
+
+**Achado real da Fase 25, corrige a frase acima:** a legenda e os controles de zoom são overlay
+sobre o canvas (painel opaco, `position: absolute` nos cantos inferiores), mas o ajuste
+automático do grafo (zoom/pan pra caber o conteúdo no canvas) centraliza sem saber que esses dois
+cantos estão ocupados. Um trace com poucos nós reais pode posicionar um nó exatamente atrás de um
+dos dois painéis, texto sobre texto. A posição normativa continua valendo (canto inferior
+esquerdo pra legenda, direito pros controles de zoom), mas o cálculo de ajuste automático precisa
+reservar uma margem de segurança nos dois cantos inferiores, do tamanho real de cada painel (a
+Executora mede o tamanho real renderizado, não assume um valor fixo), pra nenhum nó real
+renderizar atrás deles. Achado via Impeccable (`text-occlusion`) na própria Fase 25, confirmado
+por medição real de geometria, não suposição.
 
 ---
 
