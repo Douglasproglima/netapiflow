@@ -16,8 +16,10 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
-| — | Visibilidade de cancelamento, anotação de deploy | D-60 (menores) | ⚪ Baixo | Backlog, sem posição fixa |
+| 1 | Fase 25: controles e sinais visuais do grafo ao vivo (zoom visível, legenda, sparkline p95, follow-live) | D-32 | ⚪ Baixo | Planejada (`docs/plano/fase-25-grafo-controles-ao-vivo.md`), próxima a iniciar |
+| 2 | Fase 26: cenários de demonstração + atraso artificial configurável (samples/Runner) | D-32 | ⚪ Baixo | Planejada (`docs/plano/fase-26-cenarios-demo-e-delay.md`) |
+| 3 | Fase 27: visibilidade de cancelamento (cliente vs. timeout) | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-27-visibilidade-cancelamento.md`) |
+| 4 | Fase 28: anotação de deploy na timeline do histórico | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-28-anotacao-deploy.md`) |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 

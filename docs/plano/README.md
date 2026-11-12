@@ -56,7 +56,11 @@ de arquitetura, visão agregada estilo Pulse). D-59 trava a regra de implementa�
 vez, clarificada pelo D-70 enquanto o produto não é divulgado publicamente (não precisa esperar
 uso real em produção entre fases). D-61 registra entry points não-HTTP como tensão de escopo em
 aberto, sem decisão. D-62 conecta todo ADR aceito a uma Issue pública no GitHub. D-79 ranqueia o
-backlog restante por peso de valor de entrega, mantido em `docs/plano/roadmap-valor.md`.
+backlog restante por peso de valor de entrega, mantido em `docs/plano/roadmap-valor.md`. D-106
+planeja os últimos itens (D-32 e os dois menores do D-60) em quatro fases, pesquisadas e
+agrupadas antes de qualquer implementação: `fase-25-grafo-controles-ao-vivo.md`,
+`fase-26-cenarios-demo-e-delay.md`, `fase-27-visibilidade-cancelamento.md`,
+`fase-28-anotacao-deploy.md`. A Fase 25 é a próxima a entrar em implementação.
 
 ## Regra de avanço
 

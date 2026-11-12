@@ -353,6 +353,8 @@ Consome o `SseService` existente. Cabeçalho: "Live events" e chip de conexão (
 
 Se o usuário promover algum desses itens para a 0.1.0, a Planejadora registra a mudança em `decisoes.md` antes da implementação.
 
+Liberados para implementação em D-106: os seis itens, agrupados em `docs/plano/fase-25-grafo-controles-ao-vivo.md` (zoom, legenda, sparkline, seguir ao vivo) e `docs/plano/fase-26-cenarios-demo-e-delay.md` (cenários, atraso artificial). As posições da tabela acima continuam valendo como especificação normativa, não como reserva de espaço.
+
 ---
 
 ## 9. Decisões já tomadas pela Planejadora (D-33)
