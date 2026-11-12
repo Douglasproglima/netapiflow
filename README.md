@@ -535,6 +535,13 @@ NetApiFlow never captures, under any configuration:
 - Connection string, database user or peer address, when `ExternalActivitySource.Npgsql` is
   enabled. The driver reports all of them on its own `Activity`; none is ever copied onto a span.
 
+> **A request that never matches a route is recorded as `(unmatched)`, never its real path.** A
+> 404 on a typo'd URL and a successful request to a static file both land in history as
+> `(unmatched)`, indistinguishable from each other. That's the same template guarantee above, just
+> for the case where there's no template to use yet. If static assets or your own OpenAPI document
+> are cluttering your history with `(unmatched)` noise, `ExcludePaths` keeps them out of tracing
+> entirely.
+
 Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
 CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.
 See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).

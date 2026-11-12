@@ -546,6 +546,13 @@ O NetApiFlow nunca captura, em nenhuma configuração:
   `ExternalActivitySource.Npgsql` está habilitado. O driver reporta todos eles na própria
   `Activity`; nenhum é copiado para o span.
 
+> **Uma requisição que não casa com nenhuma rota é gravada como `(unmatched)`, nunca o caminho
+> real.** Um 404 de uma URL digitada errado e uma requisição bem-sucedida pra um arquivo estático
+> acabam os dois gravados como `(unmatched)`, sem distinção entre eles. É a mesma garantia de
+> template acima, só que pro caso em que ainda não existe template nenhum. Se arquivo estático ou
+> o próprio documento OpenAPI estiverem poluindo o histórico com ruído de `(unmatched)`,
+> `ExcludePaths` tira os dois do rastreamento de vez.
+
 Mensagem de erro é truncada em 300 caracteres e sanitizada, removendo e-mail, CPF, CNPJ, sequência
 numérica longa, e os pares `password=`/`token=`/`authorization`/`api-key`/`secret`. Veja
 [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
