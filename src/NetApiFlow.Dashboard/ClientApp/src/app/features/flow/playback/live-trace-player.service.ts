@@ -20,6 +20,9 @@ export class LiveTracePlayerService implements OnDestroy {
   private readonly traceSignal = signal<FlowTraceDetail | null>(null);
   readonly trace = this.traceSignal.asReadonly();
 
+  private readonly pausedSignal = signal(false);
+  readonly paused = this.pausedSignal.asReadonly();
+
   private currentTraceId: string | null = null;
   private readonly seenEventIds = new Set<number>();
   private readonly lastEventIdBySpanId = new Map<string, number>();
@@ -58,11 +61,21 @@ export class LiveTracePlayerService implements OnDestroy {
     this.lastEventIdBySpanId.clear();
     this.lastTraceEventId = -1;
     this.pendingEvents = [];
+    this.pausedSignal.set(false);
     this.traceSignal.set(null);
   }
 
   ngOnDestroy(): void {
     this.stop();
+  }
+
+  pause(): void {
+    this.pausedSignal.set(true);
+  }
+
+  resume(): void {
+    this.pausedSignal.set(false);
+    this.flushPendingEvents();
   }
 
   private loadBaseline(): void {
@@ -79,12 +92,7 @@ export class LiveTracePlayerService implements OnDestroy {
 
       this.traceSignal.set(trace);
       this.loadingBaseline = false;
-
-      const buffered = [...this.pendingEvents].sort((a, b) => a.eventId - b.eventId);
-      this.pendingEvents = [];
-      for (const event of buffered) {
-        this.mergeEvent(event);
-      }
+      this.flushPendingEvents();
     });
   }
 
@@ -99,12 +107,24 @@ export class LiveTracePlayerService implements OnDestroy {
 
     this.seenEventIds.add(event.eventId);
 
-    if (this.loadingBaseline) {
+    if (this.loadingBaseline || this.pausedSignal()) {
       this.pendingEvents.push(event);
       return;
     }
 
     this.mergeEvent(event);
+  }
+
+  private flushPendingEvents(): void {
+    if (this.loadingBaseline || this.pausedSignal()) {
+      return;
+    }
+
+    const buffered = [...this.pendingEvents].sort((a, b) => a.eventId - b.eventId);
+    this.pendingEvents = [];
+    for (const event of buffered) {
+      this.mergeEvent(event);
+    }
   }
 
   private mergeEvent(event: FlowEvent): void {

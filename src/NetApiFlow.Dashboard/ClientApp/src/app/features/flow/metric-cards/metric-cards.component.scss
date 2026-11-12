@@ -88,6 +88,9 @@
   font-variant-numeric: tabular-nums;
   color: var(--naf-text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 
   small {
     font-size: 0.9375rem;
@@ -109,4 +112,22 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.metric-cards__card--sparkline {
+  grid-column: 1 / -1;
+}
+
+.metric-cards__sparkline {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+
+  polyline {
+    fill: none;
+    stroke: var(--naf-flow-text);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
 }

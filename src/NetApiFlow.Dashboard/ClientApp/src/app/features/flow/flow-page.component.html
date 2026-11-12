@@ -92,6 +92,11 @@
             </button>
           </span>
           <span class="flow-workspace__graph-header-end">
+            @if (isFollowingLiveRunning()) {
+              <button mat-stroked-button type="button" (click)="toggleLivePause()">
+                {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
+              </button>
+            }
             <button mat-stroked-button type="button" (click)="exportTrace()">
               {{ 'export.button' | t }}
             </button>
