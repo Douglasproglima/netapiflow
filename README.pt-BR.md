@@ -84,6 +84,32 @@ builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
+### Tags numa etapa
+
+Uma etapa aberta com `NetApiFlow.Step(...)` aceita tags livres, chave e valor, gravadas naquele
+span:
+
+```csharp
+using var step = NetApiFlow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+step.Tag("order.status", order.Status);
+step.Tag("payment.provider", provider.Name);
+```
+
+Chame `Tag` em qualquer momento enquanto a etapa está aberta, não só logo depois de abri-la: as
+tags são lidas quando a etapa termina. Chave que começa com `netapiflow.` é reservada e nunca é
+gravada. `Limits.MaxTagsPerSpan` limita quantas tags um span guarda (as que passam do limite são
+descartadas e contadas), e `Limits.MaxTagValueLength` trunca um valor longo sem perder a tag. Os
+dois estão em [Configuração](#configuração).
+
+> **Valor de tag nunca é sanitizado.** Todo outro campo que o NetApiFlow grava é estrutural ou
+> passa pelo sanitizador de mensagem de erro. Tag é texto livre que você escolheu guardar, então
+> fica persistido e é servido exatamente como foi escrito. Use para identificador e rótulo curto,
+> nunca para corpo de requisição, dado de usuário ou credencial.
+
+As tags viajam em `FlowSpan.Tags`: `GET /traces/{traceId}`, `NetApiFlow.GetRecentTrace`, a tool
+`get_trace` do `NetApiFlow.Mcp` e os dois pacotes de storage carregam todas elas. A interface do
+dashboard não mostra tag nesta versão.
+
 ## Asserção de fluxo em teste
 
 Um teste de integração construído sobre `WebApplicationFactory<TEntryPoint>` já tem a resposta
@@ -160,6 +186,82 @@ registrada". A conta é a união dos intervalos `[startedAt, endedAt)` de cada e
 ingênua das durações. Assim, uma etapa aninhada ou duas branches paralelas de um `Task.WhenAll`
 nunca são contadas em dobro.
 
+Esses seis estados aparecem numa legenda fixa no canto inferior esquerdo do canvas, para não
+precisar lembrar o que cada ícone quer dizer. No canto inferior direito ficam os botões de mais
+zoom, menos zoom e "ajustar à tela", com a porcentagem atual. Roda do mouse, arrastar e pinça
+continuam funcionando igual. Os botões só tornam o mesmo zoom alcançável sem gesto.
+
+Enquanto uma trace ainda está rodando, aparece um botão "Pausar ao vivo" no cabeçalho do grafo.
+Pausar congela o grafo onde ele está, para você inspecionar uma etapa sem a imagem se mexer. Os
+eventos que chegam durante a pausa entram numa fila, não são descartados, e "Retomar ao vivo"
+aplica a fila inteira na ordem certa. É outra coisa, diferente do Replay: a pausa continua na
+trace em andamento, o Replay percorre uma trace que já terminou.
+
+A faixa de métricas acima do grafo tem um cartão de latência p95 com um sparkline das últimas 50
+execuções. O número de p95 vem do `GET /metrics`, calculado sobre a janela inteira. O sparkline é
+a forma da série recente ao lado dele. Os dois atualizam conforme as traces vão terminando.
+
+## Testar um endpoint
+
+"Testar um endpoint" (na barra superior do `/flow`, ou a página `/runner`) envia uma requisição de
+verdade para a sua API a partir do dashboard, para o grafo ter o que desenhar sem você sair do
+navegador nem abrir um cliente REST.
+
+A aba "Personalizado" monta o formulário a partir do documento OpenAPI da sua própria aplicação:
+escolha um endpoint, preencha parâmetros de rota e de query e um corpo JSON, envie. Isso exige um
+`MapOpenApi()` (ou endpoint OpenAPI equivalente) na aplicação hospedeira, e avisa quando não
+consegue carregar o documento. As rotas do próprio dashboard ficam de fora da lista.
+
+A aba "Cenários" são quatro requisições de um clique feitas para os samples que acompanham o
+repositório: Sucesso, Lento, Erro e Sequencial (N+1), cada uma produzindo uma trace de formato
+diferente. Elas apontam para as rotas de `samples/SampleApi.Controllers` e
+`samples/SampleApi.MinimalMediatR`, ou seja, servem para demonstrar o dashboard, não para
+exercitar a sua API. Para a sua API, use a aba "Personalizado".
+
+Na mesma aba há um seletor de atraso artificial (nenhum, 250 ms, 1000 ms, 3000 ms), aplicado ao
+cenário antes de disparar, para produzir uma trace realisticamente lenta sem carga de verdade. O
+atraso vai no header de requisição `X-NetApiFlow-Demo-Delay-Ms` e só tem efeito se a aplicação
+hospedeira respeitar esse header. Respeitá-lo é código de sample (`DemoDelayMiddleware`, nos dois
+projetos de exemplo), não faz parte de nenhum pacote publicado: o NetApiFlow nunca atrasa uma
+requisição sua.
+
+## Exportar e importar uma trace
+
+Uma trace aberta no `/flow` pode ser baixada como arquivo `.json` ("Baixar trace (.json)") e
+aberta de novo em qualquer outra instância do dashboard ("Importar trace (.json)"). Os dois
+acontecem inteiramente no navegador: exportar serializa a trace que já está em memória, importar
+lê o arquivo localmente, e nenhum dos dois faz chamada HTTP em nenhum sentido. Quem recebe o
+arquivo não precisa de acesso à API que gerou a trace, nem ao banco dela. É isso que torna uma
+trace mandável para um colega ou colável numa conversa com um agente de IA.
+
+Uma trace importada é desenhada pelos mesmos grafo, waterfall, cartões de métrica e feed de
+evento de uma trace ao vivo, leva um selo visível de "Trace importado" enquanto estiver aberta, e
+tem uma ação "Voltar aos traces ao vivo" para sair. Ela nunca é persistida: não entra no
+`ITraceStore` e nunca aparece em `/history`, `/insights`, `/metrics` nem `/architecture`, então a
+trace de outra pessoa não contamina as suas estatísticas. Um arquivo que não é uma exportação do
+NetApiFlow mostra uma mensagem de erro clara, nunca uma tela em branco.
+
+Clicar num span de uma trace importada monta os ancestrais e os filhos a partir do próprio
+arquivo, sem ida ao servidor. Esse detalhe não traz duração mediana nem diferença para a mediana:
+as duas vêm de execuções anteriores da mesma operação, e a instância que lê o arquivo não tem
+histórico de uma trace que ela nunca gravou.
+
+## Comparar duas execuções
+
+Duas execuções da mesma rota podem ser comparadas lado a lado. No `/history`, marque exatamente
+duas linhas e clique em "Comparar". Isso abre `/diff?a=<traceIdA>&b=<traceIdB>`, uma URL
+compartilhável enquanto as duas execuções ainda existirem no `ITraceStore` de quem abrir o link.
+
+As etapas são casadas por componente e operação, nunca por span id (um span id é único de uma
+execução e nunca se repete em duas). Uma etapa repetida dentro da mesma execução, que é o que um
+laço N+1 produz, é somada numa linha só, com a contagem de cada lado, em vez de encher a tabela
+de linhas quase iguais. Uma etapa que só uma das duas execuções rodou aparece como "Não
+executado" do outro lado, com o mesmo ícone e o mesmo texto que o grafo já usa, nunca como etapa
+casada com duração zero. Etapa casada mostra a duração dos dois lados e a diferença entre elas.
+
+Comparar duas execuções de rotas diferentes continua funcionando, só que toda etapa cai de um
+lado só. A página marca isso como aviso, porque raramente é o que se queria fazer.
+
 ## Preferências do dashboard
 
 A interface do dashboard vem em português (pt-BR) por padrão. Troque para inglês pelo seletor de
@@ -208,15 +310,28 @@ builder.Services.AddNetApiFlow(options =>
     options.Retention.MaxTraces = 1000;
     options.Retention.MaxAge = TimeSpan.FromHours(24);
     options.Limits.MaxSpansPerTrace = 300;
+    options.Limits.MaxTagsPerSpan = 20; // valor padrão mostrado; tag além do limite é descartada e contada
+    options.Limits.MaxTagValueLength = 4000; // valor padrão mostrado; valor maior é truncado, a tag não se perde
     options.IncludePaths("/api/**"); // só rastreia rota que bater; por padrão rastreia tudo
     options.ExcludePaths("/api/health"); // excluída mesmo que também bata com um padrão de inclusão
     options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; padrão é None
+    options.CapturePrePipelineSteps = true; // opt-in; padrão é false, ver abaixo
     options.TailSampling.Enabled = true; // opt-in; ver Amostragem tail-based abaixo
     options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado
     options.LogCorrelation.Enabled = true; // opt-in; ver Correlação de log abaixo
     options.Limits.MaxLogEntriesPerSpan = 20; // valor padrão mostrado
 });
 ```
+
+`CapturePrePipelineSteps` grava o que roda antes do seu controller ser chamado, em rotas de MVC
+Controller: uma etapa por filtro de autorização, no componente `AuthorizationFilters`, com o nome
+do tipo do filtro como operação, e uma etapa em volta do estágio de Resource filter, no
+componente `ResourceFilters`, com o nome da action como operação. Essa última vira a mãe da etapa
+`Controller` que já existe no grafo, então os estágios aninham em vez de duplicar. É a resposta
+para "a requisição levou 400 ms mas o meu controller levou só 20 ms, onde foi o resto" quando o
+tempo foi para a autorização ou para um resource filter, como output caching. Vem desligado por
+padrão e não muda nada para quem não ligou. Rota de Minimal API não tem estágio de filtro do MVC,
+então não ganha etapa nova de nenhum jeito.
 
 `ExternalSources` ingere a `Activity` que o runtime .NET e o driver do Npgsql já produzem, sem
 nenhuma mudança de código nos seus serviços.
@@ -406,6 +521,10 @@ O NetApiFlow nunca captura, em nenhuma configuração:
 Mensagem de erro é truncada em 300 caracteres e sanitizada, removendo e-mail, CPF, CNPJ, sequência
 numérica longa, e os pares `password=`/`token=`/`authorization`/`api-key`/`secret`. Veja
 [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+
+A única exceção é o que você mesmo escreve: as tags de uma etapa (veja
+[Tags numa etapa](#tags-numa-etapa)) são gravadas e servidas exatamente como foram passadas, sem
+nenhuma sanitização.
 
 ## Desempenho e overhead
 
