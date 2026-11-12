@@ -12,5 +12,7 @@ public interface IOrderService
 
     Task<IReadOnlyList<Order>> GetManyInParallelAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<Order>> GetManySequentiallyAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken);
+
     Task<string> GetShippingStatusAsync(int id, CancellationToken cancellationToken);
 }

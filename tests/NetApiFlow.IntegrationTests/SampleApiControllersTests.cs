@@ -69,6 +69,7 @@ public class SampleApiControllersTests
                             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                             return Task.CompletedTask;
                         }));
+                    app.UseMiddleware<Sample.DemoDelayMiddleware>();
                     app.UseRouting();
                     app.UseEndpoints(endpoints => endpoints.MapControllers());
                 });
@@ -196,5 +197,53 @@ public class SampleApiControllersTests
 
         repositorySpans.Count.ShouldBe(3);
         repositorySpans.ShouldAllBe(s => s.ParentSpanId == serviceSpan.SpanId);
+    }
+
+    [Fact]
+    public async Task Get_SequentialScenario_ProducesOneDatabaseSpanPerIdUnderASingleRepositoryCall()
+    {
+        var (host, connection) = CreateHost();
+        using var _ = host;
+        using var __ = connection;
+
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+        var spansByTrace = new ConcurrentDictionary<string, List<FlowSpan>>();
+        void OnSpan(FlowSpan span) => spansByTrace.GetOrAdd(span.TraceId, _ => []).Add(span);
+        recorder.SpanCompleted += OnSpan;
+        recorder.SpanFailed += OnSpan;
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/api/orders/sequential?ids=1&ids=2&ids=3");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var spans = spansByTrace[traceId];
+
+        var repositorySpan = spans.Single(s => s.Type == ComponentType.Repository);
+        var databaseSpans = spans.Where(s => s.Type == ComponentType.Database).ToList();
+
+        databaseSpans.Count.ShouldBe(3);
+        databaseSpans.ShouldAllBe(s => s.ParentSpanId == repositorySpan.SpanId);
+    }
+
+    [Fact]
+    public async Task Get_WithDemoDelayHeader_IncludesTheDelayInTraceDuration()
+    {
+        var (host, connection) = CreateHost();
+        using var _ = host;
+        using var __ = connection;
+
+        var recorder = host.Services.GetRequiredService<FlowRecorder>();
+        FlowTrace? completedTrace = null;
+        recorder.TraceCompleted += trace => completedTrace = trace;
+
+        var client = host.GetTestServer().CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/orders/1");
+        request.Headers.Add("X-NetApiFlow-Demo-Delay-Ms", "250");
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        completedTrace.ShouldNotBeNull();
+        completedTrace!.DurationMicros!.Value.ShouldBeGreaterThanOrEqualTo(250_000);
     }
 }
