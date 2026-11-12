@@ -105,4 +105,69 @@ describe('EndpointFormComponent', () => {
     expect(fixture.componentInstance.lastTraceId()).toBe('t1');
     expect(dispatchedTraceId).toBe('t1');
   });
+
+  it('switches to the Scenarios tab and dispatches a scenario without a delay header by default', async () => {
+    const fixture = TestBed.createComponent(EndpointFormComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.activeTab()).toBe('custom');
+    fixture.componentInstance.setActiveTab('scenarios');
+    expect(fixture.componentInstance.activeTab()).toBe('scenarios');
+
+    const [successScenario] = fixture.componentInstance.scenarios;
+    fixture.componentInstance.sendScenario(successScenario);
+    await fixture.whenStable();
+
+    const req = httpMock.expectOne(successScenario.path);
+    expect(req.request.method).toBe(successScenario.method);
+    expect(req.request.headers.has('X-NetApiFlow-Demo-Delay-Ms')).toBe(false);
+    req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't2' } });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.lastTraceId()).toBe('t2');
+  });
+
+  it('attaches the selected artificial delay header to the dispatched scenario', async () => {
+    const fixture = TestBed.createComponent(EndpointFormComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.setActiveTab('scenarios');
+    fixture.componentInstance.selectDelay(1000);
+
+    const [successScenario] = fixture.componentInstance.scenarios;
+    fixture.componentInstance.sendScenario(successScenario);
+    await fixture.whenStable();
+
+    const req = httpMock.expectOne(successScenario.path);
+    expect(req.request.headers.get('X-NetApiFlow-Demo-Delay-Ms')).toBe('1000');
+    req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't3' } });
+    await fixture.whenStable();
+  });
+
+  it('still captures the trace id from the Error scenario, which always fails', async () => {
+    const fixture = TestBed.createComponent(EndpointFormComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.setActiveTab('scenarios');
+    const errorScenario = fixture.componentInstance.scenarios.find((s) => s.key === 'error')!;
+    fixture.componentInstance.sendScenario(errorScenario);
+    await fixture.whenStable();
+
+    const req = httpMock.expectOne(errorScenario.path);
+    req.flush('boom', {
+      status: 500,
+      statusText: 'Server Error',
+      headers: { 'X-NetApiFlow-TraceId': 't4' },
+    });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.lastTraceId()).toBe('t4');
+    expect(fixture.componentInstance.sendError()).toBeNull();
+  });
 });
