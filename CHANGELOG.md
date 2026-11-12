@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
 ### Fixed
 
 - `NetApiFlow`: tags attached with `FlowStep.Tag(key, value)` now reach `FlowSpan.Tags`. The
