@@ -83,9 +83,25 @@ Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
 
 ```csharp
+using NetApiFlow.Marking;
+
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
+
+`DecorateFlowTracked` does the same thing in bulk, for every interface already registered in DI
+whose implementation type matches a predicate. It scales to a real project with many repositories
+and services, by naming convention instead of one call per interface:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+```
+
+The predicate receives the concrete implementation type registered in DI, never the interface, so
+matching on an interface-only naming convention (`IOrderRepository`) will not work.
 
 ### EF Core database commands
 

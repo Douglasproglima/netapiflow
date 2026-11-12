@@ -84,9 +84,25 @@ Forma automática, de `samples/SampleApi.Controllers/Program.cs`. `OrderService`
 não têm nenhum código do NetApiFlow. Toda chamada a eles é rastreada só por causa deste registro:
 
 ```csharp
+using NetApiFlow.Marking;
+
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
+
+O `DecorateFlowTracked` faz o mesmo em lote, para toda interface já registrada no DI cujo tipo de
+implementação bater com um predicado. Escala para um projeto real com muitos repositórios e
+serviços, por convenção de nome, em vez de uma chamada por interface:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+```
+
+O predicado recebe o tipo de implementação concreta registrado no DI, nunca a interface. Uma
+convenção de nome que só bate na interface (`IOrderRepository`) não funciona.
 
 ### Comandos de banco do EF Core
 
