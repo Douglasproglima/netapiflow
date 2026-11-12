@@ -63,8 +63,10 @@ backlog restante por peso de valor de entrega, mantido em `docs/plano/roadmap-va
 planeja os últimos itens (D-32 e os dois menores do D-60) em quatro fases, pesquisadas e
 agrupadas antes de qualquer implementação: `fase-25-grafo-controles-ao-vivo.md`,
 `fase-26-cenarios-demo-e-delay.md`, `fase-27-visibilidade-cancelamento.md`,
-`fase-28-anotacao-deploy.md`. Fases 25 (D-107) e 26 (D-108) foram aceitas. A Fase 27 é a próxima a
-entrar em implementação.
+`fase-28-anotacao-deploy.md`. Fases 25 (D-107) e 26 (D-108) foram aceitas. D-111 abre a Fase 29
+(correções pré-lançamento, `docs/plano/fase-29-correcoes-pre-lancamento.md`), achada num teste
+real de instalação fora do próprio repositório, com prioridade sobre a Fase 27 por ter um item
+bloqueante de divulgação pública (R-26). A Fase 29 é a próxima a entrar em implementação.
 
 ## Regra de avanço
 
