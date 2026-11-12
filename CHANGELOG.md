@@ -9,6 +9,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: tags attached with `FlowStep.Tag(key, value)` now reach `FlowSpan.Tags`. The
+  public API existed since `0.1.0` and wrote to the underlying `Activity`, but nothing ever copied
+  those values back into the span, so they never reached the REST API, the storage packages or
+  `NetApiFlow.Mcp`. The copy happens when the span completes, so a tag added at any point in the
+  step's life is picked up; every `netapiflow.`-prefixed name is excluded, since those already are
+  first-class `FlowSpan` properties. Two new limits bound it, matching the rest of the product:
+  `Limits.MaxTagsPerSpan` (default 20, extra tags discarded and counted by a new
+  `netapiflow.tags.dropped` counter) and `Limits.MaxTagValueLength` (default 4000, longer values
+  truncated, never dropped). Side effect of the same gap: `CaptureSqlText = true` with
+  `NetApiFlow.EntityFrameworkCore` records the SQL text on the span again.
 - `NetApiFlow.Dashboard`: semantic text (HTTP verb badges, status chips, error/warning banners,
   graph node state labels) sitting directly on its own tinted background now uses a dedicated
   `-on-tint` color token instead of the flat-surface base color, fixing six low-contrast pairs
@@ -24,12 +34,45 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow.Dashboard`: a "Scenarios" tab in the action panel, next to the existing "Custom"
+  form, with four one-click requests (Success, Slow, Error, Sequential (N+1)) aimed at the bundled
+  sample APIs, plus an artificial delay selector (none, 250 ms, 1000 ms, 3000 ms) applied to the
+  scenario before it is dispatched. The delay travels as an `X-NetApiFlow-Demo-Delay-Ms` request
+  header, honored by a `DemoDelayMiddleware` that lives in `samples/` only: it is never part of
+  any published package, and the core never delays a request (D-106).
+- `NetApiFlow.Dashboard`: live controls on the flow graph. Zoom and pan are now driven by visible
+  buttons (zoom in, zoom out, fit to screen, plus the current percentage) instead of wheel and
+  drag alone, a fixed legend lists the six node states with their icon and label, the metrics
+  strip gained a p95 latency card with a sparkline over the last 50 executions, and a
+  pause/resume toggle stops the graph from repainting while a trace is still running, replaying
+  every buffered event in order when resumed.
 - `NetApiFlow`: `NetApiFlow.GetRecentTrace(services, traceId)`, reading a trace that finished
   recently straight from the in-memory buffer the dashboard's `GET /traces/{traceId}` already
   uses, never falling back to `ITraceStore`. Built for an integration test that just awaited its
   own HTTP call: read `X-NetApiFlow-TraceId` off the response, call this, assert on `FlowSpan`s
   with plain LINQ and whatever assertion library the test project already uses. Returns `null`
   when the trace already aged out of the buffer or NetApiFlow was never registered.
+- `NetApiFlow`: `NetApiFlowOptions.CapturePrePipelineSteps` (opt-in, default `false`), recording
+  what runs before the controller or handler on MVC Controller routes: one `Service` span per
+  Authorization filter (`AuthorizationFilters`, named after the filter type) and one around the
+  Resource filter stage (`ResourceFilters`, named after the action), the latter being the parent
+  of the `Controller` span already recorded. Disabled, nothing changes for anyone who did not
+  turn it on. Minimal API routes have no MVC filter stage and are unaffected (ADR-0019).
+- `NetApiFlow.Dashboard`: comparing two executions side by side. `/history` lets you select
+  exactly two rows and open `/diff?a=<traceIdA>&b=<traceIdB>`, which matches the spans of both
+  executions by `(Component, Operation)`, never by span id. A key repeated inside one execution
+  (an N+1 loop) is summed into a single row instead of listed many times, and a key missing from
+  one side always shows as "not executed" there, with its icon and label, never as a matched step
+  with zero duration. Selecting two executions of different routes is a visible warning, not a
+  block.
+- `NetApiFlow.Dashboard`: exporting and importing a trace as JSON. "Download trace (.json)"
+  serializes the trace already loaded on `/flow`, and "Import trace (.json)" reads a file back
+  into the same graph, waterfall, metric cards and event feed. Both run entirely in the browser,
+  with no HTTP call in either direction, so a trace recorded on one machine can be read on another
+  that never saw the API or its database. An imported trace is marked with a permanent badge, is
+  never persisted, and never reaches `/history`, `/insights`, `/metrics` or `/architecture`.
+  Clicking one of its spans builds the ancestors and children locally, without median duration or
+  delta: the receiving instance has no history for a trace it never recorded.
 - `NetApiFlow`: `ExternalActivitySource.Npgsql`, ingesting the SQL command `Activity` the Npgsql
   driver already emits as a `Database` span (ADR-0018). Opt-in, `None` still the default. When
   `NetApiFlow.EntityFrameworkCore` is also in use, the driver's activity is dropped instead of
