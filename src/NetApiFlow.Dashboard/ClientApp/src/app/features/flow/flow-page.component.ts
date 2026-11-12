@@ -145,6 +145,11 @@ export class FlowPageComponent {
     () => this.graph().nodes.filter((node) => node.state === 'not-executed').length,
   );
 
+  readonly isFollowingLiveRunning = computed(
+    () =>
+      !this.importedTrace() && !this.isReplaying() && this.livePlayer.trace()?.status === 'Running',
+  );
+
   readonly errorOrigin = computed(() => {
     const trace = this.trace();
     return trace?.status === 'Error'
@@ -269,6 +274,14 @@ export class FlowPageComponent {
   backToSummary(): void {
     this.selectedNodeId.set(null);
     this.selectedSpanDetail.set(null);
+  }
+
+  toggleLivePause(): void {
+    if (this.livePlayer.paused()) {
+      this.livePlayer.resume();
+    } else {
+      this.livePlayer.pause();
+    }
   }
 
   toggleReplay(): void {
