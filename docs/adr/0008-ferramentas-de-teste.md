@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#67](https://github.com/Douglasproglima/netapiflow/issues/67)
+## Discussion
+[#179](https://github.com/Douglasproglima/netapiflow/discussions/179)
 
 ## Contexto
 `netapiflow-prompt.md` (seção 4.3) deixa em aberto a escolha entre FluentAssertions/Shouldly e

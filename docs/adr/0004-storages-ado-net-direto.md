@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#64](https://github.com/Douglasproglima/netapiflow/issues/64)
+## Discussion
+[#176](https://github.com/Douglasproglima/netapiflow/discussions/176)
 
 ## Contexto
 `netapiflow-prompt.md` (seção 5) deixa em aberto a escolha entre ADO.NET puro e Dapper para

@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#61](https://github.com/Douglasproglima/netapiflow/issues/61)
+## Discussion
+[#173](https://github.com/Douglasproglima/netapiflow/discussions/173)
 
 ## Contexto
 O NetApiFlow é distribuído como pacote NuGet público. Outros projetos pessoais do autor (Palpitt)

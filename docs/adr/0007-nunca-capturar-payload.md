@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#71](https://github.com/Douglasproglima/netapiflow/issues/71)
+## Discussion
+[#183](https://github.com/Douglasproglima/netapiflow/discussions/183)
 
 ## Contexto
 `netapiflow-prompt.md` (seção 6.8) é explícito: o NetApiFlow não é uma ferramenta de

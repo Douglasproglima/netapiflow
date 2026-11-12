@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#68](https://github.com/Douglasproglima/netapiflow/issues/68)
+## Discussion
+[#180](https://github.com/Douglasproglima/netapiflow/discussions/180)
 
 ## Contexto
 O projeto recebeu um guia de marca (`Guia de Marca v1`, out/2026), produzido por uma IA de

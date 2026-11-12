@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#125](https://github.com/Douglasproglima/netapiflow/issues/125)
+## Discussion
+[#189](https://github.com/Douglasproglima/netapiflow/discussions/189)
 
 ## Contexto
 D-58 item 5 registrou "log e exceção correlacionados por etapa (escopo do `ILogger` dentro do

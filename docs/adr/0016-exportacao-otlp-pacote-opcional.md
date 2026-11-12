@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#110](https://github.com/Douglasproglima/netapiflow/issues/110)
+## Discussion
+[#188](https://github.com/Douglasproglima/netapiflow/discussions/188)
 
 ## Contexto
 D-58 dividiu a interop com OpenTelemetry em dois itens: ingestão (1a, entregue na Fase 8,
