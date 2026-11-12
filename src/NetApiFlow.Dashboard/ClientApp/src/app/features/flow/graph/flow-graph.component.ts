@@ -7,6 +7,7 @@ import {
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { select, Selection } from 'd3-selection';
@@ -16,6 +17,9 @@ import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation
 import { ComponentTypeIcon, componentTypeIcon } from '../../../shared/component-type-icon';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { LanguageService } from '../../../core/i18n/language.service';
+import { NodeVisualState } from '../../../core/models';
+
+const ZOOM_STEP_FACTOR = 1.3;
 
 /**
  * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
@@ -53,12 +57,17 @@ export class FlowGraphComponent implements AfterViewInit {
   private svgSelection: Selection<SVGSVGElement, unknown, null, undefined> | null = null;
   private zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> | null = null;
 
+  private readonly zoomLevel = signal(1);
+  readonly zoomPercentage = computed(() => Math.round(this.zoomLevel() * 100));
+
+  readonly legendStates: readonly NodeVisualState[] = Object.keys(
+    NODE_STATE_PRESENTATION,
+  ) as NodeVisualState[];
+
   constructor() {
     effect(() => {
       this.viewBox();
-      if (this.svgSelection && this.zoomBehavior) {
-        this.svgSelection.call(this.zoomBehavior.transform, zoomIdentity);
-      }
+      this.zoomToFit();
     });
   }
 
@@ -75,11 +84,54 @@ export class FlowGraphComponent implements AfterViewInit {
       .scaleExtent([0.25, 4])
       .on('zoom', (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
         select(zoomLayerElement).attr('transform', event.transform.toString());
+        this.zoomLevel.set(event.transform.k);
       });
 
     this.svgSelection = select(svgElement);
     this.zoomBehavior = behavior;
     this.svgSelection.call(behavior).call(behavior.transform, zoomIdentity);
+  }
+
+  zoomToFit(): void {
+    if (this.svgSelection && this.zoomBehavior) {
+      this.svgSelection.call(this.zoomBehavior.transform, zoomIdentity);
+    }
+  }
+
+  zoomIn(): void {
+    if (this.svgSelection && this.zoomBehavior) {
+      this.zoomBehavior.scaleBy(this.svgSelection, ZOOM_STEP_FACTOR);
+    }
+  }
+
+  zoomOut(): void {
+    if (this.svgSelection && this.zoomBehavior) {
+      this.zoomBehavior.scaleBy(this.svgSelection, 1 / ZOOM_STEP_FACTOR);
+    }
+  }
+
+  legendIconSrc(state: NodeVisualState): string {
+    return NODE_STATE_PRESENTATION[state].iconSrc;
+  }
+
+  legendLabel(state: NodeVisualState): string {
+    return this.language.translate(NODE_STATE_PRESENTATION[state].labelKey);
+  }
+
+  zoomInAriaLabel(): string {
+    return this.language.translate('graph.zoomIn');
+  }
+
+  zoomOutAriaLabel(): string {
+    return this.language.translate('graph.zoomOut');
+  }
+
+  zoomToFitAriaLabel(): string {
+    return this.language.translate('graph.zoomToFit');
+  }
+
+  legendAriaLabel(): string {
+    return this.language.translate('graph.legend.aria');
   }
 
   nodeTransform(node: GraphNode): string {
