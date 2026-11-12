@@ -7,6 +7,7 @@ using NetApiFlow.Dashboard.Endpoints;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Marking;
 using NetApiFlow.MediatR;
+using SampleApi.MinimalMediatR;
 using SampleApi.MinimalMediatR.Application;
 using SampleApi.MinimalMediatR.Data;
 
@@ -49,6 +50,7 @@ app.UseExceptionHandler(exceptionApp => exceptionApp.Run(
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         return Task.CompletedTask;
     }));
+app.UseMiddleware<DemoDelayMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -84,6 +86,9 @@ orders.MapGet("/{id:int}/slow", async (int id, IMediator mediator, CancellationT
 
 orders.MapGet("/parallel", async (int[] ids, IMediator mediator, CancellationToken cancellationToken) =>
     Results.Ok(await mediator.Send(new GetOrdersParallelQuery(ids), cancellationToken)));
+
+orders.MapGet("/sequential", async (int[] ids, IMediator mediator, CancellationToken cancellationToken) =>
+    Results.Ok(await mediator.Send(new GetOrdersSequentiallyQuery(ids), cancellationToken)));
 
 #if NET10_0_OR_GREATER
 app.MapOpenApi();

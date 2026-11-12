@@ -41,6 +41,9 @@ public sealed class OrderService(IOrderRepository repository, IServiceScopeFacto
         return [.. results.Where(o => o is not null).Select(o => o!)];
     }
 
+    public Task<IReadOnlyList<Order>> GetManySequentiallyAsync(IReadOnlyList<int> ids, CancellationToken cancellationToken) =>
+        repository.FindManyAsync(ids, cancellationToken);
+
     public async Task<string> GetShippingStatusAsync(int id, CancellationToken cancellationToken)
     {
         using var client = httpClientFactory.CreateClient();

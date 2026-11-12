@@ -7,6 +7,7 @@ using NetApiFlow.Marking;
 using NetApiFlow.Mcp;
 using NetApiFlow.Mcp.Endpoints;
 using NetApiFlow.OpenTelemetry;
+using SampleApi.Controllers;
 using SampleApi.Controllers.Application;
 using SampleApi.Controllers.Data;
 
@@ -45,6 +46,7 @@ app.UseExceptionHandler(exceptionApp => exceptionApp.Run(
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         return Task.CompletedTask;
     }));
+app.UseMiddleware<DemoDelayMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
