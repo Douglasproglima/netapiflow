@@ -61,7 +61,8 @@ const en = {
   'action.send': 'Send request',
   'action.loading': 'Loading…',
   'action.openApiError.title': 'Could not load the OpenAPI document.',
-  'action.openApiError.hint': 'Check that the host calls MapOpenApi().',
+  'action.openApiError.hint':
+    'Check that the host serves it, and that NetApiFlowOptions.OpenApiDocumentPath points to where it is served.',
   'action.noEndpoints': 'No endpoints found.',
   'action.invalidJson': 'Body is not valid JSON.',
   'action.requestFailed': 'Request failed.',
@@ -358,7 +359,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.send': 'Enviar requisição',
   'action.loading': 'Carregando…',
   'action.openApiError.title': 'Não foi possível carregar o documento OpenAPI.',
-  'action.openApiError.hint': 'Verifique se o host chama MapOpenApi().',
+  'action.openApiError.hint':
+    'Verifique se o host serve o documento, e se NetApiFlowOptions.OpenApiDocumentPath aponta para onde ele é servido.',
   'action.noEndpoints': 'Nenhum endpoint encontrado.',
   'action.invalidJson': 'O corpo não é um JSON válido.',
   'action.requestFailed': 'A requisição falhou.',

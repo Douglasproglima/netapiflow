@@ -9,6 +9,7 @@ const CONFIG: DashboardConfig = {
   version: '0.1.0',
   tailSamplingEnabled: false,
   successSampleRate: 0.1,
+  openApiDocumentPath: '/openapi/v1.json',
 };
 
 const ROUTE_STATS: RouteStat[] = [
