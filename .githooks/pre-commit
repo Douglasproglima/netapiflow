@@ -1,0 +1,18 @@
+#!/bin/sh
+blocked_email="douglas.lima@rajamine.com"
+author_email=$(git config user.email)
+
+if [ "$author_email" = "$blocked_email" ]; then
+    echo "" >&2
+    echo "COMMIT BLOQUEADO: git config user.email está em '$blocked_email'." >&2
+    echo "Este é um repositório pessoal (Douglasproglima); a identidade de trabalho nunca" >&2
+    echo "pode autorar um commit aqui." >&2
+    echo "" >&2
+    echo "Corrija antes de commitar:" >&2
+    echo "  git config user.email \"Douglasproglima@gmail.com\"" >&2
+    echo "  git config user.name \"Douglasproglima\"" >&2
+    echo "" >&2
+    exit 1
+fi
+
+exit 0
