@@ -16,10 +16,9 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Fase 25: controles e sinais visuais do grafo ao vivo (zoom visível, legenda, sparkline p95, follow-live) | D-32 | ⚪ Baixo | Planejada (`docs/plano/fase-25-grafo-controles-ao-vivo.md`), próxima a iniciar |
-| 2 | Fase 26: cenários de demonstração + atraso artificial configurável (samples/Runner) | D-32 | ⚪ Baixo | Planejada (`docs/plano/fase-26-cenarios-demo-e-delay.md`) |
-| 3 | Fase 27: visibilidade de cancelamento (cliente vs. timeout) | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-27-visibilidade-cancelamento.md`) |
-| 4 | Fase 28: anotação de deploy na timeline do histórico | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-28-anotacao-deploy.md`) |
+| 1 | Fase 26: cenários de demonstração + atraso artificial configurável (samples/Runner) | D-32 | ⚪ Baixo | Planejada (`docs/plano/fase-26-cenarios-demo-e-delay.md`), próxima a iniciar |
+| 2 | Fase 27: visibilidade de cancelamento (cliente vs. timeout) | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-27-visibilidade-cancelamento.md`) |
+| 3 | Fase 28: anotação de deploy na timeline do histórico | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-28-anotacao-deploy.md`) |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
@@ -28,7 +27,8 @@ Interop OTel ingestão (Fase 8), detector de N+1 (Fase 9), servidor MCP (Fase 10
 exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14), sampling tail-based (Fase 15),
 mapa de arquitetura vivo (Fase 16), log/exceção correlacionados por etapa (Fase 17), trace
 portátil export/import (Fase 21), diff entre execuções (Fase 22), visibilidade de pré-pipeline
-(Fase 23), asserção de fluxo em teste (Fase 24).
+(Fase 23), asserção de fluxo em teste (Fase 24), controles e sinais visuais do grafo ao vivo
+(Fase 25).
 
 ## Fora do ranking, decisão de escopo em aberto
 
