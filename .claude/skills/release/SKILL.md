@@ -22,7 +22,10 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    ```
 5. Atualize `CHANGELOG.md`: mova o conteúdo de `[Unreleased]` para `[<versao>] - <data>`, deixe
    `[Unreleased]` vazio para a próxima rodada.
-6. Confira que os 6 pacotes NuGet compilam e empacotam: `dotnet pack NetApiFlow.slnx -c Release`.
+6. Confira que os 8 pacotes NuGet compilam e empacotam (`NetApiFlow`, `NetApiFlow.Dashboard`,
+   `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`, `NetApiFlow.Mcp`,
+   `NetApiFlow.OpenTelemetry`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`):
+   `dotnet pack NetApiFlow.slnx -c Release`.
 7. Pare aqui e peça confirmação explícita antes de `git push` e `gh pr create --base main`. Push,
    PR e tag são ações públicas (ver `.claude/rules/git-workflow.md`).
 8. Depois do merge em `main` (squash): criar a tag `v<versao>` (**só com confirmação explícita**),
