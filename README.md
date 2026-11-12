@@ -83,6 +83,31 @@ builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
+### Tagging a step
+
+A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
+
+```csharp
+using var step = NetApiFlow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+step.Tag("order.status", order.Status);
+step.Tag("payment.provider", provider.Name);
+```
+
+Call `Tag` at any point while the step is open, not only right after opening it: tags are read off
+the step when it completes. A key starting with `netapiflow.` is reserved and never recorded.
+`Limits.MaxTagsPerSpan` caps how many tags a span keeps (extra ones are discarded and counted),
+and `Limits.MaxTagValueLength` truncates a long value without dropping the tag. Both are in
+[Configuration](#configuration).
+
+> **A tag value is never sanitized.** Every other field NetApiFlow records is either structural or
+> passed through the error sanitizer. A tag is free text you chose to store, so it is persisted
+> and served exactly as written. Keep it to identifiers and short labels, never a request payload,
+> a user's data or a credential.
+
+Tags travel on `FlowSpan.Tags`: `GET /traces/{traceId}`, `NetApiFlow.GetRecentTrace`,
+`NetApiFlow.Mcp`'s `get_trace` and both storage packages all carry them. The dashboard UI does not
+display them in this version.
+
 ## Asserting on flow in tests
 
 An integration test built on `WebApplicationFactory<TEntryPoint>` already has the response its
@@ -158,6 +183,81 @@ e.g. "30% of the time (55 ms of 183 ms) is not covered by any recorded step." Th
 union of every step's `[startedAt, endedAt)` interval, not a naive sum of durations, so a nested
 step or two parallel branches of a `Task.WhenAll` never get counted twice.
 
+The same six states are listed in a fixed legend in the bottom-left corner of the canvas, so you
+never have to recall what an icon means. The bottom-right corner has zoom in, zoom out and "fit to
+screen" buttons plus the current zoom percentage. Wheel, drag and pinch keep working as before.
+The buttons just make the same zoom reachable without a gesture.
+
+While a trace is still running, a "Pause live" button appears in the graph's header. Pausing
+freezes the graph where it is, so you can inspect a step without the picture moving under you.
+Events arriving meanwhile are queued, not dropped, and "Resume live" applies the whole backlog in
+order. It is a different thing from Replay: pausing stays on the running trace, Replay steps
+through a trace that already finished.
+
+The metrics strip above the graph carries a p95 latency card with a sparkline of the last 50
+executions. The p95 figure comes from `GET /metrics` for the whole window. The sparkline is the
+shape of the recent series next to it. Both refresh as traces complete.
+
+## Try an endpoint
+
+"Try an endpoint" (in the top bar on `/flow`, or the `/runner` page) sends a real request to your
+API from the dashboard, so the graph has something to draw without you leaving the browser or
+reaching for a REST client.
+
+The "Custom" tab builds its form from your application's own OpenAPI document: pick an endpoint,
+fill in path and query parameters and a JSON body, send. It needs `MapOpenApi()` (or an equivalent
+OpenAPI endpoint) in the host application, and says so when the document can't be loaded. The
+dashboard's own routes are filtered out of the list.
+
+The "Scenarios" tab is four one-click requests built for the bundled samples: Success, Slow,
+Error and Sequential (N+1), each one producing a trace with a distinct shape. They target the
+routes in `samples/SampleApi.Controllers` and `samples/SampleApi.MinimalMediatR`, so they are
+there to demo the dashboard, not to exercise your own API: use the "Custom" tab for that.
+
+The same tab has an artificial delay selector (none, 250 ms, 1000 ms, 3000 ms) applied to the
+scenario before it is sent, to produce a believably slow trace without real load. The delay is
+sent as an `X-NetApiFlow-Demo-Delay-Ms` request header and only has an effect if the host honors
+it. Honoring it is sample code (`DemoDelayMiddleware` in both sample projects), not part of any
+published package: NetApiFlow never delays a request of yours.
+
+## Export and import a trace
+
+A trace on `/flow` can be downloaded as a `.json` file ("Download trace (.json)") and opened again
+in any other dashboard instance ("Import trace (.json)"). Both happen entirely in the browser:
+exporting serializes the trace already in memory, importing reads the file locally, and neither
+makes an HTTP call in either direction. The person receiving the file needs no access to the API
+that produced it, nor to its database, which is what makes a trace mailable to a colleague or
+pastable into a conversation with an AI agent.
+
+An imported trace renders through exactly the same graph, waterfall, metric cards and event feed
+as a live one, carries a visible "Imported trace" badge for as long as it is open, and has a
+"Back to live traces" action to leave. It is never persisted: it does not enter `ITraceStore` and
+never shows up in `/history`, `/insights`, `/metrics` or `/architecture`, so someone else's trace
+can't contaminate your own statistics. A file that isn't a NetApiFlow export gets a clear error
+message, never a blank screen.
+
+Clicking a span of an imported trace builds its ancestors and children from the file itself, with
+no round trip. That span detail has no median duration and no delta from the median: those come
+from previous executions of the same operation, and the instance reading the file has no history
+for a trace it never recorded.
+
+## Compare two executions
+
+Two executions of the same route can be compared side by side. On `/history`, select exactly two
+rows and press "Compare". That opens `/diff?a=<traceIdA>&b=<traceIdB>`, a shareable URL for as
+long as both executions still exist in the `ITraceStore` of whoever opens it.
+
+Steps are matched by component and operation, never by span id (a span id is unique to one
+execution and never repeats across two). A step repeated within one execution, which is what an
+N+1 loop produces, is summed into a single row showing the count on each side, instead of filling
+the table with near-identical rows. A step that only one of the two executions ran shows as "not
+executed" on the other side, with the same icon and label the graph already uses, never as a
+matched step with zero duration. Matched steps show the duration of each side and the delta
+between them.
+
+Comparing two executions of different routes still works, every step simply lands on one side
+only. The page flags it as a warning, since that's rarely what you meant.
+
 ## Dashboard preferences
 
 The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in
@@ -204,15 +304,28 @@ builder.Services.AddNetApiFlow(options =>
     options.Retention.MaxTraces = 1000;
     options.Retention.MaxAge = TimeSpan.FromHours(24);
     options.Limits.MaxSpansPerTrace = 300;
+    options.Limits.MaxTagsPerSpan = 20; // default shown; extra tags are discarded and counted
+    options.Limits.MaxTagValueLength = 4000; // default shown; a longer value is truncated, not dropped
     options.IncludePaths("/api/**"); // only trace matching routes; default traces everything
     options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
     options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; default is None
+    options.CapturePrePipelineSteps = true; // opt-in; default is false, see below
     options.TailSampling.Enabled = true; // opt-in; see Tail sampling below
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
     options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
     options.Limits.MaxLogEntriesPerSpan = 20; // default shown
 });
 ```
+
+`CapturePrePipelineSteps` records what runs before your controller is even called, on MVC
+Controller routes: one step per Authorization filter, under the component `AuthorizationFilters`
+with the filter's type name as its operation, and one step around the Resource filter stage,
+under the component `ResourceFilters` with the action name as its operation. The latter becomes
+the parent of the `Controller` step already in the graph, so the stages nest instead of
+duplicating. That's the answer to "the request took 400 ms but my controller only took
+20 ms, where did the rest go" when the time went to authorization or to a resource filter such as
+output caching. It is off by default and changes nothing for anyone who hasn't turned it on.
+Minimal API routes have no MVC filter stage, so they see no new step either way.
 
 `ExternalSources` ingests the `Activity` instances the .NET runtime and the Npgsql driver already
 produce, with no code change in your services.
@@ -397,6 +510,9 @@ NetApiFlow never captures, under any configuration:
 Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
 CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.
 See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+
+The one exception is what you write yourself: a step's tags (see
+[Tagging a step](#tagging-a-step)) are stored and served exactly as given, with no sanitization.
 
 ## Performance and overhead
 
