@@ -86,9 +86,9 @@ export class App implements OnInit, OnDestroy {
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       startWith(null),
-      map(() => this.router.url.split('?')[0] === '/flow'),
+      map(() => this.router.url.split('?')[0] === '/'),
     ),
-    { initialValue: this.router.url.split('?')[0] === '/flow' },
+    { initialValue: this.router.url.split('?')[0] === '/' },
   );
 
   constructor() {

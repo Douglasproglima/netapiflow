@@ -478,6 +478,20 @@ public class DashboardApiTests
         doc.RootElement.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
         doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeFalse();
         doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.1);
+        doc.RootElement.GetProperty("openApiDocumentPath").GetString().ShouldBe("/openapi/v1.json");
+    }
+
+    [Fact]
+    public async Task GetConfig_WithOpenApiDocumentPathConfigured_ReturnsIt()
+    {
+        using var host = CreateHost(configure: options => options.OpenApiDocumentPath = "/swagger/v1/swagger.json");
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("openApiDocumentPath").GetString().ShouldBe("/swagger/v1/swagger.json");
     }
 
     [Fact]

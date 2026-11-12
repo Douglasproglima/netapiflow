@@ -55,6 +55,12 @@ internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOp
                 $"NetApiFlow: Limits.MaxTagValueLength must be greater than zero (was {options.Limits.MaxTagValueLength}).");
         }
 
+        if (string.IsNullOrEmpty(options.OpenApiDocumentPath) || !options.OpenApiDocumentPath.StartsWith('/'))
+        {
+            return ValidateOptionsResult.Fail(
+                $"NetApiFlow: OpenApiDocumentPath must be root-relative and start with '/' (was '{options.OpenApiDocumentPath}').");
+        }
+
         return ValidateOptionsResult.Success;
     }
 }

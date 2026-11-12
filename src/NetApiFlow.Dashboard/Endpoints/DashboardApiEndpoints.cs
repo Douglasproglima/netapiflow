@@ -291,6 +291,7 @@ internal static class DashboardApiEndpoints
             Version = GetCoreVersion(),
             TailSamplingEnabled = options.Value.TailSampling.Enabled,
             SuccessSampleRate = options.Value.TailSampling.SuccessSampleRate,
+            OpenApiDocumentPath = options.Value.OpenApiDocumentPath,
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);

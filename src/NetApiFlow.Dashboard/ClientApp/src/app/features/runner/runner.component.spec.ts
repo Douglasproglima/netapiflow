@@ -3,8 +3,16 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { RunnerComponent } from './runner.component';
-import { OpenApiDocument } from '../../core/models';
+import { DashboardConfig, OpenApiDocument } from '../../core/models';
 import { SseService, SseConnectionState } from '../../core/sse.service';
+
+const CONFIG: DashboardConfig = {
+  slowThresholdMicros: 250_000,
+  version: '0.1.0',
+  tailSamplingEnabled: false,
+  successSampleRate: 0.1,
+  openApiDocumentPath: '/openapi/v1.json',
+};
 
 const fakeSse = {
   events$: new Subject().asObservable(),
@@ -36,6 +44,8 @@ describe('RunnerComponent', () => {
 
   it('tracks whatever trace the embedded endpoint form dispatches', async () => {
     const fixture = TestBed.createComponent(RunnerComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('api/config').flush(CONFIG);
     await fixture.whenStable();
     httpMock.expectOne('/openapi/v1.json').flush(DOC);
     await fixture.whenStable();

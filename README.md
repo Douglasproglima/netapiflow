@@ -39,6 +39,10 @@ dotnet add package NetApiFlow.Dashboard
 ```
 
 ```csharp
+using NetApiFlow;
+using NetApiFlow.Dashboard;
+using NetApiFlow.Dashboard.Endpoints;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
@@ -81,6 +85,24 @@ carry no NetApiFlow code at all, every call to them is tracked because of this o
 ```csharp
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
+```
+
+### EF Core database commands
+
+`NetApiFlow.EntityFrameworkCore` takes two steps, not one. `AddNetApiFlowEntityFrameworkCore()`
+only registers `FlowDbCommandInterceptor` in DI. You attach it to each `DbContext` yourself,
+because EF Core has no global interceptor registration:
+
+```csharp
+using NetApiFlow.EntityFrameworkCore;
+
+builder.Services.AddNetApiFlowEntityFrameworkCore();
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
+    options.AddInterceptors(sp.GetRequiredService<FlowDbCommandInterceptor>());
+});
 ```
 
 ### Tagging a step
@@ -149,7 +171,7 @@ call itself failed.
 |---|---|
 | [`NetApiFlow.Dashboard`](https://www.nuget.org/packages/NetApiFlow.Dashboard) | The REST/SSE API and the embedded Angular UI |
 | [`NetApiFlow.MediatR`](https://www.nuget.org/packages/NetApiFlow.MediatR) | Automatic tracking of MediatR requests |
-| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Automatic tracking of EF Core database commands |
+| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Tracking of EF Core database commands, once the interceptor is attached to your `DbContext` |
 | [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persists traces to PostgreSQL instead of memory |
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persists traces to SQL Server instead of memory |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | A read-only MCP server so an AI agent can query traces directly |
@@ -314,8 +336,14 @@ builder.Services.AddNetApiFlow(options =>
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
     options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
     options.Limits.MaxLogEntriesPerSpan = 20; // default shown
+    options.OpenApiDocumentPath = "/swagger/v1/swagger.json"; // default is /openapi/v1.json
 });
 ```
+
+`OpenApiDocumentPath` tells the dashboard's "Run an endpoint" panel where your application serves
+its OpenAPI document. The default is what `MapOpenApi()` serves. Point it at
+`/swagger/v1/swagger.json` for Swashbuckle, or wherever else you serve it. The panel lists your
+endpoints from that document, so a wrong path leaves it with nothing to show.
 
 `CapturePrePipelineSteps` records what runs before your controller is even called, on MVC
 Controller routes: one step per Authorization filter, under the component `AuthorizationFilters`

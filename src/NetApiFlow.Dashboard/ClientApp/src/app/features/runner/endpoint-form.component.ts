@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,16 +34,18 @@ const DELAY_OPTIONS_MS: readonly number[] = [0, 250, 1000, 3000];
 
 const DEMO_DELAY_HEADER_NAME = 'X-NetApiFlow-Demo-Delay-Ms';
 
+const FALLBACK_OPEN_API_DOCUMENT_PATH = '/openapi/v1.json';
+
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
  * path/query parameters and JSON body, and dispatch it. Shared by the `/runner` route and the
- * `/flow` workspace's action panel (guide seção 6.3): it only emits the dispatched
- * trace id, leaving what to do with it (track it inline, navigate to it) to whichever page embeds
- * it. `openApiUrl` is root-relative on purpose: the host's OpenAPI document and the endpoints it
- * describes live at the application root, which is unrelated to wherever the dashboard itself is
- * mounted (unlike `ApiService`'s own relative URLs). The dashboard's own `{basePath}/api/*` routes
- * (e.g. `DELETE /flow/api/traces`, D2) are read from the page's own `<base href>` and hidden by
- * default, since the host's OpenAPI document picks them up alongside the user's real endpoints.
+ * `/flow` workspace's action panel: it only emits the dispatched trace id, leaving what to do with
+ * it (track it inline, navigate to it) to whichever page embeds it. Where that document lives is
+ * the host's choice, so it comes from `GET /config` (`NetApiFlowOptions.OpenApiDocumentPath`); the
+ * path is root-relative, since the host's endpoints live at the application root whatever path the
+ * dashboard itself is mounted on (unlike `ApiService`'s own relative URLs). The dashboard's own
+ * `{basePath}/api/*` routes are read from the page's own `<base href>` and hidden by default,
+ * since the host's OpenAPI document picks them up alongside the user's real endpoints.
  */
 @Component({
   selector: 'app-endpoint-form',
@@ -55,7 +57,6 @@ export class EndpointFormComponent {
   private readonly api = inject(ApiService);
   private readonly document = inject(DOCUMENT);
 
-  readonly openApiUrl = input<string>('/openapi/v1.json');
   readonly traceDispatched = output<string>();
 
   readonly loading = signal(true);
@@ -110,7 +111,14 @@ export class EndpointFormComponent {
   readonly selectedDelayMs = signal(0);
 
   constructor() {
-    this.api.loadOpenApiDocument(this.openApiUrl()).subscribe({
+    this.api.getConfig().subscribe({
+      next: (config) => this.loadOpenApiDocument(config.openApiDocumentPath),
+      error: () => this.loadOpenApiDocument(FALLBACK_OPEN_API_DOCUMENT_PATH),
+    });
+  }
+
+  private loadOpenApiDocument(path: string): void {
+    this.api.loadOpenApiDocument(path).subscribe({
       next: (doc) => {
         this.openApiDocument.set(doc);
         this.loading.set(false);
