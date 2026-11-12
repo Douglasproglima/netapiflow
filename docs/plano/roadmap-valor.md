@@ -16,8 +16,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Asserção de fluxo em teste | D-58 item 6 | 🟢 Baixo-médio | Em planejamento (Fase 24) |
-| 2 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
+| 1 | D-32 (zoom visível, legenda, sparkline, cenários, delay, follow-live) | D-32 | ⚪ Baixo | Backlog |
 | — | Visibilidade de cancelamento, anotação de deploy | D-60 (menores) | ⚪ Baixo | Backlog, sem posição fixa |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
@@ -27,7 +26,7 @@ Interop OTel ingestão (Fase 8), detector de N+1 (Fase 9), servidor MCP (Fase 10
 exportação OTLP (Fase 13), visão agregada "Insights" (Fase 14), sampling tail-based (Fase 15),
 mapa de arquitetura vivo (Fase 16), log/exceção correlacionados por etapa (Fase 17), trace
 portátil export/import (Fase 21), diff entre execuções (Fase 22), visibilidade de pré-pipeline
-(Fase 23).
+(Fase 23), asserção de fluxo em teste (Fase 24).
 
 ## Fora do ranking, decisão de escopo em aberto
 
