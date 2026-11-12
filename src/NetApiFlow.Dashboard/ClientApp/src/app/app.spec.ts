@@ -91,7 +91,7 @@ describe('App', () => {
 
   it('renders the current route title and a link to each feature route', async () => {
     const { fixture } = setup(false);
-    await TestBed.inject(Router).navigateByUrl('/flow');
+    await TestBed.inject(Router).navigateByUrl('/');
     await fixture.whenStable();
     flushShellRequests();
     await fixture.whenStable();
@@ -99,7 +99,7 @@ describe('App', () => {
 
     // pt-BR is the default language (D-35), so the title renders translated, not the raw "Flow".
     expect(compiled.querySelector('.app-topbar__title')?.textContent).toContain('Fluxo');
-    expect(compiled.querySelector('a[href="/flow"]')).toBeTruthy();
+    expect(compiled.querySelector('a[href="/"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/history"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/components"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/runner"]')).toBeTruthy();
@@ -159,7 +159,7 @@ describe('App', () => {
 
   it('defaults to pt-BR and re-translates the shell when the language toggle is used', async () => {
     const { fixture } = setup(false);
-    await TestBed.inject(Router).navigateByUrl('/flow');
+    await TestBed.inject(Router).navigateByUrl('/');
     await fixture.whenStable();
     flushShellRequests();
     await fixture.whenStable();
