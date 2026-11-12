@@ -42,6 +42,8 @@ const en = {
   'metrics.avgLatency': 'Avg latency',
   'metrics.maxLatency': 'Max latency',
   'metrics.stepsExecuted': 'Steps executed',
+  'metrics.p95Latency': 'p95 latency',
+  'metrics.sparklineAria': 'Latency trend over the last {n} executions',
   'metrics.loading': 'Loading…',
   'metrics.error': 'Failed to load metrics.',
 
@@ -326,6 +328,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'metrics.avgLatency': 'Latência média',
   'metrics.maxLatency': 'Latência máxima',
   'metrics.stepsExecuted': 'Etapas executadas',
+  'metrics.p95Latency': 'Latência p95',
+  'metrics.sparklineAria': 'Tendência de latência nas últimas {n} execuções',
   'metrics.loading': 'Carregando…',
   'metrics.error': 'Falha ao carregar as métricas.',
 

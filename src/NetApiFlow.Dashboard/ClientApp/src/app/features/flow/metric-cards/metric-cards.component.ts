@@ -8,6 +8,11 @@ import { TranslationKey } from '../../../core/i18n/translations';
 export type MetricCardIcon = 'traces' | 'success' | 'errors' | 'avg' | 'max' | 'steps';
 export type MetricCardTint = 'flow' | 'success' | 'warning' | 'danger' | 'idle';
 
+const SPARKLINE_SAMPLE_SIZE = 50;
+const SPARKLINE_VIEWBOX_WIDTH = 120;
+const SPARKLINE_VIEWBOX_HEIGHT = 32;
+const SPARKLINE_VERTICAL_PADDING = 3;
+
 interface MetricCard {
   readonly labelKey: TranslationKey;
   readonly value: string;
@@ -46,18 +51,45 @@ export class MetricCardsComponent implements OnDestroy {
     if (event.type === 'TraceCompleted') {
       this.loadMetrics();
       this.loadComponentMetrics();
+      this.loadSparkline();
     }
   });
 
   readonly loading = signal(true);
   readonly error = signal<TranslationKey | null>(null);
+  readonly sparklineSampleSize = SPARKLINE_SAMPLE_SIZE;
 
   private readonly totalTraces = signal(0);
   private readonly errorCount = signal(0);
   private readonly averageDurationMicros = signal(0);
   private readonly maxDurationMicros = signal(0);
+  private readonly p95DurationMicros = signal(0);
   private readonly stepsExecuted = signal(0);
   private readonly slowThresholdMicros = signal(Infinity);
+  private readonly sparklineDurations = signal<number[]>([]);
+
+  readonly p95Value = computed(() => splitDuration(formatDurationMicros(this.p95DurationMicros())));
+
+  readonly sparklinePoints = computed(() => {
+    const durations = this.sparklineDurations();
+    if (durations.length === 0) {
+      return '';
+    }
+
+    const max = Math.max(...durations);
+    const min = Math.min(...durations);
+    const range = max - min || 1;
+    const stepX = durations.length > 1 ? SPARKLINE_VIEWBOX_WIDTH / (durations.length - 1) : 0;
+    const drawableHeight = SPARKLINE_VIEWBOX_HEIGHT - SPARKLINE_VERTICAL_PADDING * 2;
+
+    return durations
+      .map((value, index) => {
+        const x = index * stepX;
+        const y = SPARKLINE_VERTICAL_PADDING + (1 - (value - min) / range) * drawableHeight;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  });
 
   readonly cards = computed<MetricCard[]>(() => {
     const threshold = this.slowThresholdMicros();
@@ -123,6 +155,7 @@ export class MetricCardsComponent implements OnDestroy {
 
     this.loadMetrics();
     this.loadComponentMetrics();
+    this.loadSparkline();
   }
 
   ngOnDestroy(): void {
@@ -136,6 +169,7 @@ export class MetricCardsComponent implements OnDestroy {
         this.errorCount.set(summary.errorCount);
         this.averageDurationMicros.set(summary.averageDurationMicros);
         this.maxDurationMicros.set(summary.maxDurationMicros);
+        this.p95DurationMicros.set(summary.p95DurationMicros);
         this.loading.set(false);
       },
       error: () => {
@@ -154,6 +188,23 @@ export class MetricCardsComponent implements OnDestroy {
       error: () => {
         // Steps executed is a bonus figure on top of GET /metrics; its own failure doesn't block
         // the rest of the strip, which already has its own error state.
+      },
+    });
+  }
+
+  private loadSparkline(): void {
+    this.api.getTraces({ page: 1, pageSize: SPARKLINE_SAMPLE_SIZE }).subscribe({
+      next: (result) => {
+        this.sparklineDurations.set(
+          result.items
+            .map((trace) => trace.durationMicros)
+            .filter((value): value is number => value !== null)
+            .reverse(),
+        );
+      },
+      error: () => {
+        // The sparkline is a supplementary visual on top of the p95 figure; its own failure
+        // doesn't block the rest of the strip, which already has its own error state.
       },
     });
   }

@@ -3,7 +3,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { MetricCardsComponent } from './metric-cards.component';
-import { ComponentStat, FlowEvent, MetricsSummary } from '../../../core/models';
+import {
+  ComponentStat,
+  FlowEvent,
+  FlowTraceSummary,
+  MetricsSummary,
+  PagedResult,
+} from '../../../core/models';
 import { SseService } from '../../../core/sse.service';
 
 const SUMMARY: MetricsSummary = {
@@ -38,6 +44,30 @@ const COMPONENT_STATS: ComponentStat[] = [
   },
 ];
 
+function trace(
+  overrides: Partial<FlowTraceSummary> & Pick<FlowTraceSummary, 'traceId'>,
+): FlowTraceSummary {
+  return {
+    method: 'GET',
+    routeTemplate: '/api/orders/{id}',
+    httpStatus: 200,
+    status: 'Success',
+    startedAt: '2026-01-01T00:00:00.000000Z',
+    durationMicros: 1_000,
+    truncated: false,
+    ...overrides,
+  };
+}
+
+const TRACES_PAGE: PagedResult<FlowTraceSummary> = {
+  totalCount: 3,
+  items: [
+    trace({ traceId: 't3', durationMicros: 3_000 }),
+    trace({ traceId: 't2', durationMicros: 2_000 }),
+    trace({ traceId: 't1', durationMicros: 1_000 }),
+  ],
+};
+
 function fakeSseService() {
   const events = new Subject<FlowEvent>();
   return { events$: events.asObservable(), emit: (event: FlowEvent) => events.next(event) };
@@ -67,12 +97,24 @@ describe('MetricCardsComponent', () => {
     httpMock.expectOne('api/config').flush({ slowThresholdMicros, version: '0.1.0' });
   }
 
+  function flushSparkline(page: PagedResult<FlowTraceSummary> = TRACES_PAGE) {
+    httpMock
+      .expectOne(
+        (request) =>
+          request.url === 'api/traces' &&
+          request.params.get('page') === '1' &&
+          request.params.get('pageSize') === '50',
+      )
+      .flush(page);
+  }
+
   it('renders success/errors derived from errorCount and steps executed summed from component metrics', async () => {
     const fixture = TestBed.createComponent(MetricCardsComponent);
     await fixture.whenStable();
     flushConfig();
     httpMock.expectOne('api/metrics').flush(SUMMARY);
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
     await fixture.whenStable();
 
     const cards = fixture.componentInstance.cards();
@@ -134,6 +176,7 @@ describe('MetricCardsComponent', () => {
     flushConfig();
     httpMock.expectOne('api/metrics').flush({ ...SUMMARY, errorCount: 0, errorRate: 0 });
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
     await fixture.whenStable();
 
     const errorsCard = fixture.componentInstance.cards().find((card) => card.icon === 'errors');
@@ -147,6 +190,7 @@ describe('MetricCardsComponent', () => {
     flushConfig(500_000);
     httpMock.expectOne('api/metrics').flush(SUMMARY);
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
     await fixture.whenStable();
 
     const cards = fixture.componentInstance.cards();
@@ -160,6 +204,7 @@ describe('MetricCardsComponent', () => {
     flushConfig();
     httpMock.expectOne('api/metrics').flush('boom', { status: 500, statusText: 'Server Error' });
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
     await fixture.whenStable();
 
     // pt-BR is the default language (D-35).
@@ -172,6 +217,7 @@ describe('MetricCardsComponent', () => {
     flushConfig();
     httpMock.expectOne('api/metrics').flush(SUMMARY);
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.cards().find((card) => card.icon === 'traces')?.value).toBe(
@@ -186,10 +232,48 @@ describe('MetricCardsComponent', () => {
     });
     httpMock.expectOne('api/metrics').flush({ ...SUMMARY, totalTraces: 11 });
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
     await fixture.whenStable();
 
     expect(fixture.componentInstance.cards().find((card) => card.icon === 'traces')?.value).toBe(
       '11',
     );
+  });
+
+  it('renders the p95 figure from GET /metrics and a sparkline point per execution from GET /traces', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.p95Value()).toEqual({ value: '88.2', unit: 'ms' });
+
+    const points = fixture.componentInstance
+      .sparklinePoints()
+      .split(' ')
+      .map((pair) => pair.split(',').map(Number));
+    expect(points).toHaveLength(TRACES_PAGE.items.length);
+    // flushSparkline's page arrives newest-first (t3, t2, t1); the sparkline reverses it so the
+    // oldest execution (t1, the shortest) plots first/lowest and the newest (t3) plots last/highest.
+    expect(points[0][0]).toBeLessThan(points[2][0]);
+    expect(points[0][1]).toBeGreaterThan(points[2][1]);
+  });
+
+  it('ignores traces with a null duration (still running) when building the sparkline', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline({
+      totalCount: 2,
+      items: [trace({ traceId: 'running', durationMicros: null }), trace({ traceId: 't1' })],
+    });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.sparklinePoints().split(' ')).toHaveLength(1);
   });
 });
