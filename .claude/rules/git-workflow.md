@@ -48,6 +48,20 @@ Push, merge, tag, abrir ou mergear PR e criar release são visíveis publicament
 repositório é público). Nunca fazer nenhuma delas sem confirmação explícita na conversa.
 Confirmação vale para aquela ação, não para as próximas.
 
+### Exceção: PR só de documentação (D-109)
+
+Quando toda a mudança está em `README.md`, `README.pt-BR.md`, `CHANGELOG.md`, `docs/plano/`,
+`docs/adr/` ou `.claude/`, sem nenhum arquivo em `src/`, `tests/`, `samples/` ou `ClientApp/`: não
+perguntar confirmação em cada etapa (criar branch, empurrar, abrir PR, mergear). Juntar tudo numa
+branch e numa PR só, esperar o CI (segundos, por causa do `docs_only` do `detect-changes`) e
+mergear assim que ficar verde, sem pergunta extra de "posso mergear". Pedido explícito do usuário:
+o processo de confirmar passo a passo é burocracia demais pra um tipo de mudança de baixo risco e
+fácil de reverter.
+
+Essa exceção nunca se estende a uma PR que também toque `src/`, `tests/`, `samples/` ou
+`ClientApp/`, mesmo que a maior parte do diff seja documentação: nesse caso vale a regra geral
+acima, sem exceção.
+
 ## Limpeza depois do merge
 
 Rotina padrão assim que uma PR for confirmada como `MERGED` (sempre confirmar via `gh pr view
