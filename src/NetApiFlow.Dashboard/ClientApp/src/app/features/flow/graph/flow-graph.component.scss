@@ -2,6 +2,7 @@
   display: block;
   width: 100%;
   height: 100%;
+  position: relative;
 }
 
 .flow-graph {
@@ -286,4 +287,77 @@
     color: var(--naf-idle);
     fill: var(--naf-idle);
   }
+}
+
+.flow-graph__legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--naf-radius-md);
+  background: var(--naf-surface);
+  border: 1px solid var(--naf-border);
+  pointer-events: none;
+
+  // The six-item column needs more height than the shorter mobile canvas has to spare, so it
+  // wraps into rows there instead of risking the bottom entries falling outside the viewport.
+  @media (max-width: 767px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.125rem 0.625rem;
+    max-width: calc(100% - 24px);
+  }
+}
+
+.flow-graph__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--naf-font-ui);
+  font-size: 0.6875rem;
+  color: var(--naf-text-muted);
+}
+
+.flow-graph__legend-icon {
+  flex: none;
+}
+
+.flow-graph__zoom-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--naf-radius-md);
+  background: var(--naf-surface);
+  border: 1px solid var(--naf-border);
+}
+
+.flow-graph__zoom-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 0;
+  background: none;
+  color: var(--naf-text-muted);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--naf-surface-2);
+    color: var(--naf-text);
+  }
+}
+
+.flow-graph__zoom-level {
+  min-width: 2.5rem;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--naf-text-muted);
 }

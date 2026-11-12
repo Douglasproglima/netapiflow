@@ -147,3 +147,79 @@
     }
   </g>
 </svg>
+
+<div #legend class="flow-graph__legend" role="list" [attr.aria-label]="legendAriaLabel()">
+  @for (state of legendStates; track state) {
+    <span class="flow-graph__legend-item" role="listitem">
+      <svg
+        class="flow-graph__legend-icon"
+        viewBox="0 0 11 11"
+        width="11"
+        height="11"
+        aria-hidden="true"
+      >
+        <image [attr.href]="legendIconSrc(state)" width="11" height="11"></image>
+      </svg>
+      <span>{{ legendLabel(state) }}</span>
+    </span>
+  }
+</div>
+
+<div #zoomControls class="flow-graph__zoom-controls">
+  <button
+    type="button"
+    class="flow-graph__zoom-btn"
+    [attr.aria-label]="zoomInAriaLabel()"
+    (click)="zoomIn()"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      width="14"
+      height="14"
+    >
+      <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+    </svg>
+  </button>
+  <button
+    type="button"
+    class="flow-graph__zoom-btn"
+    [attr.aria-label]="zoomOutAriaLabel()"
+    (click)="zoomOut()"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      width="14"
+      height="14"
+    >
+      <path d="M5 12h14" stroke-linecap="round" />
+    </svg>
+  </button>
+  <button
+    type="button"
+    class="flow-graph__zoom-btn"
+    [attr.aria-label]="zoomToFitAriaLabel()"
+    (click)="zoomToFit()"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      width="14"
+      height="14"
+    >
+      <path
+        d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </button>
+  <span class="flow-graph__zoom-level naf-mono">{{ zoomPercentage() }}%</span>
+</div>

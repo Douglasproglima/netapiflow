@@ -84,7 +84,11 @@ describe('FlowPageComponent', () => {
     }
   }
 
-  /** The workspace's metric cards and action panel fire their own requests on mount. */
+  /**
+   * The workspace's metric cards and action panel fire their own requests on mount. Both
+   * RecentExecutionsComponent (pageSize 8) and the metric cards' sparkline (pageSize 50) call
+   * GET /traces independently, so both must be matched and flushed.
+   */
   function flushWorkspaceChildRequests(): void {
     httpMock.expectOne('api/metrics').flush({
       totalTraces: 0,
@@ -96,9 +100,9 @@ describe('FlowPageComponent', () => {
     });
     httpMock.expectOne('api/metrics/components').flush([]);
     httpMock.expectOne('/openapi/v1.json').flush({ paths: {} });
-    httpMock
-      .expectOne((request) => request.url === 'api/traces')
-      .flush({ totalCount: 0, items: [] });
+    for (const request of httpMock.match((request) => request.url === 'api/traces')) {
+      request.flush({ totalCount: 0, items: [] });
+    }
   }
 
   it('loads the trace from the ?trace= query param on mount', async () => {
@@ -179,6 +183,36 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.toggleReplay();
     expect(fixture.componentInstance.isReplaying()).toBe(false);
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('shows the live pause toggle only while following a Running trace live, not during replay', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(true);
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain('Pausar ao vivo');
+
+    fixture.componentInstance.toggleLivePause();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.livePlayer.paused()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Retomar ao vivo');
+
+    fixture.componentInstance.toggleReplay();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(false);
   });
 
   it('toggles and closes the action drawer', async () => {
