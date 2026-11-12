@@ -7,15 +7,13 @@
   opacity: 1;
 }
 
-// 8 column units: the six standard cards take 1 each, the sparkline card takes 2 (guide seção
-// 8), so every breakpoint below divides evenly with no leftover gap.
 .metric-cards {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1rem;
 
   @media (max-width: 1199px) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   @media (max-width: 767px) {
@@ -90,6 +88,9 @@
   font-variant-numeric: tabular-nums;
   color: var(--naf-text);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 
   small {
     font-size: 0.9375rem;
@@ -114,7 +115,7 @@
 }
 
 .metric-cards__card--sparkline {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 .metric-cards__sparkline {
