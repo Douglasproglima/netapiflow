@@ -10,9 +10,10 @@
 - Decisões travadas, com justificativa: `docs/plano/decisoes.md`.
 - Riscos técnicos e como cada um é provado por teste: `docs/plano/riscos.md`.
 - Decisão estrutural que vale para o projeto todo: `docs/adr/` (prefixo `ADR-`). Não contradizer
-  ADR aceito sem escrever um ADR novo que o substitua. Todo ADR aceito ganha uma Issue
-  correspondente no GitHub (label `adr`), criada na mesma PR, como rastro público e espaço de
-  comentário da comunidade (D-62).
+  ADR aceito sem escrever um ADR novo que o substitua. Todo ADR aceito ganha uma Discussion
+  correspondente no GitHub (categoria "Architecture Decisions"), criada na mesma PR, como rastro
+  público e espaço de comentário da comunidade (D-62, migrado de Issue para Discussion pela
+  D-110).
 - Regra que vale para todo código, sempre: `.claude/rules/`.
 
 ## Papéis

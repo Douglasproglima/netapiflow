@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#62](https://github.com/Douglasproglima/netapiflow/issues/62)
+## Discussion
+[#174](https://github.com/Douglasproglima/netapiflow/discussions/174)
 
 ## Contexto
 `netapiflow-prompt.md` (seção 4.1) exige que o pacote núcleo (`NetApiFlow`) não dependa do SDK do

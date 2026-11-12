@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#96](https://github.com/Douglasproglima/netapiflow/issues/96)
+## Discussion
+[#187](https://github.com/Douglasproglima/netapiflow/discussions/187)
 
 ## Contexto
 ADR-0013 decidiu que `NetApiFlow.Mcp` reaproveita `IDashboardAuthorizationFilter` em vez de

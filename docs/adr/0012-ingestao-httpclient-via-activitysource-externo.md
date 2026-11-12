@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#83](https://github.com/Douglasproglima/netapiflow/issues/83)
+## Discussion
+[#184](https://github.com/Douglasproglima/netapiflow/discussions/184)
 
 ## Contexto
 D-58 registrou interop com OpenTelemetry como prioridade 1 do roadmap pós `0.1.0`, dividido em
