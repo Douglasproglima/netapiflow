@@ -47,3 +47,6 @@ CLAUDE.local.md
 
 # ai-memory (local only, per dev) - server and data live under %LOCALAPPDATA%\ai-memory; NEVER commit
 /.ai-memory.toml
+
+# Playwright MCP scratch (screenshots, page snapshots, console logs from manual verification)
+.playwright-mcp/
