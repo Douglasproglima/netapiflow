@@ -86,6 +86,10 @@ public sealed class NetApiFlowOptions
     /// <summary>Captures Authorization and Resource filter stages (MVC Controllers only) as
     /// steps, via <c>DiagnosticListener</c>/native filter (ADR-0019). Default: <see langword="false"/>.</summary>
     public bool CapturePrePipelineSteps { get; set; }
+
+    /// <summary>Root-relative path of the OpenAPI document the dashboard's "Run an endpoint"
+    /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves.</summary>
+    public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
@@ -814,7 +818,8 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
   "slowThresholdMicros": 250000,
   "version": "0.1.0",
   "tailSamplingEnabled": false,
-  "successSampleRate": 0.1
+  "successSampleRate": 0.1,
+  "openApiDocumentPath": "/openapi/v1.json"
 }
 ```
 
@@ -825,6 +830,11 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 `tailSamplingEnabled`/`successSampleRate` (Fase 15, D-82) espelham
 `NetApiFlowOptions.TailSampling`, para o dashboard avisar quando o histórico persistido não é
 100% do tráfego real.
+
+`openApiDocumentPath` (Fase 29, D-111) espelha `NetApiFlowOptions.OpenApiDocumentPath` (padrão
+`/openapi/v1.json`), o caminho raiz-relativo de onde o host serve o próprio documento OpenAPI.
+O painel "Testar um endpoint" lê daqui em vez de assumir o caminho padrão do `MapOpenApi()`,
+porque a maioria dos projetos .NET existentes serve OpenAPI por Swashbuckle, em outro caminho.
 
 ---
 
