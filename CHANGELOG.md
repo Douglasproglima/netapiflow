@@ -9,6 +9,33 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: a request that never matches a route (MVC Controllers or Minimal API) no longer
+  persists the resolved request path. Every unmatched request now records the route template as
+  `(unmatched)` instead, closing a gap where a path segment (an id, an email, a token sitting in
+  the URL) could reach a trace before the route was known (ADR-0007). `(unmatched)` is recorded
+  for any request without a matched route, not only 404s. A request that fails after matching a
+  route (authorization, a thrown exception) still keeps the real route template.
+- `NetApiFlow.EntityFrameworkCore`: attaching `FlowDbCommandInterceptor` more than once to the
+  same `DbContext` type, for example once via `AddDbContext` and once via `AddDbContextFactory`,
+  no longer leaves a phantom `Database` span stuck in `Running`. Only the attachment that reaches
+  a command first opens its span; every other attachment reuses it instead of opening a second
+  one.
+- `NetApiFlow.Dashboard`: `/flow` no longer redirects to `/flow/flow`.
+- `NetApiFlow.Dashboard`: the action panel's route list no longer grows past its column on wide
+  screens (`>= 1600px` layout) when the OpenAPI document behind "Try an endpoint" lists a real
+  number of routes. The list used to have no height limit of its own, so it pushed the flow graph
+  out of view.
+
+### Added
+
+- `NetApiFlow`: `NetApiFlowOptions.OpenApiDocumentPath` (default `/openapi/v1.json`), so "Try an
+  endpoint" can read an OpenAPI document served at a different path, such as the one Swashbuckle
+  serves at `/swagger/v1/swagger.json`.
+
+## [0.2.0] - 2026-11-12
+
+### Fixed
+
 - `NetApiFlow`: tags attached with `FlowStep.Tag(key, value)` now reach `FlowSpan.Tags`. The
   public API existed since `0.1.0` and wrote to the underlying `Activity`, but nothing ever copied
   those values back into the span, so they never reached the REST API, the storage packages or
