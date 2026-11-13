@@ -13,7 +13,10 @@ using NetApiFlow.Routing;
 
 namespace NetApiFlow.Dashboard.Endpoints;
 
-/// <summary>Maps the twelve REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>, seção 3).</summary>
+/// <summary>
+/// Maps the twelve REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>,
+/// seção 3), plus <c>/deploys</c> (Fase 28, pending the same freeze).
+/// </summary>
 internal static class DashboardApiEndpoints
 {
     public static RouteGroupBuilder MapNetApiFlowDashboardApi(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
@@ -36,6 +39,8 @@ internal static class DashboardApiEndpoints
         group.MapGet("/metrics/routes", GetRouteMetrics);
         group.MapGet("/architecture", GetArchitecture);
         group.MapGet("/config", GetConfig);
+        group.MapPost("/deploys", CreateDeploy);
+        group.MapGet("/deploys", GetDeploys);
         group.MapStream();
 
         return group;
@@ -295,6 +300,35 @@ internal static class DashboardApiEndpoints
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);
+    }
+
+    private static async Task<IResult> CreateDeploy(CreateDeployAnnotationRequest request, IDeployAnnotationStore store, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Label))
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var annotation = new DeployAnnotation
+        {
+            Id = Guid.NewGuid().ToString("n"),
+            Timestamp = DateTime.UtcNow,
+            Label = request.Label,
+        };
+
+        await store.SaveAsync(annotation, cancellationToken);
+        return Results.Json(annotation, DashboardJsonOptions.Rest, statusCode: StatusCodes.Status201Created);
+    }
+
+    private static async Task<IResult> GetDeploys(DateTime? from, DateTime? to, IDeployAnnotationStore store, CancellationToken cancellationToken)
+    {
+        if (from is null || to is null)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var annotations = await store.QueryAsync(from.Value, to.Value, cancellationToken);
+        return Results.Json(annotations, DashboardJsonOptions.Rest);
     }
 
     /// <summary>
