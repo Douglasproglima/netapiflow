@@ -71,7 +71,13 @@ function inputValue(event: Event): string {
 }
 
 function isFlowStatus(value: string | null): value is FlowStatus {
-  return value === 'Running' || value === 'Success' || value === 'Error';
+  return (
+    value === 'Running' ||
+    value === 'Success' ||
+    value === 'Error' ||
+    value === 'Cancelled' ||
+    value === 'Timeout'
+  );
 }
 
 function isTraceSortField(value: string | null): value is TraceSortField {
@@ -172,14 +178,23 @@ function rowStatusState(trace: FlowTraceSummary): NodeVisualState {
   if (trace.status === 'Running') {
     return 'running';
   }
+  if (trace.status === 'Cancelled') {
+    return 'cancelled';
+  }
+  if (trace.status === 'Timeout') {
+    return 'timeout';
+  }
   return trace.httpStatus !== null && trace.httpStatus >= 400 ? 'error' : 'completed';
 }
 
-function rowStatusTint(state: NodeVisualState): 'flow' | 'danger' | 'success' {
+function rowStatusTint(state: NodeVisualState): 'flow' | 'danger' | 'success' | 'idle' {
   if (state === 'running') {
     return 'flow';
   }
-  return state === 'error' ? 'danger' : 'success';
+  if (state === 'cancelled') {
+    return 'idle';
+  }
+  return state === 'error' || state === 'timeout' ? 'danger' : 'success';
 }
 
 function describeError(error: HttpErrorResponse): string {

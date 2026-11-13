@@ -19,4 +19,6 @@ export const NODE_STATE_PRESENTATION: Readonly<Record<NodeVisualState, NodeState
   slow: { iconSrc: 'node-states/slow.svg', labelKey: 'node.state.slow' },
   error: { iconSrc: 'node-states/error.svg', labelKey: 'node.state.error' },
   'not-executed': { iconSrc: 'node-states/skipped.svg', labelKey: 'node.state.notExecuted' },
+  cancelled: { iconSrc: 'node-states/cancelled.svg', labelKey: 'node.state.cancelled' },
+  timeout: { iconSrc: 'node-states/timeout.svg', labelKey: 'node.state.timeout' },
 };

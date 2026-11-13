@@ -4,7 +4,13 @@ export type ParseTraceFileResult =
   | { readonly ok: true; readonly trace: FlowTraceDetail }
   | { readonly ok: false; readonly reason: 'invalid-json' | 'invalid-shape' };
 
-const FLOW_STATUSES: readonly FlowStatus[] = ['Running', 'Success', 'Error'];
+const FLOW_STATUSES: readonly FlowStatus[] = [
+  'Running',
+  'Success',
+  'Error',
+  'Cancelled',
+  'Timeout',
+];
 
 export function traceExportFileName(traceId: string): string {
   return `trace-${traceId}.json`;

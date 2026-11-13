@@ -12,4 +12,12 @@ describe('statusTint', () => {
   it('maps Success to success', () => {
     expect(statusTint('Success')).toBe('success');
   });
+
+  it('maps Timeout to danger', () => {
+    expect(statusTint('Timeout')).toBe('danger');
+  });
+
+  it('maps Cancelled to idle', () => {
+    expect(statusTint('Cancelled')).toBe('idle');
+  });
 });

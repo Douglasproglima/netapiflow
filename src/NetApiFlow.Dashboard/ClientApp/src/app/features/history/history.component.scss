@@ -279,6 +279,10 @@
   color: var(--naf-flow-text);
 }
 
+.history__status-pill--idle {
+  color: var(--naf-text-muted);
+}
+
 .history__row-link {
   display: block;
   overflow: hidden;

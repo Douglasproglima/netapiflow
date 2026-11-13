@@ -155,7 +155,9 @@
       <div class="flow-details__chips">
         <span
           class="flow-details__chip"
-          [class.flow-details__chip--danger]="trace().status === 'Error'"
+          [class.flow-details__chip--danger]="
+            trace().status === 'Error' || trace().status === 'Timeout'
+          "
           [class.flow-details__chip--success]="trace().status === 'Success'"
         >
           {{ 'details.httpStatus' | t: { status: trace().httpStatus ?? '—' } }}

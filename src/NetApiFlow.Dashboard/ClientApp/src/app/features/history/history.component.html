@@ -195,6 +195,24 @@
             <img src="node-states/running.svg" alt="" width="14" height="14" />
             {{ 'history.filter.status.running' | t }}
           </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="filters().status === 'Cancelled'"
+            (click)="setStatus('Cancelled')"
+          >
+            <img src="node-states/cancelled.svg" alt="" width="14" height="14" />
+            {{ 'history.filter.status.cancelled' | t }}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            [attr.aria-checked]="filters().status === 'Timeout'"
+            (click)="setStatus('Timeout')"
+          >
+            <img src="node-states/timeout.svg" alt="" width="14" height="14" />
+            {{ 'history.filter.status.timeout' | t }}
+          </button>
         </div>
       </div>
 
