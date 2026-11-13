@@ -1,6 +1,10 @@
 .flow-workspace {
   padding: 1rem;
-  min-height: 100%;
+  // Has to be a real height, not min-height: every height: 100%/max-height: % below this point
+  // (the action panel, its route list) resolves against this box. With only min-height, this box
+  // has no definite height of its own, so those percentages silently resolve to none and the row
+  // grows as tall as the action panel's content demands.
+  height: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
