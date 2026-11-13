@@ -80,6 +80,23 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task SaveAsync_ThenGetAsync_RoundTripsCancelledAndTimeoutStatus()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("cancelled-1", status: FlowStatus.Cancelled), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("timeout-1", status: FlowStatus.Timeout), [], CancellationToken.None);
+
+        (await store.GetAsync("cancelled-1", CancellationToken.None))!.Trace.Status.ShouldBe(FlowStatus.Cancelled);
+        (await store.GetAsync("timeout-1", CancellationToken.None))!.Trace.Status.ShouldBe(FlowStatus.Timeout);
+
+        var byCancelled = await store.QueryAsync(new TraceQuery { Status = FlowStatus.Cancelled }, CancellationToken.None);
+        byCancelled.Items.Select(i => i.TraceId).ShouldBe(["cancelled-1"]);
+
+        var byTimeout = await store.QueryAsync(new TraceQuery { Status = FlowStatus.Timeout }, CancellationToken.None);
+        byTimeout.Items.Select(i => i.TraceId).ShouldBe(["timeout-1"]);
+    }
+
+    [Fact]
     public async Task GetAsync_UnknownTraceId_ReturnsNull()
     {
         var store = CreateStore();
@@ -164,6 +181,20 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetTraceStatsAsync_CountsTimeoutAsErrorButNotCancelled()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("stats-success", status: FlowStatus.Success), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("stats-timeout", status: FlowStatus.Timeout), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("stats-cancelled", status: FlowStatus.Cancelled), [], CancellationToken.None);
+
+        var stats = await store.GetTraceStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        stats.TotalTraces.ShouldBe(3);
+        stats.ErrorCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task GetRouteStatsAsync_AggregatesPerMethodAndRouteTemplate()
     {
         var store = CreateStore();
@@ -181,6 +212,20 @@ public abstract class TraceStoreTestsBase
         orders.ErrorCount.ShouldBe(1);
         orders.MedianDurationMicros.ShouldBe(2_000);
         orders.MaxDurationMicros.ShouldBe(3_000);
+    }
+
+    [Fact]
+    public async Task GetRouteStatsAsync_CountsTimeoutAsErrorButNotCancelled()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("rs-err-timeout", route: "/api/orders/{id}", status: FlowStatus.Timeout), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("rs-err-cancelled", route: "/api/orders/{id}", status: FlowStatus.Cancelled), [], CancellationToken.None);
+
+        var stats = await store.GetRouteStatsAsync(new StatsQuery(), CancellationToken.None);
+
+        var stat = stats.ShouldHaveSingleItem();
+        stat.ExecutionCount.ShouldBe(2);
+        stat.ErrorCount.ShouldBe(1);
     }
 
     [Fact]

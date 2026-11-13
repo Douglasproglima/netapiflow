@@ -6,48 +6,38 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NetApiFlow.Domain;
+using NetApiFlow.Recording;
 using Shouldly;
 using Xunit;
 
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Confirms, against a real Kestrel listener rather than <c>TestServer</c> (the same reason as
+/// Confirms, against a real Kestrel listener rather than <c>TestServer</c> (same reason as
 /// <see cref="DashboardSseTests"/>: only a real client disconnect cancels
-/// <c>HttpContext.RequestAborted</c>), whether reading
-/// <c>context.RequestAborted.IsCancellationRequested</c> at the point
-/// <c>NetApiFlowMiddleware</c> catches an exception reliably distinguishes a client disconnecting
-/// from an unrelated internal cancellation.
+/// <c>HttpContext.RequestAborted</c>), that the full pipeline classifies a client disconnecting
+/// and an internal cancellation into the right <see cref="FlowStatus"/>, end to end through
+/// <c>NetApiFlowMiddleware</c> and <see cref="FlowRecorder"/>.
 /// </summary>
-public class CancellationVisibilityInvestigationTests
+public class CancellationClassificationIntegrationTests
 {
-    private sealed record CaughtCancellation(string ExceptionTypeName, bool RequestAbortedAtCatch);
-
-    private static async Task<(IHost Host, HttpClient Client, ConcurrentDictionary<string, CaughtCancellation> Caught)> CreateHostAsync()
+    private static async Task<(IHost Host, HttpClient Client, ConcurrentDictionary<string, FlowTrace> Completed)> CreateHostAsync()
     {
-        var caught = new ConcurrentDictionary<string, CaughtCancellation>();
+        var completed = new ConcurrentDictionary<string, FlowTrace>();
 
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseKestrel();
                 webBuilder.UseUrls("http://127.0.0.1:0");
-                webBuilder.ConfigureServices(services => services.AddRouting());
+                webBuilder.ConfigureServices(services =>
+                {
+                    services.AddRouting();
+                    services.AddNetApiFlow(o => o.IncludePaths("/**"));
+                });
                 webBuilder.Configure(app =>
                 {
-                    app.Use(async (context, next) =>
-                    {
-                        try
-                        {
-                            await next(context);
-                        }
-                        catch (Exception ex)
-                        {
-                            caught[context.Request.Path.Value!] =
-                                new CaughtCancellation(ex.GetType().Name, context.RequestAborted.IsCancellationRequested);
-                            throw;
-                        }
-                    });
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
@@ -70,27 +60,29 @@ public class CancellationVisibilityInvestigationTests
 
         await host.StartAsync();
 
+        host.Services.GetRequiredService<FlowRecorder>().TraceCompleted += trace => completed[trace.RouteTemplate] = trace;
+
         var addresses = host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses;
         var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
-        return (host, client, caught);
+        return (host, client, completed);
     }
 
-    private static async Task<CaughtCancellation> WaitForCaptureAsync(ConcurrentDictionary<string, CaughtCancellation> caught, string path)
+    private static async Task<FlowTrace> WaitForCompletionAsync(ConcurrentDictionary<string, FlowTrace> completed, string routeTemplate)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (!caught.TryGetValue(path, out var value))
+        while (!completed.TryGetValue(routeTemplate, out var trace))
         {
             timeout.Token.ThrowIfCancellationRequested();
             await Task.Delay(20, CancellationToken.None);
         }
 
-        return caught[path];
+        return completed[routeTemplate];
     }
 
     [Fact]
-    public async Task RequestAborted_WhenClientDisconnectsMidRequest_IsTrueAtCatch()
+    public async Task ClientDisconnectingMidRequest_CompletesTraceAsCancelled()
     {
-        var (host, client, caught) = await CreateHostAsync();
+        var (host, client, completed) = await CreateHostAsync();
         using var _host = host;
         using var _client = client;
 
@@ -102,20 +94,20 @@ public class CancellationVisibilityInvestigationTests
 
         await Should.ThrowAsync<Exception>(() => pendingRequest);
 
-        var result = await WaitForCaptureAsync(caught, "/client-cancel");
-        result.RequestAbortedAtCatch.ShouldBeTrue();
+        var trace = await WaitForCompletionAsync(completed, "/client-cancel");
+        trace.Status.ShouldBe(FlowStatus.Cancelled);
     }
 
     [Fact]
-    public async Task RequestAborted_WhenAnInternalCancellationFiresWithTheClientStillConnected_IsFalseAtCatch()
+    public async Task InternalCancellationWithClientStillConnected_CompletesTraceAsTimeout()
     {
-        var (host, client, caught) = await CreateHostAsync();
+        var (host, client, completed) = await CreateHostAsync();
         using var _host = host;
         using var _client = client;
 
         using var response = await client.GetAsync("/internal-timeout");
 
-        var result = await WaitForCaptureAsync(caught, "/internal-timeout");
-        result.RequestAbortedAtCatch.ShouldBeFalse();
+        var trace = await WaitForCompletionAsync(completed, "/internal-timeout");
+        trace.Status.ShouldBe(FlowStatus.Timeout);
     }
 }

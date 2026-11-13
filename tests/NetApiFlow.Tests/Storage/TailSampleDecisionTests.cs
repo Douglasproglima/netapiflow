@@ -38,6 +38,24 @@ public class TailSampleDecisionTests
     }
 
     [Fact]
+    public void ShouldPersist_WhenTraceIsTimeout_AlwaysReturnsTrue()
+    {
+        var options = new TailSamplingOptions { Enabled = true, SuccessSampleRate = 0.0 };
+        var trace = BuildTrace(FlowStatus.Timeout, 1_000);
+
+        TailSampleDecision.ShouldPersist(trace, options, SlowThreshold, randomDraw: 0.99).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ShouldPersist_WhenTraceIsCancelled_FollowsTheSameSamplingAsSuccess()
+    {
+        var options = new TailSamplingOptions { Enabled = true, SuccessSampleRate = 0.1 };
+        var trace = BuildTrace(FlowStatus.Cancelled, 1_000);
+
+        TailSampleDecision.ShouldPersist(trace, options, SlowThreshold, randomDraw: 0.5).ShouldBeFalse();
+    }
+
+    [Fact]
     public void ShouldPersist_WhenDurationAtSlowThreshold_ReturnsTrue()
     {
         var options = new TailSamplingOptions { Enabled = true, SuccessSampleRate = 0.0 };
