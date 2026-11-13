@@ -63,5 +63,24 @@ internal static class SqlServerSchemaInitializer
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public static async Task EnsureDeployAnnotationsCreatedAsync(SqlConnection connection, string deployAnnotationsTable, CancellationToken cancellationToken)
+    {
+        var sql = $"""
+            IF OBJECT_ID('{deployAnnotationsTable}', 'U') IS NULL
+            BEGIN
+                CREATE TABLE {deployAnnotationsTable} (
+                    id varchar(64) NOT NULL PRIMARY KEY,
+                    timestamp datetimeoffset NOT NULL,
+                    label nvarchar(max) NOT NULL
+                );
+
+                CREATE INDEX ix_{SafeIndexName(deployAnnotationsTable)}_timestamp ON {deployAnnotationsTable} (timestamp);
+            END;
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private static string SafeIndexName(string tableName) => tableName.Replace("dbo.", string.Empty, StringComparison.Ordinal);
 }

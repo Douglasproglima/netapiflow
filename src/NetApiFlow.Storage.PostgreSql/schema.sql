@@ -43,3 +43,11 @@ CREATE TABLE IF NOT EXISTS netapiflow_spans (
 );
 
 CREATE INDEX IF NOT EXISTS ix_netapiflow_spans_trace_id ON netapiflow_spans (trace_id);
+
+CREATE TABLE IF NOT EXISTS netapiflow_deploy_annotations (
+    id varchar(64) PRIMARY KEY,
+    timestamp timestamptz NOT NULL,
+    label text NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_netapiflow_deploy_annotations_timestamp ON netapiflow_deploy_annotations (timestamp);

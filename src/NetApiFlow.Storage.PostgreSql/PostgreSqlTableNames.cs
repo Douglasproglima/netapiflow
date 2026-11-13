@@ -10,14 +10,24 @@ internal static partial class PostgreSqlTableNames
 {
     public static (string Traces, string Spans) Resolve(string tablePrefix)
     {
+        ValidateOrThrow(tablePrefix);
+        return ($"{tablePrefix}traces", $"{tablePrefix}spans");
+    }
+
+    public static string ResolveDeployAnnotations(string tablePrefix)
+    {
+        ValidateOrThrow(tablePrefix);
+        return $"{tablePrefix}deploy_annotations";
+    }
+
+    private static void ValidateOrThrow(string tablePrefix)
+    {
         if (!ValidPrefix().IsMatch(tablePrefix))
         {
             throw new ArgumentException(
                 $"NetApiFlow.Storage.PostgreSql: TablePrefix '{tablePrefix}' is invalid. Use only letters, digits and underscores, starting with a letter or underscore.",
                 nameof(tablePrefix));
         }
-
-        return ($"{tablePrefix}traces", $"{tablePrefix}spans");
     }
 
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$")]
