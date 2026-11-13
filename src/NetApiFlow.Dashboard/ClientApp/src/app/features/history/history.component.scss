@@ -340,6 +340,38 @@
   color: var(--naf-warning);
 }
 
+.history__row--deploy td {
+  height: auto;
+  padding: 0.5rem 0.75rem;
+  background: var(--naf-flow-tint);
+  white-space: normal;
+}
+
+.history__deploy-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--naf-font-ui);
+  font-size: 0.8125rem;
+  color: var(--naf-flow-text);
+}
+
+.history__deploy-icon {
+  flex: none;
+}
+
+.history__deploy-label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history__deploy-time {
+  margin-left: auto;
+  flex: none;
+}
+
 .history__foot {
   display: flex;
   align-items: center;
@@ -540,6 +572,10 @@
       gap: 0.25rem 0.625rem;
       padding: 0.625rem 1rem;
       align-items: center;
+    }
+
+    tbody tr.history__row--deploy {
+      display: block;
     }
 
     td {

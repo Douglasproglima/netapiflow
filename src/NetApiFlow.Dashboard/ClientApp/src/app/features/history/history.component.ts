@@ -5,6 +5,7 @@ import { ActivatedRoute, Params, ParamMap, Router, RouterLink } from '@angular/r
 import { Subject, debounceTime } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import {
+  DeployAnnotation,
   FlowStatus,
   NodeVisualState,
   PagedResult,
@@ -13,6 +14,7 @@ import {
   TraceQuery,
   TraceSortField,
 } from '../../core/models';
+import { HistoryRow, mergeTraceRowsWithDeployMarkers } from './deploy-timeline';
 import { formatDurationMicros } from '../../shared/duration-format';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import { NODE_STATE_PRESENTATION } from '../../shared/node-state-presentation';
@@ -241,6 +243,7 @@ export class HistoryComponent {
   readonly loading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly result = signal<PagedResult<FlowTraceSummary> | null>(null);
+  readonly deployMarkers = signal<DeployAnnotation[]>([]);
 
   /** At most 2, in selection order: a 3rd pick drops the oldest (FIFO), same as a product compare picker. */
   readonly selectedTraces = signal<FlowTraceSummary[]>([]);
@@ -308,6 +311,23 @@ export class HistoryComponent {
     () => this.filters().order ?? DEFAULT_SORT_DIRECTION,
   );
 
+  /**
+   * Deploy markers only interleave when the table is sorted chronologically: a duration or
+   * route sort has no timeline for a marker to sit "between", so markers are left out rather
+   * than inserted at a position that wouldn't mean anything.
+   */
+  readonly historyRows = computed<HistoryRow[]>(() => {
+    const page = this.result();
+    if (!page) {
+      return [];
+    }
+    if (this.activeSort() !== 'startedAt') {
+      return page.items.map((trace): HistoryRow => ({ kind: 'trace', trace }));
+    }
+
+    return mergeTraceRowsWithDeployMarkers(page.items, this.deployMarkers(), this.activeOrder());
+  });
+
   private readonly routeInput$ = new Subject<string>();
   private readonly tenantInput$ = new Subject<string>();
 
@@ -351,6 +371,45 @@ export class HistoryComponent {
         replaceUrl: true,
       });
     });
+
+    effect(() => {
+      const page = this.result();
+      if (this.activeSort() !== 'startedAt' || !page || page.items.length === 0) {
+        this.deployMarkers.set([]);
+        return;
+      }
+
+      const { from, to } = this.deployQueryWindow(page);
+
+      this.api.getDeploys(from, to).subscribe({
+        next: (deploys) => this.deployMarkers.set(deploys),
+        error: () => this.deployMarkers.set([]),
+      });
+    });
+  }
+
+  /**
+   * A deploy right before or after the whole trace history (nothing recorded yet on the other
+   * side) still needs to show: on whichever page currently holds the newest/oldest execution for
+   * the active sort direction, that edge of the window extends to "now"/epoch instead of stopping
+   * at the last trace actually on the page.
+   */
+  private deployQueryWindow(page: PagedResult<FlowTraceSummary>): { from: string; to: string } {
+    const timestamps = page.items.map((trace) => new Date(trace.startedAt).getTime());
+    const order = this.activeOrder();
+    const isFirstPage = (this.filters().page ?? 1) === 1;
+    const isLastPage = !this.hasNextPage();
+    const showsNewestOverall = (order === 'desc' && isFirstPage) || (order === 'asc' && isLastPage);
+    const showsOldestOverall = (order === 'desc' && isLastPage) || (order === 'asc' && isFirstPage);
+
+    return {
+      from: showsOldestOverall
+        ? new Date(0).toISOString()
+        : new Date(Math.min(...timestamps)).toISOString(),
+      to: showsNewestOverall
+        ? new Date().toISOString()
+        : new Date(Math.max(...timestamps)).toISOString(),
+    };
   }
 
   onRouteInput(event: Event): void {
@@ -531,6 +590,10 @@ export class HistoryComponent {
 
   shortTraceId(traceId: string): string {
     return traceId.slice(0, 8);
+  }
+
+  rowTrackKey(row: HistoryRow): string {
+    return row.kind === 'trace' ? `trace-${row.trace.traceId}` : `deploy-${row.deploy.id}`;
   }
 
   copyTraceId(traceId: string, event: Event): void {

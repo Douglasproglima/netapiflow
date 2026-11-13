@@ -26,6 +26,15 @@
         ],
         "createdAt": "2026-11-11T14:37:38.100Z",
         "reason": "false positive: static file analysis can't resolve Angular [src] bindings (stateIconSrc()); same pattern already exists unflagged in history.component.html when scanned as a rendered URL"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/app/features/history/history.component.html"
+        ],
+        "createdAt": "2026-11-13T22:27:35.386Z",
+        "reason": "false positive: static analysis can't resolve Angular [src] bindings (rowStateIconSrc()); same precedent already recorded for diff-page.component.html"
       }
     ]
   }

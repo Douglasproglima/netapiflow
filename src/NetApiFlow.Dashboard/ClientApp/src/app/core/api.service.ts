@@ -5,6 +5,7 @@ import {
   ArchitectureMap,
   ComponentStat,
   DashboardConfig,
+  DeployAnnotation,
   EndpointDescriptor,
   FlowTraceDetail,
   FlowTraceSummary,
@@ -89,6 +90,16 @@ export class ApiService {
 
   getConfig(): Observable<DashboardConfig> {
     return this.http.get<DashboardConfig>(`${this.basePath}/config`);
+  }
+
+  getDeploys(from: string, to: string): Observable<DeployAnnotation[]> {
+    return this.http.get<DeployAnnotation[]>(`${this.basePath}/deploys`, {
+      params: new HttpParams().set('from', from).set('to', to),
+    });
+  }
+
+  createDeploy(label: string): Observable<DeployAnnotation> {
+    return this.http.post<DeployAnnotation>(`${this.basePath}/deploys`, { label });
   }
 
   /**
