@@ -466,7 +466,7 @@ code,
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  height: 36px;
+  min-height: 36px;
   border: 1px solid var(--naf-border);
   border-radius: var(--naf-radius-sm);
   overflow: hidden;

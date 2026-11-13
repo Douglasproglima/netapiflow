@@ -152,7 +152,7 @@ export class FlowPageComponent {
 
   readonly errorOrigin = computed(() => {
     const trace = this.trace();
-    return trace?.status === 'Error'
+    return trace?.status === 'Error' || trace?.status === 'Timeout'
       ? (trace.spans.find((span) => span.isErrorOrigin) ?? null)
       : null;
   });
@@ -160,7 +160,7 @@ export class FlowPageComponent {
   readonly slowestStep = computed(() => {
     const trace = this.trace();
     const threshold = this.slowThresholdMicros();
-    if (!trace || trace.status === 'Error' || threshold === null) {
+    if (!trace || trace.status === 'Error' || trace.status === 'Timeout' || threshold === null) {
       return null;
     }
 

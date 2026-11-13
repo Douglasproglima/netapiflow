@@ -92,9 +92,14 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                     recorder.UpdateRouteTemplate(traceId, routeTemplate);
                 }
 
-                var status = caughtException is not null || context.Response.StatusCode >= 500
-                    ? FlowStatus.Error
-                    : FlowStatus.Success;
+                var status = caughtException switch
+                {
+                    OperationCanceledException when context.RequestAborted.IsCancellationRequested => FlowStatus.Cancelled,
+                    OperationCanceledException => FlowStatus.Timeout,
+                    not null => FlowStatus.Error,
+                    null when context.Response.StatusCode >= 500 => FlowStatus.Error,
+                    _ => FlowStatus.Success,
+                };
 
                 recorder.CompleteTrace(traceId, context.Response.StatusCode, status, caughtException?.Message);
             }

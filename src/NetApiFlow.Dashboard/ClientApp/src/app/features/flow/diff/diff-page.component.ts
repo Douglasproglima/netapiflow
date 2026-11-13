@@ -156,6 +156,14 @@ export class DiffPageComponent {
       return 'running';
     }
 
+    if (trace.status === 'Cancelled') {
+      return 'cancelled';
+    }
+
+    if (trace.status === 'Timeout') {
+      return 'timeout';
+    }
+
     return trace.status === 'Error' ? 'error' : 'completed';
   }
 

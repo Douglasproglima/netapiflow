@@ -3,11 +3,11 @@
  * exactly (camelCase); every duration is microseconds, every timestamp an ISO 8601 UTC string.
  */
 
-export type FlowStatus = 'Running' | 'Success' | 'Error';
+export type FlowStatus = 'Running' | 'Success' | 'Error' | 'Cancelled' | 'Timeout';
 
 /** The six visual states of seção 7.2 do prompt (D-26: lives in `core/`, not under `features/flow`). */
 export type NodeVisualState =
-  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed';
+  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed' | 'cancelled' | 'timeout';
 
 export type ComponentType =
   'Endpoint' | 'Controller' | 'UseCase' | 'Service' | 'Repository' | 'Database' | 'Http' | 'Custom';

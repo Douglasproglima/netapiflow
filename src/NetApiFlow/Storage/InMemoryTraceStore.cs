@@ -78,7 +78,7 @@ internal sealed class InMemoryTraceStore : ITraceStore
                 Component = group.Key.Component,
                 Operation = group.Key.Operation,
                 ExecutionCount = group.Count(),
-                ErrorCount = group.Count(s => s.Status == FlowStatus.Error),
+                ErrorCount = group.Count(s => s.Status is FlowStatus.Error or FlowStatus.Timeout),
                 MedianDurationMicros = Percentile(durations, 0.5),
                 AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
                 P95DurationMicros = Percentile(durations, 0.95),
@@ -118,7 +118,7 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult(new TraceStats
         {
             TotalTraces = traces.Count,
-            ErrorCount = traces.Count(t => t.Status == FlowStatus.Error),
+            ErrorCount = traces.Count(t => t.Status is FlowStatus.Error or FlowStatus.Timeout),
             AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
             P95DurationMicros = Percentile(durations, 0.95),
             MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
@@ -146,7 +146,7 @@ internal sealed class InMemoryTraceStore : ITraceStore
                 Method = group.Key.Method,
                 RouteTemplate = group.Key.RouteTemplate,
                 ExecutionCount = group.Count(),
-                ErrorCount = group.Count(t => t.Status == FlowStatus.Error),
+                ErrorCount = group.Count(t => t.Status is FlowStatus.Error or FlowStatus.Timeout),
                 MedianDurationMicros = Percentile(durations, 0.5),
                 AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
                 P95DurationMicros = Percentile(durations, 0.95),

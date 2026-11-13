@@ -74,6 +74,11 @@ describe('parseTraceFile', () => {
     expect(parseTraceFile(JSON.stringify(trace))).toEqual({ ok: false, reason: 'invalid-shape' });
   });
 
+  it.each(['Cancelled', 'Timeout'])('accepts a trace whose status is %s', (status) => {
+    const trace = { ...validTrace(), status };
+    expect(parseTraceFile(JSON.stringify(trace))).toEqual({ ok: true, trace });
+  });
+
   it('rejects a trace whose spans is not an array', () => {
     const trace = { ...validTrace(), spans: 'not-an-array' };
     expect(parseTraceFile(JSON.stringify(trace))).toEqual({ ok: false, reason: 'invalid-shape' });
