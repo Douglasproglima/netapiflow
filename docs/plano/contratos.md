@@ -51,7 +51,7 @@ public sealed record LogEntry
 }
 
 public enum ComponentType { Endpoint, Controller, UseCase, Service, Repository, Database, Http, Custom }
-public enum FlowStatus { Running, Success, Error }
+public enum FlowStatus { Running, Success, Error, Cancelled, Timeout }
 
 public interface IFlowEventListener
 {
@@ -108,8 +108,11 @@ public sealed class TailSamplingOptions
     public bool Enabled { get; set; }
 
     /// <summary>Fraction (0.0-1.0) of successful, non-slow traces to persist. A trace with
-    /// <see cref="FlowStatus.Error"/> or a duration at or above <see cref="NetApiFlowOptions.SlowThreshold"/>
-    /// is always persisted, regardless of this value. Default: <c>0.1</c> (keep 10%).</summary>
+    /// <see cref="FlowStatus.Error"/> or <see cref="FlowStatus.Timeout"/>, or a duration at or
+    /// above <see cref="NetApiFlowOptions.SlowThreshold"/>, is always persisted, regardless of
+    /// this value. A <see cref="FlowStatus.Cancelled"/> trace follows the same sampling rate as
+    /// <see cref="FlowStatus.Success"/> (ADR-0020): a client disconnecting is routine churn, not
+    /// a server-side problem worth guaranteeing coverage for. Default: <c>0.1</c> (keep 10%).</summary>
     public double SuccessSampleRate { get; set; } = 0.1;
 }
 
@@ -336,7 +339,9 @@ public sealed record TraceStats
 ```
 
 `errorRate` do payload de `/metrics` é calculado pela camada de API (`ErrorCount / TotalTraces`,
-`0` quando `TotalTraces` é `0`), não pelo `ITraceStore`.
+`0` quando `TotalTraces` é `0`), não pelo `ITraceStore`. `ErrorCount` (aqui, em `ComponentStat` e
+em `RouteStat`) conta `FlowStatus.Error` **e** `FlowStatus.Timeout`, nunca `FlowStatus.Cancelled`
+(ADR-0020): um cliente cancelando não indica problema no servidor, um timeout interno indica.
 
 `GetRouteStatsAsync` e `RouteStat` foram acrescentados a `ITraceStore` na Fase 14 (D-81): agregado
 por rota do trace (`Method`, `RouteTemplate`), mesmo molde de `ComponentStat` mas sobre
