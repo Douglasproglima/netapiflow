@@ -19,7 +19,7 @@ internal static class TailSampleDecision
             return true;
         }
 
-        if (trace.Status == FlowStatus.Error)
+        if (trace.Status is FlowStatus.Error or FlowStatus.Timeout)
         {
             return true;
         }

@@ -11,4 +11,10 @@ public enum FlowStatus
 
     /// <summary>Finished with an exception, or a descendant span failed.</summary>
     Error,
+
+    /// <summary>The client disconnected before the request finished.</summary>
+    Cancelled,
+
+    /// <summary>An internal cancellation fired while the client was still connected.</summary>
+    Timeout,
 }
