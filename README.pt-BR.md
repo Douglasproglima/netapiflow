@@ -300,6 +300,24 @@ casada com duração zero. Etapa casada mostra a duração dos dois lados e a di
 Comparar duas execuções de rotas diferentes continua funcionando, só que toda etapa cai de um
 lado só. A página marca isso como aviso, porque raramente é o que se queria fazer.
 
+## Anotação de deploy
+
+Um marco de deploy no `/history` ajuda a correlacionar um incidente investigado depois com um
+deploy feito por outra pessoa, às vezes em outra máquina, em outro dia. Registre um logo depois do
+deploy terminar, como uma etapa do seu pipeline de release:
+
+```bash
+curl -X POST https://sua-api.exemplo.com/flow/api/deploys \
+  -H "Content-Type: application/json" \
+  -d '{"label": "v1.4.2"}'
+```
+
+O servidor atribui o horário. Um relógio de cliente alguns segundos adiantado ou atrasado nunca
+desloca a posição do marco na linha do tempo. O marco aparece no `/history` como uma linha de
+largura total, na ordem cronológica entre as execuções ao redor dele, visível para quem abrir o
+dashboard, não só para o navegador que criou o marco. Nesta versão não existe tela no próprio
+dashboard para criar um marco, nem como editar ou apagar um marco já salvo.
+
 ## Preferências do dashboard
 
 A interface do dashboard vem em português (pt-BR) por padrão. Troque para inglês pelo seletor de
