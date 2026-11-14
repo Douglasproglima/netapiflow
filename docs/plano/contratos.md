@@ -71,8 +71,31 @@ public interface ITraceStore
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
-public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
+public sealed record DeployAnnotation
+{
+    public required string Id { get; init; }
+    public required DateTime Timestamp { get; init; }
+    public required string Label { get; init; }
+}
 
+public interface IDeployAnnotationStore
+{
+    ValueTask SaveAsync(DeployAnnotation annotation, CancellationToken cancellationToken);
+    ValueTask<IReadOnlyList<DeployAnnotation>> QueryAsync(DateTime from, DateTime until, CancellationToken cancellationToken);
+}
+
+public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
+```
+
+`IDeployAnnotationStore` (Fase 28, D-60) é irmã de `ITraceStore`, não extensão dela: marca um
+deploy na timeline do histórico, compartilhado entre todo mundo que abre o dashboard, nunca só no
+navegador de quem registrou o marco. `Timestamp` é sempre atribuído pelo servidor, nunca recebido
+do cliente. Sem `DeleteAsync` (YAGNI até aparecer um pedido real de apagar um marco).
+`InMemoryDeployAnnotationStore` é a implementação padrão do núcleo;
+`AddNetApiFlowPostgreSqlStorage`/`AddNetApiFlowSqlServerStorage` substituem os dois stores
+(`ITraceStore` e `IDeployAnnotationStore`) na mesma chamada, mesmo backing que os traces já usam.
+
+```csharp
 /// <summary>Shared gate for every diagnostic surface (Dashboard, MCP, any future one). ADR-0015.</summary>
 public interface IFlowAccessFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
 
@@ -841,9 +864,22 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 O painel "Testar um endpoint" lê daqui em vez de assumir o caminho padrão do `MapOpenApi()`,
 porque a maioria dos projetos .NET existentes serve OpenAPI por Swashbuckle, em outro caminho.
 
+### POST `/deploys`
+
+Acrescentada na Fase 28 (D-60): cria um marco de deploy. Corpo `{ "label": string }`, `400` sem
+`label` (vazio ou só espaço). `timestamp` sempre `DateTime.UtcNow` gerado no servidor, nunca
+recebido do cliente, para um relógio de cliente divergente não contaminar a posição do marco na
+timeline. `201` com o `DeployAnnotation` criado no corpo.
+
+### GET `/deploys`
+
+`from`/`to` obrigatórios na query string (`400` se faltar um), janela de busca por
+`DeployAnnotation.Timestamp`, inclusive dos dois lados. Usado por `/history` para popular os
+marcos intercalados com as execuções.
+
 ---
 
-Autorização vale para as treze rotas acima, sem exceção (ADR-0006): fora de
+Autorização vale para as quinze rotas acima, sem exceção (ADR-0006): fora de
 `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
 `IDashboardAuthorizationFilter` configurado, toda rota responde `404`. Com um dos dois
 configurado e o usuário sem a claim exigida, `403` (risco R-09, mitigação na Fase 5).
