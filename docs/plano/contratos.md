@@ -84,13 +84,6 @@ public interface IDeployAnnotationStore
     ValueTask<IReadOnlyList<DeployAnnotation>> QueryAsync(DateTime from, DateTime until, CancellationToken cancellationToken);
 }
 
-public sealed record DemoScenario
-{
-    public required string Label { get; init; }
-    public required string Method { get; init; }
-    public required string Path { get; init; }
-}
-
 public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
 ```
 
@@ -120,11 +113,6 @@ public sealed class NetApiFlowOptions
     /// <summary>Root-relative path of the OpenAPI document the dashboard's "Run an endpoint"
     /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves.</summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
-
-    /// <summary>One-click demo requests shown in the "Scenarios" tab of "Try an endpoint".
-    /// Default: empty, the tab does not render. Fase 31 (D-121): the tab used to ship a fixed
-    /// list of routes from this repository's own samples, 404ing against any other host.</summary>
-    public IReadOnlyList<DemoScenario> DemoScenarios { get; set; } = [];
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
@@ -859,8 +847,7 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
   "version": "0.1.0",
   "tailSamplingEnabled": false,
   "successSampleRate": 0.1,
-  "openApiDocumentPath": "/openapi/v1.json",
-  "demoScenarios": []
+  "openApiDocumentPath": "/openapi/v1.json"
 }
 ```
 
@@ -876,11 +863,6 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 `/openapi/v1.json`), o caminho raiz-relativo de onde o host serve o próprio documento OpenAPI.
 O painel "Testar um endpoint" lê daqui em vez de assumir o caminho padrão do `MapOpenApi()`,
 porque a maioria dos projetos .NET existentes serve OpenAPI por Swashbuckle, em outro caminho.
-
-`demoScenarios` (Fase 31, D-121) espelha `NetApiFlowOptions.DemoScenarios`, lista vazia por
-padrão. A aba "Scenarios" do painel "Testar um endpoint" só aparece quando a lista não é vazia:
-antes da Fase 31, a aba vinha com uma lista fixa de rotas do sample deste repositório, que
-respondia 404 em qualquer outra API.
 
 ### POST `/deploys`
 

@@ -2,8 +2,10 @@
 
 Auditoria do frontend do dashboard, feita a partir do commit `2e900be` de `main`, encontrou 24
 achados reais (4 Alta, 10 Média, 10 Baixa). Todos os 24 foram reverificados pela Planejadora
-contra o código atual antes deste plano, com arquivo e linha; só um sub-item (o `<image href>`
-relativo citado no M7) não procede. A verificação completa está em D-121.
+contra o código atual antes deste plano, com arquivo e linha. A verificação completa está em
+D-121, corrigida em D-122 (o sub-item do `<image href>` relativo no M7 procede: está em
+`flow-graph.component.html`, componente filho que `architecture.component.html` embute via
+`<app-flow-graph>`, não no próprio template do mapa de arquitetura).
 
 Os achados de Baixa severidade viram a Fase 32, separada desta. Justificativa: nenhum dos dez é
 bug de correção visível pro usuário (são acessibilidade, i18n, validação de formulário e
@@ -17,36 +19,23 @@ Toda tarefa de correção de bug (não as de contrato/decisão de forma) escreve
 reproduz o problema, confirma que ele falha, só depois corrige. Isso vale tanto pro backend quanto
 pro Angular.
 
-## Tarefa 31.1 (A1, bloqueante): cenários de demonstração configuráveis pelo host
+## Tarefa 31.1 (A1, bloqueante): remover a aba "Scenarios" hardcoded
 
 Hoje `endpoint-form.component.ts` tem uma constante `SCENARIOS` hardcoded com rotas do
 `samples/SampleApi.Controllers` (`/api/orders/1`, `/api/orders/2/confirm`, etc.), exibida pra todo
-usuário do pacote publicado, numa API real que nunca tem essas rotas. Decisão de forma, travada
-pela Planejadora, `contratos.md` já congelado nesta mesma branch antes desta tarefa começar:
+usuário do pacote publicado, numa API real que nunca tem essas rotas.
 
-```csharp
-public sealed record DemoScenario
-{
-    public required string Label { get; init; }
-    public required string Method { get; init; }
-    public required string Path { get; init; }
-}
-```
+Escopo travado pela Planejadora pra esta tarefa ser PATCH de verdade (0.3.1, D-122): sem nenhuma
+API pública nova. Remover a constante `SCENARIOS`, a aba "Scenarios" inteira (volta a sobrar só a
+aba "Custom") e o seletor de delay artificial (`X-NetApiFlow-Demo-Delay-Ms`) que só fazia sentido
+junto dela. "Cenário configurável pelo host" (o host declarar os próprios cenários, cada sample
+configurando os seus, seletor de delay voltando condicionado a isso) vira ideia separada, registrada
+em `roadmap-valor.md`, fora desta fase e fora da 0.3.1: exige API pública nova
+(`NetApiFlowOptions`, `GET /config`), que força MINOR.
 
-`NetApiFlowOptions` ganha `IReadOnlyList<DemoScenario> DemoScenarios { get; set; } = []`. `GET
-/config` ganha `demoScenarios` (array, vazio por padrão). O frontend lê os cenários de
-`GET /config` em vez da constante; a aba "Scenarios" só aparece quando o array não é vazio (`@if`
-no lugar do que hoje sempre renderiza). O seletor de delay artificial (`X-NetApiFlow-Demo-Delay-Ms`)
-continua existindo, mas junto da aba: sem cenário configurado, não tem o que atrasar, a aba
-inteira some.
-
-Os dois samples do repositório (`SampleApi.Controllers`, `SampleApi.MinimalMediatR`) configuram
-`DemoScenarios` com as rotas que a constante tinha, pra não perder a demonstração que já existe.
-
-**Pronto quando:** sem `DemoScenarios` configurado, a aba "Scenarios" não aparece (só "Custom").
-Com `DemoScenarios` configurado, a aba aparece com exatamente os cenários do host, não mais uma
-lista fixa. Teste de integração provando que `GET /config` reflete o array configurado, vazio por
-padrão. Teste Angular provando que a aba não renderiza com array vazio.
+**Pronto quando:** `endpoint-form.component.ts` não tem mais `SCENARIOS` nem nada do seletor de
+delay. O painel "Testar um endpoint" só mostra "Custom", sem aba fixa com rota de exemplo
+nenhuma. Teste Angular confirma que a aba antiga não existe mais no DOM.
 
 ## Tarefa 31.2 (A2): coalescer as chamadas disparadas por cada trace
 
@@ -101,11 +90,24 @@ tem a trace inteira na mão).
 
 Conectar `getBlueprint` na `flow-page` pra uma trace ao vivo: carregar o blueprint da rota assim
 que o primeiro evento da trace chega, usar como referência pra marcar "not-executed" do mesmo jeito
-que o replay já faz.
+que o replay já faz. Três regras:
+
+- o blueprint é buscado uma vez por trace acompanhada (por método e rota), nunca de novo a cada
+  evento SSE daquela mesma trace;
+- resposta `204` do `GET /blueprint` significa "sem fantasmas": a trace ao vivo não tem nenhuma
+  etapa prevista além das que já chegaram, nenhum nó vira "not-executed" por causa dela;
+- precedência com a correção da tarefa 31.4 (A4): enquanto o replay (ou a trace ao vivo) ainda
+  está em andamento, span do próprio trace ainda não revelado é `'waiting'`, nunca `'not-executed'`.
+  Só depois que a trace termina, um span que nunca apareceu (nem no replay, nem ao vivo) e que o
+  blueprint previa vira `'not-executed'`. Fantasma do blueprint nunca aparece como `'waiting'`
+  permanente.
 
 **Pronto quando:** teste de integração com uma trace ao vivo real, onde um branch condicional não
 executa uma etapa que o blueprint previa, confirma que essa etapa aparece como "not-executed"
-antes da trace terminar, não só depois.
+antes da trace terminar, não só depois. Teste de `graph-builder` cobrindo um replay de trace com
+erro que também tem blueprint: span do próprio trace ainda não revelado fica `'waiting'`, fantasma
+do blueprint não revelado fica `'not-executed'` desde o início, nenhum dos dois troca de estado
+incorretamente até o replay terminar.
 
 ## Tarefa 31.6 (M2): legenda do grafo ao vivo mostra dois estados impossíveis
 
@@ -173,16 +175,21 @@ sem precisar recarregar a página.
 
 ## Tarefa 31.11 (M7): SVG exportado do mapa de arquitetura não é autocontido
 
-`exportSvg` clona o SVG da página sem inlinar os valores computados de `var(--naf-*)`; abrir o
-arquivo fora do navegador (outro programa, ou a mesma página sem o stylesheet carregado) perde
-toda a cor. (O sub-achado de `<image href>` relativo não procede: não existe `<image>` no fluxo de
-arquitetura.)
+`exportSvg` clona o SVG da página (`architecture.component.ts`, `exportSvg()`) sem resolver dois
+tipos de referência externa: os valores computados de `var(--naf-*)`, e o `href` relativo de cada
+`<image>` de ícone de estado (`flow-graph.component.html`, linhas 98 a 105 e 161, renderizado pelo
+`<app-flow-graph>` que `architecture.component.html` embute). Abrir o arquivo fora do navegador
+(outro programa, ou a mesma página sem o stylesheet e sem o servidor do dashboard) perde a cor e
+mostra um ícone quebrado em todo nó.
 
 Resolver cada `var(--naf-*)` usado pro valor computado real antes de serializar, inline no próprio
-elemento ou num `<style>` embutido no SVG exportado.
+elemento ou num `<style>` embutido no SVG exportado. Embutir cada ícone de estado como data URI ou
+SVG inline no lugar do `href` relativo, pros mesmos oito estados que `node-state-presentation.ts`
+já lista.
 
-**Pronto quando:** teste abre o SVG exportado isoladamente (sem o stylesheet da página) e confirma
-que as cores não dependem de nenhuma variável CSS externa.
+**Pronto quando:** teste abre o arquivo `architecture.svg` exportado, isoladamente (sem o
+stylesheet da página e sem o servidor do dashboard no ar), e confirma que nem a cor nem nenhum
+ícone de nó dependem de recurso externo.
 
 ## Tarefa 31.12 (M8): item "Fluxo" do menu fica ativo em toda rota
 
