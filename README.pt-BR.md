@@ -522,10 +522,14 @@ Desligado por padrão. Toda trace completa é persistida, igual a antes dessa op
 Ligado, a decisão é tomada uma vez, quando a trace está pronta para persistência, antes de
 chegar ao `ITraceStore`:
 
-- Trace com erro é sempre persistida.
+- Trace com erro, ou cuja requisição estourou tempo com o cliente ainda conectado, é sempre
+  persistida. Cliente desconectando antes da requisição terminar não conta como erro aqui: segue
+  a mesma amostragem de uma trace de sucesso, porque um cliente desistindo não diz nada sobre o
+  servidor.
 - Trace no limiar de `SlowThreshold` ou acima dele é sempre persistida. É o mesmo limiar já
   usado para colorir a UI, não um segundo conceito de "lento".
-- Qualquer outra trace (sucesso, não lenta) é persistida com probabilidade `SuccessSampleRate`.
+- Qualquer outra trace (sucesso, não lenta, sem desconexão de cliente) é persistida com
+  probabilidade `SuccessSampleRate`.
 
 > **A visão ao vivo nunca muda.** `GET /traces/live` e o stream SSE leem do gravador em memória,
 > não do storage. Uma trace descartada pela amostragem continua aparecendo enquanto roda. Só o

@@ -514,10 +514,14 @@ Disabled by default: every completed trace is persisted, same as before this opt
 Enabled, the decision is made once, when a trace is ready to persist, before it ever reaches the
 `ITraceStore`:
 
-- A trace with an error is always persisted.
+- A trace with an error, or whose request timed out while the client stayed connected, is always
+  persisted. A client disconnecting before the request finished does not count as an error here:
+  it follows the same sampling as a successful trace, since a client giving up says nothing about
+  the server.
 - A trace at or above `SlowThreshold` is always persisted (the same threshold already used to
   color the UI, not a second concept of "slow").
-- Any other trace (successful, not slow) is persisted with probability `SuccessSampleRate`.
+- Any other trace (successful, not slow, not a client disconnect) is persisted with probability
+  `SuccessSampleRate`.
 
 > **The live view never changes.** `GET /traces/live` and the SSE stream read from the in-memory
 > recorder, not from the store, so a sampled-out trace still shows up while it runs. Only the
