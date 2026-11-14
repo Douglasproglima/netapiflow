@@ -75,6 +75,9 @@ const en = {
   'graph.slowestStep': 'Slowest step: {component} · {duration}',
   'graph.empty.title': 'No request is currently in progress.',
   'graph.empty.hint': 'Send a request from "Try an endpoint" or call your API directly.',
+  'graph.notFound.title': 'Trace not found.',
+  'graph.notFound.hint':
+    'It may have expired from the in-memory buffer, or the id in the URL is invalid.',
   'graph.loading': 'Loading…',
   'graph.zoomIn': 'Zoom in',
   'graph.zoomOut': 'Zoom out',
@@ -366,6 +369,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'graph.empty.title': 'Nenhuma requisição em andamento no momento.',
   'graph.empty.hint':
     'Envie uma requisição usando "Testar um endpoint" ou chame sua API diretamente.',
+  'graph.notFound.title': 'Trace não encontrada.',
+  'graph.notFound.hint': 'Ela pode ter expirado do buffer em memória, ou o id na URL é inválido.',
   'graph.loading': 'Carregando…',
   'graph.zoomIn': 'Mais zoom',
   'graph.zoomOut': 'Menos zoom',

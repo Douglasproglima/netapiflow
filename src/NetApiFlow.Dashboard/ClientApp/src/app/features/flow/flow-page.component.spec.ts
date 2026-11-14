@@ -123,6 +123,25 @@ describe('FlowPageComponent', () => {
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
   });
 
+  it('shows an explicit not-found state for a trace that expired or never existed (A3)', async () => {
+    configure('missing');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock
+      .expectOne('api/traces/missing')
+      .flush('not found', { status: 404, statusText: 'Not Found' });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.trace()).toBeNull();
+    expect(fixture.componentInstance.traceNotFound()).toBe(true);
+    // pt-BR is the default language (D-35); must not show the generic empty-list state instead.
+    expect(fixture.nativeElement.textContent).toContain('Trace não encontrada.');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhuma requisição em andamento');
+  });
+
   it('lists in-progress traces when no ?trace= param is present', async () => {
     configure(null);
     const fixture = TestBed.createComponent(FlowPageComponent);

@@ -166,6 +166,22 @@
             [selectedNodeId]="selectedNodeId()"
             (nodeSelected)="onNodeSelected($event)"
           />
+        } @else if (traceNotFound()) {
+          <div class="flow-workspace__empty flow-workspace__empty--not-found">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              width="28"
+              height="28"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9 9l6 6M15 9l-6 6" />
+            </svg>
+            <p>{{ 'graph.notFound.title' | t }}</p>
+            <p class="flow-workspace__empty-hint">{{ 'graph.notFound.hint' | t }}</p>
+          </div>
         } @else if (liveTracesLoading()) {
           <p class="flow-workspace__status" role="status">{{ 'graph.loading' | t }}</p>
         } @else if (liveTraces().length === 0) {

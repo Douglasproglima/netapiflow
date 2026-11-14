@@ -87,6 +87,10 @@ export class FlowPageComponent {
   readonly trace = computed<FlowTraceDetail | null>(
     () => this.importedTrace() ?? this.livePlayer.trace(),
   );
+
+  readonly traceNotFound = computed(
+    () => this.traceId() !== null && !this.importedTrace() && this.livePlayer.notFound(),
+  );
   readonly graph = computed<GraphResult>(() => {
     const trace = this.trace();
     const slowThresholdMicros = this.slowThresholdMicros();
