@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#66](https://github.com/Douglasproglima/netapiflow/issues/66)
+## Discussion
+[#178](https://github.com/Douglasproglima/netapiflow/discussions/178)
 
 ## Contexto
 O dashboard expõe a estrutura interna da aplicação do usuário: nomes de componente, operação,

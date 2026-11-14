@@ -115,6 +115,10 @@
   color: var(--naf-flow-text);
 }
 
+.recent-executions__status-text--idle {
+  color: var(--naf-text-muted);
+}
+
 .recent-executions__duration {
   font-family: var(--naf-font-mono);
   font-size: 0.75rem;

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -478,6 +479,20 @@ public class DashboardApiTests
         doc.RootElement.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
         doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeFalse();
         doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.1);
+        doc.RootElement.GetProperty("openApiDocumentPath").GetString().ShouldBe("/openapi/v1.json");
+    }
+
+    [Fact]
+    public async Task GetConfig_WithOpenApiDocumentPathConfigured_ReturnsIt()
+    {
+        using var host = CreateHost(configure: options => options.OpenApiDocumentPath = "/swagger/v1/swagger.json");
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("openApiDocumentPath").GetString().ShouldBe("/swagger/v1/swagger.json");
     }
 
     [Fact]
@@ -516,6 +531,64 @@ public class DashboardApiTests
     }
 
     [Fact]
+    public async Task CreateDeploy_SavesAnnotationWithServerGeneratedTimestamp_AndReturnsIt()
+    {
+        using var host = CreateHost();
+        var client = host.GetTestServer().CreateClient();
+        var before = DateTime.UtcNow;
+
+        var response = await client.PostAsJsonAsync("/flow/api/deploys", new { label = "v1.4.2" });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("label").GetString().ShouldBe("v1.4.2");
+        doc.RootElement.GetProperty("id").GetString().ShouldNotBeNullOrEmpty();
+        var timestamp = doc.RootElement.GetProperty("timestamp").GetDateTime();
+        timestamp.ShouldBeInRange(before, DateTime.UtcNow.AddSeconds(1));
+    }
+
+    [Fact]
+    public async Task CreateDeploy_BlankLabel_Returns400()
+    {
+        using var host = CreateHost();
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.PostAsJsonAsync("/flow/api/deploys", new { label = "   " });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetDeploys_ReturnsAnnotationsWithinTheRequestedWindow()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<IDeployAnnotationStore>();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(new DeployAnnotation { Id = "d-old", Timestamp = now.AddDays(-10), Label = "v1.0.0" }, CancellationToken.None);
+        await store.SaveAsync(new DeployAnnotation { Id = "d-inside", Timestamp = now, Label = "v1.1.0" }, CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync(
+            $"/flow/api/deploys?from={Uri.EscapeDataString(now.AddHours(-1).ToString("O"))}&to={Uri.EscapeDataString(now.AddHours(1).ToString("O"))}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var ids = doc.RootElement.EnumerateArray().Select(e => e.GetProperty("id").GetString()).ToList();
+        ids.ShouldBe(["d-inside"]);
+    }
+
+    [Fact]
+    public async Task GetDeploys_MissingRequiredParameter_Returns400()
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/deploys?from=2026-01-01T00:00:00Z");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task OutsideDevelopment_WithoutAuthorizationConfigured_EveryRouteReturns404()
     {
         using var host = CreateHost(environmentName: Environments.Production);
@@ -527,6 +600,8 @@ public class DashboardApiTests
         (await client.GetAsync("/flow/api/metrics")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/metrics/routes")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync("/flow/api/deploys?from=2026-01-01T00:00:00Z&to=2026-01-02T00:00:00Z")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.PostAsJsonAsync("/flow/api/deploys", new { label = "v1.0.0" })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]

@@ -2,9 +2,8 @@ import { Routes } from '@angular/router';
 import { FlowPageComponent } from './features/flow/flow-page.component';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'flow' },
   {
-    path: 'flow',
+    path: '',
     component: FlowPageComponent,
     data: { title: 'nav.flow', subtitle: 'topbar.subtitle.flow' },
   },

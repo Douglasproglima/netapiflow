@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#156](https://github.com/Douglasproglima/netapiflow/issues/156)
+## Discussion
+[#191](https://github.com/Douglasproglima/netapiflow/discussions/191)
 
 ## Contexto
 D-60 item D previa visibilidade de routing, model binding e filtros de ação, assumindo

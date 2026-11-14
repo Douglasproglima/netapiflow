@@ -39,6 +39,10 @@ dotnet add package NetApiFlow.Dashboard
 ```
 
 ```csharp
+using NetApiFlow;
+using NetApiFlow.Dashboard;
+using NetApiFlow.Dashboard.Endpoints;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
@@ -79,8 +83,42 @@ Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
 
 ```csharp
+using NetApiFlow.Marking;
+
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
+```
+
+`DecorateFlowTracked` does the same thing in bulk, for every interface already registered in DI
+whose implementation type matches a predicate. It scales to a real project with many repositories
+and services, by naming convention instead of one call per interface:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+```
+
+The predicate receives the concrete implementation type registered in DI, never the interface, so
+matching on an interface-only naming convention (`IOrderRepository`) will not work.
+
+### EF Core database commands
+
+`NetApiFlow.EntityFrameworkCore` takes two steps, not one. `AddNetApiFlowEntityFrameworkCore()`
+only registers `FlowDbCommandInterceptor` in DI. You attach it to each `DbContext` yourself,
+because EF Core has no global interceptor registration:
+
+```csharp
+using NetApiFlow.EntityFrameworkCore;
+
+builder.Services.AddNetApiFlowEntityFrameworkCore();
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
+    options.AddInterceptors(sp.GetRequiredService<FlowDbCommandInterceptor>());
+});
 ```
 
 ### Tagging a step
@@ -149,7 +187,7 @@ call itself failed.
 |---|---|
 | [`NetApiFlow.Dashboard`](https://www.nuget.org/packages/NetApiFlow.Dashboard) | The REST/SSE API and the embedded Angular UI |
 | [`NetApiFlow.MediatR`](https://www.nuget.org/packages/NetApiFlow.MediatR) | Automatic tracking of MediatR requests |
-| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Automatic tracking of EF Core database commands |
+| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Tracking of EF Core database commands, once the interceptor is attached to your `DbContext` |
 | [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persists traces to PostgreSQL instead of memory |
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persists traces to SQL Server instead of memory |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | A read-only MCP server so an AI agent can query traces directly |
@@ -258,6 +296,24 @@ between them.
 Comparing two executions of different routes still works, every step simply lands on one side
 only. The page flags it as a warning, since that's rarely what you meant.
 
+## Deploy annotations
+
+A deploy marker on `/history` helps you correlate an incident you're investigating later with a
+deploy someone else made, often on another machine, another day. Mark one right after a deploy
+finishes, as a step in your release pipeline:
+
+```bash
+curl -X POST https://your-api.example.com/flow/api/deploys \
+  -H "Content-Type: application/json" \
+  -d '{"label": "v1.4.2"}'
+```
+
+The server assigns the timestamp; a client clock running a few seconds off never shifts a marker's
+position on the timeline. The marker shows up in `/history` as a full-width row, in chronological
+order among the executions around it, visible to everyone who opens the dashboard, not just the
+browser that created it. There's no UI to create one from the dashboard itself in this release,
+and no way to edit or delete a marker once saved.
+
 ## Dashboard preferences
 
 The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in
@@ -314,8 +370,14 @@ builder.Services.AddNetApiFlow(options =>
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
     options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
     options.Limits.MaxLogEntriesPerSpan = 20; // default shown
+    options.OpenApiDocumentPath = "/swagger/v1/swagger.json"; // default is /openapi/v1.json
 });
 ```
+
+`OpenApiDocumentPath` tells the dashboard's "Run an endpoint" panel where your application serves
+its OpenAPI document. The default is what `MapOpenApi()` serves. Point it at
+`/swagger/v1/swagger.json` for Swashbuckle, or wherever else you serve it. The panel lists your
+endpoints from that document, so a wrong path leaves it with nothing to show.
 
 `CapturePrePipelineSteps` records what runs before your controller is even called, on MVC
 Controller routes: one step per Authorization filter, under the component `AuthorizationFilters`
@@ -506,6 +568,13 @@ NetApiFlow never captures, under any configuration:
   to `scheme://host[:port]/path` as routes).
 - Connection string, database user or peer address, when `ExternalActivitySource.Npgsql` is
   enabled. The driver reports all of them on its own `Activity`; none is ever copied onto a span.
+
+> **A request that never matches a route is recorded as `(unmatched)`, never its real path.** A
+> 404 on a typo'd URL and a successful request to a static file both land in history as
+> `(unmatched)`, indistinguishable from each other. That's the same template guarantee above, just
+> for the case where there's no template to use yet. If static assets or your own OpenAPI document
+> are cluttering your history with `(unmatched)` noise, `ExcludePaths` keeps them out of tracing
+> entirely.
 
 Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
 CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.

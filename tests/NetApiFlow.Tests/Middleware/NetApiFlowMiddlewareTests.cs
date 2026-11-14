@@ -51,6 +51,34 @@ public class NetApiFlowMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WithoutMatchedEndpoint_RecordsPlaceholderInsteadOfRequestedPath()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        var recorded = new List<FlowTrace>();
+        recorder.TraceStarted += recorded.Add;
+        recorder.TraceCompleted += recorded.Add;
+
+        var subject = new NetApiFlowMiddleware(
+            next: context =>
+            {
+                context.Response.StatusCode = 404;
+                return Task.CompletedTask;
+            },
+            recorder,
+            options);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/api/devices/359872104738291/status";
+
+        await subject.InvokeAsync(httpContext);
+
+        recorded.ShouldNotBeEmpty();
+        recorded.ShouldAllBe(trace => trace.RouteTemplate == "(unmatched)");
+    }
+
+    [Fact]
     public async Task InvokeAsync_WhenRouteIsExcluded_DoesNotRecordTrace()
     {
         var netApiFlowOptions = new NetApiFlowOptions();
@@ -91,5 +119,52 @@ public class NetApiFlowMiddlewareTests
         completed.ShouldNotBeNull();
         completed.Status.ShouldBe(FlowStatus.Error);
         completed.ErrorMessage.ShouldBe("boom");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenHandlerThrowsOperationCanceledAndRequestAborted_CompletesTraceAsCancelled()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        FlowTrace? completed = null;
+        recorder.TraceCompleted += trace => completed = trace;
+
+        using var requestAborted = new CancellationTokenSource();
+        requestAborted.Cancel();
+
+        var subject = new NetApiFlowMiddleware(
+            next: _ => throw new OperationCanceledException(requestAborted.Token),
+            recorder,
+            options);
+
+        var httpContext = new DefaultHttpContext { RequestAborted = requestAborted.Token };
+        httpContext.Request.Path = "/api/orders";
+
+        await Should.ThrowAsync<OperationCanceledException>(() => subject.InvokeAsync(httpContext));
+
+        completed.ShouldNotBeNull();
+        completed.Status.ShouldBe(FlowStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenHandlerThrowsOperationCanceledButClientStillConnected_CompletesTraceAsTimeout()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        FlowTrace? completed = null;
+        recorder.TraceCompleted += trace => completed = trace;
+
+        var subject = new NetApiFlowMiddleware(
+            next: _ => throw new OperationCanceledException("internal timeout"),
+            recorder,
+            options);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Path = "/api/orders";
+
+        await Should.ThrowAsync<OperationCanceledException>(() => subject.InvokeAsync(httpContext));
+
+        completed.ShouldNotBeNull();
+        completed.Status.ShouldBe(FlowStatus.Timeout);
     }
 }

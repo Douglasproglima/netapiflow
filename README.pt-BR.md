@@ -40,6 +40,10 @@ dotnet add package NetApiFlow.Dashboard
 ```
 
 ```csharp
+using NetApiFlow;
+using NetApiFlow.Dashboard;
+using NetApiFlow.Dashboard.Endpoints;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
@@ -80,8 +84,42 @@ Forma automática, de `samples/SampleApi.Controllers/Program.cs`. `OrderService`
 não têm nenhum código do NetApiFlow. Toda chamada a eles é rastreada só por causa deste registro:
 
 ```csharp
+using NetApiFlow.Marking;
+
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
+```
+
+O `DecorateFlowTracked` faz o mesmo em lote, para toda interface já registrada no DI cujo tipo de
+implementação bater com um predicado. Escala para um projeto real com muitos repositórios e
+serviços, por convenção de nome, em vez de uma chamada por interface:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
+builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+```
+
+O predicado recebe o tipo de implementação concreta registrado no DI, nunca a interface. Uma
+convenção de nome que só bate na interface (`IOrderRepository`) não funciona.
+
+### Comandos de banco do EF Core
+
+`NetApiFlow.EntityFrameworkCore` exige dois passos, não um. `AddNetApiFlowEntityFrameworkCore()`
+só registra o `FlowDbCommandInterceptor` no DI. Anexar o interceptor a cada `DbContext` é com
+você, porque o EF Core não tem registro global de interceptor:
+
+```csharp
+using NetApiFlow.EntityFrameworkCore;
+
+builder.Services.AddNetApiFlowEntityFrameworkCore();
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default"));
+    options.AddInterceptors(sp.GetRequiredService<FlowDbCommandInterceptor>());
+});
 ```
 
 ### Tags numa etapa
@@ -151,7 +189,7 @@ devolve `null` só porque a chamada HTTP falhou.
 |---|---|
 | [`NetApiFlow.Dashboard`](https://www.nuget.org/packages/NetApiFlow.Dashboard) | A API REST/SSE e a UI Angular embutida |
 | [`NetApiFlow.MediatR`](https://www.nuget.org/packages/NetApiFlow.MediatR) | Rastreamento automático de requests do MediatR |
-| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Rastreamento automático de comandos de banco do EF Core |
+| [`NetApiFlow.EntityFrameworkCore`](https://www.nuget.org/packages/NetApiFlow.EntityFrameworkCore) | Rastreamento de comandos de banco do EF Core, depois de anexar o interceptor ao seu `DbContext` |
 | [`NetApiFlow.Storage.PostgreSql`](https://www.nuget.org/packages/NetApiFlow.Storage.PostgreSql) | Persiste traces no PostgreSQL em vez de memória |
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persiste traces no SQL Server em vez de memória |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | Um servidor MCP só leitura para um agente de IA consultar traces direto |
@@ -262,6 +300,24 @@ casada com duração zero. Etapa casada mostra a duração dos dois lados e a di
 Comparar duas execuções de rotas diferentes continua funcionando, só que toda etapa cai de um
 lado só. A página marca isso como aviso, porque raramente é o que se queria fazer.
 
+## Anotação de deploy
+
+Um marco de deploy no `/history` ajuda a correlacionar um incidente investigado depois com um
+deploy feito por outra pessoa, às vezes em outra máquina, em outro dia. Registre um logo depois do
+deploy terminar, como uma etapa do seu pipeline de release:
+
+```bash
+curl -X POST https://sua-api.exemplo.com/flow/api/deploys \
+  -H "Content-Type: application/json" \
+  -d '{"label": "v1.4.2"}'
+```
+
+O servidor atribui o horário. Um relógio de cliente alguns segundos adiantado ou atrasado nunca
+desloca a posição do marco na linha do tempo. O marco aparece no `/history` como uma linha de
+largura total, na ordem cronológica entre as execuções ao redor dele, visível para quem abrir o
+dashboard, não só para o navegador que criou o marco. Nesta versão não existe tela no próprio
+dashboard para criar um marco, nem como editar ou apagar um marco já salvo.
+
 ## Preferências do dashboard
 
 A interface do dashboard vem em português (pt-BR) por padrão. Troque para inglês pelo seletor de
@@ -320,8 +376,14 @@ builder.Services.AddNetApiFlow(options =>
     options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado
     options.LogCorrelation.Enabled = true; // opt-in; ver Correlação de log abaixo
     options.Limits.MaxLogEntriesPerSpan = 20; // valor padrão mostrado
+    options.OpenApiDocumentPath = "/swagger/v1/swagger.json"; // padrão é /openapi/v1.json
 });
 ```
+
+`OpenApiDocumentPath` diz ao painel "Testar um endpoint" do dashboard onde a sua aplicação serve
+o documento OpenAPI. O padrão é o que o `MapOpenApi()` serve. Aponte para
+`/swagger/v1/swagger.json` no Swashbuckle, ou para onde você servir o documento. O painel lista os
+seus endpoints a partir desse documento, então um caminho errado deixa o painel sem nada a mostrar.
 
 `CapturePrePipelineSteps` grava o que roda antes do seu controller ser chamado, em rotas de MVC
 Controller: uma etapa por filtro de autorização, no componente `AuthorizationFilters`, com o nome
@@ -517,6 +579,13 @@ O NetApiFlow nunca captura, em nenhuma configuração:
 - String de conexão, usuário do banco ou endereço do servidor, quando
   `ExternalActivitySource.Npgsql` está habilitado. O driver reporta todos eles na própria
   `Activity`; nenhum é copiado para o span.
+
+> **Uma requisição que não casa com nenhuma rota é gravada como `(unmatched)`, nunca o caminho
+> real.** Um 404 de uma URL digitada errado e uma requisição bem-sucedida pra um arquivo estático
+> acabam os dois gravados como `(unmatched)`, sem distinção entre eles. É a mesma garantia de
+> template acima, só que pro caso em que ainda não existe template nenhum. Se arquivo estático ou
+> o próprio documento OpenAPI estiverem poluindo o histórico com ruído de `(unmatched)`,
+> `ExcludePaths` tira os dois do rastreamento de vez.
 
 Mensagem de erro é truncada em 300 caracteres e sanitizada, removendo e-mail, CPF, CNPJ, sequência
 numérica longa, e os pares `password=`/`token=`/`authorization`/`api-key`/`secret`. Veja

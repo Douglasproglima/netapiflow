@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#140](https://github.com/Douglasproglima/netapiflow/issues/140)
+## Discussion
+[#190](https://github.com/Douglasproglima/netapiflow/discussions/190)
 
 ## Contexto
 R-06 ficou aberto desde o bootstrap do projeto (Fase 2), carregando duas suposições nunca

@@ -52,3 +52,14 @@ BEGIN
 
     CREATE INDEX ix_netapiflow_spans_trace_id ON dbo.netapiflow_spans (trace_id);
 END;
+
+IF OBJECT_ID('dbo.netapiflow_deploy_annotations', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.netapiflow_deploy_annotations (
+        id varchar(64) NOT NULL PRIMARY KEY,
+        timestamp datetimeoffset NOT NULL,
+        label nvarchar(max) NOT NULL
+    );
+
+    CREATE INDEX ix_netapiflow_deploy_annotations_timestamp ON dbo.netapiflow_deploy_annotations (timestamp);
+END;

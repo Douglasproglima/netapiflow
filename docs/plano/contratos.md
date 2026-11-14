@@ -51,7 +51,7 @@ public sealed record LogEntry
 }
 
 public enum ComponentType { Endpoint, Controller, UseCase, Service, Repository, Database, Http, Custom }
-public enum FlowStatus { Running, Success, Error }
+public enum FlowStatus { Running, Success, Error, Cancelled, Timeout }
 
 public interface IFlowEventListener
 {
@@ -71,8 +71,31 @@ public interface ITraceStore
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
-public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
+public sealed record DeployAnnotation
+{
+    public required string Id { get; init; }
+    public required DateTime Timestamp { get; init; }
+    public required string Label { get; init; }
+}
 
+public interface IDeployAnnotationStore
+{
+    ValueTask SaveAsync(DeployAnnotation annotation, CancellationToken cancellationToken);
+    ValueTask<IReadOnlyList<DeployAnnotation>> QueryAsync(DateTime from, DateTime until, CancellationToken cancellationToken);
+}
+
+public interface IFlowTenantResolver { string? Resolve(HttpContext context); }
+```
+
+`IDeployAnnotationStore` (Fase 28, D-60) é irmã de `ITraceStore`, não extensão dela: marca um
+deploy na timeline do histórico, compartilhado entre todo mundo que abre o dashboard, nunca só no
+navegador de quem registrou o marco. `Timestamp` é sempre atribuído pelo servidor, nunca recebido
+do cliente. Sem `DeleteAsync` (YAGNI até aparecer um pedido real de apagar um marco).
+`InMemoryDeployAnnotationStore` é a implementação padrão do núcleo;
+`AddNetApiFlowPostgreSqlStorage`/`AddNetApiFlowSqlServerStorage` substituem os dois stores
+(`ITraceStore` e `IDeployAnnotationStore`) na mesma chamada, mesmo backing que os traces já usam.
+
+```csharp
 /// <summary>Shared gate for every diagnostic surface (Dashboard, MCP, any future one). ADR-0015.</summary>
 public interface IFlowAccessFilter { ValueTask<bool> AuthorizeAsync(HttpContext context); }
 
@@ -86,6 +109,10 @@ public sealed class NetApiFlowOptions
     /// <summary>Captures Authorization and Resource filter stages (MVC Controllers only) as
     /// steps, via <c>DiagnosticListener</c>/native filter (ADR-0019). Default: <see langword="false"/>.</summary>
     public bool CapturePrePipelineSteps { get; set; }
+
+    /// <summary>Root-relative path of the OpenAPI document the dashboard's "Run an endpoint"
+    /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves.</summary>
+    public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
@@ -104,8 +131,11 @@ public sealed class TailSamplingOptions
     public bool Enabled { get; set; }
 
     /// <summary>Fraction (0.0-1.0) of successful, non-slow traces to persist. A trace with
-    /// <see cref="FlowStatus.Error"/> or a duration at or above <see cref="NetApiFlowOptions.SlowThreshold"/>
-    /// is always persisted, regardless of this value. Default: <c>0.1</c> (keep 10%).</summary>
+    /// <see cref="FlowStatus.Error"/> or <see cref="FlowStatus.Timeout"/>, or a duration at or
+    /// above <see cref="NetApiFlowOptions.SlowThreshold"/>, is always persisted, regardless of
+    /// this value. A <see cref="FlowStatus.Cancelled"/> trace follows the same sampling rate as
+    /// <see cref="FlowStatus.Success"/> (ADR-0020): a client disconnecting is routine churn, not
+    /// a server-side problem worth guaranteeing coverage for. Default: <c>0.1</c> (keep 10%).</summary>
     public double SuccessSampleRate { get; set; } = 0.1;
 }
 
@@ -332,7 +362,9 @@ public sealed record TraceStats
 ```
 
 `errorRate` do payload de `/metrics` é calculado pela camada de API (`ErrorCount / TotalTraces`,
-`0` quando `TotalTraces` é `0`), não pelo `ITraceStore`.
+`0` quando `TotalTraces` é `0`), não pelo `ITraceStore`. `ErrorCount` (aqui, em `ComponentStat` e
+em `RouteStat`) conta `FlowStatus.Error` **e** `FlowStatus.Timeout`, nunca `FlowStatus.Cancelled`
+(ADR-0020): um cliente cancelando não indica problema no servidor, um timeout interno indica.
 
 `GetRouteStatsAsync` e `RouteStat` foram acrescentados a `ITraceStore` na Fase 14 (D-81): agregado
 por rota do trace (`Method`, `RouteTemplate`), mesmo molde de `ComponentStat` mas sobre
@@ -814,7 +846,8 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
   "slowThresholdMicros": 250000,
   "version": "0.1.0",
   "tailSamplingEnabled": false,
-  "successSampleRate": 0.1
+  "successSampleRate": 0.1,
+  "openApiDocumentPath": "/openapi/v1.json"
 }
 ```
 
@@ -826,9 +859,27 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 `NetApiFlowOptions.TailSampling`, para o dashboard avisar quando o histórico persistido não é
 100% do tráfego real.
 
+`openApiDocumentPath` (Fase 29, D-111) espelha `NetApiFlowOptions.OpenApiDocumentPath` (padrão
+`/openapi/v1.json`), o caminho raiz-relativo de onde o host serve o próprio documento OpenAPI.
+O painel "Testar um endpoint" lê daqui em vez de assumir o caminho padrão do `MapOpenApi()`,
+porque a maioria dos projetos .NET existentes serve OpenAPI por Swashbuckle, em outro caminho.
+
+### POST `/deploys`
+
+Acrescentada na Fase 28 (D-60): cria um marco de deploy. Corpo `{ "label": string }`, `400` sem
+`label` (vazio ou só espaço). `timestamp` sempre `DateTime.UtcNow` gerado no servidor, nunca
+recebido do cliente, para um relógio de cliente divergente não contaminar a posição do marco na
+timeline. `201` com o `DeployAnnotation` criado no corpo.
+
+### GET `/deploys`
+
+`from`/`to` obrigatórios na query string (`400` se faltar um), janela de busca por
+`DeployAnnotation.Timestamp`, inclusive dos dois lados. Usado por `/history` para popular os
+marcos intercalados com as execuções.
+
 ---
 
-Autorização vale para as treze rotas acima, sem exceção (ADR-0006): fora de
+Autorização vale para as quinze rotas acima, sem exceção (ADR-0006): fora de
 `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem
 `IDashboardAuthorizationFilter` configurado, toda rota responde `404`. Com um dos dois
 configurado e o usuário sem a claim exigida, `403` (risco R-09, mitigação na Fase 5).

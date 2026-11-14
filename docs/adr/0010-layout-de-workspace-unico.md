@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#69](https://github.com/Douglasproglima/netapiflow/issues/69)
+## Discussion
+[#181](https://github.com/Douglasproglima/netapiflow/discussions/181)
 
 ## Contexto
 

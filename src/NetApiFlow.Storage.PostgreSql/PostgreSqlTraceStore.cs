@@ -174,7 +174,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
                     Component = group.Key.Component,
                     Operation = group.Key.Operation,
                     ExecutionCount = group.Count(),
-                    ErrorCount = group.Count(r => r.Status == FlowStatus.Error),
+                    ErrorCount = group.Count(r => r.Status is FlowStatus.Error or FlowStatus.Timeout),
                     MedianDurationMicros = Percentile(durations, 0.5),
                     AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
                     P95DurationMicros = Percentile(durations, 0.95),
@@ -214,7 +214,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         return new TraceStats
         {
             TotalTraces = statuses.Count,
-            ErrorCount = statuses.Count(s => s == FlowStatus.Error),
+            ErrorCount = statuses.Count(s => s is FlowStatus.Error or FlowStatus.Timeout),
             AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
             P95DurationMicros = Percentile(durations, 0.95),
             MaxDurationMicros = durations.Count == 0 ? 0 : durations[^1],
@@ -256,7 +256,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
                     Method = group.Key.Method,
                     RouteTemplate = group.Key.RouteTemplate,
                     ExecutionCount = group.Count(),
-                    ErrorCount = group.Count(r => r.Status == FlowStatus.Error),
+                    ErrorCount = group.Count(r => r.Status is FlowStatus.Error or FlowStatus.Timeout),
                     MedianDurationMicros = Percentile(durations, 0.5),
                     AverageDurationMicros = durations.Count == 0 ? 0 : (long)durations.Average(),
                     P95DurationMicros = Percentile(durations, 0.95),

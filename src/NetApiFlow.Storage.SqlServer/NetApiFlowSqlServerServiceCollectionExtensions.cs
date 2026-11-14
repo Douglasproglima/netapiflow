@@ -7,8 +7,9 @@ namespace NetApiFlow.Storage.SqlServer;
 public static class NetApiFlowSqlServerServiceCollectionExtensions
 {
     /// <summary>
-    /// Replaces the default in-memory <see cref="ITraceStore"/> with one backed by SQL Server.
-    /// Call after <c>AddNetApiFlow(...)</c>, since this overrides its registration.
+    /// Replaces the default in-memory <see cref="ITraceStore"/> and <see cref="IDeployAnnotationStore"/>
+    /// with ones backed by SQL Server. Call after <c>AddNetApiFlow(...)</c>, since this overrides their
+    /// registration.
     /// </summary>
     public static IServiceCollection AddNetApiFlowSqlServerStorage(
         this IServiceCollection services, string connectionString, Action<SqlServerStorageOptions>? configure = null)
@@ -18,6 +19,8 @@ public static class NetApiFlowSqlServerServiceCollectionExtensions
 
         services.Replace(ServiceDescriptor.Singleton<ITraceStore>(
             _ => new SqlServerTraceStore(connectionString, options)));
+        services.Replace(ServiceDescriptor.Singleton<IDeployAnnotationStore>(
+            _ => new SqlServerDeployAnnotationStore(connectionString, options)));
 
         return services;
     }

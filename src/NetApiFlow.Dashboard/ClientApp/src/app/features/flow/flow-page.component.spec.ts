@@ -77,10 +77,14 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
-  /** Both FlowPageComponent and the metric cards read GET /config independently. */
+  /** FlowPageComponent, the metric cards and the action panel each read GET /config independently. */
   function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
     for (const request of httpMock.match('api/config')) {
-      request.flush({ slowThresholdMicros, version: '0.1.0' });
+      request.flush({
+        slowThresholdMicros,
+        version: '0.1.0',
+        openApiDocumentPath: '/openapi/v1.json',
+      });
     }
   }
 

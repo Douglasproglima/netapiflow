@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#94](https://github.com/Douglasproglima/netapiflow/issues/94)
+## Discussion
+[#186](https://github.com/Douglasproglima/netapiflow/discussions/186)
 
 ## Contexto
 ADR-0009 define o guia de marca (`docs/brand/tokens.md`) como referência canônica de cor,

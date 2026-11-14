@@ -24,6 +24,11 @@ agir. Não assuma um papel fixo só porque é o que este arquivo descreveu numa 
 - Nunca editar direto em `main` ou `develop`. Se estiver numa delas, criar uma branch antes
   (`chore/*` para governança, `feature/*`/`bugfix/*` para o que a Executora fizer).
 - `feature/*`, `bugfix/*` e `chore/*` sempre nascem de `develop` atualizado (`git pull` antes).
+- Em qualquer clone ou worktree novo, rodar `git config core.hooksPath .githooks` antes do
+  primeiro commit. Esse repositório é pessoal (conta `Douglasproglima`); o hook em
+  `.githooks/pre-commit` bloqueia qualquer commit autorado com a identidade de trabalho
+  (`douglas.lima@rajamine.com`), travando no próprio git em vez de depender de alguém lembrar de
+  checar. `core.hooksPath` é configuração local (`.git/config`), não vem sozinha num clone novo.
 
 ## Commits
 

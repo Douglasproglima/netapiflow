@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#65](https://github.com/Douglasproglima/netapiflow/issues/65)
+## Discussion
+[#177](https://github.com/Douglasproglima/netapiflow/discussions/177)
 
 ## Contexto
 `netapiflow-prompt.md` (seções 2, 7.5 e 13-Fase5) exige que instalar o pacote e chamar

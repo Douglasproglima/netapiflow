@@ -3,11 +3,11 @@
  * exactly (camelCase); every duration is microseconds, every timestamp an ISO 8601 UTC string.
  */
 
-export type FlowStatus = 'Running' | 'Success' | 'Error';
+export type FlowStatus = 'Running' | 'Success' | 'Error' | 'Cancelled' | 'Timeout';
 
 /** The six visual states of seção 7.2 do prompt (D-26: lives in `core/`, not under `features/flow`). */
 export type NodeVisualState =
-  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed';
+  'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed' | 'cancelled' | 'timeout';
 
 export type ComponentType =
   'Endpoint' | 'Controller' | 'UseCase' | 'Service' | 'Repository' | 'Database' | 'Http' | 'Custom';
@@ -120,12 +120,13 @@ export interface MetricsSummary {
   maxDurationMicros: number;
 }
 
-/** GET /config (D-24, `version` added by D-33, tail sampling fields added by D-82). */
+/** GET /config. */
 export interface DashboardConfig {
   slowThresholdMicros: number;
   version: string;
   tailSamplingEnabled: boolean;
   successSampleRate: number;
+  openApiDocumentPath: string;
 }
 
 /** GET /metrics/components list item. */
@@ -231,6 +232,13 @@ export interface OpenApiOperation {
 
 export interface OpenApiDocument {
   paths?: Record<string, Record<string, OpenApiOperation>>;
+}
+
+/** GET /deploys list item and POST /deploys response body. */
+export interface DeployAnnotation {
+  id: string;
+  timestamp: string;
+  label: string;
 }
 
 /** SSE event body (seção 2 do contrato). Exactly one of span/trace is present. */

@@ -10,14 +10,24 @@ internal static partial class SqlServerTableNames
 {
     public static (string Traces, string Spans) Resolve(string tablePrefix)
     {
+        ValidateOrThrow(tablePrefix);
+        return ($"dbo.{tablePrefix}traces", $"dbo.{tablePrefix}spans");
+    }
+
+    public static string ResolveDeployAnnotations(string tablePrefix)
+    {
+        ValidateOrThrow(tablePrefix);
+        return $"dbo.{tablePrefix}deploy_annotations";
+    }
+
+    private static void ValidateOrThrow(string tablePrefix)
+    {
         if (!ValidPrefix().IsMatch(tablePrefix))
         {
             throw new ArgumentException(
                 $"NetApiFlow.Storage.SqlServer: TablePrefix '{tablePrefix}' is invalid. Use only letters, digits and underscores, starting with a letter or underscore.",
                 nameof(tablePrefix));
         }
-
-        return ($"dbo.{tablePrefix}traces", $"dbo.{tablePrefix}spans");
     }
 
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$")]

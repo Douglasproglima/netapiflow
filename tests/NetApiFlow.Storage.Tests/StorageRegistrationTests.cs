@@ -5,7 +5,7 @@ using Shouldly;
 
 namespace NetApiFlow.Storage.Tests;
 
-/// <summary>Verifies each storage package replaces the default in-memory <see cref="ITraceStore"/>, without needing a live database.</summary>
+/// <summary>Verifies each storage package replaces the default in-memory <see cref="ITraceStore"/> and <see cref="IDeployAnnotationStore"/>, without needing a live database.</summary>
 public class StorageRegistrationTests
 {
     [Fact]
@@ -17,8 +17,10 @@ public class StorageRegistrationTests
 
         using var provider = services.BuildServiceProvider();
         var store = provider.GetRequiredService<ITraceStore>();
+        var deployAnnotationStore = provider.GetRequiredService<IDeployAnnotationStore>();
 
         store.GetType().Namespace.ShouldBe("NetApiFlow.Storage.PostgreSql");
+        deployAnnotationStore.GetType().Namespace.ShouldBe("NetApiFlow.Storage.PostgreSql");
     }
 
     [Fact]
@@ -30,7 +32,9 @@ public class StorageRegistrationTests
 
         using var provider = services.BuildServiceProvider();
         var store = provider.GetRequiredService<ITraceStore>();
+        var deployAnnotationStore = provider.GetRequiredService<IDeployAnnotationStore>();
 
         store.GetType().Namespace.ShouldBe("NetApiFlow.Storage.SqlServer");
+        deployAnnotationStore.GetType().Namespace.ShouldBe("NetApiFlow.Storage.SqlServer");
     }
 }

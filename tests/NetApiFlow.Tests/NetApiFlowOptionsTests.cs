@@ -107,6 +107,37 @@ public class NetApiFlowOptionsTests
     }
 
     [Fact]
+    public void Value_WithoutExplicitOpenApiDocumentPath_UsesTheMapOpenApiDefault()
+    {
+        BuildOptions([]).Value.OpenApiDocumentPath.ShouldBe("/openapi/v1.json");
+    }
+
+    [Fact]
+    public void Value_WithOpenApiDocumentPathConfigured_UsesIt()
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:OpenApiDocumentPath"] = "/swagger/v1/swagger.json",
+        });
+
+        options.Value.OpenApiDocumentPath.ShouldBe("/swagger/v1/swagger.json");
+    }
+
+    [Theory]
+    [InlineData("openapi/v1.json")]
+    [InlineData("")]
+    public void Value_WithOpenApiDocumentPathNotRootRelative_ThrowsOptionsValidationException(string path)
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            ["NetApiFlow:OpenApiDocumentPath"] = path,
+        });
+
+        var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
+        exception.Message.ShouldContain("OpenApiDocumentPath");
+    }
+
+    [Fact]
     public void Value_WithMaxLogEntriesPerSpanZeroOrLess_ThrowsOptionsValidationException()
     {
         var options = BuildOptions(new Dictionary<string, string?>

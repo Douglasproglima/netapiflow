@@ -448,6 +448,59 @@ describe('HistoryComponent', () => {
     expect(component.canCompare()).toBe(true);
   });
 
+  it('fetches deploy markers reaching epoch/now at the edges of the only page, and interleaves them when sorted by startedAt', async () => {
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    vi.setSystemTime(new Date('2026-11-13T13:00:00.000Z'));
+
+    const component = await mount();
+    flushConfig();
+    const page: PagedResult<FlowTraceSummary> = {
+      items: [
+        makeSummary('newer', { startedAt: '2026-11-13T12:00:00.000000Z' }),
+        makeSummary('older', { startedAt: '2026-11-13T10:00:00.000000Z' }),
+      ],
+      totalCount: 2,
+    };
+    httpMock.expectOne((r) => r.url === 'api/traces').flush(page);
+    await Promise.resolve();
+    harness.detectChanges();
+
+    const deploysReq = httpMock.expectOne((r) => r.url === 'api/deploys');
+    expect(deploysReq.request.params.get('from')).toBe('1970-01-01T00:00:00.000Z');
+    expect(deploysReq.request.params.get('to')).toBe('2026-11-13T13:00:00.000Z');
+    deploysReq.flush([{ id: 'd1', timestamp: '2026-11-13T11:00:00.000000Z', label: 'v1.4.2' }]);
+    await Promise.resolve();
+    harness.detectChanges();
+
+    const rows = component.historyRows();
+    expect(rows.map((row) => (row.kind === 'trace' ? row.trace.traceId : row.deploy.id))).toEqual([
+      'newer',
+      'd1',
+      'older',
+    ]);
+    expect(harness.routeNativeElement?.textContent).toContain('Deploy: v1.4.2');
+  });
+
+  it('does not fetch deploy markers when sorted by a non-chronological field', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.toggleSort('duration');
+    await harness.fixture.whenStable();
+
+    httpMock
+      .expectOne((r) => r.params.get('sort') === 'duration')
+      .flush({ items: [makeSummary('t1')], totalCount: 1 });
+    await harness.fixture.whenStable();
+
+    httpMock.expectNone((r) => r.url === 'api/deploys');
+    expect(component.deployMarkers()).toEqual([]);
+  });
+
   it('navigates to /diff with both trace ids when comparing', async () => {
     const component = await mount();
     flushConfig();

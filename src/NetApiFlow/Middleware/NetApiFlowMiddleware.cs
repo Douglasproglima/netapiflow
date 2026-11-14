@@ -15,6 +15,14 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
 {
     private const string TraceIdHeaderName = "X-NetApiFlow-TraceId";
 
+    /// <summary>
+    /// Route template recorded while routing has not resolved an endpoint yet, and kept for good
+    /// on a request that never matches one. This middleware runs before <c>UseRouting</c>, so the
+    /// only route-ish value available at that point is the requested URI, which may carry
+    /// identifiers and must never reach a trace.
+    /// </summary>
+    internal const string UnmatchedRouteTemplate = "(unmatched)";
+
     public async Task InvokeAsync(HttpContext context)
     {
         var flowOptions = options.Value;
@@ -32,7 +40,7 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
             traceId = activity.TraceId.ToString();
         }
 
-        var started = recorder.TryStartTrace(traceId, context.Request.Method, context.Request.Path.Value ?? "/", DateTime.UtcNow);
+        var started = recorder.TryStartTrace(traceId, context.Request.Method, UnmatchedRouteTemplate, DateTime.UtcNow);
         if (started)
         {
             context.Response.Headers[TraceIdHeaderName] = traceId;
@@ -84,9 +92,14 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                     recorder.UpdateRouteTemplate(traceId, routeTemplate);
                 }
 
-                var status = caughtException is not null || context.Response.StatusCode >= 500
-                    ? FlowStatus.Error
-                    : FlowStatus.Success;
+                var status = caughtException switch
+                {
+                    OperationCanceledException when context.RequestAborted.IsCancellationRequested => FlowStatus.Cancelled,
+                    OperationCanceledException => FlowStatus.Timeout,
+                    not null => FlowStatus.Error,
+                    null when context.Response.StatusCode >= 500 => FlowStatus.Error,
+                    _ => FlowStatus.Success,
+                };
 
                 recorder.CompleteTrace(traceId, context.Response.StatusCode, status, caughtException?.Message);
             }

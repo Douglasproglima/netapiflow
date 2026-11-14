@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#92](https://github.com/Douglasproglima/netapiflow/issues/92)
+## Discussion
+[#185](https://github.com/Douglasproglima/netapiflow/discussions/185)
 
 ## Contexto
 D-60 item A registrou o servidor MCP embutido como a aposta de maior potencial de divulgação

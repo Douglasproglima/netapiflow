@@ -28,16 +28,24 @@ public sealed class NetApiFlowOptions
     /// <summary>Ecosystem <c>ActivitySource</c> instances to also observe, besides NetApiFlow's own. Default: <see cref="ExternalActivitySource.None"/>.</summary>
     public ExternalActivitySource ExternalSources { get; set; } = ExternalActivitySource.None;
 
+    /// <summary>
+    /// Root-relative path of the OpenAPI document the dashboard's "Run an endpoint" panel reads to
+    /// list your endpoints. Set it to wherever your host serves its document, for example
+    /// <c>/swagger/v1/swagger.json</c> under Swashbuckle. Default: <c>/openapi/v1.json</c>, what
+    /// <c>MapOpenApi()</c> serves.
+    /// </summary>
+    public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
+
     /// <summary>Retention policy for persisted traces.</summary>
     public RetentionOptions Retention { get; } = new();
 
     /// <summary>In-process limits for tracing overhead.</summary>
     public LimitsOptions Limits { get; } = new();
 
-    /// <summary>Tail-based sampling of persisted traces (D-82).</summary>
+    /// <summary>Tail-based sampling of persisted traces.</summary>
     public TailSamplingOptions TailSampling { get; } = new();
 
-    /// <summary>Log and exception correlation per step (ADR-0017).</summary>
+    /// <summary>Log and exception correlation per step.</summary>
     public LogCorrelationOptions LogCorrelation { get; } = new();
 
     /// <summary>Route glob patterns (<c>*</c> for one segment, <c>**</c> for any depth) a request must match to be traced.</summary>

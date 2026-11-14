@@ -5,6 +5,7 @@ import { ApiService } from './api.service';
 import {
   ArchitectureMap,
   ComponentStat,
+  DeployAnnotation,
   FlowTraceDetail,
   FlowTraceSummary,
   MetricsSummary,
@@ -206,6 +207,42 @@ describe('ApiService', () => {
 
     const req = httpMock.expectOne('api/config');
     req.flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
+  });
+
+  it('getDeploys sends from and to as query params', () => {
+    const expected: DeployAnnotation[] = [
+      { id: 'd1', timestamp: '2026-11-13T12:00:00.000000Z', label: 'v1.4.2' },
+    ];
+
+    service.getDeploys('2026-11-01T00:00:00Z', '2026-11-14T00:00:00Z').subscribe((result) => {
+      expect(result).toEqual(expected);
+    });
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url === 'api/deploys' &&
+        request.params.get('from') === '2026-11-01T00:00:00Z' &&
+        request.params.get('to') === '2026-11-14T00:00:00Z',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(expected);
+  });
+
+  it('createDeploy posts the label and returns the saved annotation', () => {
+    const expected: DeployAnnotation = {
+      id: 'd1',
+      timestamp: '2026-11-13T12:00:00.000000Z',
+      label: 'v1.4.2',
+    };
+
+    service.createDeploy('v1.4.2').subscribe((result) => {
+      expect(result).toEqual(expected);
+    });
+
+    const req = httpMock.expectOne('api/deploys');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ label: 'v1.4.2' });
+    req.flush(expected);
   });
 
   it('callEndpoint sends a root-relative request, not prefixed by the dashboard base path', () => {

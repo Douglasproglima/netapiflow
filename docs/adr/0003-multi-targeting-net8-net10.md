@@ -3,8 +3,8 @@
 ## Status
 Aceito
 
-## Issue
-[#63](https://github.com/Douglasproglima/netapiflow/issues/63)
+## Discussion
+[#175](https://github.com/Douglasproglima/netapiflow/discussions/175)
 
 ## Contexto
 `netapiflow-prompt.md` (seção 4.1) exige `net8.0` e `net10.0`, as duas versões LTS do .NET no
