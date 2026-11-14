@@ -357,6 +357,82 @@ describe('FlowGraphComponent', () => {
     });
   });
 
+  describe('auto-fit (M3)', () => {
+    function rootOnly() {
+      const spans: FlowSpan[] = [
+        span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),
+      ];
+      return buildGraph({ spans, traceStatus: 'Success', slowThresholdMicros: 250_000 });
+    }
+
+    function rootAndChild() {
+      const spans: FlowSpan[] = [
+        span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),
+        span({
+          spanId: 'child',
+          parentSpanId: 'root',
+          sequence: 1,
+          component: 'D',
+          operation: 'Op2',
+        }),
+      ];
+      return buildGraph({ spans, traceStatus: 'Success', slowThresholdMicros: 250_000 });
+    }
+
+    it('does not auto-fit again after a manual zoom, even when a new node changes the viewBox', async () => {
+      const first = rootOnly();
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', first.nodes);
+      fixture.componentRef.setInput('edges', first.edges);
+      await fixture.whenStable();
+
+      fixture.componentInstance.zoomIn();
+      const zoomToFitSpy = vi.spyOn(fixture.componentInstance, 'zoomToFit');
+
+      const second = rootAndChild();
+      fixture.componentRef.setInput('nodes', second.nodes);
+      fixture.componentRef.setInput('edges', second.edges);
+      await fixture.whenStable();
+
+      expect(zoomToFitSpy).not.toHaveBeenCalled();
+    });
+
+    it('auto-fits on the very first render, with no manual interaction yet', async () => {
+      const first = rootOnly();
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', first.nodes);
+      fixture.componentRef.setInput('edges', first.edges);
+      await fixture.whenStable();
+
+      const zoomToFitSpy = vi.spyOn(fixture.componentInstance, 'zoomToFit');
+      const second = rootAndChild();
+      fixture.componentRef.setInput('nodes', second.nodes);
+      fixture.componentRef.setInput('edges', second.edges);
+      await fixture.whenStable();
+
+      expect(zoomToFitSpy).toHaveBeenCalled();
+    });
+
+    it('re-arms auto-fit for future updates once the user clicks "fit to screen" again', async () => {
+      const first = rootOnly();
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', first.nodes);
+      fixture.componentRef.setInput('edges', first.edges);
+      await fixture.whenStable();
+
+      fixture.componentInstance.zoomIn();
+      fixture.componentInstance.zoomToFit();
+      const zoomToFitSpy = vi.spyOn(fixture.componentInstance, 'zoomToFit');
+
+      const second = rootAndChild();
+      fixture.componentRef.setInput('nodes', second.nodes);
+      fixture.componentRef.setInput('edges', second.edges);
+      await fixture.whenStable();
+
+      expect(zoomToFitSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('legend', () => {
     it('renders exactly the states a node can actually have, never cancelled or timeout (M2)', async () => {
       const fixture = TestBed.createComponent(FlowGraphComponent);

@@ -79,10 +79,30 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
 
   readonly legendStates: readonly NodeVisualState[] = GRAPH_NODE_VISUAL_STATES;
 
+  /**
+   * Set by a real zoom/pan gesture or the +/- buttons (M3); cleared by "fit to screen" itself,
+   * or automatically the moment the node count drops (switching into replay at its first,
+   * not-yet-advanced step; switching to a different trace entirely) — there is no view worth
+   * preserving once the graph being looked at has effectively changed shape. While set, a live
+   * trace simply growing node after node no longer fights whatever the user is looking at.
+   */
+  private readonly hasManuallyAdjusted = signal(false);
+  private lastNodeCount = 0;
+
   constructor() {
     effect(() => {
+      const nodeCount = this.nodes().length;
       this.viewBox();
-      this.zoomToFit();
+
+      if (nodeCount < this.lastNodeCount) {
+        this.hasManuallyAdjusted.set(false);
+      }
+
+      this.lastNodeCount = nodeCount;
+
+      if (!this.hasManuallyAdjusted()) {
+        this.zoomToFit();
+      }
     });
   }
 
@@ -105,6 +125,14 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
     this.svgSelection = select(svgElement);
     this.zoomBehavior = behavior;
     this.svgSelection.call(behavior).call(behavior.transform, zoomIdentity);
+
+    // Listened on the raw DOM element rather than inferred from the zoom behavior's own event
+    // (`D3ZoomEvent.sourceEvent` keeps referencing the last real gesture on every later
+    // programmatic `.transform()` call too, e.g. `zoomToFit`'s own — it cannot tell them apart).
+    const markManuallyAdjusted = (): void => this.hasManuallyAdjusted.set(true);
+    svgElement.addEventListener('wheel', markManuallyAdjusted, { passive: true });
+    svgElement.addEventListener('mousedown', markManuallyAdjusted);
+    svgElement.addEventListener('touchstart', markManuallyAdjusted, { passive: true });
 
     this.observeOverlaySizes();
   }
@@ -137,18 +165,24 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
     if (this.svgSelection && this.zoomBehavior) {
       this.svgSelection.call(this.zoomBehavior.transform, zoomIdentity);
     }
+
+    this.hasManuallyAdjusted.set(false);
   }
 
   zoomIn(): void {
     if (this.svgSelection && this.zoomBehavior) {
       this.zoomBehavior.scaleBy(this.svgSelection, ZOOM_STEP_FACTOR);
     }
+
+    this.hasManuallyAdjusted.set(true);
   }
 
   zoomOut(): void {
     if (this.svgSelection && this.zoomBehavior) {
       this.zoomBehavior.scaleBy(this.svgSelection, 1 / ZOOM_STEP_FACTOR);
     }
+
+    this.hasManuallyAdjusted.set(true);
   }
 
   legendIconSrc(state: NodeVisualState): string {
