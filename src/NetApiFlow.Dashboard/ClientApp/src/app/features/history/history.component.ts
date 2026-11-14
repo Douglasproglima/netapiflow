@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Params, ParamMap, Router, RouterLink } from '@angular/router';
-import { Subject, debounceTime } from 'rxjs';
+import { Subject, catchError, debounceTime, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import {
   DeployAnnotation,
@@ -330,6 +330,7 @@ export class HistoryComponent {
 
   private readonly routeInput$ = new Subject<string>();
   private readonly tenantInput$ = new Subject<string>();
+  private readonly queryTrigger$ = new Subject<TraceQuery>();
 
   constructor() {
     this.routeInput$
@@ -346,21 +347,32 @@ export class HistoryComponent {
       this.successSampleRate.set(config.successSampleRate);
     });
 
+    // `switchMap` (M4) cancels a still-in-flight request for an earlier filter/page combination
+    // the moment a new one starts, so its response can never arrive after and overwrite it.
+    this.queryTrigger$
+      .pipe(
+        switchMap((query) =>
+          this.api.getTraces(query).pipe(
+            catchError((error: HttpErrorResponse) => {
+              this.errorMessage.set(describeError(error));
+              return of(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((result) => {
+        if (result) {
+          this.result.set(result);
+        }
+        this.loading.set(false);
+      });
+
     effect(() => {
       const query = this.filters();
       this.loading.set(true);
       this.errorMessage.set(null);
-
-      this.api.getTraces(query).subscribe({
-        next: (result) => {
-          this.result.set(result);
-          this.loading.set(false);
-        },
-        error: (error: HttpErrorResponse) => {
-          this.errorMessage.set(describeError(error));
-          this.loading.set(false);
-        },
-      });
+      this.queryTrigger$.next(query);
     });
 
     effect(() => {

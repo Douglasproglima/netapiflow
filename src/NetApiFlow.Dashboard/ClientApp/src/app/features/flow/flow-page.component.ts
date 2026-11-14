@@ -1,8 +1,8 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { map } from 'rxjs';
+import { Subject, map, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
@@ -127,10 +127,21 @@ export class FlowPageComponent {
     });
   });
 
+  private readonly spanSelection$ = new Subject<{ traceId: string; nodeId: string }>();
+
   constructor() {
     this.api
       .getConfig()
       .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+
+    // `switchMap` (M4) cancels a still-in-flight span lookup for an earlier selection the
+    // moment a new one starts, so its response can never arrive after and overwrite it.
+    this.spanSelection$
+      .pipe(
+        switchMap(({ traceId, nodeId }) => this.api.getSpan(traceId, nodeId)),
+        takeUntilDestroyed(),
+      )
+      .subscribe((detail) => this.selectedSpanDetail.set(detail));
 
     effect(() => {
       this.actionDrawer.isDrawer.set(this.isActionDrawer());
@@ -303,7 +314,7 @@ export class FlowPageComponent {
       return;
     }
 
-    this.api.getSpan(traceId, nodeId).subscribe((detail) => this.selectedSpanDetail.set(detail));
+    this.spanSelection$.next({ traceId, nodeId });
   }
 
   backToSummary(): void {

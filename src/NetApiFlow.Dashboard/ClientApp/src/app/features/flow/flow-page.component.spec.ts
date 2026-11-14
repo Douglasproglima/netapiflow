@@ -448,4 +448,56 @@ describe('FlowPageComponent', () => {
     expect(fixture.componentInstance.importedTrace()).toBeNull();
     expect(fixture.componentInstance.trace()).toBeNull();
   });
+
+  it('always reflects the latest span selection, never a stale response that arrives after a newer one (M4)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      spans: [
+        ...makeTrace('t1').spans,
+        {
+          spanId: 's2',
+          parentSpanId: 's1',
+          sequence: 1,
+          component: 'OrderService',
+          operation: 'GetAsync',
+          type: 'Service',
+          startedAt: '2026-01-01T00:00:00.000000Z',
+          endedAt: '2026-01-01T00:00:00.000100Z',
+          durationMicros: 100,
+          status: 'Success',
+          errorType: null,
+          errorMessage: null,
+          isErrorOrigin: false,
+          tags: {},
+          logs: [],
+        },
+      ],
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    fixture.componentInstance.onNodeSelected('s1');
+    const firstReq = httpMock.expectOne('api/traces/t1/spans/s1');
+
+    fixture.componentInstance.onNodeSelected('s2');
+    const secondReq = httpMock.expectOne('api/traces/t1/spans/s2');
+
+    // `switchMap` (M4) unsubscribes the first (now stale) lookup the moment the second starts.
+    expect(firstReq.cancelled).toBe(true);
+
+    secondReq.flush({
+      span: { ...makeTrace('t1').spans[0], spanId: 's2' },
+      ancestors: [],
+      children: [],
+    } as never);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedSpanDetail()?.span.spanId).toBe('s2');
+  });
 });

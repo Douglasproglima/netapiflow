@@ -1,4 +1,6 @@
 import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, catchError, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { ArchitectureMap, EndpointDescriptor } from '../../core/models';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
@@ -69,6 +71,12 @@ export class ArchitectureComponent {
     this.map() ? buildArchitectureGraph(this.map()!) : { nodes: [], edges: [] },
   );
 
+  private readonly architectureTrigger$ = new Subject<{
+    method: string;
+    routeTemplate: string;
+    from: string;
+  }>();
+
   constructor() {
     this.api.getEndpoints().subscribe((endpoints) => this.endpoints.set(endpoints));
 
@@ -76,6 +84,29 @@ export class ArchitectureComponent {
       this.tailSamplingEnabled.set(config.tailSamplingEnabled);
       this.successSampleRate.set(config.successSampleRate);
     });
+
+    // `switchMap` (M4) cancels a still-in-flight request for an earlier route/window
+    // combination the moment a new one starts, so its response can never arrive after and
+    // overwrite it.
+    this.architectureTrigger$
+      .pipe(
+        switchMap(({ method, routeTemplate, from }) =>
+          this.api.getArchitecture(method, routeTemplate, { from }).pipe(
+            catchError(() => {
+              this.map.set(null);
+              this.error.set('architecture.error');
+              return of(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((map) => {
+        if (map) {
+          this.map.set(map);
+        }
+        this.loading.set(false);
+      });
 
     effect(() => {
       const route = this.selectedRoute();
@@ -91,17 +122,10 @@ export class ArchitectureComponent {
       const from = periodPresetFrom(window, new Date());
       this.loading.set(true);
       this.error.set(null);
-
-      this.api.getArchitecture(route.method, route.routeTemplate, { from }).subscribe({
-        next: (map) => {
-          this.map.set(map);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.map.set(null);
-          this.error.set('architecture.error');
-          this.loading.set(false);
-        },
+      this.architectureTrigger$.next({
+        method: route.method,
+        routeTemplate: route.routeTemplate,
+        from,
       });
     });
   }

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
-import { forkJoin } from 'rxjs';
+import { Subject, catchError, forkJoin, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { EndpointDescriptor, RouteStat } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
@@ -64,28 +65,42 @@ export class InsightsComponent {
     );
   });
 
+  private readonly windowTrigger$ = new Subject<string>();
+
   constructor() {
     this.api.getConfig().subscribe((config) => {
       this.tailSamplingEnabled.set(config.tailSamplingEnabled);
       this.successSampleRate.set(config.successSampleRate);
     });
 
+    // `switchMap` (M4) cancels a still-in-flight request for an earlier window the moment a
+    // new one starts, so its response can never arrive after and overwrite it.
+    this.windowTrigger$
+      .pipe(
+        switchMap((from) =>
+          forkJoin([this.api.getRouteMetrics({ from }), this.api.getEndpoints()]).pipe(
+            catchError(() => {
+              this.error.set('insights.error');
+              return of(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((result) => {
+        if (result) {
+          const [routeStats, endpoints] = result;
+          this.routeStats.set(routeStats);
+          this.endpoints.set(endpoints);
+        }
+        this.loading.set(false);
+      });
+
     effect(() => {
       const from = periodPresetFrom(this.window(), new Date());
       this.loading.set(true);
       this.error.set(null);
-
-      forkJoin([this.api.getRouteMetrics({ from }), this.api.getEndpoints()]).subscribe({
-        next: ([routeStats, endpoints]) => {
-          this.routeStats.set(routeStats);
-          this.endpoints.set(endpoints);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.error.set('insights.error');
-          this.loading.set(false);
-        },
-      });
+      this.windowTrigger$.next(from);
     });
   }
 

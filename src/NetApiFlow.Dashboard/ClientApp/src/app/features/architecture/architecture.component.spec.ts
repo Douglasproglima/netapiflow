@@ -176,6 +176,49 @@ describe('ArchitectureComponent', () => {
     secondReq.flush({ totalExecutions: 0, nodes: [], edges: [] } satisfies ArchitectureMap);
   });
 
+  it('always reflects the latest route, never a stale response that arrives after a newer one (M4)', async () => {
+    const fixture = TestBed.createComponent(ArchitectureComponent);
+    await fixture.whenStable();
+    httpMock
+      .expectOne((req) => req.url === 'api/endpoints')
+      .flush([
+        ...ENDPOINTS,
+        { method: 'POST', routeTemplate: '/api/orders', displayName: 'POST /api/orders' },
+      ]);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
+    await fixture.whenStable();
+
+    selectRoute(fixture, 'GET', '/api/orders/{id}');
+    await fixture.whenStable();
+    const firstReq = httpMock.expectOne((req) => req.url === 'api/architecture');
+
+    selectRoute(fixture, 'POST', '/api/orders');
+    await fixture.whenStable();
+
+    // `switchMap` (M4) unsubscribes the first (now stale) route's lookup the moment the
+    // second route's request starts.
+    expect(firstReq.cancelled).toBe(true);
+
+    const secondReq = httpMock.expectOne((req) => req.url === 'api/architecture');
+    expect(secondReq.request.params.get('route')).toBe('/api/orders');
+    const secondMap: ArchitectureMap = {
+      totalExecutions: 1,
+      nodes: [
+        {
+          component: 'OrdersController',
+          operation: 'Create',
+          type: 'Controller',
+          executionCount: 1,
+        },
+      ],
+      edges: [],
+    };
+    secondReq.flush(secondMap);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.map()).toEqual(secondMap);
+  });
+
   it('exportSvg serializes the rendered graph and downloads it with the svg MIME type', async () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();
