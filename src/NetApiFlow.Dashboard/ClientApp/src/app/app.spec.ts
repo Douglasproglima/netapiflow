@@ -108,6 +108,42 @@ describe('App', () => {
     expect(compiled.querySelector('a[href="/runner"]')).toBeTruthy();
   });
 
+  it('marks the "Fluxo" nav item active only on "/", never on another route (M8)', async () => {
+    localStorage.clear();
+    const { fake } = fakeBreakpointObserver(false);
+    const sse = fakeSseService();
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [
+        provideRouter([
+          { path: '', component: StubPageComponent, data: { title: 'nav.flow' } },
+          { path: 'history', component: StubPageComponent, data: { title: 'nav.history' } },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: BreakpointObserver, useValue: fake },
+        { provide: SseService, useValue: sse },
+        { provide: ThemeService, useValue: fakeThemeService() },
+      ],
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl('/');
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+
+    const flowNavItem = (): Element | null =>
+      (fixture.nativeElement as HTMLElement).querySelector('a.app-rail__item[href="/"]');
+
+    expect(flowNavItem()?.classList.contains('app-rail__item--active')).toBe(true);
+
+    await TestBed.inject(Router).navigateByUrl('/history');
+    await fixture.whenStable();
+
+    expect(flowNavItem()?.classList.contains('app-rail__item--active')).toBe(false);
+  });
+
   it('docks the rail open by default on a wide viewport, with the hamburger also present', async () => {
     const { fixture } = setup(false);
     await fixture.whenStable();
