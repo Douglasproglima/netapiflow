@@ -296,6 +296,24 @@ between them.
 Comparing two executions of different routes still works, every step simply lands on one side
 only. The page flags it as a warning, since that's rarely what you meant.
 
+## Deploy annotations
+
+A deploy marker on `/history` helps you correlate an incident you're investigating later with a
+deploy someone else made, often on another machine, another day. Mark one right after a deploy
+finishes, as a step in your release pipeline:
+
+```bash
+curl -X POST https://your-api.example.com/flow/api/deploys \
+  -H "Content-Type: application/json" \
+  -d '{"label": "v1.4.2"}'
+```
+
+The server assigns the timestamp; a client clock running a few seconds off never shifts a marker's
+position on the timeline. The marker shows up in `/history` as a full-width row, in chronological
+order among the executions around it, visible to everyone who opens the dashboard, not just the
+browser that created it. There's no UI to create one from the dashboard itself in this release,
+and no way to edit or delete a marker once saved.
+
 ## Dashboard preferences
 
 The dashboard UI defaults to Portuguese (pt-BR); switch to English from the language toggle in

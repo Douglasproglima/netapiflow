@@ -661,73 +661,13 @@
               </tr>
             </thead>
             <tbody>
-              @for (trace of result()!.items; track trace.traceId) {
-                <tr class="history__row">
-                  <td class="history__col-select">
-                    <input
-                      type="checkbox"
-                      [attr.aria-label]="'history.compare.selectAria' | t"
-                      [checked]="isSelected(trace.traceId)"
-                      (change)="toggleSelection(trace)"
-                    />
-                  </td>
-                  <td class="history__col-status">
-                    <span class="history__status-pill" [class]="rowStatusTintClass(trace)">
-                      <img
-                        [src]="rowStateIconSrc(trace)"
-                        [attr.alt]="rowStateLabelKey(trace) | t"
-                        width="14"
-                        height="14"
-                      />
-                      @if (trace.httpStatus !== null) {
-                        {{ trace.httpStatus }}
-                      }
-                    </span>
-                  </td>
-                  <td class="history__col-method">
-                    <span class="naf-tag" [class]="methodTagClass(trace.method)">{{
-                      trace.method
-                    }}</span>
-                  </td>
-                  <td class="history__col-route">
-                    <a
-                      class="history__row-link"
-                      [routerLink]="['/']"
-                      [queryParams]="{ trace: trace.traceId }"
-                      [attr.title]="trace.method + ' ' + trace.routeTemplate"
-                    >
-                      {{ trace.routeTemplate }}
-                    </a>
-                    @if (trace.truncated) {
-                      <span class="history__tag">{{ 'history.table.truncated' | t }}</span>
-                    }
-                  </td>
-                  <td
-                    class="history__col-started naf-mono"
-                    [attr.title]="startedAtFull(trace.startedAt)"
-                  >
-                    {{ startedAtShort(trace.startedAt) }}
-                  </td>
-                  <td
-                    class="history__col-duration history__col-duration--right naf-mono"
-                    [class.history__duration--slow]="isSlowDuration(trace.durationMicros)"
-                  >
-                    @if (trace.durationMicros === null) {
-                      <span class="history__muted">{{ 'history.row.running' | t }}</span>
-                    } @else {
-                      {{ formatDuration(trace.durationMicros) }}
-                    }
-                  </td>
-                  <td class="history__col-trace">
-                    <span class="history__trace-cell">
-                      <span class="naf-mono history__muted">{{ shortTraceId(trace.traceId) }}</span>
-                      <button
-                        type="button"
-                        class="history__copy"
-                        [attr.aria-label]="'history.row.copyTraceId' | t"
-                        (click)="copyTraceId(trace.traceId, $event)"
-                      >
+              @for (row of historyRows(); track rowTrackKey(row)) {
+                @if (row.kind === 'deploy') {
+                  <tr class="history__row history__row--deploy">
+                    <td colspan="7">
+                      <span class="history__deploy-cell">
                         <svg
+                          class="history__deploy-icon"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -736,16 +676,111 @@
                           stroke-linejoin="round"
                           width="14"
                           height="14"
+                          aria-hidden="true"
                         >
-                          <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
-                          <path
-                            d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
-                          />
+                          <path d="M6 21V4" />
+                          <path d="M6 4h11l-2.5 3.5L17 11H6" />
                         </svg>
-                      </button>
-                    </span>
-                  </td>
-                </tr>
+                        <span class="history__deploy-label">
+                          {{ 'history.deploy.rowLabel' | t: { label: row.deploy.label } }}
+                        </span>
+                        <span
+                          class="naf-mono history__muted history__deploy-time"
+                          [attr.title]="startedAtFull(row.deploy.timestamp)"
+                        >
+                          {{ startedAtShort(row.deploy.timestamp) }}
+                        </span>
+                      </span>
+                    </td>
+                  </tr>
+                } @else {
+                  <tr class="history__row">
+                    <td class="history__col-select">
+                      <input
+                        type="checkbox"
+                        [attr.aria-label]="'history.compare.selectAria' | t"
+                        [checked]="isSelected(row.trace.traceId)"
+                        (change)="toggleSelection(row.trace)"
+                      />
+                    </td>
+                    <td class="history__col-status">
+                      <span class="history__status-pill" [class]="rowStatusTintClass(row.trace)">
+                        <img
+                          [src]="rowStateIconSrc(row.trace)"
+                          [attr.alt]="rowStateLabelKey(row.trace) | t"
+                          width="14"
+                          height="14"
+                        />
+                        @if (row.trace.httpStatus !== null) {
+                          {{ row.trace.httpStatus }}
+                        }
+                      </span>
+                    </td>
+                    <td class="history__col-method">
+                      <span class="naf-tag" [class]="methodTagClass(row.trace.method)">{{
+                        row.trace.method
+                      }}</span>
+                    </td>
+                    <td class="history__col-route">
+                      <a
+                        class="history__row-link"
+                        [routerLink]="['/']"
+                        [queryParams]="{ trace: row.trace.traceId }"
+                        [attr.title]="row.trace.method + ' ' + row.trace.routeTemplate"
+                      >
+                        {{ row.trace.routeTemplate }}
+                      </a>
+                      @if (row.trace.truncated) {
+                        <span class="history__tag">{{ 'history.table.truncated' | t }}</span>
+                      }
+                    </td>
+                    <td
+                      class="history__col-started naf-mono"
+                      [attr.title]="startedAtFull(row.trace.startedAt)"
+                    >
+                      {{ startedAtShort(row.trace.startedAt) }}
+                    </td>
+                    <td
+                      class="history__col-duration history__col-duration--right naf-mono"
+                      [class.history__duration--slow]="isSlowDuration(row.trace.durationMicros)"
+                    >
+                      @if (row.trace.durationMicros === null) {
+                        <span class="history__muted">{{ 'history.row.running' | t }}</span>
+                      } @else {
+                        {{ formatDuration(row.trace.durationMicros) }}
+                      }
+                    </td>
+                    <td class="history__col-trace">
+                      <span class="history__trace-cell">
+                        <span class="naf-mono history__muted">{{
+                          shortTraceId(row.trace.traceId)
+                        }}</span>
+                        <button
+                          type="button"
+                          class="history__copy"
+                          [attr.aria-label]="'history.row.copyTraceId' | t"
+                          (click)="copyTraceId(row.trace.traceId, $event)"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.75"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            width="14"
+                            height="14"
+                          >
+                            <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                            <path
+                              d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
+                            />
+                          </svg>
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                }
               }
             </tbody>
           </table>

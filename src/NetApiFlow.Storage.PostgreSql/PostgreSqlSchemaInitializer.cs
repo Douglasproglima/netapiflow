@@ -54,4 +54,20 @@ internal static class PostgreSqlSchemaInitializer
         await using var command = new NpgsqlCommand(sql, connection);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public static async Task EnsureDeployAnnotationsCreatedAsync(NpgsqlConnection connection, string deployAnnotationsTable, CancellationToken cancellationToken)
+    {
+        var sql = $"""
+            CREATE TABLE IF NOT EXISTS {deployAnnotationsTable} (
+                id varchar(64) PRIMARY KEY,
+                timestamp timestamptz NOT NULL,
+                label text NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS ix_{deployAnnotationsTable}_timestamp ON {deployAnnotationsTable} (timestamp);
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 }

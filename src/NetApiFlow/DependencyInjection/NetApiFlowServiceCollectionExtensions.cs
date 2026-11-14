@@ -40,6 +40,8 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddSingleton<FlowActivityListener>();
         services.AddSingleton<InMemoryTraceStore>();
         services.TryAddSingleton<ITraceStore>(sp => sp.GetRequiredService<InMemoryTraceStore>());
+        services.AddSingleton<InMemoryDeployAnnotationStore>();
+        services.TryAddSingleton<IDeployAnnotationStore>(sp => sp.GetRequiredService<InMemoryDeployAnnotationStore>());
 
         services.AddSingleton<IStartupFilter, NetApiFlowStartupFilter>();
         services.Configure<MvcOptions>(options => options.Filters.Add<FlowControllerActionFilter>());

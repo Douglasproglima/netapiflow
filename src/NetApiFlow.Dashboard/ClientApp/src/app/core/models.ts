@@ -234,6 +234,13 @@ export interface OpenApiDocument {
   paths?: Record<string, Record<string, OpenApiOperation>>;
 }
 
+/** GET /deploys list item and POST /deploys response body. */
+export interface DeployAnnotation {
+  id: string;
+  timestamp: string;
+  label: string;
+}
+
 /** SSE event body (seção 2 do contrato). Exactly one of span/trace is present. */
 export interface FlowEvent {
   eventId: number;
