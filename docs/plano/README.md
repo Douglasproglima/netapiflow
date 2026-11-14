@@ -74,8 +74,9 @@ Fase 29. Fase 27 (D-117, ADR-0020) e Fase 28 (D-119) também aceitas. Com isso, 
 inteiro (D-32, D-58, D-60) está entregue; só sobram os dois itens sem fase atribuída de
 `docs/plano/roadmap-valor.md` (Dapper sobre SQL Server, piso em pixels do R-28). D-121 abre, a
 partir de uma auditoria real do frontend, a Fase 31 (`fase-31-correcoes-auditoria-frontend.md`,
-14 tarefas, achados Alta e Média) e registra os achados de Baixa severidade pra uma Fase 32
-futura, ainda sem plano escrito.
+14 tarefas, achados Alta e Média, hotfix `0.3.1`) e, corrigida pela D-123, a Fase 32
+(`fase-32-correcoes-auditoria-frontend-baixa.md`, 12 tarefas, achados Baixa, hotfix `0.3.2`
+depois da 0.3.1).
 
 ## Regra de avanço
 
