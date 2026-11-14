@@ -71,4 +71,17 @@ describe('RunnerComponent', () => {
 
     expect(fixture.componentInstance.livePlayer.trace()?.traceId).toBe('t1');
   });
+
+  it('constrains the page to a fixed max width instead of stretching edge to edge', async () => {
+    const fixture = TestBed.createComponent(RunnerComponent);
+    await fixture.whenStable();
+    httpMock.expectOne('api/config').flush(CONFIG);
+    await fixture.whenStable();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    const wrapper: HTMLElement = fixture.nativeElement.querySelector('.runner');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper.contains(fixture.nativeElement.querySelector('app-endpoint-form'))).toBe(true);
+  });
 });

@@ -10,6 +10,7 @@ import { EndpointFormComponent } from './endpoint-form.component';
 @Component({
   selector: 'app-runner',
   templateUrl: './runner.component.html',
+  styleUrl: './runner.component.scss',
   imports: [EndpointFormComponent],
   providers: [LiveTracePlayerService],
 })
