@@ -356,4 +356,29 @@ describe('FlowGraphComponent', () => {
       );
     });
   });
+
+  describe('legend', () => {
+    it('renders exactly the states a node can actually have, never cancelled or timeout (M2)', async () => {
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', []);
+      fixture.componentRef.setInput('edges', []);
+      await fixture.whenStable();
+
+      const labels = Array.from(
+        fixture.nativeElement.querySelectorAll('.flow-graph__legend-item span:last-child'),
+      ).map((el) => (el as Element).textContent);
+
+      // pt-BR is the default language (D-35).
+      expect(labels).toEqual([
+        'Aguardando',
+        'Em execução',
+        'Concluído',
+        'Lento',
+        'Erro',
+        'Não executado',
+      ]);
+      expect(labels).not.toContain('Cancelado');
+      expect(labels).not.toContain('Tempo esgotado');
+    });
+  });
 });

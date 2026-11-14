@@ -15,7 +15,10 @@ import { select, Selection } from 'd3-selection';
 import { zoom, zoomIdentity, D3ZoomEvent, ZoomBehavior } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
 import { ContainerSize, computeGraphViewBox } from './flow-graph-viewbox';
-import { NODE_STATE_PRESENTATION } from '../../../shared/node-state-presentation';
+import {
+  GRAPH_NODE_VISUAL_STATES,
+  NODE_STATE_PRESENTATION,
+} from '../../../shared/node-state-presentation';
 import { ComponentTypeIcon, componentTypeIcon } from '../../../shared/component-type-icon';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { LanguageService } from '../../../core/i18n/language.service';
@@ -74,9 +77,7 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   private readonly zoomLevel = signal(1);
   readonly zoomPercentage = computed(() => Math.round(this.zoomLevel() * 100));
 
-  readonly legendStates: readonly NodeVisualState[] = Object.keys(
-    NODE_STATE_PRESENTATION,
-  ) as NodeVisualState[];
+  readonly legendStates: readonly NodeVisualState[] = GRAPH_NODE_VISUAL_STATES;
 
   constructor() {
     effect(() => {

@@ -22,3 +22,13 @@ export const NODE_STATE_PRESENTATION: Readonly<Record<NodeVisualState, NodeState
   cancelled: { iconSrc: 'node-states/cancelled.svg', labelKey: 'node.state.cancelled' },
   timeout: { iconSrc: 'node-states/timeout.svg', labelKey: 'node.state.timeout' },
 };
+
+/**
+ * States a graph node (a span) can actually show (M2, ADR-0020: cancellation and timeout are a
+ * whole trace's own status, never a single span's). `/history`, the diff view and
+ * recent-executions keep reading every key of `NODE_STATE_PRESENTATION` directly for a trace's
+ * own status, untouched by this narrower list — it only governs the live graph's legend.
+ */
+export const GRAPH_NODE_VISUAL_STATES: readonly NodeVisualState[] = (
+  Object.keys(NODE_STATE_PRESENTATION) as NodeVisualState[]
+).filter((state) => state !== 'cancelled' && state !== 'timeout');
