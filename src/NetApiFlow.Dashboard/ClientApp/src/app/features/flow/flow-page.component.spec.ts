@@ -9,11 +9,14 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of, Subject } from 'rxjs';
 import { FlowPageComponent } from './flow-page.component';
 import { SseService, SseConnectionState } from '../../core/sse.service';
-import { FlowTraceDetail, FlowTraceSummary } from '../../core/models';
+import { FlowEvent, FlowTrace, FlowTraceDetail, FlowTraceSummary } from '../../core/models';
+
+const sseEvents$ = new Subject<FlowEvent>();
+const sseReconnected$ = new Subject<void>();
 
 const fakeSse = {
-  events$: new Subject().asObservable(),
-  reconnected$: new Subject<void>().asObservable(),
+  events$: sseEvents$.asObservable(),
+  reconnected$: sseReconnected$.asObservable(),
   state: () => 'open' as SseConnectionState,
   connect: vi.fn(),
   disconnect: vi.fn(),
@@ -133,6 +136,17 @@ describe('FlowPageComponent', () => {
     }
     await fixture.whenStable();
     return requests;
+  }
+
+  function findReplayButton(fixture: ComponentFixture<FlowPageComponent>): HTMLButtonElement {
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
+      (candidate): candidate is HTMLButtonElement =>
+        (candidate as HTMLButtonElement).textContent?.trim() === 'Replay',
+    );
+    if (!button) {
+      throw new Error('Replay button not found');
+    }
+    return button;
   }
 
   it('loads the trace from the ?trace= query param on mount', async () => {
@@ -289,6 +303,115 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.toggleReplay();
     expect(fixture.componentInstance.isReplaying()).toBe(false);
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('disables the replay button while the trace is Running, and re-enables it once it concludes (M5)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    expect(findReplayButton(fixture).disabled).toBe(true);
+
+    const completedTrace: FlowTrace = makeTrace('t1');
+    sseEvents$.next({
+      eventId: 1,
+      type: 'TraceCompleted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:00:00.000200Z',
+      trace: completedTrace,
+    });
+    await fixture.whenStable();
+
+    expect(findReplayButton(fixture).disabled).toBe(false);
+  });
+
+  it('does not reset an already-playing replay when a new SSE event arrives for the same Running trace (M5)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    const runningTrace = makeTrace('t1');
+    runningTrace.status = 'Running';
+    runningTrace.httpStatus = null;
+    runningTrace.endedAt = null;
+    runningTrace.durationMicros = null;
+    runningTrace.spans = [
+      ...runningTrace.spans,
+      {
+        spanId: 's2',
+        parentSpanId: 's1',
+        sequence: 1,
+        component: 'OrderController',
+        operation: 'Notify',
+        type: 'Service',
+        startedAt: '2026-01-01T00:00:00.000100Z',
+        endedAt: '2026-01-01T00:00:00.000150Z',
+        durationMicros: 50,
+        status: 'Success',
+        errorType: null,
+        errorMessage: null,
+        isErrorOrigin: false,
+        tags: {},
+        logs: [],
+      },
+    ];
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(runningTrace);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    fixture.componentInstance.toggleReplay();
+    expect(fixture.componentInstance.isReplaying()).toBe(true);
+    expect(fixture.componentInstance.replayPlayer.totalSteps()).toBe(2);
+
+    fixture.componentInstance.replayPlayer.stepForward();
+    expect(fixture.componentInstance.replayPlayer.stepIndex()).toBe(1);
+    expect(fixture.componentInstance.replayPlayer.state()).toBe('paused');
+
+    sseEvents$.next({
+      eventId: 1,
+      type: 'SpanStarted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:00:00.000200Z',
+      span: {
+        spanId: 's3',
+        parentSpanId: 's1',
+        sequence: 2,
+        component: 'OrderController',
+        operation: 'Audit',
+        type: 'Service',
+        startedAt: '2026-01-01T00:00:00.000150Z',
+        endedAt: null,
+        durationMicros: null,
+        status: 'Running',
+        errorType: null,
+        errorMessage: null,
+        isErrorOrigin: false,
+        tags: {},
+        logs: [],
+      },
+    });
+    await fixture.whenStable();
+
+    // Not reloaded (M5): the live trace now has 3 spans, but the replay already in progress
+    // keeps the 2-span snapshot it started with, at the step the user left it on.
+    expect(fixture.componentInstance.replayPlayer.totalSteps()).toBe(2);
+    expect(fixture.componentInstance.replayPlayer.stepIndex()).toBe(1);
+    expect(fixture.componentInstance.replayPlayer.state()).toBe('paused');
   });
 
   it('shows the live pause toggle only while following a Running trace live, not during replay', async () => {

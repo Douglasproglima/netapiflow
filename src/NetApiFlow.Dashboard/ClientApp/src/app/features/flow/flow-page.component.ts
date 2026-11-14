@@ -177,13 +177,26 @@ export class FlowPageComponent {
         .subscribe((blueprint) => this.liveBlueprintSpans.set(blueprint?.spans ?? null));
     });
 
+    // Keyed by traceId plus whether the trace is still Running (M5), so a live trace's growing
+    // span list never reloads an already-playing replay back to step 0: only a new trace
+    // identity or the trace concluding is a real reason to reload.
     effect(() => {
       const trace = this.trace();
-      if (trace) {
-        this.replayPlayer.load(trace);
+      if (!trace) {
+        return;
       }
+
+      const loadKey = `${trace.traceId}:${trace.status === 'Running'}`;
+      if (loadKey === this.lastReplayLoadKey) {
+        return;
+      }
+
+      this.lastReplayLoadKey = loadKey;
+      this.replayPlayer.load(trace);
     });
   }
+
+  private lastReplayLoadKey: string | null = null;
 
   readonly replaySpeeds = REPLAY_SPEEDS;
 

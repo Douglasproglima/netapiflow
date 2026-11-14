@@ -100,7 +100,12 @@
             <button mat-stroked-button type="button" (click)="exportTrace()">
               {{ 'export.button' | t }}
             </button>
-            <button mat-stroked-button type="button" (click)="toggleReplay()">
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="trace.status === 'Running'"
+              (click)="toggleReplay()"
+            >
               {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
             </button>
           </span>
