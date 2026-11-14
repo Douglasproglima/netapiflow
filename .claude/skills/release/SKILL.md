@@ -37,8 +37,15 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    a tag que a política de Trusted Publishing já foi configurada no nuget.org (tarefa 7.7 em
    `docs/plano/fase-7-documentacao.md`); se for a primeira release, esse passo manual precisa ter
    sido feito antes.
-10. Depois da tag: merge de `main` de volta em `develop` (PR ou fast-forward, conforme o grupo
-    preferir).
+10. `release.yml` só publica pacote, nunca cria a página de Release no GitHub. Sem este passo, a
+    tag existe e o nuget.org recebe o pacote, mas `gh release list` continua mostrando a versão
+    anterior como "Latest" (achado real, v0.2.0 e v0.3.0 ficaram sem Release por duas rodadas
+    seguidas). Criar com `gh release create v<versao> --title v<versao> --notes-file <corpo>`,
+    corpo sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
+11. Depois da tag: merge de `main` de volta em `develop`. `main` e `develop` têm proteção de
+    branch (push direto é rejeitado pelo próprio GitHub), então isso sempre é PR, nunca
+    fast-forward direto. Mergear com "Create a merge commit" (nunca squash), senão a PR perde o
+    vínculo de ancestralidade que o merge deveria estabelecer.
 
 Nunca criar a tag nem publicar sem confirmação explícita de quem pediu, mesmo que os passos
 anteriores já tenham sido aprovados.
