@@ -14,8 +14,8 @@ using NetApiFlow.Routing;
 namespace NetApiFlow.Dashboard.Endpoints;
 
 /// <summary>
-/// Maps the twelve REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>,
-/// seção 3), plus <c>/deploys</c> (Fase 28, pending the same freeze).
+/// Maps the fifteen REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>,
+/// seção 3).
 /// </summary>
 internal static class DashboardApiEndpoints
 {

@@ -3,7 +3,7 @@ using NpgsqlTypes;
 
 namespace NetApiFlow.Storage.PostgreSql;
 
-/// <summary><see cref="IDeployAnnotationStore"/> backed by PostgreSQL via raw ADO.NET (D-05).</summary>
+/// <summary><see cref="IDeployAnnotationStore"/> backed by PostgreSQL via raw ADO.NET.</summary>
 internal sealed class PostgreSqlDeployAnnotationStore : IDeployAnnotationStore, IDisposable
 {
     private readonly string _connectionString;

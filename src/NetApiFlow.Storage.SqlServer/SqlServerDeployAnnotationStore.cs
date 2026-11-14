@@ -2,7 +2,7 @@ using Microsoft.Data.SqlClient;
 
 namespace NetApiFlow.Storage.SqlServer;
 
-/// <summary><see cref="IDeployAnnotationStore"/> backed by SQL Server via raw ADO.NET (D-05).</summary>
+/// <summary><see cref="IDeployAnnotationStore"/> backed by SQL Server via raw ADO.NET.</summary>
 internal sealed class SqlServerDeployAnnotationStore : IDeployAnnotationStore, IDisposable
 {
     private readonly string _connectionString;
