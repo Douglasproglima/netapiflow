@@ -1,5 +1,9 @@
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
@@ -109,6 +113,28 @@ describe('FlowPageComponent', () => {
     }
   }
 
+  /**
+   * M1: a live trace fires its own `GET /blueprint` once it loads. Flushed as 204 ("no ghosts")
+   * unless a test cares about what it returns, since the fetch only becomes a pending request
+   * after a tick (`livePlayer.trace()` becoming non-null), hence the extra `whenStable()`.
+   */
+  async function flushLiveBlueprint(
+    fixture: ComponentFixture<FlowPageComponent>,
+    blueprint: FlowTraceDetail | null = null,
+  ): Promise<TestRequest[]> {
+    await fixture.whenStable();
+    const requests = httpMock.match((request) => request.url === 'api/blueprint');
+    for (const request of requests) {
+      if (blueprint) {
+        request.flush(blueprint);
+      } else {
+        request.flush(null, { status: 204, statusText: 'No Content' });
+      }
+    }
+    await fixture.whenStable();
+    return requests;
+  }
+
   it('loads the trace from the ?trace= query param on mount', async () => {
     configure('t1');
     const fixture = TestBed.createComponent(FlowPageComponent);
@@ -118,9 +144,62 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.trace()?.traceId).toBe('t1');
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('fetches the blueprint once per tracked trace and marks a skipped branch not-executed before the trace ends (M1)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const blueprint: FlowTraceDetail = {
+      ...makeTrace('t1'),
+      spans: [
+        ...makeTrace('t1').spans,
+        {
+          spanId: 'bp-notify',
+          parentSpanId: 's1',
+          sequence: 1,
+          component: 'NotificationService',
+          operation: 'SendAsync',
+          type: 'Service',
+          startedAt: '2026-01-01T00:00:00.000000Z',
+          endedAt: '2026-01-01T00:00:00.000100Z',
+          durationMicros: 100,
+          status: 'Success',
+          errorType: null,
+          errorMessage: null,
+          isErrorOrigin: false,
+          tags: {},
+          logs: [],
+        },
+      ],
+    };
+    const [blueprintReq] = await flushLiveBlueprint(fixture, blueprint);
+    expect(blueprintReq.request.params.get('method')).toBe('GET');
+    expect(blueprintReq.request.params.get('route')).toBe('/api/orders/{id}');
+
+    // The root span (s1) already concluded without taking the blueprint's extra branch: that
+    // branch is settled as not-executed now, even though the trace overall is still Running.
+    expect(fixture.componentInstance.trace()?.status).toBe('Running');
+    expect(
+      fixture.componentInstance.graph().nodes.find((n) => n.component === 'NotificationService')
+        ?.state,
+    ).toBe('not-executed');
   });
 
   it('shows an explicit not-found state for a trace that expired or never existed (A3)', async () => {
@@ -178,6 +257,7 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.graph().nodes[0].state).toBe('slow');
   });
@@ -191,6 +271,7 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.isReplaying()).toBe(false);
 
@@ -225,6 +306,7 @@ describe('FlowPageComponent', () => {
     });
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(true);
     // pt-BR is the default language (D-35).
@@ -264,6 +346,7 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);

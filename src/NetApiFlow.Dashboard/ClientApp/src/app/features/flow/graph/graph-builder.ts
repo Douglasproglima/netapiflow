@@ -40,13 +40,24 @@ export interface GraphBuilderInput {
   spans: FlowSpan[];
   traceStatus: FlowStatus;
   slowThresholdMicros: number;
-  /** Spans of the last successful execution of the same endpoint, used to infer missing steps. */
+  /**
+   * This execution's own complete span set, when `spans` is only a partial reveal of it (a
+   * replay animating toward it). Defaults to `spans` itself — nothing further of this same
+   * execution left to reveal — which is always the case live (M1): there, `spans` already grows
+   * in real time as the one and only record of what happened.
+   */
+  fullSpans?: FlowSpan[];
+  /**
+   * A different (earlier) execution of the same route, used to infer a branch this one's
+   * `fullSpans` never took at all — as opposed to one `fullSpans` does contain but `spans`
+   * hasn't revealed yet.
+   */
   blueprintSpans?: FlowSpan[];
   /**
    * True while there is still more to reveal: a live trace still `Running`, or a replay that
-   * has not reached its last step yet. A ghost (never-revealed) node is `'waiting'` while this
-   * holds, `'not-executed'` only once it no longer does. Defaults to `traceStatus === 'Running'`
-   * (A4): the live, non-replay case where that was always the correct signal on its own.
+   * has not reached its last step yet. A span this execution's own `fullSpans` proves it took
+   * (just not yet revealed by `spans`) is `'waiting'` while this holds, `'not-executed'` only
+   * once it no longer does. Defaults to `traceStatus === 'Running'` (A4).
    */
   inProgress?: boolean;
 }
@@ -110,10 +121,17 @@ interface MergedNode {
   operation: string;
   type: ComponentType;
   sequence: number | null;
-  /** `null` marks a ghost node: present in the blueprint, absent from the real spans. */
+  /** `null` marks a ghost node: present in the blueprint, absent from `fullSpans`. */
   status: FlowStatus | null;
   durationMicros: number | null;
   children: MergedNode[];
+  /**
+   * Fixed answer for a blueprint-only ghost (M1): this execution's own `fullSpans` already
+   * proves whether that branch ran, so its state never depends on the global `inProgress`
+   * flag the way a same-execution not-yet-revealed span's does. `null` for every other node
+   * (real or same-execution ghost), which defers to the standard `inProgress` rule instead.
+   */
+  forcedState: NodeVisualState | null;
 }
 
 /**
@@ -186,12 +204,18 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
 }
 
 /**
- * Ghost nodes (inferred from the blueprint, never revealed among `spans`) are "waiting" while
- * `inProgress` holds, "not-executed" once it no longer does — there is no way to know a missing
- * branch will never run (or never get revealed by the replay) until then (A4).
+ * A blueprint-only ghost (M1) already has its answer fixed at merge time (`forcedState`): this
+ * execution's own `fullSpans` already proves whether that branch ran. Every other ghost is a
+ * same-execution span `fullSpans` has but `spans` hasn't revealed yet (A4) — "waiting" while
+ * `inProgress` holds, "not-executed" only once it no longer does, since there is no way to know
+ * it won't show up until then.
  */
 function resolveState(node: MergedNode, input: GraphBuilderInput): NodeVisualState {
   if (node.status === null) {
+    if (node.forcedState) {
+      return node.forcedState;
+    }
+
     const inProgress = input.inProgress ?? input.traceStatus === 'Running';
     return inProgress ? 'waiting' : 'not-executed';
   }
@@ -306,30 +330,48 @@ function findRoot(spans: FlowSpan[]): FlowSpan | undefined {
 }
 
 function buildMergedTree(input: GraphBuilderInput): MergedNode | null {
-  const realChildrenByParent = buildChildrenByParent(input.spans);
+  const fullSpans = input.fullSpans ?? input.spans;
+  const revealedIds = new Set(input.spans.map((span) => span.spanId));
+  const fullChildrenByParent = buildChildrenByParent(fullSpans);
   const blueprintChildrenByParent = buildChildrenByParent(input.blueprintSpans ?? []);
 
-  const realRoot = findRoot(input.spans);
-  const blueprintRoot = findRoot(input.blueprintSpans ?? []);
-
-  if (realRoot) {
-    return mergeNode(realRoot, realChildrenByParent, blueprintRoot, blueprintChildrenByParent);
+  const fullRoot = findRoot(fullSpans);
+  if (fullRoot) {
+    const blueprintRoot = findRoot(input.blueprintSpans ?? []);
+    return mergeWithBlueprint(
+      fullRoot,
+      blueprintRoot,
+      fullChildrenByParent,
+      blueprintChildrenByParent,
+      revealedIds,
+    );
   }
 
+  const blueprintRoot = findRoot(input.blueprintSpans ?? []);
   if (blueprintRoot) {
-    return buildGhostSubtree(blueprintRoot, blueprintChildrenByParent);
+    // Nothing of this execution exists yet at all: there is no `fullSpans` status to judge
+    // against, so defer to the standard `inProgress` rule (`forcedState: null`) same as before.
+    return buildBlueprintOnlyGhost(blueprintRoot, blueprintChildrenByParent, null);
   }
 
   return null;
 }
 
-function mergeNode(
-  realSpan: FlowSpan,
-  realChildrenByParent: Map<string | null, FlowSpan[]>,
+/**
+ * Walks `fullSpans`' own shape (this execution's complete record), merging in a `blueprintSpans`
+ * branch wherever `fullSpan`'s own children never include it (M1) — resolved immediately from
+ * `fullSpan`'s own status, regardless of whether `fullSpan` itself has been revealed yet. A real
+ * node not yet present among `spans` is masked to a same-execution ghost (A4): `status: null`,
+ * `forcedState: null`, deferring to `inProgress`.
+ */
+function mergeWithBlueprint(
+  fullSpan: FlowSpan,
   blueprintSpan: FlowSpan | undefined,
+  fullChildrenByParent: Map<string | null, FlowSpan[]>,
   blueprintChildrenByParent: Map<string | null, FlowSpan[]>,
+  revealedIds: Set<string>,
 ): MergedNode {
-  const realChildren = realChildrenByParent.get(realSpan.spanId) ?? [];
+  const fullChildren = fullChildrenByParent.get(fullSpan.spanId) ?? [];
   const blueprintChildren = blueprintSpan
     ? (blueprintChildrenByParent.get(blueprintSpan.spanId) ?? [])
     : [];
@@ -337,45 +379,63 @@ function mergeNode(
   const matchedBlueprintIds = new Set<string>();
   const children: MergedNode[] = [];
 
-  for (const realChild of realChildren) {
+  for (const fullChild of fullChildren) {
     const match = blueprintChildren.find(
       (candidate) =>
         !matchedBlueprintIds.has(candidate.spanId) &&
-        candidate.component === realChild.component &&
-        candidate.operation === realChild.operation,
+        candidate.component === fullChild.component &&
+        candidate.operation === fullChild.operation,
     );
 
     if (match) {
       matchedBlueprintIds.add(match.spanId);
     }
 
-    children.push(mergeNode(realChild, realChildrenByParent, match, blueprintChildrenByParent));
+    children.push(
+      mergeWithBlueprint(
+        fullChild,
+        match,
+        fullChildrenByParent,
+        blueprintChildrenByParent,
+        revealedIds,
+      ),
+    );
   }
 
   for (const blueprintChild of blueprintChildren) {
     if (!matchedBlueprintIds.has(blueprintChild.spanId)) {
-      children.push(buildGhostSubtree(blueprintChild, blueprintChildrenByParent));
+      // `fullSpan` already proves this branch's fate: still running (might yet take it) or
+      // concluded without it (never will), regardless of whether `fullSpan` itself is revealed.
+      const forcedState: NodeVisualState =
+        fullSpan.status === 'Running' ? 'waiting' : 'not-executed';
+      children.push(
+        buildBlueprintOnlyGhost(blueprintChild, blueprintChildrenByParent, forcedState),
+      );
     }
   }
 
+  const revealed = revealedIds.has(fullSpan.spanId);
+
   return {
-    id: realSpan.spanId,
-    component: realSpan.component,
-    operation: realSpan.operation,
-    type: realSpan.type,
-    sequence: realSpan.sequence,
-    status: realSpan.status,
-    durationMicros: realSpan.durationMicros,
+    id: fullSpan.spanId,
+    component: fullSpan.component,
+    operation: fullSpan.operation,
+    type: fullSpan.type,
+    sequence: fullSpan.sequence,
+    status: revealed ? fullSpan.status : null,
+    durationMicros: revealed ? fullSpan.durationMicros : null,
     children,
+    forcedState: null,
   };
 }
 
-function buildGhostSubtree(
+function buildBlueprintOnlyGhost(
   blueprintSpan: FlowSpan,
   blueprintChildrenByParent: Map<string | null, FlowSpan[]>,
+  forcedState: NodeVisualState | null,
 ): MergedNode {
   const children = (blueprintChildrenByParent.get(blueprintSpan.spanId) ?? []).map((child) =>
-    buildGhostSubtree(child, blueprintChildrenByParent),
+    buildBlueprintOnlyGhost(child, blueprintChildrenByParent, forcedState),
   );
 
   return {
@@ -387,5 +447,6 @@ function buildGhostSubtree(
     status: null,
     durationMicros: null,
     children,
+    forcedState,
   };
 }

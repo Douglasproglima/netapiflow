@@ -6,7 +6,7 @@ import { map } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
-import { FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
+import { FlowSpan, FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
 import { buildGraph, GraphResult, isGhostNodeId } from './graph/graph-builder';
@@ -91,6 +91,16 @@ export class FlowPageComponent {
   readonly traceNotFound = computed(
     () => this.traceId() !== null && !this.importedTrace() && this.livePlayer.notFound(),
   );
+
+  /**
+   * The last successful execution of the live trace's own (method, route), fetched once per
+   * tracked trace (M1) so a live trace can mark a branch its blueprint predicted but that hasn't
+   * shown up as "not-executed" the same way a replay already can, instead of only ever reporting
+   * what has executed so far.
+   */
+  private readonly liveBlueprintSpans = signal<FlowSpan[] | null>(null);
+  private liveBlueprintTraceId: string | null = null;
+
   readonly graph = computed<GraphResult>(() => {
     const trace = this.trace();
     const slowThresholdMicros = this.slowThresholdMicros();
@@ -103,7 +113,7 @@ export class FlowPageComponent {
         spans: this.replayPlayer.visibleSpans(),
         traceStatus: trace.status,
         slowThresholdMicros,
-        blueprintSpans: trace.spans,
+        fullSpans: trace.spans,
         inProgress: this.replayPlayer.state() !== 'finished',
       });
     }
@@ -112,6 +122,7 @@ export class FlowPageComponent {
       spans: trace.spans,
       traceStatus: trace.status,
       slowThresholdMicros,
+      blueprintSpans: this.liveBlueprintSpans() ?? undefined,
       inProgress: trace.status === 'Running',
     });
   });
@@ -130,6 +141,8 @@ export class FlowPageComponent {
       this.selectedNodeId.set(null);
       this.selectedSpanDetail.set(null);
       this.isReplaying.set(false);
+      this.liveBlueprintSpans.set(null);
+      this.liveBlueprintTraceId = null;
 
       if (traceId) {
         this.importedTrace.set(null);
@@ -139,6 +152,18 @@ export class FlowPageComponent {
         this.livePlayer.stop();
         this.loadLiveTraces();
       }
+    });
+
+    effect(() => {
+      const trace = this.livePlayer.trace();
+      if (!trace || trace.traceId === this.liveBlueprintTraceId) {
+        return;
+      }
+
+      this.liveBlueprintTraceId = trace.traceId;
+      this.api
+        .getBlueprint(trace.method, trace.routeTemplate)
+        .subscribe((blueprint) => this.liveBlueprintSpans.set(blueprint?.spans ?? null));
     });
 
     effect(() => {
