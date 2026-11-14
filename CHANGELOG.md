@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-14
+
 ### Fixed
 
 - `NetApiFlow`: a request that never matches a route (MVC Controllers or Minimal API) no longer
@@ -31,6 +33,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: `NetApiFlowOptions.OpenApiDocumentPath` (default `/openapi/v1.json`), so "Try an
   endpoint" can read an OpenAPI document served at a different path, such as the one Swashbuckle
   serves at `/swagger/v1/swagger.json`.
+- `NetApiFlow`: `FlowStatus` gains `Cancelled` (the client disconnected before the request
+  finished) and `Timeout` (an internal cancellation fired while the client was still connected),
+  distinguishing the two instead of recording both as `Error` (ADR-0020). `Timeout` still counts
+  toward `ErrorCount` and is always persisted under tail sampling, same as `Error`; `Cancelled`
+  counts toward neither, since a client giving up is not a sign of a server-side problem.
+  `NetApiFlow.Dashboard` shows the two with their own icon, color and filter option on `/history`.
+- `NetApiFlow`: `IDeployAnnotationStore` and `DeployAnnotation`, a sibling of `ITraceStore` for
+  marking a deploy on the `/history` timeline, shared across everyone who opens the dashboard.
+  `NetApiFlow.Dashboard` exposes `POST`/`GET /flow/api/deploys`; the timestamp is always assigned
+  by the server. `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer` persist
+  annotations the same way they already persist traces.
 
 ## [0.2.0] - 2026-11-12
 
