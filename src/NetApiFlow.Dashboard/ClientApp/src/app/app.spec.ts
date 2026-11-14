@@ -39,9 +39,11 @@ function fakeBreakpointObserver(initiallyNarrow: boolean) {
 }
 
 function fakeSseService() {
+  const events = new Subject<FlowEvent>();
   return {
     state: signal<'connecting' | 'open' | 'closed'>('open'),
-    events$: new Subject<FlowEvent>().asObservable(),
+    events$: events.asObservable(),
+    emit: (event: FlowEvent) => events.next(event),
     connect: vi.fn(),
     disconnect: vi.fn(),
   };
@@ -57,6 +59,7 @@ describe('App', () => {
   function setup(initiallyNarrow: boolean) {
     localStorage.clear(); // isolate LanguageService's default (pt-BR, D-35) across tests
     const { fake, emitNarrow } = fakeBreakpointObserver(initiallyNarrow);
+    const sse = fakeSseService();
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
@@ -64,13 +67,13 @@ describe('App', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: BreakpointObserver, useValue: fake },
-        { provide: SseService, useValue: fakeSseService() },
+        { provide: SseService, useValue: sse },
         { provide: ThemeService, useValue: fakeThemeService() },
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(App);
-    return { fixture, emitNarrow };
+    return { fixture, emitNarrow, sse };
   }
 
   function flushShellRequests() {
@@ -205,5 +208,34 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.inProgressCount()).toBe(1);
+  });
+
+  it('coalesces a burst of trace events into at most one extra GET /traces/live call (A2)', async () => {
+    const { fixture, sse } = setup(false);
+    await fixture.whenStable();
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
+    httpMock.expectOne('api/traces/live').flush([]);
+    await fixture.whenStable();
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    for (let i = 0; i < 10; i++) {
+      sse.emit({
+        eventId: i,
+        type: 'TraceCompleted',
+        traceId: `t${i}`,
+        timestamp: '2026-01-01T00:00:00Z',
+      });
+    }
+
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const liveRequests = httpMock.match('api/traces/live');
+    expect(liveRequests.length).toBeLessThanOrEqual(1);
+    liveRequests.forEach((req) => req.flush([{ traceId: 't9' } as never]));
   });
 });

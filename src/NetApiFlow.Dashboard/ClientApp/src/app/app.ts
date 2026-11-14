@@ -5,11 +5,11 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { filter, map, startWith } from 'rxjs';
+import { auditTime, filter, map, merge, of, startWith, switchMap } from 'rxjs';
 import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ActionDrawerService } from './core/action-drawer.service';
 import { ApiService } from './core/api.service';
-import { SseService } from './core/sse.service';
+import { SSE_REFRESH_AUDIT_MS, SseService } from './core/sse.service';
 import { formatDurationMicros } from './shared/duration-format';
 import { LanguageService } from './core/i18n/language.service';
 import { TranslatePipe } from './core/i18n/translate.pipe';
@@ -111,12 +111,16 @@ export class App implements OnInit, OnDestroy {
       this.slowThresholdValue.set(formatDurationMicros(config.slowThresholdMicros));
       this.version.set(config.version);
     });
-    this.refreshInProgressCount();
-    this.sse.events$.subscribe((event) => {
-      if (event.type === 'TraceStarted' || event.type === 'TraceCompleted') {
-        this.refreshInProgressCount();
-      }
-    });
+
+    merge(
+      of(undefined),
+      this.sse.events$.pipe(
+        filter((event) => event.type === 'TraceStarted' || event.type === 'TraceCompleted'),
+        auditTime(SSE_REFRESH_AUDIT_MS),
+      ),
+    )
+      .pipe(switchMap(() => this.api.getLiveTraces()))
+      .subscribe((traces) => this.inProgressCount.set(traces.length));
   }
 
   ngOnDestroy(): void {
@@ -147,10 +151,6 @@ export class App implements OnInit, OnDestroy {
 
   themeToggleLabel(): TranslationKey {
     return this.isDarkTheme() ? 'theme.toggle.toLight' : 'theme.toggle.toDark';
-  }
-
-  private refreshInProgressCount(): void {
-    this.api.getLiveTraces().subscribe((traces) => this.inProgressCount.set(traces.length));
   }
 
   private currentRouteData(): Record<string, unknown> {
