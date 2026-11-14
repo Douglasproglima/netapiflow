@@ -262,6 +262,50 @@ describe('FlowPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('/api/orders');
   });
 
+  it('refreshes the in-progress list on a TraceStarted/TraceCompleted SSE event, without a page reload (M6)', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.liveTraces()).toEqual([]);
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    sseEvents$.next({
+      eventId: 1,
+      type: 'TraceStarted',
+      traceId: 't9',
+      timestamp: '2026-01-01T00:00:00.000000Z',
+    });
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const summaries: FlowTraceSummary[] = [
+      {
+        traceId: 't9',
+        method: 'POST',
+        routeTemplate: '/api/orders',
+        httpStatus: null,
+        status: 'Running',
+        startedAt: '2026-01-01T00:00:00.000000Z',
+        durationMicros: null,
+        truncated: false,
+      },
+    ];
+    httpMock.expectOne('api/traces/live').flush(summaries);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.liveTraces()).toEqual(summaries);
+  });
+
   it('marks a span as slow using the threshold fetched from GET /config, not a fixed constant', async () => {
     configure('t1');
     const fixture = TestBed.createComponent(FlowPageComponent);
