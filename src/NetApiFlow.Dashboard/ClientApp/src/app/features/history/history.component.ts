@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Params, ParamMap, Router, RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import {
   DeployAnnotation,
   FlowStatus,
@@ -212,6 +213,7 @@ function describeError(error: HttpErrorResponse): string {
 })
 export class HistoryComponent {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -341,7 +343,7 @@ export class HistoryComponent {
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((value) => this.patchFilters({ tenant: value || undefined }));
 
-    this.api.getConfig().subscribe((config) => {
+    this.config.config$.subscribe((config) => {
       this.slowThresholdMicros.set(config.slowThresholdMicros);
       this.tailSamplingEnabled.set(config.tailSamplingEnabled);
       this.successSampleRate.set(config.successSampleRate);

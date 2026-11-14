@@ -9,6 +9,7 @@ import { auditTime, filter, map, merge, of, startWith, switchMap } from 'rxjs';
 import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ActionDrawerService } from './core/action-drawer.service';
 import { ApiService } from './core/api.service';
+import { ConfigService } from './core/config.service';
 import { SSE_REFRESH_AUDIT_MS, SseService } from './core/sse.service';
 import { formatDurationMicros } from './shared/duration-format';
 import { LanguageService } from './core/i18n/language.service';
@@ -42,6 +43,7 @@ export class App implements OnInit, OnDestroy {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly dialog = inject(MatDialog);
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly sse = inject(SseService);
   private readonly language = inject(LanguageService);
   private readonly theme = inject(ThemeService);
@@ -107,7 +109,7 @@ export class App implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.sse.connect();
-    this.api.getConfig().subscribe((config) => {
+    this.config.config$.subscribe((config) => {
       this.slowThresholdValue.set(formatDurationMicros(config.slowThresholdMicros));
       this.version.set(config.version);
     });

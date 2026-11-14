@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { Subject, catchError, forkJoin, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import { EndpointDescriptor, RouteStat } from '../../core/models';
 import { formatDurationMicros } from '../../shared/duration-format';
 import { PeriodPreset, periodPresetFrom } from '../../shared/period-preset';
@@ -30,6 +31,7 @@ function routeKey(method: string, routeTemplate: string): string {
 })
 export class InsightsComponent {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
 
   readonly windows = WINDOWS;
   readonly window = signal<PeriodPreset>(DEFAULT_WINDOW);
@@ -68,7 +70,7 @@ export class InsightsComponent {
   private readonly windowTrigger$ = new Subject<string>();
 
   constructor() {
-    this.api.getConfig().subscribe((config) => {
+    this.config.config$.subscribe((config) => {
       this.tailSamplingEnabled.set(config.tailSamplingEnabled);
       this.successSampleRate.set(config.successSampleRate);
     });

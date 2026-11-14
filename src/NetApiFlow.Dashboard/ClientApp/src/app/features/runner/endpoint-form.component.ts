@@ -4,6 +4,7 @@ import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import { OpenApiDocument } from '../../core/models';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import {
@@ -14,8 +15,6 @@ import {
 } from './openapi-form';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
-
-const FALLBACK_OPEN_API_DOCUMENT_PATH = '/openapi/v1.json';
 
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
@@ -36,6 +35,7 @@ const FALLBACK_OPEN_API_DOCUMENT_PATH = '/openapi/v1.json';
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly document = inject(DOCUMENT);
 
   readonly traceDispatched = output<string>();
@@ -87,10 +87,7 @@ export class EndpointFormComponent {
   readonly lastTraceId = signal<string | null>(null);
 
   constructor() {
-    this.api.getConfig().subscribe({
-      next: (config) => this.loadOpenApiDocument(config.openApiDocumentPath),
-      error: () => this.loadOpenApiDocument(FALLBACK_OPEN_API_DOCUMENT_PATH),
-    });
+    this.config.config$.subscribe((config) => this.loadOpenApiDocument(config.openApiDocumentPath));
   }
 
   private loadOpenApiDocument(path: string): void {

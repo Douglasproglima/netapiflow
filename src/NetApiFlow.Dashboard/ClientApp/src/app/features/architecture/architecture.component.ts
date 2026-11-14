@@ -2,6 +2,7 @@ import { Component, ElementRef, computed, effect, inject, signal, viewChild } fr
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, catchError, firstValueFrom, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import { ArchitectureMap, EndpointDescriptor } from '../../core/models';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
@@ -62,6 +63,7 @@ function inlineComputedPresentation(live: Element, cloned: Element): void {
 })
 export class ArchitectureComponent {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
 
   readonly windows = WINDOWS;
   readonly window = signal<PeriodPreset>(DEFAULT_WINDOW);
@@ -107,7 +109,7 @@ export class ArchitectureComponent {
   constructor() {
     this.api.getEndpoints().subscribe((endpoints) => this.endpoints.set(endpoints));
 
-    this.api.getConfig().subscribe((config) => {
+    this.config.config$.subscribe((config) => {
       this.tailSamplingEnabled.set(config.tailSamplingEnabled);
       this.successSampleRate.set(config.successSampleRate);
     });

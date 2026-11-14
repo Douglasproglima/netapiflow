@@ -79,6 +79,7 @@ const en = {
   'graph.notFound.hint':
     'It may have expired from the in-memory buffer, or the id in the URL is invalid.',
   'graph.loading': 'Loading…',
+  'graph.liveTracesError': 'Failed to load in-progress requests.',
   'graph.zoomIn': 'Zoom in',
   'graph.zoomOut': 'Zoom out',
   'graph.zoomToFit': 'Fit to screen',
@@ -372,6 +373,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'graph.notFound.title': 'Trace não encontrada.',
   'graph.notFound.hint': 'Ela pode ter expirado do buffer em memória, ou o id na URL é inválido.',
   'graph.loading': 'Carregando…',
+  'graph.liveTracesError': 'Falha ao carregar as requisições em andamento.',
   'graph.zoomIn': 'Mais zoom',
   'graph.zoomOut': 'Menos zoom',
   'graph.zoomToFit': 'Ajustar à tela',

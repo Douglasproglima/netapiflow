@@ -84,7 +84,10 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
-  /** FlowPageComponent, the metric cards and the action panel each read GET /config independently. */
+  /**
+   * FlowPageComponent, the metric cards and the action panel all read the same `ConfigService`
+   * (M9), so exactly one GET /config request serves every one of them.
+   */
   function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
     for (const request of httpMock.match('api/config')) {
       request.flush({
@@ -318,6 +321,43 @@ describe('FlowPageComponent', () => {
     await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.graph().nodes[0].state).toBe('slow');
+  });
+
+  it('falls back to a reasonable default threshold when GET /config fails, instead of blocking the graph (M9)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    for (const request of httpMock.match('api/config')) {
+      request.flush('boom', { status: 500, statusText: 'Server Error' });
+    }
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    expect(fixture.componentInstance.slowThresholdMicros()).toBe(250_000);
+    expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('exits the loading state with an error message when loading the in-progress list fails (M9)', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock
+      .expectOne('api/traces/live')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.liveTracesLoading()).toBe(false);
+    expect(fixture.componentInstance.liveTracesError()).toBe(true);
+    // pt-BR is the default language (D-35).
+    expect(fixture.nativeElement.textContent).toContain(
+      'Falha ao carregar as requisições em andamento.',
+    );
   });
 
   it('toggles into replay mode and back to live', async () => {

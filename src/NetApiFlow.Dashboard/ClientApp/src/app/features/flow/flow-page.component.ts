@@ -2,10 +2,11 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Subject, auditTime, filter, map, merge, switchMap } from 'rxjs';
+import { Subject, auditTime, catchError, filter, map, merge, of, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import { FlowSpan, FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
 import { SSE_REFRESH_AUDIT_MS, SseService } from '../../core/sse.service';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
@@ -56,6 +57,7 @@ export class FlowPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly sse = inject(SseService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly language = inject(LanguageService);
@@ -76,6 +78,7 @@ export class FlowPageComponent {
 
   readonly liveTraces = signal<FlowTraceSummary[]>([]);
   readonly liveTracesLoading = signal(false);
+  readonly liveTracesError = signal(false);
 
   readonly selectedNodeId = signal<string | null>(null);
   readonly selectedSpanDetail = signal<SpanDetail | null>(null);
@@ -133,9 +136,9 @@ export class FlowPageComponent {
   private readonly liveTracesTrigger$ = new Subject<void>();
 
   constructor() {
-    this.api
-      .getConfig()
-      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+    this.config.config$.subscribe((config) =>
+      this.slowThresholdMicros.set(config.slowThresholdMicros),
+    );
 
     // `switchMap` (M4) cancels a still-in-flight span lookup for an earlier selection the
     // moment a new one starts, so its response can never arrive after and overwrite it.
@@ -161,11 +164,20 @@ export class FlowPageComponent {
       ),
     )
       .pipe(
-        switchMap(() => this.api.getLiveTraces()),
+        switchMap(() =>
+          this.api.getLiveTraces().pipe(
+            catchError(() => {
+              this.liveTracesError.set(true);
+              return of(null);
+            }),
+          ),
+        ),
         takeUntilDestroyed(),
       )
       .subscribe((traces) => {
-        this.liveTraces.set(traces);
+        if (traces) {
+          this.liveTraces.set(traces);
+        }
         this.liveTracesLoading.set(false);
       });
 
@@ -188,6 +200,7 @@ export class FlowPageComponent {
       } else {
         this.livePlayer.stop();
         this.liveTracesLoading.set(true);
+        this.liveTracesError.set(false);
         this.liveTracesTrigger$.next();
       }
     });

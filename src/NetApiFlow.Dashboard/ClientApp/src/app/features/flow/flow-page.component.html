@@ -189,6 +189,8 @@
           </div>
         } @else if (liveTracesLoading()) {
           <p class="flow-workspace__status" role="status">{{ 'graph.loading' | t }}</p>
+        } @else if (liveTracesError()) {
+          <p class="flow-workspace__status" role="alert">{{ 'graph.liveTracesError' | t }}</p>
         } @else if (liveTraces().length === 0) {
           <div class="flow-workspace__empty">
             <svg

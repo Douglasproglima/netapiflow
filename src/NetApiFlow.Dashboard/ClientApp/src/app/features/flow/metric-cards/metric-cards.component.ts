@@ -1,6 +1,7 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Subscription, auditTime, filter, merge, of, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/api.service';
+import { ConfigService } from '../../../core/config.service';
 import { SSE_REFRESH_AUDIT_MS, SseService } from '../../../core/sse.service';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
@@ -47,6 +48,7 @@ function splitDuration(formatted: string): { value: string; unit: string | null 
 })
 export class MetricCardsComponent implements OnDestroy {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly sse = inject(SseService);
 
   /** Every consumer below refreshes at most once per `SSE_REFRESH_AUDIT_MS` window (A2), each independently cancelling its own stale in-flight request. */
@@ -151,9 +153,9 @@ export class MetricCardsComponent implements OnDestroy {
   });
 
   constructor() {
-    this.api
-      .getConfig()
-      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+    this.config.config$.subscribe((config) =>
+      this.slowThresholdMicros.set(config.slowThresholdMicros),
+    );
 
     this.subscriptions.add(
       merge(of(undefined), this.traceCompleted$)
