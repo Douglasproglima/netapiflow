@@ -197,7 +197,9 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.toggleReplay();
     expect(fixture.componentInstance.isReplaying()).toBe(true);
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
-    expect(fixture.componentInstance.graph().nodes[0].state).toBe('not-executed');
+    // Not yet revealed by the replay, but the replay itself isn't finished either (A4): this
+    // must read as "waiting", never "not-executed" — the latter would claim the step never ran.
+    expect(fixture.componentInstance.graph().nodes[0].state).toBe('waiting');
 
     fixture.componentInstance.replayPlayer.stepForward();
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);

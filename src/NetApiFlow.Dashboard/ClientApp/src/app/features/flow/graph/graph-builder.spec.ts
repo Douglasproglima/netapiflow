@@ -265,6 +265,54 @@ describe('buildGraph', () => {
     expect(ghost?.state).toBe('waiting');
   });
 
+  it('marks a span the replay has not revealed yet as waiting, not not-executed, even on a concluded trace (A4)', () => {
+    // The replay call site passes only the steps revealed so far as `spans`, and the full
+    // concluded trace as `blueprintSpans` (flow-page.component.ts). `traceStatus` is the
+    // already-final status — `inProgress` is the only signal that distinguishes "replay still
+    // has more to reveal" from "this branch truly never ran".
+    const revealedSoFar = [
+      span({
+        spanId: 'root',
+        parentSpanId: null,
+        sequence: 0,
+        component: 'OrdersController',
+        operation: 'Get',
+      }),
+    ];
+    const fullTrace = [
+      ...revealedSoFar,
+      span({
+        spanId: 'service',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'OrderService',
+        operation: 'GetAsync',
+      }),
+    ];
+
+    const stillReplaying = buildGraph(
+      input({
+        spans: revealedSoFar,
+        traceStatus: 'Success',
+        blueprintSpans: fullTrace,
+        inProgress: true,
+      }),
+    );
+    expect(stillReplaying.nodes.find((n) => n.component === 'OrderService')?.state).toBe('waiting');
+
+    const replayFinished = buildGraph(
+      input({
+        spans: revealedSoFar,
+        traceStatus: 'Success',
+        blueprintSpans: fullTrace,
+        inProgress: false,
+      }),
+    );
+    expect(replayFinished.nodes.find((n) => n.component === 'OrderService')?.state).toBe(
+      'not-executed',
+    );
+  });
+
   it('does not ghost a blueprint step that did execute, even if the real span has a different id', () => {
     const spans = [
       span({

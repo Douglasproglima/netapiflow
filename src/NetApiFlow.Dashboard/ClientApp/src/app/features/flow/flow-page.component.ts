@@ -104,10 +104,16 @@ export class FlowPageComponent {
         traceStatus: trace.status,
         slowThresholdMicros,
         blueprintSpans: trace.spans,
+        inProgress: this.replayPlayer.state() !== 'finished',
       });
     }
 
-    return buildGraph({ spans: trace.spans, traceStatus: trace.status, slowThresholdMicros });
+    return buildGraph({
+      spans: trace.spans,
+      traceStatus: trace.status,
+      slowThresholdMicros,
+      inProgress: trace.status === 'Running',
+    });
   });
 
   constructor() {

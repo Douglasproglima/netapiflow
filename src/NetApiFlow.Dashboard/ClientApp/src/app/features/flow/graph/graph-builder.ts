@@ -42,6 +42,13 @@ export interface GraphBuilderInput {
   slowThresholdMicros: number;
   /** Spans of the last successful execution of the same endpoint, used to infer missing steps. */
   blueprintSpans?: FlowSpan[];
+  /**
+   * True while there is still more to reveal: a live trace still `Running`, or a replay that
+   * has not reached its last step yet. A ghost (never-revealed) node is `'waiting'` while this
+   * holds, `'not-executed'` only once it no longer does. Defaults to `traceStatus === 'Running'`
+   * (A4): the live, non-replay case where that was always the correct signal on its own.
+   */
+  inProgress?: boolean;
 }
 
 const NODE_WIDTH = 184;
@@ -179,13 +186,14 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
 }
 
 /**
- * Ghost nodes (inferred from the blueprint, never actually executed) are "waiting" while the
- * trace is still running, "not-executed" once it has concluded — there is no way to know a
- * missing branch will never run until the trace is done.
+ * Ghost nodes (inferred from the blueprint, never revealed among `spans`) are "waiting" while
+ * `inProgress` holds, "not-executed" once it no longer does — there is no way to know a missing
+ * branch will never run (or never get revealed by the replay) until then (A4).
  */
 function resolveState(node: MergedNode, input: GraphBuilderInput): NodeVisualState {
   if (node.status === null) {
-    return input.traceStatus === 'Running' ? 'waiting' : 'not-executed';
+    const inProgress = input.inProgress ?? input.traceStatus === 'Running';
+    return inProgress ? 'waiting' : 'not-executed';
   }
 
   return stateFromSpanStatus(node.status, node.durationMicros, input.slowThresholdMicros);
