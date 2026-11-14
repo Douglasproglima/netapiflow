@@ -72,7 +72,10 @@ agrupadas antes de qualquer implementação: `fase-25-grafo-controles-ao-vivo.md
 foram aceitas, essa última inserida fora de ordem por conter R-27, regressão bloqueante da própria
 Fase 29. Fase 27 (D-117, ADR-0020) e Fase 28 (D-119) também aceitas. Com isso, o roadmap pós-`0.1.0`
 inteiro (D-32, D-58, D-60) está entregue; só sobram os dois itens sem fase atribuída de
-`docs/plano/roadmap-valor.md` (Dapper sobre SQL Server, piso em pixels do R-28).
+`docs/plano/roadmap-valor.md` (Dapper sobre SQL Server, piso em pixels do R-28). D-121 abre, a
+partir de uma auditoria real do frontend, a Fase 31 (`fase-31-correcoes-auditoria-frontend.md`,
+14 tarefas, achados Alta e Média) e registra os achados de Baixa severidade pra uma Fase 32
+futura, ainda sem plano escrito.
 
 ## Regra de avanço
 
