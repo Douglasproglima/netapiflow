@@ -130,6 +130,30 @@ describe('InsightsComponent', () => {
     expect(rows[0].querySelectorAll('td')[1].textContent?.trim()).toBe('/api/orders/{id}');
   });
 
+  it('adds a tail-sampling caveat next to dead routes when tail sampling is enabled (M10)', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS, {
+      ...CONFIG,
+      tailSamplingEnabled: true,
+      successSampleRate: 0.1,
+    });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('A amostragem baseada em cauda está ativa');
+  });
+
+  it('shows no tail-sampling caveat next to dead routes when tail sampling is disabled', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS, { ...CONFIG, tailSamplingEnabled: false });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'A amostragem baseada em cauda está ativa',
+    );
+  });
+
   it('shows an explicit empty state for dead routes when every route ran', async () => {
     const fixture = TestBed.createComponent(InsightsComponent);
     await fixture.whenStable();

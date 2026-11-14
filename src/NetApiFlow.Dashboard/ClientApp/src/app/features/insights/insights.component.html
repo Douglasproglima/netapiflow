@@ -89,6 +89,9 @@
       @if (deadRoutes().length === 0) {
         <p class="insights__status">{{ 'insights.deadRoutes.empty' | t }}</p>
       } @else {
+        @if (tailSamplingEnabled()) {
+          <p class="insights__status">{{ 'insights.deadRoutes.tailSamplingCaveat' | t }}</p>
+        }
         <table class="insights__table">
           <thead>
             <tr>

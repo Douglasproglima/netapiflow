@@ -199,6 +199,8 @@ const en = {
   'insights.topErrors.empty': 'No errors recorded in this window.',
   'insights.deadRoutes.title': 'Dead routes',
   'insights.deadRoutes.empty': 'Every traceable route ran in this window.',
+  'insights.deadRoutes.tailSamplingCaveat':
+    'Tail-based sampling is active: a route listed here may just have been sampled out, not actually unused.',
   'insights.table.method': 'Method',
   'insights.table.route': 'Route',
   'insights.table.executions': 'Executions',
@@ -493,6 +495,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'insights.topErrors.empty': 'Nenhum erro registrado nesta janela.',
   'insights.deadRoutes.title': 'Rotas mortas',
   'insights.deadRoutes.empty': 'Toda rota rastreável foi executada nesta janela.',
+  'insights.deadRoutes.tailSamplingCaveat':
+    'A amostragem baseada em cauda está ativa: uma rota desta lista pode só ter sido amostrada pra fora, não estar de fato sem tráfego.',
   'insights.table.method': 'Método',
   'insights.table.route': 'Rota',
   'insights.table.executions': 'Execuções',
