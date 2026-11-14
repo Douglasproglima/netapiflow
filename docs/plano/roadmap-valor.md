@@ -16,9 +16,8 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 
 | # | Item | Fonte | Peso | Status |
 |---|---|---|---|---|
-| 1 | Fase 28: anotação de deploy na timeline do histórico | D-60 (menor, sem posição fixa) | ⚪ Baixo | Planejada (`docs/plano/fase-28-anotacao-deploy.md`) |
-| 2 | Ingestão de Dapper sobre SQL Server via `ExternalActivitySource` novo | D-114 (achado 4, dogfooding) | ⚪ Baixo, sem fase atribuída | Ideia registrada, não planejada: código misto EF Core + Dapper perde o nó `Database` na parte em Dapper, mesma lacuna que `ExternalActivitySource.Npgsql` já resolveu pro lado PostgreSQL |
-| 3 | Piso em pixels na lista do painel "Testar um endpoint" (`.endpoint-form__list-wrapper`), hoje só `max-height: 55%` | D-116 (achado 2, dogfooding), R-28 | ⚪ Baixo, não bloqueante | Planejada: decisão de forma passa por `docs/design/flow-workspace/guide.md` antes do código |
+| 1 | Ingestão de Dapper sobre SQL Server via `ExternalActivitySource` novo | D-114 (achado 4, dogfooding) | ⚪ Baixo, sem fase atribuída | Ideia registrada, não planejada: código misto EF Core + Dapper perde o nó `Database` na parte em Dapper, mesma lacuna que `ExternalActivitySource.Npgsql` já resolveu pro lado PostgreSQL |
+| 2 | Piso em pixels na lista do painel "Testar um endpoint" (`.endpoint-form__list-wrapper`), hoje só `max-height: 55%` | D-116 (achado 2, dogfooding), R-28 | ⚪ Baixo, não bloqueante | Planejada: decisão de forma passa por `docs/design/flow-workspace/guide.md` antes do código |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
@@ -30,7 +29,8 @@ portátil export/import (Fase 21), diff entre execuções (Fase 22), visibilidad
 (Fase 23), asserção de fluxo em teste (Fase 24), controles e sinais visuais do grafo ao vivo
 (Fase 25), cenários de demonstração e atraso artificial configurável (Fase 26), correções
 pré-lançamento da primeira (Fase 29) e segunda (Fase 30) rodada de dogfooding, visibilidade de
-cancelamento (Fase 27).
+cancelamento (Fase 27), anotação de deploy na timeline do histórico (Fase 28). Roadmap pós-`0.1.0`
+zerado: só sobram os dois itens sem fase atribuída acima.
 
 ## Fora do ranking, decisão de escopo em aberto
 
