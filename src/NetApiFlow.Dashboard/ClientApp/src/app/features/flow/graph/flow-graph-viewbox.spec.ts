@@ -47,6 +47,27 @@ describe('computeGraphViewBox', () => {
     expect(reservedScreenPx).toBeCloseTo(72, 6);
   });
 
+  it('stays bounded when the canvas is barely taller than the reserved overlay footprint (replay bar eating vertical space)', () => {
+    // reservedBottomPx = 200 + 12 = 212; container.height (250) leaves the height-constrained
+    // formula's denominator (250 - 212 = 38) right next to zero, where it used to blow up.
+    const container = { width: 1000, height: 250 };
+    const viewBox = computeGraphViewBox(800, 60, container, [200, 30]);
+    const { height } = parseViewBox(viewBox);
+
+    expect(height).toBeCloseTo(628, 6);
+  });
+
+  it('clamps the blow-up instead of growing without bound as the denominator approaches zero', () => {
+    // container.height = 213 leaves a denominator of just 1 (213 - reservedBottomPx of 212). The
+    // pre-fix formula divided by that raw, unclamped denominator and would have returned a
+    // margin of (40 * 213 + 212 * 60) / 1 = 21,240 here — this is what the clamp must avoid.
+    const unclampedReferenceMargin = (40 * 213 + 212 * 60) / 1;
+
+    const viewBox = computeGraphViewBox(800, 60, { width: 1000, height: 213 }, [200, 30]);
+
+    expect(parseViewBox(viewBox).height).toBeLessThan(unclampedReferenceMargin / 10);
+  });
+
   it('uses the tallest overlay panel, not the sum of all panels', () => {
     const container = { width: 1000, height: 300 };
     const viewBoxOneTall = computeGraphViewBox(400, 100, container, [60, 26]);

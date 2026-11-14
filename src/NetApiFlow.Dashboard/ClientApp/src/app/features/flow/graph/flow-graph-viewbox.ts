@@ -56,10 +56,10 @@ function bottomMarginForOverlay(
     return widthConstrainedMargin;
   }
 
-  const denominator = container.height - reservedBottomPx;
-  if (denominator <= 0) {
-    return BASE_MARGIN_PX + reservedBottomPx;
-  }
+  // A denominator near zero (the canvas is barely taller than the reserved overlay footprint,
+  // e.g. the replay bar eating vertical space) would otherwise blow this margin up without
+  // bound. Flooring it at BASE_MARGIN_PX caps how cramped the result can get instead.
+  const denominator = Math.max(container.height - reservedBottomPx, BASE_MARGIN_PX);
 
   return (BASE_MARGIN_PX * container.height + reservedBottomPx * contentHeight) / denominator;
 }
