@@ -116,6 +116,15 @@ export class ApiService {
   loadOpenApiDocument(url: string): Observable<OpenApiDocument> {
     return this.http.get<OpenApiDocument>(url);
   }
+
+  /**
+   * Fetches a static asset served alongside the dashboard itself (e.g. a node-state icon SVG),
+   * at a root-relative URL never prefixed with `basePath`, since it isn't part of the
+   * dashboard's own API namespace.
+   */
+  getStaticAsset(path: string): Observable<string> {
+    return this.http.get(path, { responseType: 'text' });
+  }
 }
 
 /** Builds HttpParams from a plain object, skipping undefined values (query param absent = no filter). */

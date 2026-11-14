@@ -233,13 +233,50 @@ describe('ArchitectureComponent', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
 
-    fixture.componentInstance.exportSvg();
+    const exportPromise = fixture.componentInstance.exportSvg();
+    httpMock.expectOne('node-states/completed.svg').flush('<svg><circle/></svg>');
+    await exportPromise;
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect((createObjectURL.mock.calls[0][0] as Blob).type).toBe('image/svg+xml');
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
 
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+    click.mockRestore();
+  });
+
+  it('exports the SVG self-contained (M7): no relative icon href, each element carries its resolved color inline', async () => {
+    const fixture = TestBed.createComponent(ArchitectureComponent);
+    await fixture.whenStable();
+    httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
+    await fixture.whenStable();
+    await selectRouteWithGraph(fixture, httpMock);
+
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+    const getComputedStyleSpy = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      getPropertyValue: (property: string) => (property === 'fill' ? 'rgb(1, 2, 3)' : ''),
+    } as CSSStyleDeclaration);
+
+    const exportPromise = fixture.componentInstance.exportSvg();
+    httpMock
+      .expectOne('node-states/completed.svg')
+      .flush('<svg xmlns="http://www.w3.org/2000/svg"><circle fill="#10B981"/></svg>');
+    await exportPromise;
+
+    const exportedMarkup = await (createObjectURL.mock.calls[0][0] as Blob).text();
+
+    expect(exportedMarkup).not.toContain('node-states/completed.svg');
+    expect(exportedMarkup).toContain('data:image/svg+xml');
+    expect(exportedMarkup).toContain('fill: rgb(1, 2, 3)');
+
+    getComputedStyleSpy.mockRestore();
     createObjectURL.mockRestore();
     revokeObjectURL.mockRestore();
     click.mockRestore();

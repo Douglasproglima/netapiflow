@@ -1,6 +1,6 @@
 import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, of, switchMap } from 'rxjs';
+import { Subject, catchError, firstValueFrom, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { ArchitectureMap, EndpointDescriptor } from '../../core/models';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
@@ -20,6 +20,33 @@ function routeKey(method: string, routeTemplate: string): string {
 
 function inputValue(event: Event): string {
   return (event.target as HTMLSelectElement).value;
+}
+
+const INLINED_PRESENTATION_PROPERTIES = ['fill', 'stroke', 'color', 'font-family'] as const;
+
+/**
+ * Bakes each element's own resolved color/font (M7) straight onto its exported clone, in the
+ * same traversal order `cloneNode(true)` preserves, so the exported file keeps looking the same
+ * with no dashboard stylesheet around to resolve `var(--naf-*)` through.
+ */
+function inlineComputedPresentation(live: Element, cloned: Element): void {
+  const liveElements = [live, ...Array.from(live.querySelectorAll('*'))];
+  const clonedElements = [cloned, ...Array.from(cloned.querySelectorAll('*'))];
+
+  liveElements.forEach((liveElement, index) => {
+    const clonedElement = clonedElements[index];
+    if (!(clonedElement instanceof SVGElement)) {
+      return;
+    }
+
+    const computed = getComputedStyle(liveElement);
+    for (const property of INLINED_PRESENTATION_PROPERTIES) {
+      const value = computed.getPropertyValue(property);
+      if (value) {
+        clonedElement.style.setProperty(property, value);
+      }
+    }
+  });
 }
 
 /**
@@ -160,7 +187,7 @@ export class ArchitectureComponent {
     downloadTextFile(architectureMapToMermaid(map), 'architecture.mmd', 'text/plain');
   }
 
-  exportSvg(): void {
+  async exportSvg(): Promise<void> {
     const svg = this.graphHost()?.nativeElement.querySelector('svg');
     if (!svg) {
       return;
@@ -171,10 +198,45 @@ export class ArchitectureComponent {
       clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     }
 
+    inlineComputedPresentation(svg, clone);
+    await this.inlineStateIcons(clone);
+
     downloadTextFile(
       new XMLSerializer().serializeToString(clone),
       'architecture.svg',
       'image/svg+xml',
     );
+  }
+
+  /**
+   * Replaces each state icon's relative `href` with the icon's own markup as a data URI (M7), so
+   * the exported file keeps showing every node's icon when opened on its own, with no dashboard
+   * server or stylesheet around to resolve the original relative path.
+   */
+  private async inlineStateIcons(svg: SVGSVGElement): Promise<void> {
+    const images = Array.from(svg.querySelectorAll('image'));
+    const hrefs = [
+      ...new Set(
+        images
+          .map((image) => image.getAttribute('href'))
+          .filter((href): href is string => !!href && !href.startsWith('data:')),
+      ),
+    ];
+
+    const dataUriByHref = new Map(
+      await Promise.all(
+        hrefs.map(async (href) => {
+          const markup = await firstValueFrom(this.api.getStaticAsset(href));
+          return [href, `data:image/svg+xml;utf8,${encodeURIComponent(markup)}`] as const;
+        }),
+      ),
+    );
+
+    for (const image of images) {
+      const dataUri = dataUriByHref.get(image.getAttribute('href') ?? '');
+      if (dataUri) {
+        image.setAttribute('href', dataUri);
+      }
+    }
   }
 }
