@@ -81,7 +81,10 @@
           </div>
 
           @for (field of form.fields; track field.name) {
-            <div class="endpoint-form__field">
+            <div
+              class="endpoint-form__field"
+              [class.endpoint-form__field--invalid]="invalidFieldName() === field.name"
+            >
               <label [for]="'endpoint-form-field-' + field.name"
                 >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
               >
@@ -102,13 +105,55 @@
             </div>
           }
 
+          <div class="endpoint-form__headers">
+            <div class="endpoint-form__headers-head">
+              <span>{{ 'action.headers.title' | t }}</span>
+              <button type="button" class="endpoint-form__headers-add" (click)="addHeader()">
+                {{ 'action.headers.add' | t }}
+              </button>
+            </div>
+            @for (header of customHeaders(); track $index) {
+              <div class="endpoint-form__header-row">
+                <input
+                  type="text"
+                  [attr.placeholder]="'action.headers.namePlaceholder' | t"
+                  [value]="header.name"
+                  (input)="onHeaderNameInput($index, $event)"
+                />
+                <input
+                  type="text"
+                  [attr.placeholder]="'action.headers.valuePlaceholder' | t"
+                  [value]="header.value"
+                  (input)="onHeaderValueInput($index, $event)"
+                />
+                <button
+                  type="button"
+                  class="endpoint-form__header-remove"
+                  [attr.aria-label]="'action.headers.remove' | t"
+                  (click)="removeHeader($index)"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    width="14"
+                    height="14"
+                  >
+                    <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </div>
+            }
+          </div>
+
           <button mat-flat-button type="submit" class="endpoint-form__send" [disabled]="sending()">
             {{ 'action.send' | t }}
           </button>
 
           @if (sendError()) {
             <p class="endpoint-form__status endpoint-form__status--error" role="alert">
-              {{ sendError() | t }}
+              {{ sendError() | t: { name: invalidFieldName() ?? '' } }}
             </p>
           }
 

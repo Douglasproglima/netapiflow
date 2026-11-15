@@ -36,7 +36,7 @@
 }
 
 .app-topbar__sub {
-  flex: 1 1 auto;
+  flex: auto;
   min-width: 0;
   font-size: 0.8125rem;
   color: var(--naf-text-muted);
@@ -133,7 +133,7 @@
 }
 
 .app-shell {
-  flex: 1 1 auto;
+  flex: auto;
   min-height: 0;
 }
 
@@ -171,7 +171,7 @@
   right: 0.5rem;
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 1px solid var(--naf-border);
   background: var(--naf-surface);
   color: var(--naf-text-muted);
@@ -188,7 +188,11 @@
 // Material's own backdrop for the overlay rail defaults to a low-opacity black that barely reads
 // against this dark theme; darken it so it's obvious the rail can be dismissed by tapping outside.
 ::ng-deep .mat-drawer-backdrop.mat-drawer-shown {
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: #0009;
+}
+
+.app-rail__nav {
+  display: contents;
 }
 
 .app-rail__logo {
@@ -222,8 +226,11 @@
   }
 }
 
-// Manual override (D-36): same switch as the media query above, but driven by the `data-theme`
-// attribute the theme toggle writes, so it wins over the OS preference once set.
+// Manual override: same switch as the media query above, but driven by the `data-theme` attribute
+// the theme toggle writes, so it wins over the OS preference once set. No equivalent block exists
+// for `data-theme="dark"`: that state already matches what happens with no override at all (the
+// light mark starts hidden, the dark one never gets a `display: none` anywhere), so asserting it
+// again would only repeat the default.
 // `:host-context` is required here (instead of plain `:root`) because this is a component
 // stylesheet: Angular's emulated encapsulation would otherwise scope a bare `:root` selector with
 // this component's own content attribute, which the real `<html>` element never carries.
@@ -233,16 +240,6 @@
   }
 
   .app-rail__logo-mark--light {
-    display: inline;
-  }
-}
-
-:host-context([data-theme='dark']) {
-  .app-rail__logo-mark--light {
-    display: none;
-  }
-
-  .app-rail__logo-mark--dark {
     display: inline;
   }
 }
@@ -262,7 +259,6 @@
   font-family: var(--naf-font-ui);
   font-weight: 500;
   font-size: 0.6875rem;
-  letter-spacing: 0;
   border: 0;
   background: none;
   cursor: pointer;

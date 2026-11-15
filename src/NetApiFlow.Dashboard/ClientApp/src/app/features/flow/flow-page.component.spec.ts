@@ -263,6 +263,9 @@ describe('FlowPageComponent', () => {
 
     expect(fixture.componentInstance.liveTraces()).toEqual(summaries);
     expect(fixture.nativeElement.textContent).toContain('/api/orders');
+    // pt-BR is the default language; the status must not leak the raw English "Running".
+    expect(fixture.nativeElement.textContent).toContain('Em execução');
+    expect(fixture.nativeElement.textContent).not.toContain('Running');
   });
 
   it('refreshes the in-progress list on a TraceStarted/TraceCompleted SSE event, without a page reload (M6)', async () => {

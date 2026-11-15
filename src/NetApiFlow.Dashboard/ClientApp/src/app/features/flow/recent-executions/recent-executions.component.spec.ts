@@ -122,6 +122,33 @@ describe('RecentExecutionsComponent', () => {
     expect(fixture.componentInstance.collapsed()).toBe(false);
   });
 
+  it('clears the error state once a later refresh succeeds', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush('boom', { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.error()).toBe('recent.error');
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    sse.emit({
+      eventId: 1,
+      type: 'TraceCompleted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:01:00Z',
+    });
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.error()).toBeNull();
+  });
+
   it('re-fetches the list when a TraceCompleted event arrives (D-39)', async () => {
     const fixture = TestBed.createComponent(RecentExecutionsComponent);
     await fixture.whenStable();

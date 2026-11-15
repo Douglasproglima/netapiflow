@@ -8,6 +8,7 @@
 export type SupportedLanguage = 'pt-BR' | 'en';
 
 const en = {
+  'nav.ariaLabel': 'Main navigation',
   'nav.flow': 'Flow',
   'nav.history': 'History',
   'nav.components': 'Components',
@@ -56,6 +57,11 @@ const en = {
   'action.field.kind.path': 'path',
   'action.field.kind.query': 'query',
   'action.field.kind.body': 'body',
+  'action.headers.title': 'Headers',
+  'action.headers.add': 'Add header',
+  'action.headers.namePlaceholder': 'Name',
+  'action.headers.valuePlaceholder': 'Value',
+  'action.headers.remove': 'Remove this header',
   'action.send': 'Send request',
   'action.loading': 'Loading…',
   'action.openApiError.title': 'Could not load the OpenAPI document.',
@@ -63,6 +69,7 @@ const en = {
     'Check that the host serves it, and that NetApiFlowOptions.OpenApiDocumentPath points to where it is served.',
   'action.noEndpoints': 'No endpoints found.',
   'action.invalidJson': 'Body is not valid JSON.',
+  'action.emptyPathParam': 'Fill in the "{name}" path parameter before sending.',
   'action.requestFailed': 'Request failed.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Close the action panel',
@@ -304,6 +311,7 @@ const en = {
 };
 
 const ptBr: Record<keyof typeof en, string> = {
+  'nav.ariaLabel': 'Navegação principal',
   'nav.flow': 'Fluxo',
   'nav.history': 'Histórico',
   'nav.components': 'Componentes',
@@ -352,6 +360,11 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.field.kind.path': 'caminho',
   'action.field.kind.query': 'consulta',
   'action.field.kind.body': 'corpo',
+  'action.headers.title': 'Headers',
+  'action.headers.add': 'Adicionar header',
+  'action.headers.namePlaceholder': 'Nome',
+  'action.headers.valuePlaceholder': 'Valor',
+  'action.headers.remove': 'Remover este header',
   'action.send': 'Enviar requisição',
   'action.loading': 'Carregando…',
   'action.openApiError.title': 'Não foi possível carregar o documento OpenAPI.',
@@ -359,6 +372,7 @@ const ptBr: Record<keyof typeof en, string> = {
     'Verifique se o host serve o documento, e se NetApiFlowOptions.OpenApiDocumentPath aponta para onde ele é servido.',
   'action.noEndpoints': 'Nenhum endpoint encontrado.',
   'action.invalidJson': 'O corpo não é um JSON válido.',
+  'action.emptyPathParam': 'Preencha o parâmetro de rota "{name}" antes de enviar.',
   'action.requestFailed': 'A requisição falhou.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Fechar o painel de ação',
