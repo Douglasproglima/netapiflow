@@ -6,6 +6,9 @@ export type PlaybackState = 'paused' | 'playing' | 'finished';
 /** Below this, a step would flash by too fast to notice — the cadence, never the reported duration, adapts. */
 const MIN_VISUAL_DELAY_MS = 150;
 
+/** Above this, an unusually large real gap between two spans would otherwise freeze the replay. */
+const MAX_VISUAL_DELAY_MS = 5_000;
+
 /**
  * Replays a completed trace's spans in the order they really started. Only the pacing of the
  * animation changes with playback speed; the duration any panel displays always comes straight
@@ -115,16 +118,17 @@ export class ReplayPlayerService implements OnDestroy {
   }
 
   private computeDelayMs(index: number): number {
-    const spans = this.orderedSpans();
-    const speed = this.speedSignal();
     if (index === 0) {
-      return MIN_VISUAL_DELAY_MS / speed;
+      return MIN_VISUAL_DELAY_MS;
     }
 
+    const spans = this.orderedSpans();
+    const speed = this.speedSignal();
     const previousStartMs = Date.parse(spans[index - 1].startedAt);
     const currentStartMs = Date.parse(spans[index].startedAt);
     const realGapMs = Math.max(currentStartMs - previousStartMs, 0);
-    return Math.max(realGapMs / speed, MIN_VISUAL_DELAY_MS / speed);
+    const scaledGapMs = Math.max(realGapMs / speed, MIN_VISUAL_DELAY_MS);
+    return Math.min(scaledGapMs, MAX_VISUAL_DELAY_MS);
   }
 
   private advanceStep(): void {
