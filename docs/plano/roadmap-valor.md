@@ -26,6 +26,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 | 8 | `SqlServerTraceStore` compara `method` por igualdade exata de string, sem `ILIKE`/case-insensitive como `PostgreSqlTraceStore` já faz; inconsistência entre os dois storages persistentes | D-124 (achado incidental ao investigar o A5) | ⚪ Baixo, sem fase atribuída | Ideia registrada, não planejada: impacto prático baixo (verbo HTTP já normalmente canônico), mas é inconsistência real entre os dois backends |
 | 9 | Ingestão de Dapper sobre SQL Server via `ExternalActivitySource` novo | D-114 (achado 4, dogfooding) | ⚪ Baixo, sem fase atribuída | Ideia registrada, não planejada: código misto EF Core + Dapper perde o nó `Database` na parte em Dapper, mesma lacuna que `ExternalActivitySource.Npgsql` já resolveu pro lado PostgreSQL |
 | 10 | Piso em pixels na lista do painel "Testar um endpoint" (`.endpoint-form__list-wrapper`), hoje só `max-height: 55%` | D-116 (achado 2, dogfooding), R-28 | ⚪ Baixo, não bloqueante | Planejada: decisão de forma passa por `docs/design/flow-workspace/guide.md` antes do código |
+| 11 | Investigar de uma vez o conjunto de testes `.NET` sensíveis a timing/agendamento sob carga de CI (três ocorrências já registradas: D-54, D-125, D-127), em vez de tratar cada falha isolada na hora que aparece | D-54, D-125, D-127 | ⚪ Baixo, sem fase atribuída | Ideia registrada, não planejada |
 
 ## Já entregues (fora deste ranking, histórico em `docs/plano/README.md`)
 
