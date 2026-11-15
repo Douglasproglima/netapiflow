@@ -245,13 +245,12 @@ describe('ApiService', () => {
     req.flush(expected);
   });
 
-  it('callEndpoint strips the OpenAPI path leading slash so it resolves against the base href', () => {
+  it('callEndpoint sends a root-relative request, not prefixed by the dashboard base path', () => {
     service
       .callEndpoint('POST', '/api/orders/5', { customerName: 'Acme' })
       .subscribe((response) => expect(response.headers.get('X-NetApiFlow-TraceId')).toBe('t1'));
 
-    httpMock.expectNone('/api/orders/5');
-    const req = httpMock.expectOne('api/orders/5');
+    const req = httpMock.expectOne('/api/orders/5');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ customerName: 'Acme' });
     req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
@@ -263,7 +262,7 @@ describe('ApiService', () => {
       .callEndpoint('GET', '/api/orders/5', undefined, headers)
       .subscribe((response) => expect(response.status).toBe(200));
 
-    const req = httpMock.expectOne('api/orders/5');
+    const req = httpMock.expectOne('/api/orders/5');
     expect(req.request.headers.get('X-Tenant')).toBe('acme');
     expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
     req.flush(null, { status: 200, statusText: 'OK' });
