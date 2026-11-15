@@ -32,7 +32,13 @@ Verifique, nesta ordem:
 7. **Gitflow.** Nome da branch e mensagens de commit seguem `docs/gitflow.md` (Conventional
    Commits, inglês). Em `release/*` e `hotfix/*`, `CHANGELOG.md` tem a seção da versão SemVer
    correta (ADR-0001).
-8. **Escrita.** Rodar `grep -rn "—" <arquivos do diff>` nos arquivos em português e apontar
+8. **Documentação.** O diff muda algo que `README.md`/`README.pt-BR.md`, `docs/architecture.md`
+   ou o README do pacote afetado (`src/<Pacote>/README.md`) já descrevem? Toda mudança de
+   comportamento visível a quem usa o pacote (novo `FlowStatus`, nova rota, campo novo de
+   `GET /config`, limitação nova ou removida, printscreen/GIF que não reflete mais a tela atual)
+   precisa de atualização correspondente na mesma PR. Aponte doc desatualizada por arquivo e
+   seção, não só "falta atualizar o README".
+9. **Escrita.** Rodar `grep -rn "—" <arquivos do diff>` nos arquivos em português e apontar
    travessão colando ideias em comentário ou documentação interna.
 
 Reporte cada achado com arquivo e linha. Se estiver tudo certo, diga com todas as letras que está
