@@ -4,6 +4,13 @@ import { SupportedLanguage, TRANSLATIONS, TranslationKey } from './translations'
 const STORAGE_KEY = 'naf-lang';
 const DEFAULT_LANGUAGE: SupportedLanguage = 'pt-BR'; // Deliberately not navigator.language.
 
+export function interpolate(template: string, values: Record<string, string | number>): string {
+  return Object.keys(values).reduce(
+    (text, placeholder) => text.replaceAll(`{${placeholder}}`, String(values[placeholder])),
+    template,
+  );
+}
+
 function readStoredLanguage(): SupportedLanguage {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -35,13 +42,6 @@ export class LanguageService {
 
   translate(key: TranslationKey, values?: Record<string, string | number>): string {
     const template = this.dictionary()[key];
-    if (!values) {
-      return template;
-    }
-
-    return Object.keys(values).reduce(
-      (text, placeholder) => text.replace(`{${placeholder}}`, String(values[placeholder])),
-      template,
-    );
+    return values ? interpolate(template, values) : template;
   }
 }

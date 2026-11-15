@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { LanguageService } from './language.service';
+import { interpolate, LanguageService } from './language.service';
 
 describe('LanguageService', () => {
   beforeEach(() => {
@@ -66,6 +66,10 @@ describe('LanguageService', () => {
     const service = TestBed.inject(LanguageService);
 
     expect(service.language()).toBe('pt-BR');
+  });
+
+  it('translate interpolates every occurrence of a placeholder that repeats in the same template', () => {
+    expect(interpolate('{n} of {n}', { n: 3 })).toBe('3 of 3');
   });
 
   it('keeps updating the signal even when localStorage.setItem throws', () => {
