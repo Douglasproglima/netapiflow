@@ -5,13 +5,18 @@ achados reais (4 Alta, 10 Média, 10 Baixa). Todos os 24 foram reverificados pel
 contra o código atual antes deste plano, com arquivo e linha. A verificação completa está em
 D-121, corrigida em D-122 (o sub-item do `<image href>` relativo no M7 procede: está em
 `flow-graph.component.html`, componente filho que `architecture.component.html` embute via
-`<app-flow-graph>`, não no próprio template do mapa de arquitetura).
+`<app-flow-graph>`, não no próprio template do mapa de arquitetura) e em D-123 (os achados de
+Baixa severidade não são 10 itens individuais, são 6 blocos de texto com 17 problemas atômicos).
 
-Os achados de Baixa severidade viram a Fase 32, separada desta. Justificativa: nenhum dos dez é
+Os achados de Baixa severidade viram a Fase 32, separada desta. Justificativa: nenhum deles é
 bug de correção visível pro usuário (são acessibilidade, i18n, validação de formulário e
 orçamento de build), enquanto todo achado desta fase é um comportamento que já quebra ou confunde
-alguém usando o dashboard hoje. Juntar os 24 numa fase só passaria de 20 tarefas, difícil de
+alguém usando o dashboard hoje. Juntar tudo numa fase só passaria de 20 tarefas, difícil de
 revisar e de reverter em partes se algo sair errado.
+
+Achado novo (A5), fora da auditoria original, relatado em dogfooding real já com 16 tarefas
+implementadas: template de rota gravado e consultado em formatos diferentes. Vira a Tarefa 31.17,
+registrada em D-124.
 
 ## Regra geral desta fase
 
@@ -230,9 +235,57 @@ não há forma simples de resolver com o contrato atual.
 **Pronto quando:** teste confirma que, com `tailSamplingEnabled: true`, a tela mostra a ressalva
 junto de qualquer rota morta.
 
+## Tarefa 31.17 (A5, bloqueante): template de rota gravado e consultado em formatos diferentes
+
+Achado real durante a implementação (depois de 31.5 e 31.14 já commitadas; não houve como seguir a
+ordem original pedida, as duas já estavam prontas quando o achado chegou). `NetApiFlowMiddleware.cs`
+grava `RoutePattern.RawText` como vem: rota de Controller por atributo chega sem barra inicial
+(`api/orders/parallel`), rota de Minimal API com `MapGroup` chega com barra. `GET /endpoints`
+normaliza pra sempre ter barra (mas não corta barra final). As comparações de rota nos três
+`ITraceStore` (`InMemoryTraceStore`, `PostgreSqlTraceStore`, `SqlServerTraceStore`) são igualdade
+exata de string, sem nenhuma normalização. Resultado: o mapa de Arquitetura (que cruza `/endpoints`
+com os dados agregados por rota) nunca encontra execução pra rota de Controller, mesmo com
+execuções reais na janela.
+
+Um helper interno novo no núcleo (`NetApiFlow`), não público: recebe o texto cru do
+`RoutePattern` e devolve sempre com barra inicial, sem barra final, preservando o resto
+(parâmetro e restrição inclusive, ex. `api/orders/{id:int}` → `/api/orders/{id:int}`). Usado em
+todo ponto de entrada de um `route`, dos dois lados:
+
+- gravação: `NetApiFlowMiddleware.cs`, antes de `UpdateRouteTemplate`;
+- `GET /endpoints`, no lugar do `"/" + RawText.TrimStart('/')` atual (que não cobre barra final);
+- qualquer ponto da API do dashboard que receber `route` da query string (`/traces`, `/blueprint`,
+  `/architecture`) e repassar pra um `ITraceStore`, normalizando antes de repassar.
+
+Nenhum `ITraceStore` muda a própria comparação (continua igualdade exata); o helper garante que os
+dois lados da comparação já chegam canônicos. Confirmar que `NetApiFlow.Storage.PostgreSql` e
+`NetApiFlow.Storage.SqlServer` já enxergam `internal` do núcleo (`InternalsVisibleTo`); se não
+enxergarem, é parte desta tarefa configurar.
+
+**Dados já gravados (decisão travada, D-124):** normalizar os registros existentes nos dois
+storages persistentes, não aceitar os dois formatos nas consultas. Uma normalização que aceitasse
+os dois formatos na consulta (ex. comparar ignorando barra) perderia uso de índice simples pra
+sempre; migrar os dados é custo único. `PostgreSqlTraceStore`/`SqlServerTraceStore` já normalizam o
+schema na primeira execução (Fase 6): a correção de dados entra no mesmo lugar, um
+`UPDATE` idempotente (sem efeito depois da primeira vez) que acrescenta a barra inicial e corta a
+final de todo `route_template` fora do formato canônico. `InMemoryTraceStore` não precisa de nada:
+dado em memória não sobrevive a um restart, e um restart é exatamente quando a correção do
+middleware passa a valer.
+
+**Pronto quando:**
+
+- teste unitário do helper de normalização cobrindo `api/x`, `/api/x`, `/api/x/`, `/`, e um
+  template com parâmetro e restrição (`api/orders/{id:int}`);
+- teste de integração com uma rota de Controller e uma de Minimal API, ambas encontradas pelo mapa
+  de Arquitetura, pelo blueprint, pelo filtro de rota de `/traces` e pelo Insights (nenhuma listada
+  como rota morta depois de executada);
+- teste com Testcontainers nos dois bancos persistentes: insere um registro com `route_template`
+  fora do formato canônico direto via SQL (simulando dado gravado antes desta correção), inicializa
+  o store, confirma que o registro foi normalizado.
+
 ## Fora de escopo
 
-- Os 10 achados de Baixa severidade (Fase 32).
+- Os 17 achados de Baixa severidade (Fase 32).
 - Resolver o falso positivo de rota morta causado por janela de tempo maior que a retenção real do
   `ITraceStore` (sem contrato que exponha a retenção configurada hoje; decisão de expor isso, se
   fizer sentido, é da Planejadora, fora desta fase).
@@ -240,9 +293,10 @@ junto de qualquer rota morta.
 
 ## Aceite da fase
 
-Critérios de pronto das 14 tarefas acima. Build/test/lint/format dos dois lados (backend só muda
-na tarefa 31.1). Impeccable rodado em `/flow`, `/history` e `/insights` (telas tocadas por mais de
-uma tarefa), tema claro e escuro, desktop e `390x844`.
+Critérios de pronto das 15 tarefas acima (14 originais mais a 31.17). Build/test/lint/format dos
+dois lados: até a 31.16 o hotfix era 100% frontend, a 31.17 volta a tocar o núcleo
+(`NetApiFlow`) e os dois pacotes de storage. Impeccable rodado em `/flow`, `/history` e
+`/insights` (telas tocadas por mais de uma tarefa), tema claro e escuro, desktop e `390x844`.
 
 ## Ao terminar
 
