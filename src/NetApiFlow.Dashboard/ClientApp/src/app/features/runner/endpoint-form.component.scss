@@ -226,6 +226,7 @@
 
 .endpoint-form__send {
   width: 100%;
+  flex-shrink: 0;
   justify-content: center;
 }
 
