@@ -1,5 +1,6 @@
 const BASE_MARGIN_PX = 40;
 const OVERLAY_EDGE_INSET_PX = 12;
+const MAX_RESERVED_BOTTOM_FRACTION = 0.5;
 
 export interface ContainerSize {
   readonly width: number;
@@ -25,7 +26,16 @@ export function computeGraphViewBox(
   const width = contentWidth + BASE_MARGIN_PX;
   const tallestOverlayPx =
     overlayPanelHeightsPx.length > 0 ? Math.max(...overlayPanelHeightsPx) : 0;
-  const reservedBottomPx = tallestOverlayPx > 0 ? tallestOverlayPx + OVERLAY_EDGE_INSET_PX : 0;
+  const uncappedReservedBottomPx =
+    tallestOverlayPx > 0 ? tallestOverlayPx + OVERLAY_EDGE_INSET_PX : 0;
+
+  // A canvas squeezed short enough (the replay bar eating vertical space, e.g.) can leave an
+  // overlay taller than the canvas itself: fully clearing it would shrink the graph to a sliver.
+  // Past half the canvas, give up on full clearance and settle for a bounded, partial one instead.
+  const reservedBottomPx = Math.min(
+    uncappedReservedBottomPx,
+    container.height * MAX_RESERVED_BOTTOM_FRACTION,
+  );
 
   const bottomMargin =
     reservedBottomPx > 0 && container.width > 0 && container.height > 0
