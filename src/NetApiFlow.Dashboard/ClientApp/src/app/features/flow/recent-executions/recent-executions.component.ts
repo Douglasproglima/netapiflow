@@ -8,6 +8,7 @@ import { SSE_REFRESH_AUDIT_MS, SseService } from '../../../core/sse.service';
 import { FlowTraceSummary } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
+import { catchAsResult } from '../../../shared/observable-result';
 import { statusTint, StatusTint } from '../../../shared/status-tint';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { LanguageService } from '../../../core/i18n/language.service';
@@ -47,16 +48,17 @@ export class RecentExecutionsComponent implements OnDestroy {
       auditTime(SSE_REFRESH_AUDIT_MS),
     ),
   )
-    .pipe(switchMap(() => this.api.getTraces({ page: 1, pageSize: PAGE_SIZE })))
-    .subscribe({
-      next: (result) => {
-        this.traces.set(result.items);
-        this.loading.set(false);
-      },
-      error: () => {
+    .pipe(switchMap(() => catchAsResult(this.api.getTraces({ page: 1, pageSize: PAGE_SIZE }))))
+    .subscribe((result) => {
+      if (!result.ok) {
         this.error.set('recent.error');
         this.loading.set(false);
-      },
+        return;
+      }
+
+      this.error.set(null);
+      this.traces.set(result.value.items);
+      this.loading.set(false);
     });
 
   toggleCollapsed(): void {
