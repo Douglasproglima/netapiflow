@@ -8,6 +8,7 @@
 export type SupportedLanguage = 'pt-BR' | 'en';
 
 const en = {
+  'nav.ariaLabel': 'Main navigation',
   'nav.flow': 'Flow',
   'nav.history': 'History',
   'nav.components': 'Components',
@@ -304,6 +305,7 @@ const en = {
 };
 
 const ptBr: Record<keyof typeof en, string> = {
+  'nav.ariaLabel': 'Navegação principal',
   'nav.flow': 'Fluxo',
   'nav.history': 'Histórico',
   'nav.components': 'Componentes',

@@ -160,144 +160,158 @@
         <span class="naf-mono">v{{ v }}</span>
       }
     </a>
-    <a
-      class="app-rail__item"
-      routerLink="/"
-      routerLinkActive="app-rail__item--active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      [attr.title]="'nav.flow' | t"
-      (click)="closeSidenavIfNarrow()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
+    <nav class="app-rail__nav" [attr.aria-label]="'nav.ariaLabel' | t">
+      <a
+        class="app-rail__item"
+        routerLink="/"
+        routerLinkActive="app-rail__item--active"
+        #flowLink="routerLinkActive"
+        [routerLinkActiveOptions]="{ exact: true }"
+        [attr.aria-current]="flowLink.isActive ? 'page' : null"
+        [attr.title]="'nav.flow' | t"
+        (click)="closeSidenavIfNarrow()"
       >
-        <circle cx="5" cy="12" r="2.5" />
-        <circle cx="19" cy="6" r="2.5" />
-        <circle cx="19" cy="18" r="2.5" />
-        <path d="M7.5 12h3.5M11 12 16.6 7.2M11 12l5.6 4.8" />
-      </svg>
-      <span>{{ 'nav.flow' | t }}</span>
-    </a>
-    <a
-      class="app-rail__item"
-      routerLink="/history"
-      routerLinkActive="app-rail__item--active"
-      [attr.title]="'nav.history' | t"
-      (click)="closeSidenavIfNarrow()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+        >
+          <circle cx="5" cy="12" r="2.5" />
+          <circle cx="19" cy="6" r="2.5" />
+          <circle cx="19" cy="18" r="2.5" />
+          <path d="M7.5 12h3.5M11 12 16.6 7.2M11 12l5.6 4.8" />
+        </svg>
+        <span>{{ 'nav.flow' | t }}</span>
+      </a>
+      <a
+        class="app-rail__item"
+        routerLink="/history"
+        routerLinkActive="app-rail__item--active"
+        #historyLink="routerLinkActive"
+        [attr.aria-current]="historyLink.isActive ? 'page' : null"
+        [attr.title]="'nav.history' | t"
+        (click)="closeSidenavIfNarrow()"
       >
-        <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
-        <path d="M3.5 4v4.5H8" />
-        <path d="M12 7.5V12l3 2" />
-      </svg>
-      <span>{{ 'nav.history' | t }}</span>
-    </a>
-    <a
-      class="app-rail__item"
-      routerLink="/components"
-      routerLinkActive="app-rail__item--active"
-      [attr.title]="'nav.components' | t"
-      (click)="closeSidenavIfNarrow()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+        >
+          <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+          <path d="M3.5 4v4.5H8" />
+          <path d="M12 7.5V12l3 2" />
+        </svg>
+        <span>{{ 'nav.history' | t }}</span>
+      </a>
+      <a
+        class="app-rail__item"
+        routerLink="/components"
+        routerLinkActive="app-rail__item--active"
+        #componentsLink="routerLinkActive"
+        [attr.aria-current]="componentsLink.isActive ? 'page' : null"
+        [attr.title]="'nav.components' | t"
+        (click)="closeSidenavIfNarrow()"
       >
-        <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
-        <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
-        <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
-        <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
-      </svg>
-      <span>{{ 'nav.components' | t }}</span>
-    </a>
-    <a
-      class="app-rail__item"
-      routerLink="/insights"
-      routerLinkActive="app-rail__item--active"
-      [attr.title]="'nav.insights' | t"
-      (click)="closeSidenavIfNarrow()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+        >
+          <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
+          <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
+          <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
+        </svg>
+        <span>{{ 'nav.components' | t }}</span>
+      </a>
+      <a
+        class="app-rail__item"
+        routerLink="/insights"
+        routerLinkActive="app-rail__item--active"
+        #insightsLink="routerLinkActive"
+        [attr.aria-current]="insightsLink.isActive ? 'page' : null"
+        [attr.title]="'nav.insights' | t"
+        (click)="closeSidenavIfNarrow()"
       >
-        <path d="M4 19.5V13M10 19.5V8.5M16 19.5V4.5M4 9.5l6-4 6 4 4-2.5" />
-      </svg>
-      <span>{{ 'nav.insights' | t }}</span>
-    </a>
-    <a
-      class="app-rail__item"
-      routerLink="/architecture"
-      routerLinkActive="app-rail__item--active"
-      [attr.title]="'nav.architecture' | t"
-      (click)="closeSidenavIfNarrow()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+        >
+          <path d="M4 19.5V13M10 19.5V8.5M16 19.5V4.5M4 9.5l6-4 6 4 4-2.5" />
+        </svg>
+        <span>{{ 'nav.insights' | t }}</span>
+      </a>
+      <a
+        class="app-rail__item"
+        routerLink="/architecture"
+        routerLinkActive="app-rail__item--active"
+        #architectureLink="routerLinkActive"
+        [attr.aria-current]="architectureLink.isActive ? 'page' : null"
+        [attr.title]="'nav.architecture' | t"
+        (click)="closeSidenavIfNarrow()"
       >
-        <circle cx="6" cy="6" r="2.2" />
-        <circle cx="18" cy="6" r="2.2" />
-        <circle cx="12" cy="18" r="2.2" />
-        <path d="M8 6h8M7.8 7.4 11.2 16.2M16.2 7.4 12.8 16.2" />
-      </svg>
-      <span>{{ 'nav.architecture' | t }}</span>
-    </a>
-    <a
-      class="app-rail__item"
-      routerLink="/runner"
-      routerLinkActive="app-rail__item--active"
-      [attr.title]="'nav.runner' | t"
-      (click)="closeSidenavIfNarrow()"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        width="20"
-        height="20"
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+        >
+          <circle cx="6" cy="6" r="2.2" />
+          <circle cx="18" cy="6" r="2.2" />
+          <circle cx="12" cy="18" r="2.2" />
+          <path d="M8 6h8M7.8 7.4 11.2 16.2M16.2 7.4 12.8 16.2" />
+        </svg>
+        <span>{{ 'nav.architecture' | t }}</span>
+      </a>
+      <a
+        class="app-rail__item"
+        routerLink="/runner"
+        routerLinkActive="app-rail__item--active"
+        #runnerLink="routerLinkActive"
+        [attr.aria-current]="runnerLink.isActive ? 'page' : null"
+        [attr.title]="'nav.runner' | t"
+        (click)="closeSidenavIfNarrow()"
       >
-        <path d="M7 4.5v15l12-7.5Z" />
-      </svg>
-      <span>{{ 'nav.runner' | t }}</span>
-    </a>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          width="20"
+          height="20"
+        >
+          <path d="M7 4.5v15l12-7.5Z" />
+        </svg>
+        <span>{{ 'nav.runner' | t }}</span>
+      </a>
+    </nav>
     <div class="app-rail__spacer"></div>
     <div class="app-rail__divider"></div>
     <button

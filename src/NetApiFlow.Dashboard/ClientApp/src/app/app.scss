@@ -191,6 +191,10 @@
   background-color: rgba(0, 0, 0, 0.6);
 }
 
+.app-rail__nav {
+  display: contents;
+}
+
 .app-rail__logo {
   display: flex;
   flex-direction: column;
