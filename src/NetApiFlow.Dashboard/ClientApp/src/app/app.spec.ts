@@ -246,6 +246,25 @@ describe('App', () => {
     expect(fixture.componentInstance.inProgressCount()).toBe(1);
   });
 
+  it('announces the SSE connection chip with aria-live="polite", regardless of connection state', async () => {
+    const { fixture, sse } = setup(false);
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+
+    const chip = (): Element | null => fixture.nativeElement.querySelector('.naf-chip');
+
+    expect(chip()?.getAttribute('aria-live')).toBe('polite');
+
+    sse.state.set('connecting');
+    fixture.detectChanges();
+    expect(chip()?.getAttribute('aria-live')).toBe('polite');
+
+    sse.state.set('closed');
+    fixture.detectChanges();
+    expect(chip()?.getAttribute('aria-live')).toBe('polite');
+  });
+
   it('coalesces a burst of trace events into at most one extra GET /traces/live call (A2)', async () => {
     const { fixture, sse } = setup(false);
     await fixture.whenStable();

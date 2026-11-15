@@ -93,6 +93,7 @@
     </button>
     <span
       class="naf-chip"
+      aria-live="polite"
       [class.naf-chip--live]="connectionState() === 'open'"
       [class.naf-chip--warning]="connectionState() === 'connecting'"
       [class.naf-chip--danger]="connectionState() === 'closed'"
