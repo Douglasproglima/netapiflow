@@ -61,7 +61,7 @@ describe('computeGraphViewBox', () => {
   });
 
   it('caps how much of the canvas an oversized overlay can reserve, instead of shrinking the graph to a sliver (replay bar + tall legend)', () => {
-    // The exact shape reported live (D-123): replaying a trace shrinks the canvas height to
+    // The exact shape reported live: replaying a trace shrinks the canvas height to
     // ~212px while the state legend alone is ~200px tall. Reserving the full overlay footprint
     // would leave only ~34% scale (a tiny cluster of nodes); capped at half the canvas, the
     // graph stays close to its natural size.

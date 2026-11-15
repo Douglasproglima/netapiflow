@@ -444,7 +444,7 @@ describe('FlowGraphComponent', () => {
         fixture.nativeElement.querySelectorAll('.flow-graph__legend-item span:last-child'),
       ).map((el) => (el as Element).textContent);
 
-      // pt-BR is the default language (D-35).
+      // pt-BR is the default language.
       expect(labels).toEqual([
         'Aguardando',
         'Em execução',

@@ -233,7 +233,7 @@ describe('FlowPageComponent', () => {
 
     expect(fixture.componentInstance.trace()).toBeNull();
     expect(fixture.componentInstance.traceNotFound()).toBe(true);
-    // pt-BR is the default language (D-35); must not show the generic empty-list state instead.
+    // pt-BR is the default language; must not show the generic empty-list state instead.
     expect(fixture.nativeElement.textContent).toContain('Trace não encontrada.');
     expect(fixture.nativeElement.textContent).not.toContain('Nenhuma requisição em andamento');
   });
@@ -354,7 +354,7 @@ describe('FlowPageComponent', () => {
 
     expect(fixture.componentInstance.liveTracesLoading()).toBe(false);
     expect(fixture.componentInstance.liveTracesError()).toBe(true);
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain(
       'Falha ao carregar as requisições em andamento.',
     );
