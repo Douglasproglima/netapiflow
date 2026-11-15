@@ -227,6 +227,11 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
     this.nodeSelected.emit(node.id);
   }
 
+  onNodeKeydownSpace(event: Event, node: GraphNode): void {
+    event.preventDefault();
+    this.onNodeClick(node);
+  }
+
   stateIconSrc(node: GraphNode): string {
     return NODE_STATE_PRESENTATION[node.state].iconSrc;
   }

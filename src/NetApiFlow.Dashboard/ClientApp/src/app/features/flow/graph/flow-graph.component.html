@@ -25,10 +25,12 @@
         [attr.data-state]="node.state"
         [attr.transform]="nodeTransform(node)"
         [attr.aria-label]="nodeAriaLabel(node)"
+        [attr.aria-pressed]="node.id === selectedNodeId() ? 'true' : 'false'"
         tabindex="0"
         role="button"
         (click)="onNodeClick(node)"
         (keydown.enter)="onNodeClick(node)"
+        (keydown.space)="onNodeKeydownSpace($event, node)"
       >
         <rect
           class="flow-graph__node-ring"
