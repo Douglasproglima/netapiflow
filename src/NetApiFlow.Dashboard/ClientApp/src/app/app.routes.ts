@@ -43,4 +43,5 @@ export const routes: Routes = [
       import('./features/runner/runner.component').then((m) => m.RunnerComponent),
     data: { title: 'nav.runner', subtitle: 'topbar.subtitle.runner' },
   },
+  { path: '**', redirectTo: '' },
 ];
