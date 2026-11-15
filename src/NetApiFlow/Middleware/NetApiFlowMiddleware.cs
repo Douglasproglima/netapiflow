@@ -89,7 +89,7 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                 var routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
                 if (routeTemplate is not null)
                 {
-                    recorder.UpdateRouteTemplate(traceId, routeTemplate);
+                    recorder.UpdateRouteTemplate(traceId, RouteTemplateNormalizer.Normalize(routeTemplate));
                 }
 
                 var status = caughtException switch

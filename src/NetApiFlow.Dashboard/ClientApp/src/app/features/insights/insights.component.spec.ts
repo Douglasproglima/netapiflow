@@ -130,6 +130,30 @@ describe('InsightsComponent', () => {
     expect(rows[0].querySelectorAll('td')[1].textContent?.trim()).toBe('/api/orders/{id}');
   });
 
+  it('adds a tail-sampling caveat next to dead routes when tail sampling is enabled (M10)', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS, {
+      ...CONFIG,
+      tailSamplingEnabled: true,
+      successSampleRate: 0.1,
+    });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('A amostragem baseada em cauda está ativa');
+  });
+
+  it('shows no tail-sampling caveat next to dead routes when tail sampling is disabled', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS, { ...CONFIG, tailSamplingEnabled: false });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'A amostragem baseada em cauda está ativa',
+    );
+  });
+
   it('shows an explicit empty state for dead routes when every route ran', async () => {
     const fixture = TestBed.createComponent(InsightsComponent);
     await fixture.whenStable();
@@ -172,5 +196,33 @@ describe('InsightsComponent', () => {
     expect(hoursAgo).toBeLessThan(25);
     routesReq.flush([]);
     httpMock.expectOne((req) => req.url === 'api/endpoints').flush([]);
+  });
+
+  it('always reflects the latest window, never a stale response that arrives after a newer one (M4)', async () => {
+    const fixture = TestBed.createComponent(InsightsComponent);
+    await fixture.whenStable();
+    flushInitial(httpMock, ROUTE_STATS, ENDPOINTS);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectWindow('24h');
+    await fixture.whenStable();
+    const firstRoutesReq = httpMock.expectOne((req) => req.url === 'api/metrics/routes');
+    const firstEndpointsReq = httpMock.expectOne((req) => req.url === 'api/endpoints');
+
+    fixture.componentInstance.selectWindow('30d');
+    await fixture.whenStable();
+
+    // `switchMap` (M4) unsubscribes the first (now stale) window's pair the moment the second
+    // window's request starts.
+    expect(firstRoutesReq.cancelled).toBe(true);
+    expect(firstEndpointsReq.cancelled).toBe(true);
+
+    const secondRoutesReq = httpMock.expectOne((req) => req.url === 'api/metrics/routes');
+    const secondEndpointsReq = httpMock.expectOne((req) => req.url === 'api/endpoints');
+    secondRoutesReq.flush([ROUTE_STATS[0]]);
+    secondEndpointsReq.flush(ENDPOINTS);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.routeStats()).toEqual([ROUTE_STATS[0]]);
   });
 });

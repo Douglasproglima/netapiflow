@@ -265,6 +265,120 @@ describe('buildGraph', () => {
     expect(ghost?.state).toBe('waiting');
   });
 
+  it('marks a span the replay has not revealed yet as waiting, not not-executed, even on a concluded trace (A4)', () => {
+    // The replay call site passes only the steps revealed so far as `spans`, and the full
+    // concluded trace as `fullSpans` (flow-page.component.ts). `traceStatus` is the already-final
+    // status — `inProgress` is the only signal that distinguishes "replay still has more to
+    // reveal" from "this branch truly never ran".
+    const revealedSoFar = [
+      span({
+        spanId: 'root',
+        parentSpanId: null,
+        sequence: 0,
+        component: 'OrdersController',
+        operation: 'Get',
+      }),
+    ];
+    const fullTrace = [
+      ...revealedSoFar,
+      span({
+        spanId: 'service',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'OrderService',
+        operation: 'GetAsync',
+      }),
+    ];
+
+    const stillReplaying = buildGraph(
+      input({
+        spans: revealedSoFar,
+        traceStatus: 'Success',
+        fullSpans: fullTrace,
+        inProgress: true,
+      }),
+    );
+    expect(stillReplaying.nodes.find((n) => n.component === 'OrderService')?.state).toBe('waiting');
+
+    const replayFinished = buildGraph(
+      input({
+        spans: revealedSoFar,
+        traceStatus: 'Success',
+        fullSpans: fullTrace,
+        inProgress: false,
+      }),
+    );
+    expect(replayFinished.nodes.find((n) => n.component === 'OrderService')?.state).toBe(
+      'not-executed',
+    );
+  });
+
+  it('replaying an errored trace that also has a blueprint: own not-yet-revealed span waits, blueprint-only ghost is not-executed from the start (M1)', () => {
+    // This execution's own complete record: root succeeded, then failed before reaching the
+    // step the blueprint (a past successful run) shows coming next.
+    const fullTrace = [
+      span({
+        spanId: 'root',
+        parentSpanId: null,
+        sequence: 0,
+        component: 'OrdersController',
+        operation: 'Confirm',
+      }),
+      span({
+        spanId: 'rule',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'OrderService',
+        operation: 'ValidateBusinessRule',
+        status: 'Error',
+        errorType: 'BusinessRuleException',
+      }),
+    ];
+    const blueprintSpans = [
+      ...fullTrace.map((s) => ({ ...s, status: 'Success' as FlowStatus })),
+      span({
+        spanId: 'bp-repo',
+        parentSpanId: 'rule',
+        sequence: 2,
+        component: 'OrderRepository',
+        operation: 'SaveAsync',
+      }),
+    ];
+
+    // Replay step 0: nothing of this execution revealed yet.
+    const result = buildGraph(
+      input({
+        spans: [],
+        traceStatus: 'Error',
+        fullSpans: fullTrace,
+        blueprintSpans,
+        inProgress: true,
+      }),
+    );
+
+    // `rule` belongs to this execution's own fullSpans, just not revealed yet: waiting.
+    expect(result.nodes.find((n) => n.component === 'OrderService')?.state).toBe('waiting');
+    // `bp-repo` never happened in fullSpans at all (the rule failed first): not-executed
+    // immediately, even though the replay is still in progress and `rule` itself is still
+    // presented as unrevealed.
+    expect(result.nodes.find((n) => n.component === 'OrderRepository')?.state).toBe('not-executed');
+
+    // Once the replay finishes, `rule` flips too; the blueprint-only ghost was already settled.
+    const finished = buildGraph(
+      input({
+        spans: fullTrace,
+        traceStatus: 'Error',
+        fullSpans: fullTrace,
+        blueprintSpans,
+        inProgress: false,
+      }),
+    );
+    expect(finished.nodes.find((n) => n.component === 'OrderService')?.state).toBe('error');
+    expect(finished.nodes.find((n) => n.component === 'OrderRepository')?.state).toBe(
+      'not-executed',
+    );
+  });
+
   it('does not ghost a blueprint step that did execute, even if the real span has a different id', () => {
     const spans = [
       span({

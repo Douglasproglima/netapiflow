@@ -1,5 +1,8 @@
 import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, catchError, firstValueFrom, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import { ArchitectureMap, EndpointDescriptor } from '../../core/models';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
@@ -20,6 +23,33 @@ function inputValue(event: Event): string {
   return (event.target as HTMLSelectElement).value;
 }
 
+const INLINED_PRESENTATION_PROPERTIES = ['fill', 'stroke', 'color', 'font-family'] as const;
+
+/**
+ * Bakes each element's own resolved color/font (M7) straight onto its exported clone, in the
+ * same traversal order `cloneNode(true)` preserves, so the exported file keeps looking the same
+ * with no dashboard stylesheet around to resolve `var(--naf-*)` through.
+ */
+function inlineComputedPresentation(live: Element, cloned: Element): void {
+  const liveElements = [live, ...Array.from(live.querySelectorAll('*'))];
+  const clonedElements = [cloned, ...Array.from(cloned.querySelectorAll('*'))];
+
+  liveElements.forEach((liveElement, index) => {
+    const clonedElement = clonedElements[index];
+    if (!(clonedElement instanceof SVGElement)) {
+      return;
+    }
+
+    const computed = getComputedStyle(liveElement);
+    for (const property of INLINED_PRESENTATION_PROPERTIES) {
+      const value = computed.getPropertyValue(property);
+      if (value) {
+        clonedElement.style.setProperty(property, value);
+      }
+    }
+  });
+}
+
 /**
  * Generalizes /blueprint (last successful execution of a route) to the union of every
  * execution of a route within a window (D-83): same question ("what does this route normally
@@ -33,6 +63,7 @@ function inputValue(event: Event): string {
 })
 export class ArchitectureComponent {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
 
   readonly windows = WINDOWS;
   readonly window = signal<PeriodPreset>(DEFAULT_WINDOW);
@@ -69,13 +100,42 @@ export class ArchitectureComponent {
     this.map() ? buildArchitectureGraph(this.map()!) : { nodes: [], edges: [] },
   );
 
+  private readonly architectureTrigger$ = new Subject<{
+    method: string;
+    routeTemplate: string;
+    from: string;
+  }>();
+
   constructor() {
     this.api.getEndpoints().subscribe((endpoints) => this.endpoints.set(endpoints));
 
-    this.api.getConfig().subscribe((config) => {
+    this.config.config$.subscribe((config) => {
       this.tailSamplingEnabled.set(config.tailSamplingEnabled);
       this.successSampleRate.set(config.successSampleRate);
     });
+
+    // `switchMap` (M4) cancels a still-in-flight request for an earlier route/window
+    // combination the moment a new one starts, so its response can never arrive after and
+    // overwrite it.
+    this.architectureTrigger$
+      .pipe(
+        switchMap(({ method, routeTemplate, from }) =>
+          this.api.getArchitecture(method, routeTemplate, { from }).pipe(
+            catchError(() => {
+              this.map.set(null);
+              this.error.set('architecture.error');
+              return of(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((map) => {
+        if (map) {
+          this.map.set(map);
+        }
+        this.loading.set(false);
+      });
 
     effect(() => {
       const route = this.selectedRoute();
@@ -91,17 +151,10 @@ export class ArchitectureComponent {
       const from = periodPresetFrom(window, new Date());
       this.loading.set(true);
       this.error.set(null);
-
-      this.api.getArchitecture(route.method, route.routeTemplate, { from }).subscribe({
-        next: (map) => {
-          this.map.set(map);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.map.set(null);
-          this.error.set('architecture.error');
-          this.loading.set(false);
-        },
+      this.architectureTrigger$.next({
+        method: route.method,
+        routeTemplate: route.routeTemplate,
+        from,
       });
     });
   }
@@ -136,7 +189,7 @@ export class ArchitectureComponent {
     downloadTextFile(architectureMapToMermaid(map), 'architecture.mmd', 'text/plain');
   }
 
-  exportSvg(): void {
+  async exportSvg(): Promise<void> {
     const svg = this.graphHost()?.nativeElement.querySelector('svg');
     if (!svg) {
       return;
@@ -147,10 +200,45 @@ export class ArchitectureComponent {
       clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     }
 
+    inlineComputedPresentation(svg, clone);
+    await this.inlineStateIcons(clone);
+
     downloadTextFile(
       new XMLSerializer().serializeToString(clone),
       'architecture.svg',
       'image/svg+xml',
     );
+  }
+
+  /**
+   * Replaces each state icon's relative `href` with the icon's own markup as a data URI (M7), so
+   * the exported file keeps showing every node's icon when opened on its own, with no dashboard
+   * server or stylesheet around to resolve the original relative path.
+   */
+  private async inlineStateIcons(svg: SVGSVGElement): Promise<void> {
+    const images = Array.from(svg.querySelectorAll('image'));
+    const hrefs = [
+      ...new Set(
+        images
+          .map((image) => image.getAttribute('href'))
+          .filter((href): href is string => !!href && !href.startsWith('data:')),
+      ),
+    ];
+
+    const dataUriByHref = new Map(
+      await Promise.all(
+        hrefs.map(async (href) => {
+          const markup = await firstValueFrom(this.api.getStaticAsset(href));
+          return [href, `data:image/svg+xml;utf8,${encodeURIComponent(markup)}`] as const;
+        }),
+      ),
+    );
+
+    for (const image of images) {
+      const dataUri = dataUriByHref.get(image.getAttribute('href') ?? '');
+      if (dataUri) {
+        image.setAttribute('href', dataUri);
+      }
+    }
   }
 }

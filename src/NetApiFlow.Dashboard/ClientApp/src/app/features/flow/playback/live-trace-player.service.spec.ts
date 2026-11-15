@@ -157,6 +157,31 @@ describe('LiveTracePlayerService', () => {
     expect(service.trace()?.spans.find((s) => s.spanId === 's2')?.status).toBe('Success');
   });
 
+  it('reaches a terminal not-found state when the baseline request fails, instead of loading forever (A3)', () => {
+    service.track('t1');
+
+    // Arrives before the failed GET /traces/{traceId} response: must not accumulate forever.
+    events.next(spanEvent(1, makeSpan('s1')));
+
+    getTraceCalls[0].error(new Error('404'));
+
+    expect(service.notFound()).toBe(true);
+    expect(service.trace()).toBeNull();
+
+    // A later event for the same (now known-dead) trace is just dropped, not buffered forever.
+    events.next(spanEvent(2, makeSpan('s2')));
+    expect(service.trace()).toBeNull();
+  });
+
+  it('clears the not-found state as soon as a new track() call starts', () => {
+    service.track('t1');
+    getTraceCalls[0].error(new Error('404'));
+    expect(service.notFound()).toBe(true);
+
+    service.track('t2');
+    expect(service.notFound()).toBe(false);
+  });
+
   it('reloads the consolidated trace on reconnect before resuming live updates', () => {
     service.track('t1');
     getTraceCalls[0].next(makeTrace([makeSpan('root')]));

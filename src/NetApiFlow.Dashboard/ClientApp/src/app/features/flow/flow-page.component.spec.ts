@@ -1,15 +1,22 @@
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import { FlowPageComponent } from './flow-page.component';
 import { SseService, SseConnectionState } from '../../core/sse.service';
-import { FlowTraceDetail, FlowTraceSummary } from '../../core/models';
+import { FlowEvent, FlowTrace, FlowTraceDetail, FlowTraceSummary } from '../../core/models';
+
+const sseEvents$ = new Subject<FlowEvent>();
+const sseReconnected$ = new Subject<void>();
 
 const fakeSse = {
-  events$: new Subject().asObservable(),
-  reconnected$: new Subject<void>().asObservable(),
+  events$: sseEvents$.asObservable(),
+  reconnected$: sseReconnected$.asObservable(),
   state: () => 'open' as SseConnectionState,
   connect: vi.fn(),
   disconnect: vi.fn(),
@@ -77,7 +84,10 @@ describe('FlowPageComponent', () => {
     httpMock.verify();
   });
 
-  /** FlowPageComponent, the metric cards and the action panel each read GET /config independently. */
+  /**
+   * FlowPageComponent, the metric cards and the action panel all read the same `ConfigService`
+   * (M9), so exactly one GET /config request serves every one of them.
+   */
   function flushAllConfigRequests(slowThresholdMicros = 250_000): void {
     for (const request of httpMock.match('api/config')) {
       request.flush({
@@ -109,6 +119,39 @@ describe('FlowPageComponent', () => {
     }
   }
 
+  /**
+   * M1: a live trace fires its own `GET /blueprint` once it loads. Flushed as 204 ("no ghosts")
+   * unless a test cares about what it returns, since the fetch only becomes a pending request
+   * after a tick (`livePlayer.trace()` becoming non-null), hence the extra `whenStable()`.
+   */
+  async function flushLiveBlueprint(
+    fixture: ComponentFixture<FlowPageComponent>,
+    blueprint: FlowTraceDetail | null = null,
+  ): Promise<TestRequest[]> {
+    await fixture.whenStable();
+    const requests = httpMock.match((request) => request.url === 'api/blueprint');
+    for (const request of requests) {
+      if (blueprint) {
+        request.flush(blueprint);
+      } else {
+        request.flush(null, { status: 204, statusText: 'No Content' });
+      }
+    }
+    await fixture.whenStable();
+    return requests;
+  }
+
+  function findReplayButton(fixture: ComponentFixture<FlowPageComponent>): HTMLButtonElement {
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
+      (candidate): candidate is HTMLButtonElement =>
+        (candidate as HTMLButtonElement).textContent?.trim() === 'Replay',
+    );
+    if (!button) {
+      throw new Error('Replay button not found');
+    }
+    return button;
+  }
+
   it('loads the trace from the ?trace= query param on mount', async () => {
     configure('t1');
     const fixture = TestBed.createComponent(FlowPageComponent);
@@ -118,9 +161,81 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.trace()?.traceId).toBe('t1');
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('fetches the blueprint once per tracked trace and marks a skipped branch not-executed before the trace ends (M1)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const blueprint: FlowTraceDetail = {
+      ...makeTrace('t1'),
+      spans: [
+        ...makeTrace('t1').spans,
+        {
+          spanId: 'bp-notify',
+          parentSpanId: 's1',
+          sequence: 1,
+          component: 'NotificationService',
+          operation: 'SendAsync',
+          type: 'Service',
+          startedAt: '2026-01-01T00:00:00.000000Z',
+          endedAt: '2026-01-01T00:00:00.000100Z',
+          durationMicros: 100,
+          status: 'Success',
+          errorType: null,
+          errorMessage: null,
+          isErrorOrigin: false,
+          tags: {},
+          logs: [],
+        },
+      ],
+    };
+    const [blueprintReq] = await flushLiveBlueprint(fixture, blueprint);
+    expect(blueprintReq.request.params.get('method')).toBe('GET');
+    expect(blueprintReq.request.params.get('route')).toBe('/api/orders/{id}');
+
+    // The root span (s1) already concluded without taking the blueprint's extra branch: that
+    // branch is settled as not-executed now, even though the trace overall is still Running.
+    expect(fixture.componentInstance.trace()?.status).toBe('Running');
+    expect(
+      fixture.componentInstance.graph().nodes.find((n) => n.component === 'NotificationService')
+        ?.state,
+    ).toBe('not-executed');
+  });
+
+  it('shows an explicit not-found state for a trace that expired or never existed (A3)', async () => {
+    configure('missing');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock
+      .expectOne('api/traces/missing')
+      .flush('not found', { status: 404, statusText: 'Not Found' });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.trace()).toBeNull();
+    expect(fixture.componentInstance.traceNotFound()).toBe(true);
+    // pt-BR is the default language; must not show the generic empty-list state instead.
+    expect(fixture.nativeElement.textContent).toContain('Trace não encontrada.');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhuma requisição em andamento');
   });
 
   it('lists in-progress traces when no ?trace= param is present', async () => {
@@ -150,6 +265,50 @@ describe('FlowPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('/api/orders');
   });
 
+  it('refreshes the in-progress list on a TraceStarted/TraceCompleted SSE event, without a page reload (M6)', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/live').flush([]);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.liveTraces()).toEqual([]);
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    sseEvents$.next({
+      eventId: 1,
+      type: 'TraceStarted',
+      traceId: 't9',
+      timestamp: '2026-01-01T00:00:00.000000Z',
+    });
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const summaries: FlowTraceSummary[] = [
+      {
+        traceId: 't9',
+        method: 'POST',
+        routeTemplate: '/api/orders',
+        httpStatus: null,
+        status: 'Running',
+        startedAt: '2026-01-01T00:00:00.000000Z',
+        durationMicros: null,
+        truncated: false,
+      },
+    ];
+    httpMock.expectOne('api/traces/live').flush(summaries);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.liveTraces()).toEqual(summaries);
+  });
+
   it('marks a span as slow using the threshold fetched from GET /config, not a fixed constant', async () => {
     configure('t1');
     const fixture = TestBed.createComponent(FlowPageComponent);
@@ -159,8 +318,46 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.graph().nodes[0].state).toBe('slow');
+  });
+
+  it('falls back to a reasonable default threshold when GET /config fails, instead of blocking the graph (M9)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    for (const request of httpMock.match('api/config')) {
+      request.flush('boom', { status: 500, statusText: 'Server Error' });
+    }
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    expect(fixture.componentInstance.slowThresholdMicros()).toBe(250_000);
+    expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('exits the loading state with an error message when loading the in-progress list fails (M9)', async () => {
+    configure(null);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock
+      .expectOne('api/traces/live')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.liveTracesLoading()).toBe(false);
+    expect(fixture.componentInstance.liveTracesError()).toBe(true);
+    // pt-BR is the default language.
+    expect(fixture.nativeElement.textContent).toContain(
+      'Falha ao carregar as requisições em andamento.',
+    );
   });
 
   it('toggles into replay mode and back to live', async () => {
@@ -172,13 +369,16 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.isReplaying()).toBe(false);
 
     fixture.componentInstance.toggleReplay();
     expect(fixture.componentInstance.isReplaying()).toBe(true);
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
-    expect(fixture.componentInstance.graph().nodes[0].state).toBe('not-executed');
+    // Not yet revealed by the replay, but the replay itself isn't finished either (A4): this
+    // must read as "waiting", never "not-executed" — the latter would claim the step never ran.
+    expect(fixture.componentInstance.graph().nodes[0].state).toBe('waiting');
 
     fixture.componentInstance.replayPlayer.stepForward();
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
@@ -187,6 +387,115 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.toggleReplay();
     expect(fixture.componentInstance.isReplaying()).toBe(false);
     expect(fixture.componentInstance.graph().nodes).toHaveLength(1);
+  });
+
+  it('disables the replay button while the trace is Running, and re-enables it once it concludes (M5)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    expect(findReplayButton(fixture).disabled).toBe(true);
+
+    const completedTrace: FlowTrace = makeTrace('t1');
+    sseEvents$.next({
+      eventId: 1,
+      type: 'TraceCompleted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:00:00.000200Z',
+      trace: completedTrace,
+    });
+    await fixture.whenStable();
+
+    expect(findReplayButton(fixture).disabled).toBe(false);
+  });
+
+  it('does not reset an already-playing replay when a new SSE event arrives for the same Running trace (M5)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    const runningTrace = makeTrace('t1');
+    runningTrace.status = 'Running';
+    runningTrace.httpStatus = null;
+    runningTrace.endedAt = null;
+    runningTrace.durationMicros = null;
+    runningTrace.spans = [
+      ...runningTrace.spans,
+      {
+        spanId: 's2',
+        parentSpanId: 's1',
+        sequence: 1,
+        component: 'OrderController',
+        operation: 'Notify',
+        type: 'Service',
+        startedAt: '2026-01-01T00:00:00.000100Z',
+        endedAt: '2026-01-01T00:00:00.000150Z',
+        durationMicros: 50,
+        status: 'Success',
+        errorType: null,
+        errorMessage: null,
+        isErrorOrigin: false,
+        tags: {},
+        logs: [],
+      },
+    ];
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(runningTrace);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    fixture.componentInstance.toggleReplay();
+    expect(fixture.componentInstance.isReplaying()).toBe(true);
+    expect(fixture.componentInstance.replayPlayer.totalSteps()).toBe(2);
+
+    fixture.componentInstance.replayPlayer.stepForward();
+    expect(fixture.componentInstance.replayPlayer.stepIndex()).toBe(1);
+    expect(fixture.componentInstance.replayPlayer.state()).toBe('paused');
+
+    sseEvents$.next({
+      eventId: 1,
+      type: 'SpanStarted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:00:00.000200Z',
+      span: {
+        spanId: 's3',
+        parentSpanId: 's1',
+        sequence: 2,
+        component: 'OrderController',
+        operation: 'Audit',
+        type: 'Service',
+        startedAt: '2026-01-01T00:00:00.000150Z',
+        endedAt: null,
+        durationMicros: null,
+        status: 'Running',
+        errorType: null,
+        errorMessage: null,
+        isErrorOrigin: false,
+        tags: {},
+        logs: [],
+      },
+    });
+    await fixture.whenStable();
+
+    // Not reloaded (M5): the live trace now has 3 spans, but the replay already in progress
+    // keeps the 2-span snapshot it started with, at the step the user left it on.
+    expect(fixture.componentInstance.replayPlayer.totalSteps()).toBe(2);
+    expect(fixture.componentInstance.replayPlayer.stepIndex()).toBe(1);
+    expect(fixture.componentInstance.replayPlayer.state()).toBe('paused');
   });
 
   it('shows the live pause toggle only while following a Running trace live, not during replay', async () => {
@@ -204,6 +513,7 @@ describe('FlowPageComponent', () => {
     });
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(true);
     // pt-BR is the default language (D-35).
@@ -243,6 +553,7 @@ describe('FlowPageComponent', () => {
     httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
     flushWorkspaceChildRequests();
     await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
 
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
@@ -343,5 +654,57 @@ describe('FlowPageComponent', () => {
 
     expect(fixture.componentInstance.importedTrace()).toBeNull();
     expect(fixture.componentInstance.trace()).toBeNull();
+  });
+
+  it('always reflects the latest span selection, never a stale response that arrives after a newer one (M4)', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush({
+      ...makeTrace('t1'),
+      spans: [
+        ...makeTrace('t1').spans,
+        {
+          spanId: 's2',
+          parentSpanId: 's1',
+          sequence: 1,
+          component: 'OrderService',
+          operation: 'GetAsync',
+          type: 'Service',
+          startedAt: '2026-01-01T00:00:00.000000Z',
+          endedAt: '2026-01-01T00:00:00.000100Z',
+          durationMicros: 100,
+          status: 'Success',
+          errorType: null,
+          errorMessage: null,
+          isErrorOrigin: false,
+          tags: {},
+          logs: [],
+        },
+      ],
+    });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    fixture.componentInstance.onNodeSelected('s1');
+    const firstReq = httpMock.expectOne('api/traces/t1/spans/s1');
+
+    fixture.componentInstance.onNodeSelected('s2');
+    const secondReq = httpMock.expectOne('api/traces/t1/spans/s2');
+
+    // `switchMap` (M4) unsubscribes the first (now stale) lookup the moment the second starts.
+    expect(firstReq.cancelled).toBe(true);
+
+    secondReq.flush({
+      span: { ...makeTrace('t1').spans[0], spanId: 's2' },
+      ancestors: [],
+      children: [],
+    } as never);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedSpanDetail()?.span.spanId).toBe('s2');
   });
 });

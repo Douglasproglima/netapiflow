@@ -108,18 +108,22 @@ export class ApiService {
    * `path` is root-relative, exactly as declared in the host's OpenAPI document (never prefixed
    * with `basePath`, since it does not belong to the dashboard's own API namespace).
    */
-  callEndpoint(
-    method: string,
-    path: string,
-    body?: unknown,
-    headers?: Record<string, string>,
-  ): Observable<HttpResponse<unknown>> {
-    return this.http.request(method, path, { body, headers, observe: 'response' });
+  callEndpoint(method: string, path: string, body?: unknown): Observable<HttpResponse<unknown>> {
+    return this.http.request(method, path, { body, observe: 'response' });
   }
 
   /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */
   loadOpenApiDocument(url: string): Observable<OpenApiDocument> {
     return this.http.get<OpenApiDocument>(url);
+  }
+
+  /**
+   * Fetches a static asset served alongside the dashboard itself (e.g. a node-state icon SVG),
+   * at a root-relative URL never prefixed with `basePath`, since it isn't part of the
+   * dashboard's own API namespace.
+   */
+  getStaticAsset(path: string): Observable<string> {
+    return this.http.get(path, { responseType: 'text' });
   }
 }
 

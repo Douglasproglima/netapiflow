@@ -7,6 +7,53 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-15
+
+### Fixed
+
+- `NetApiFlow`: a route template is now recorded and queried in one consistent shape (a leading
+  slash, never a trailing one), regardless of whether the route was declared as a Controller
+  attribute route or a Minimal API group. Previously, Controller-style routes were recorded
+  without a leading slash, so the architecture map, `GET /blueprint`, and the `/traces`/
+  `/architecture` route filters never matched their executions. Existing rows in
+  `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer` are normalized in place the
+  next time each store starts.
+- `NetApiFlow.Dashboard`: "Try an endpoint" no longer ships a fixed "Scenarios" tab with sample
+  routes that don't exist on the host's own API.
+- `NetApiFlow.Dashboard`: metrics, the in-progress trace list, and the live graph no longer
+  trigger a fresh HTTP request for every single SSE event during a burst of traces; requests are
+  now coalesced.
+- `NetApiFlow.Dashboard`: `/flow?trace=<id>` with an expired or invalid trace id now shows an
+  explicit "trace not found" state instead of staying on "Loading" forever.
+- `NetApiFlow.Dashboard`: replaying a trace no longer marks a step the replay hasn't reached yet
+  as "not executed"; it now shows "waiting" until the replay actually reveals it.
+- `NetApiFlow.Dashboard`: a live trace now uses `GET /blueprint` to mark a branch the blueprint
+  predicted but the trace skipped as "not executed", instead of only working during replay.
+- `NetApiFlow.Dashboard`: the live graph's legend no longer lists "Cancelled"/"Timeout", states
+  that only apply to a whole trace, never to an individual node.
+- `NetApiFlow.Dashboard`: a manual zoom or pan on the live graph is no longer undone by the next
+  live update.
+- `NetApiFlow.Dashboard`: an in-flight request superseded by a newer one (history, insights,
+  architecture map, node/span selection) no longer lets its stale response overwrite the newer
+  result.
+- `NetApiFlow.Dashboard`: replay is disabled while a trace is still `Running`, and no longer
+  resets its current step on every SSE event for the same trace.
+- `NetApiFlow.Dashboard`: the exported architecture map SVG is now self-contained (resolved
+  colors and embedded state icons), so it renders correctly outside the dashboard.
+- `NetApiFlow.Dashboard`: the "Flow" sidebar item is only marked active on the root route, not on
+  every route under it.
+- `NetApiFlow.Dashboard`: `GET /config` is now fetched once and shared across every consumer,
+  with a sane fallback and error handling when the call fails.
+- `NetApiFlow.Dashboard`: the dead-route warning now adds a caveat when tail sampling is enabled,
+  since sampling can explain the absence of traces as well as a genuinely unused route.
+- `NetApiFlow.Dashboard`: the standalone `/runner` page no longer stretches its form edge to edge
+  on wide viewports.
+- `NetApiFlow.Dashboard`: the live graph's `viewBox` no longer grows without bound when the
+  canvas is short (for example, while the replay bar is open), and caps how much of the canvas an
+  overlay (the state legend) can reserve.
+- `NetApiFlow.Dashboard`: the "Send request" button no longer shrinks below a readable height in
+  a narrow flex layout.
+
 ## [0.3.0] - 2026-11-14
 
 ### Fixed
