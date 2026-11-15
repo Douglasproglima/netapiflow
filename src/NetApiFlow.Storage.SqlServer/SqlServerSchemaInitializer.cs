@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using NetApiFlow.Routing;
 
 namespace NetApiFlow.Storage.SqlServer;
 
@@ -61,6 +62,40 @@ internal static class SqlServerSchemaInitializer
 
         await using var command = new SqlCommand(sql, connection);
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Brings every already-stored <c>route_template</c> to <see cref="RouteTemplateNormalizer"/>'s
+    /// canonical shape, idempotent: once every row is canonical, the distinct set to check next
+    /// time is unaffected and nothing is rewritten.
+    /// </summary>
+    public static async Task NormalizeRouteTemplatesAsync(SqlConnection connection, string tracesTable, CancellationToken cancellationToken)
+    {
+        var distinctRouteTemplates = new List<string>();
+        await using (var selectCommand = new SqlCommand($"SELECT DISTINCT route_template FROM {tracesTable}", connection))
+        await using (var reader = await selectCommand.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                distinctRouteTemplates.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var routeTemplate in distinctRouteTemplates)
+        {
+            var normalized = RouteTemplateNormalizer.Normalize(routeTemplate);
+            if (normalized == routeTemplate)
+            {
+                continue;
+            }
+
+            await using var updateCommand = new SqlCommand(
+                $"UPDATE {tracesTable} SET route_template = @normalized WHERE route_template = @original",
+                connection);
+            updateCommand.Parameters.AddWithValue("normalized", normalized);
+            updateCommand.Parameters.AddWithValue("original", routeTemplate);
+            await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 
     public static async Task EnsureDeployAnnotationsCreatedAsync(SqlConnection connection, string deployAnnotationsTable, CancellationToken cancellationToken)

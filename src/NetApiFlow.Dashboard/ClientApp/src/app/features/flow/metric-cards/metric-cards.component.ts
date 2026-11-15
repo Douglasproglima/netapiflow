@@ -1,6 +1,8 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Subscription, auditTime, filter, merge, of, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/api.service';
-import { SseService } from '../../../core/sse.service';
+import { ConfigService } from '../../../core/config.service';
+import { SSE_REFRESH_AUDIT_MS, SseService } from '../../../core/sse.service';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../../core/i18n/translations';
@@ -46,14 +48,16 @@ function splitDuration(formatted: string): { value: string; unit: string | null 
 })
 export class MetricCardsComponent implements OnDestroy {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly sse = inject(SseService);
-  private readonly sseSubscription = this.sse.events$.subscribe((event) => {
-    if (event.type === 'TraceCompleted') {
-      this.loadMetrics();
-      this.loadComponentMetrics();
-      this.loadSparkline();
-    }
-  });
+
+  /** Every consumer below refreshes at most once per `SSE_REFRESH_AUDIT_MS` window (A2), each independently cancelling its own stale in-flight request. */
+  private readonly traceCompleted$ = this.sse.events$.pipe(
+    filter((event) => event.type === 'TraceCompleted'),
+    auditTime(SSE_REFRESH_AUDIT_MS),
+  );
+
+  private readonly subscriptions = new Subscription();
 
   readonly loading = signal(true);
   readonly error = signal<TranslationKey | null>(null);
@@ -149,63 +153,65 @@ export class MetricCardsComponent implements OnDestroy {
   });
 
   constructor() {
-    this.api
-      .getConfig()
-      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+    this.config.config$.subscribe((config) =>
+      this.slowThresholdMicros.set(config.slowThresholdMicros),
+    );
 
-    this.loadMetrics();
-    this.loadComponentMetrics();
-    this.loadSparkline();
+    this.subscriptions.add(
+      merge(of(undefined), this.traceCompleted$)
+        .pipe(switchMap(() => this.api.getMetrics({})))
+        .subscribe({
+          next: (summary) => {
+            this.totalTraces.set(summary.totalTraces);
+            this.errorCount.set(summary.errorCount);
+            this.averageDurationMicros.set(summary.averageDurationMicros);
+            this.maxDurationMicros.set(summary.maxDurationMicros);
+            this.p95DurationMicros.set(summary.p95DurationMicros);
+            this.loading.set(false);
+          },
+          error: () => {
+            this.error.set('metrics.error');
+            this.loading.set(false);
+          },
+        }),
+    );
+
+    this.subscriptions.add(
+      merge(of(undefined), this.traceCompleted$)
+        .pipe(switchMap(() => this.api.getComponentMetrics({})))
+        .subscribe({
+          next: (stats) => {
+            const total = stats.reduce((sum, stat) => sum + stat.executionCount, 0);
+            this.stepsExecuted.set(total);
+          },
+          error: () => {
+            // Steps executed is a bonus figure on top of GET /metrics; its own failure doesn't block
+            // the rest of the strip, which already has its own error state.
+          },
+        }),
+    );
+
+    this.subscriptions.add(
+      merge(of(undefined), this.traceCompleted$)
+        .pipe(switchMap(() => this.api.getTraces({ page: 1, pageSize: SPARKLINE_SAMPLE_SIZE })))
+        .subscribe({
+          next: (result) => {
+            this.sparklineDurations.set(
+              result.items
+                .map((trace) => trace.durationMicros)
+                .filter((value): value is number => value !== null)
+                .reverse(),
+            );
+          },
+          error: () => {
+            // The sparkline is a supplementary visual on top of the p95 figure; its own failure
+            // doesn't block the rest of the strip, which already has its own error state.
+          },
+        }),
+    );
   }
 
   ngOnDestroy(): void {
-    this.sseSubscription.unsubscribe();
-  }
-
-  private loadMetrics(): void {
-    this.api.getMetrics({}).subscribe({
-      next: (summary) => {
-        this.totalTraces.set(summary.totalTraces);
-        this.errorCount.set(summary.errorCount);
-        this.averageDurationMicros.set(summary.averageDurationMicros);
-        this.maxDurationMicros.set(summary.maxDurationMicros);
-        this.p95DurationMicros.set(summary.p95DurationMicros);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('metrics.error');
-        this.loading.set(false);
-      },
-    });
-  }
-
-  private loadComponentMetrics(): void {
-    this.api.getComponentMetrics({}).subscribe({
-      next: (stats) => {
-        const total = stats.reduce((sum, stat) => sum + stat.executionCount, 0);
-        this.stepsExecuted.set(total);
-      },
-      error: () => {
-        // Steps executed is a bonus figure on top of GET /metrics; its own failure doesn't block
-        // the rest of the strip, which already has its own error state.
-      },
-    });
-  }
-
-  private loadSparkline(): void {
-    this.api.getTraces({ page: 1, pageSize: SPARKLINE_SAMPLE_SIZE }).subscribe({
-      next: (result) => {
-        this.sparklineDurations.set(
-          result.items
-            .map((trace) => trace.durationMicros)
-            .filter((value): value is number => value !== null)
-            .reverse(),
-        );
-      },
-      error: () => {
-        // The sparkline is a supplementary visual on top of the p95 figure; its own failure
-        // doesn't block the rest of the strip, which already has its own error state.
-      },
-    });
+    this.subscriptions.unsubscribe();
   }
 }

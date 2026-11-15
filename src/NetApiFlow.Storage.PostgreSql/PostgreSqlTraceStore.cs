@@ -465,6 +465,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
             await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
+            await PostgreSqlSchemaInitializer.NormalizeRouteTemplatesAsync(connection, _tracesTable, cancellationToken);
             _schemaReady = true;
         }
         finally

@@ -224,12 +224,19 @@ describe('MetricCardsComponent', () => {
       '10',
     );
 
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
     sse.emit({
       eventId: 1,
       type: 'TraceCompleted',
       traceId: 't1',
       timestamp: '2026-01-01T00:00:00Z',
     });
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
     httpMock.expectOne('api/metrics').flush({ ...SUMMARY, totalTraces: 11 });
     httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
     flushSparkline();
@@ -238,6 +245,37 @@ describe('MetricCardsComponent', () => {
     expect(fixture.componentInstance.cards().find((card) => card.icon === 'traces')?.value).toBe(
       '11',
     );
+  });
+
+  it('coalesces a burst of TraceCompleted events into at most one extra round of calls per origin (A2)', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
+    await fixture.whenStable();
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    for (let i = 0; i < 10; i++) {
+      sse.emit({
+        eventId: i,
+        type: 'TraceCompleted',
+        traceId: `t${i}`,
+        timestamp: '2026-01-01T00:00:00Z',
+      });
+    }
+
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(httpMock.match('api/metrics').length).toBeLessThanOrEqual(1);
+    expect(httpMock.match('api/metrics/components').length).toBeLessThanOrEqual(1);
+    expect(httpMock.match((r) => r.url === 'api/traces').length).toBeLessThanOrEqual(1);
   });
 
   it('renders the p95 figure from GET /metrics and a sparkline point per execution from GET /traces', async () => {

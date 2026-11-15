@@ -2,8 +2,9 @@ import { Component, OnDestroy, inject, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { auditTime, filter, merge, of, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/api.service';
-import { SseService } from '../../../core/sse.service';
+import { SSE_REFRESH_AUDIT_MS, SseService } from '../../../core/sse.service';
 import { FlowTraceSummary } from '../../../core/models';
 import { formatDurationMicros } from '../../../shared/duration-format';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
@@ -30,11 +31,6 @@ export class RecentExecutionsComponent implements OnDestroy {
   private readonly api = inject(ApiService);
   private readonly language = inject(LanguageService);
   private readonly sse = inject(SseService);
-  private readonly sseSubscription = this.sse.events$.subscribe((event) => {
-    if (event.type === 'TraceCompleted') {
-      this.loadTraces();
-    }
-  });
 
   readonly loading = signal(true);
   readonly error = signal<TranslationKey | null>(null);
@@ -43,20 +39,16 @@ export class RecentExecutionsComponent implements OnDestroy {
 
   readonly traceSelected = output<string>();
 
-  toggleCollapsed(): void {
-    this.collapsed.update((collapsed) => !collapsed);
-  }
-
-  constructor() {
-    this.loadTraces();
-  }
-
-  ngOnDestroy(): void {
-    this.sseSubscription.unsubscribe();
-  }
-
-  private loadTraces(): void {
-    this.api.getTraces({ page: 1, pageSize: PAGE_SIZE }).subscribe({
+  /** Refreshes at most once per `SSE_REFRESH_AUDIT_MS` window (A2), cancelling a stale in-flight request. */
+  private readonly subscription = merge(
+    of(undefined),
+    this.sse.events$.pipe(
+      filter((event) => event.type === 'TraceCompleted'),
+      auditTime(SSE_REFRESH_AUDIT_MS),
+    ),
+  )
+    .pipe(switchMap(() => this.api.getTraces({ page: 1, pageSize: PAGE_SIZE })))
+    .subscribe({
       next: (result) => {
         this.traces.set(result.items);
         this.loading.set(false);
@@ -66,6 +58,13 @@ export class RecentExecutionsComponent implements OnDestroy {
         this.loading.set(false);
       },
     });
+
+  toggleCollapsed(): void {
+    this.collapsed.update((collapsed) => !collapsed);
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
   }
 
   methodTagClass(method: string): string {

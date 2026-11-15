@@ -4,6 +4,7 @@ import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
+import { ConfigService } from '../../core/config.service';
 import { OpenApiDocument } from '../../core/models';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import {
@@ -14,27 +15,6 @@ import {
 } from './openapi-form';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
-
-type ActionTab = 'custom' | 'scenarios';
-
-interface Scenario {
-  key: 'success' | 'slow' | 'error' | 'sequential';
-  method: string;
-  path: string;
-}
-
-const SCENARIOS: readonly Scenario[] = [
-  { key: 'success', method: 'GET', path: '/api/orders/1' },
-  { key: 'slow', method: 'GET', path: '/api/orders/1/slow' },
-  { key: 'error', method: 'GET', path: '/api/orders/2/confirm' },
-  { key: 'sequential', method: 'GET', path: '/api/orders/sequential?ids=1&ids=2&ids=3' },
-];
-
-const DELAY_OPTIONS_MS: readonly number[] = [0, 250, 1000, 3000];
-
-const DEMO_DELAY_HEADER_NAME = 'X-NetApiFlow-Demo-Delay-Ms';
-
-const FALLBACK_OPEN_API_DOCUMENT_PATH = '/openapi/v1.json';
 
 /**
  * Lets the user pick an endpoint from the host application's own OpenAPI document, fill in its
@@ -55,6 +35,7 @@ const FALLBACK_OPEN_API_DOCUMENT_PATH = '/openapi/v1.json';
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
   private readonly document = inject(DOCUMENT);
 
   readonly traceDispatched = output<string>();
@@ -105,16 +86,8 @@ export class EndpointFormComponent {
   readonly sendError = signal<TranslationKey | null>(null);
   readonly lastTraceId = signal<string | null>(null);
 
-  readonly activeTab = signal<ActionTab>('custom');
-  readonly scenarios = SCENARIOS;
-  readonly delayOptionsMs = DELAY_OPTIONS_MS;
-  readonly selectedDelayMs = signal(0);
-
   constructor() {
-    this.api.getConfig().subscribe({
-      next: (config) => this.loadOpenApiDocument(config.openApiDocumentPath),
-      error: () => this.loadOpenApiDocument(FALLBACK_OPEN_API_DOCUMENT_PATH),
-    });
+    this.config.config$.subscribe((config) => this.loadOpenApiDocument(config.openApiDocumentPath));
   }
 
   private loadOpenApiDocument(path: string): void {
@@ -158,24 +131,6 @@ export class EndpointFormComponent {
     return httpMethodTagClass(method);
   }
 
-  setActiveTab(tab: ActionTab): void {
-    this.activeTab.set(tab);
-    this.sendError.set(null);
-    this.lastTraceId.set(null);
-  }
-
-  scenarioLabelKey(scenario: Scenario): TranslationKey {
-    return `action.scenario.${scenario.key}.label`;
-  }
-
-  scenarioDescriptionKey(scenario: Scenario): TranslationKey {
-    return `action.scenario.${scenario.key}.description`;
-  }
-
-  selectDelay(delayMs: number): void {
-    this.selectedDelayMs.set(delayMs);
-  }
-
   send(): void {
     const form = this.form();
     if (!form) {
@@ -204,12 +159,6 @@ export class EndpointFormComponent {
 
     const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
     this.dispatch(this.api.callEndpoint(form.method, fullPath, body));
-  }
-
-  sendScenario(scenario: Scenario): void {
-    const delayMs = this.selectedDelayMs();
-    const headers = delayMs > 0 ? { [DEMO_DELAY_HEADER_NAME]: String(delayMs) } : undefined;
-    this.dispatch(this.api.callEndpoint(scenario.method, scenario.path, undefined, headers));
   }
 
   private dispatch(request: Observable<HttpResponse<unknown>>): void {

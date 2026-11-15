@@ -23,6 +23,10 @@ export class LiveTracePlayerService implements OnDestroy {
   private readonly pausedSignal = signal(false);
   readonly paused = this.pausedSignal.asReadonly();
 
+  private readonly notFoundSignal = signal(false);
+  /** Set when `GET /traces/{traceId}` fails (expired from the buffer, or an invalid id). */
+  readonly notFound = this.notFoundSignal.asReadonly();
+
   private currentTraceId: string | null = null;
   private readonly seenEventIds = new Set<number>();
   private readonly lastEventIdBySpanId = new Map<string, number>();
@@ -62,6 +66,7 @@ export class LiveTracePlayerService implements OnDestroy {
     this.lastTraceEventId = -1;
     this.pendingEvents = [];
     this.pausedSignal.set(false);
+    this.notFoundSignal.set(false);
     this.traceSignal.set(null);
   }
 
@@ -85,14 +90,26 @@ export class LiveTracePlayerService implements OnDestroy {
     }
 
     this.loadingBaseline = true;
-    this.api.getTrace(traceId).subscribe((trace) => {
-      if (this.currentTraceId !== traceId) {
-        return; // Stopped or switched to a different trace while this request was in flight.
-      }
+    this.notFoundSignal.set(false);
+    this.api.getTrace(traceId).subscribe({
+      next: (trace) => {
+        if (this.currentTraceId !== traceId) {
+          return; // Stopped or switched to a different trace while this request was in flight.
+        }
 
-      this.traceSignal.set(trace);
-      this.loadingBaseline = false;
-      this.flushPendingEvents();
+        this.traceSignal.set(trace);
+        this.loadingBaseline = false;
+        this.flushPendingEvents();
+      },
+      error: () => {
+        if (this.currentTraceId !== traceId) {
+          return; // Stopped or switched to a different trace while this request was in flight.
+        }
+
+        this.loadingBaseline = false;
+        this.pendingEvents = [];
+        this.notFoundSignal.set(true);
+      },
     });
   }
 
