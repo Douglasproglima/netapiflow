@@ -5,8 +5,12 @@ export type Theme = 'dark' | 'light';
 const STORAGE_KEY = 'naf-theme';
 
 function readStoredTheme(): Theme | null {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'dark' || stored === 'light' ? stored : null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === 'dark' || stored === 'light' ? stored : null;
+  } catch {
+    return null;
+  }
 }
 
 function prefersLight(): boolean {
@@ -26,7 +30,7 @@ function applyDomAttribute(preference: Theme | null): void {
 }
 
 /**
- * Manual theme toggle (D-36): `null` means no saved preference, so `prefers-color-scheme` stays
+ * Manual theme toggle: `null` means no saved preference, so `prefers-color-scheme` stays
  * in charge, same as before this existed. Picking a theme writes `data-theme` on the document
  * root and persists it, overriding the media query from then on.
  *
@@ -47,7 +51,12 @@ export class ThemeService {
 
   toggle(): void {
     this.preference = this.isDark() ? 'light' : 'dark';
-    localStorage.setItem(STORAGE_KEY, this.preference);
+    try {
+      localStorage.setItem(STORAGE_KEY, this.preference);
+    } catch {
+      // Storage may be unavailable (private browsing, exhausted quota, a blocked iframe); the
+      // toggle still works for the rest of this session, it just won't be remembered next time.
+    }
     this.isDark.set(resolveIsDark(this.preference));
     applyDomAttribute(this.preference);
   }

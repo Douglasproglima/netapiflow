@@ -7,6 +7,10 @@ describe('LanguageService', () => {
     TestBed.configureTestingModule({});
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('defaults to pt-BR when there is no saved preference (D-35, never navigator.language)', () => {
     const service = TestBed.inject(LanguageService);
 
@@ -52,5 +56,26 @@ describe('LanguageService', () => {
     const service = TestBed.inject(LanguageService);
 
     expect(service.translate('topbar.inProgress', { count: 3 })).toBe('3 em andamento');
+  });
+
+  it('falls back to pt-BR when localStorage.getItem throws', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked');
+    });
+
+    const service = TestBed.inject(LanguageService);
+
+    expect(service.language()).toBe('pt-BR');
+  });
+
+  it('keeps updating the signal even when localStorage.setItem throws', () => {
+    const service = TestBed.inject(LanguageService);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked');
+    });
+
+    expect(() => service.setLanguage('en')).not.toThrow();
+
+    expect(service.language()).toBe('en');
   });
 });

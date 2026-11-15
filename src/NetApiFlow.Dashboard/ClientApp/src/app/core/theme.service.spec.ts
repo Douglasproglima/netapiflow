@@ -22,6 +22,7 @@ describe('ThemeService', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('follows prefers-color-scheme when there is no saved preference', () => {
@@ -68,5 +69,29 @@ describe('ThemeService', () => {
     expect(service.isDark()).toBe(false);
     expect(document.documentElement.dataset['theme']).toBe('light');
     expect(localStorage.getItem('naf-theme')).toBe('light');
+  });
+
+  it('falls back to the system preference when localStorage.getItem throws', () => {
+    stubPrefersColorScheme(true);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked');
+    });
+
+    const service = TestBed.inject(ThemeService);
+
+    expect(service.isDark()).toBe(false);
+  });
+
+  it('keeps toggling the signal and DOM attribute even when localStorage.setItem throws', () => {
+    stubPrefersColorScheme(true);
+    const service = TestBed.inject(ThemeService);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked');
+    });
+
+    expect(() => service.toggle()).not.toThrow();
+
+    expect(service.isDark()).toBe(true);
+    expect(document.documentElement.dataset['theme']).toBe('dark');
   });
 });
