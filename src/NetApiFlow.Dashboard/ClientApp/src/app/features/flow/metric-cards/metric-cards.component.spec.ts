@@ -211,6 +211,38 @@ describe('MetricCardsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Falha ao carregar as métricas.');
   });
 
+  it('clears the error state once a later refresh succeeds', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush('boom', { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.error()).toBe('metrics.error');
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    sse.emit({
+      eventId: 1,
+      type: 'TraceCompleted',
+      traceId: 't1',
+      timestamp: '2026-01-01T00:00:00Z',
+    });
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.error()).toBeNull();
+  });
+
   it('re-fetches the metrics when a TraceCompleted event arrives (D-39)', async () => {
     const fixture = TestBed.createComponent(MetricCardsComponent);
     await fixture.whenStable();

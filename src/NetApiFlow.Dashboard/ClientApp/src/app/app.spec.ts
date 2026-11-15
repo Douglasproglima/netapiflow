@@ -144,6 +144,50 @@ describe('App', () => {
     expect(flowNavItem()?.classList.contains('app-rail__item--active')).toBe(false);
   });
 
+  it('wraps the nav links in a <nav> landmark and marks the active route with aria-current', async () => {
+    localStorage.clear();
+    const { fake } = fakeBreakpointObserver(false);
+    const sse = fakeSseService();
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [
+        provideRouter([
+          { path: '', component: StubPageComponent, data: { title: 'nav.flow' } },
+          { path: 'history', component: StubPageComponent, data: { title: 'nav.history' } },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: BreakpointObserver, useValue: fake },
+        { provide: SseService, useValue: sse },
+        { provide: ThemeService, useValue: fakeThemeService() },
+      ],
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(App);
+    await TestBed.inject(Router).navigateByUrl('/');
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const nav = compiled.querySelector('nav');
+    expect(nav).not.toBeNull();
+    expect(nav?.querySelector('a[href="/"]')).toBeTruthy();
+
+    const flowNavItem = (): Element | null => compiled.querySelector('a.app-rail__item[href="/"]');
+    const historyNavItem = (): Element | null =>
+      compiled.querySelector('a.app-rail__item[href="/history"]');
+
+    expect(flowNavItem()?.getAttribute('aria-current')).toBe('page');
+    expect(historyNavItem()?.getAttribute('aria-current')).toBeNull();
+
+    await TestBed.inject(Router).navigateByUrl('/history');
+    await fixture.whenStable();
+
+    expect(flowNavItem()?.getAttribute('aria-current')).toBeNull();
+    expect(historyNavItem()?.getAttribute('aria-current')).toBe('page');
+  });
+
   it('docks the rail open by default on a wide viewport, with the hamburger also present', async () => {
     const { fixture } = setup(false);
     await fixture.whenStable();
@@ -244,6 +288,25 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.inProgressCount()).toBe(1);
+  });
+
+  it('announces the SSE connection chip with aria-live="polite", regardless of connection state', async () => {
+    const { fixture, sse } = setup(false);
+    await fixture.whenStable();
+    flushShellRequests();
+    await fixture.whenStable();
+
+    const chip = (): Element | null => fixture.nativeElement.querySelector('.naf-chip');
+
+    expect(chip()?.getAttribute('aria-live')).toBe('polite');
+
+    sse.state.set('connecting');
+    fixture.detectChanges();
+    expect(chip()?.getAttribute('aria-live')).toBe('polite');
+
+    sse.state.set('closed');
+    fixture.detectChanges();
+    expect(chip()?.getAttribute('aria-live')).toBe('polite');
   });
 
   it('coalesces a burst of trace events into at most one extra GET /traces/live call (A2)', async () => {

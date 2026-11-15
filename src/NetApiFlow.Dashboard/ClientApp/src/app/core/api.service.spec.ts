@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { ApiService } from './api.service';
 import {
   ArchitectureMap,
@@ -254,5 +254,17 @@ describe('ApiService', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ customerName: 'Acme' });
     req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+  });
+
+  it('callEndpoint forwards custom headers on the dispatched request', () => {
+    const headers = new HttpHeaders().set('X-Tenant', 'acme').set('Authorization', 'Bearer abc');
+    service
+      .callEndpoint('GET', '/api/orders/5', undefined, headers)
+      .subscribe((response) => expect(response.status).toBe(200));
+
+    const req = httpMock.expectOne('/api/orders/5');
+    expect(req.request.headers.get('X-Tenant')).toBe('acme');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
+    req.flush(null, { status: 200, statusText: 'OK' });
   });
 });

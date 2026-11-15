@@ -109,21 +109,62 @@ describe('ReplayPlayerService', () => {
     expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first', 'second']);
   });
 
-  it('plays faster at higher speed than at lower speed', async () => {
+  it('plays faster at higher speed than at lower speed, once the real gap between steps is large enough to matter', async () => {
     vi.useFakeTimers();
-    const trace = makeTrace([makeSpan('s1', 0, '2026-01-01T00:00:00.000000Z', 1_000)]);
+    const trace = makeTrace([
+      makeSpan('first', 0, '2026-01-01T00:00:00.000000Z', 1_000),
+      makeSpan('second', 1, '2026-01-01T00:00:02.000000Z', 1_000), // 2s real gap
+    ]);
 
     service.load(trace);
     service.setSpeed(4);
     service.play();
-    await vi.advanceTimersByTimeAsync(40); // 150ms / 4 = 37.5ms, so this should be enough
+    await vi.advanceTimersByTimeAsync(700); // 150ms (first step) + 2000ms/4 (second) = 650ms
     expect(service.state()).toBe('finished');
 
     service.load(trace);
     service.setSpeed(0.25);
     service.play();
-    await vi.advanceTimersByTimeAsync(40);
-    expect(service.state()).toBe('playing'); // 150ms / 0.25 = 600ms, nowhere near done yet
+    await vi.advanceTimersByTimeAsync(700); // 2000ms/0.25 alone is already 8000ms for the second step
+    expect(service.state()).toBe('playing');
+  });
+
+  it('never lets a step flash by below the minimum visual delay, even at high speed', async () => {
+    vi.useFakeTimers();
+    const trace = makeTrace([
+      makeSpan('first', 0, '2026-01-01T00:00:00.000000Z', 1_000),
+      makeSpan('second', 1, '2026-01-01T00:00:00.010000Z', 1_000), // 10ms real gap
+    ]);
+    service.load(trace);
+    service.setSpeed(4);
+    service.play();
+
+    // Old buggy floor (150ms / speed) would have revealed both steps well before 200ms
+    // (37.5ms + 37.5ms); the fixed floor keeps each step visible for a full 150ms regardless
+    // of speed, so only the first step should be visible this early.
+    await vi.advanceTimersByTimeAsync(200);
+    expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first']);
+
+    await vi.advanceTimersByTimeAsync(150);
+    expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first', 'second']);
+  });
+
+  it('caps the delay between steps at a maximum, instead of freezing on an unusually large real gap', async () => {
+    vi.useFakeTimers();
+    const trace = makeTrace([
+      makeSpan('first', 0, '2026-01-01T00:00:00.000000Z', 1_000),
+      makeSpan('second', 1, '2026-01-01T00:00:40.000000Z', 1_000), // 40s real gap
+    ]);
+    service.load(trace);
+    service.setSpeed(1);
+    service.play();
+
+    await vi.advanceTimersByTimeAsync(150);
+    expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first']);
+
+    // Well under the uncapped 40s gap, but past the new maximum delay.
+    await vi.advanceTimersByTimeAsync(5_100);
+    expect(service.visibleSpans().map((s) => s.spanId)).toEqual(['first', 'second']);
   });
 
   it('pause stops the timeline without losing progress, and restart resets it to the beginning', async () => {
