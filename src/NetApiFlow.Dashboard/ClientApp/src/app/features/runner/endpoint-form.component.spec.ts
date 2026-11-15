@@ -132,7 +132,7 @@ describe('EndpointFormComponent', () => {
     fixture.componentInstance.send();
     await fixture.whenStable();
 
-    const req = httpMock.expectOne('/api/orders/5');
+    const req = httpMock.expectOne('api/orders/5');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ customerName: 'Acme' });
     req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
@@ -156,7 +156,7 @@ describe('EndpointFormComponent', () => {
     fixture.componentInstance.send();
     await fixture.whenStable();
 
-    const req = httpMock.expectOne('/api/orders/5');
+    const req = httpMock.expectOne('api/orders/5');
     expect(req.request.headers.get('X-Tenant')).toBe('acme');
     req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
   });
@@ -174,7 +174,7 @@ describe('EndpointFormComponent', () => {
     fixture.componentInstance.send();
     await fixture.whenStable();
 
-    const req = httpMock.expectOne('/api/orders/5');
+    const req = httpMock.expectOne('api/orders/5');
     expect(req.request.headers.keys()).toEqual([]);
     req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
   });
@@ -195,6 +195,7 @@ describe('EndpointFormComponent', () => {
       'Preencha o parâmetro de rota "id" antes de enviar.',
     );
     httpMock.expectNone('/api/orders/');
+    httpMock.expectNone('api/orders/');
   });
 
   it('never renders a Scenarios tab or any hardcoded sample route', async () => {

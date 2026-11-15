@@ -105,8 +105,10 @@ export class ApiService {
   /**
    * Dispatches a request to an arbitrary endpoint of the host application (the Runner, tarefa
    * 4.11), as opposed to every other method here, which calls the dashboard's own ten routes.
-   * `path` is root-relative, exactly as declared in the host's OpenAPI document (never prefixed
-   * with `basePath`, since it does not belong to the dashboard's own API namespace).
+   * `path` arrives with a leading slash, exactly as declared in the host's OpenAPI document.
+   * Stripped here so the browser resolves it as relative, against the page's own `<base href>`
+   * (risco R-03), which is what lets the request still reach the host once a reverse proxy's
+   * `PathBase` sits in front of it, instead of going straight to the domain root.
    */
   callEndpoint(
     method: string,
@@ -114,7 +116,8 @@ export class ApiService {
     body?: unknown,
     headers?: HttpHeaders,
   ): Observable<HttpResponse<unknown>> {
-    return this.http.request(method, path, { body, headers, observe: 'response' });
+    const relativePath = path.replace(/^\/+/, '');
+    return this.http.request(method, relativePath, { body, headers, observe: 'response' });
   }
 
   /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */
