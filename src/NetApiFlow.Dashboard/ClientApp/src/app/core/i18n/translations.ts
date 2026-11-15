@@ -57,6 +57,20 @@ const en = {
   'action.field.kind.path': 'path',
   'action.field.kind.query': 'query',
   'action.field.kind.body': 'body',
+  'action.authorize.title': 'Authorize',
+  'action.authorize.schemeLabel.plain': '{name} ({type})',
+  'action.authorize.schemeLabel.token': '{name} ({type}, paste an access token)',
+  'action.authorize.valuePlaceholder': 'Paste the value',
+  'action.authorize.reveal': 'Show value',
+  'action.authorize.hide': 'Hide value',
+  'action.authorize.preview.header': 'Sent as header: {name}: {value}',
+  'action.authorize.preview.query': 'Sent as query parameter: ?{name}={value}',
+  'action.authorize.queryWarning':
+    'This value is sent in the request URL and may appear in the host access log.',
+  'action.authorize.noAlternativeFilled':
+    'This operation requires authentication and none of the options above is filled in.',
+  'action.authorize.notDeclaredNote':
+    'This operation does not declare that it requires authentication; no Authorize value will be applied here.',
   'action.headers.title': 'Headers',
   'action.headers.add': 'Add header',
   'action.headers.namePlaceholder': 'Name',
@@ -360,6 +374,20 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.field.kind.path': 'caminho',
   'action.field.kind.query': 'consulta',
   'action.field.kind.body': 'corpo',
+  'action.authorize.title': 'Autorizar',
+  'action.authorize.schemeLabel.plain': '{name} ({type})',
+  'action.authorize.schemeLabel.token': '{name} ({type}, cole um access token)',
+  'action.authorize.valuePlaceholder': 'Cole o valor',
+  'action.authorize.reveal': 'Mostrar valor',
+  'action.authorize.hide': 'Ocultar valor',
+  'action.authorize.preview.header': 'Enviado como header: {name}: {value}',
+  'action.authorize.preview.query': 'Enviado como parâmetro de consulta: ?{name}={value}',
+  'action.authorize.queryWarning':
+    'Esse valor vai na URL da requisição e pode aparecer no log de acesso do host.',
+  'action.authorize.noAlternativeFilled':
+    'Esta operação exige autenticação e nenhuma das opções acima está preenchida.',
+  'action.authorize.notDeclaredNote':
+    'Esta operação não declara exigir autenticação; nenhum valor de Autorizar será aplicado aqui.',
   'action.headers.title': 'Headers',
   'action.headers.add': 'Adicionar header',
   'action.headers.namePlaceholder': 'Nome',
