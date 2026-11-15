@@ -134,11 +134,16 @@ guarda de try/catch que a Tarefa 32.1 já aplicou para `localStorage` (navegaç�
 esgotada, iframe bloqueado): falha silenciosa cai no valor vazio em memória, nunca trava o app. Ao
 construir, o serviço lê o que já estiver salvo.
 
-Reconciliação ao carregar o documento OpenAPI: quando `listSecuritySchemes(doc)` muda (documento
-novo carregado), descartar do estado em memória e do `sessionStorage` qualquer valor salvo cujo
-nome de esquema não aparece mais na lista atual. Sem isso, um valor salvo para um esquema que não
-existe mais no documento ficaria "autorizado" para nada, o mesmo bug que `persistAuthorization`
-do Swagger UI já teve.
+Reconciliação ao carregar o documento OpenAPI: quando um documento **novo, carregado com
+sucesso**, devolve um `listSecuritySchemes(doc)` diferente do anterior, descartar do estado em
+memória e do `sessionStorage` qualquer valor salvo cujo nome de esquema não aparece mais na lista
+atual. Sem isso, um valor salvo para um esquema que não existe mais no documento ficaria
+"autorizado" para nada, o mesmo bug que `persistAuthorization` do Swagger UI já teve. A
+reconciliação só roda depois de um fetch bem-sucedido: uma falha ao buscar o documento (rede
+instável, API momentaneamente fora do ar) não pode ser lida como "lista de esquemas vazia,
+descartar tudo". `EndpointFormComponent` já segue esse padrão hoje (`loadError`, setado só no
+`error:` do subscribe, nunca zera `openApiDocument`); o serviço de credenciais reconcilia contra o
+último documento carregado com sucesso, nunca contra um estado de erro.
 
 `EndpointFormComponent.selectEndpoint()` para de zerar `customHeaders`: os dois agora vêm do
 serviço e sobrevivem à troca de rota.
@@ -147,7 +152,8 @@ serviço e sobrevivem à troca de rota.
 component, mesmo serviço reconstruído a partir do `sessionStorage` mockado) e a trocar de
 endpoint selecionado. Teste confirma que `sessionStorage` lançando ao escrever não propaga
 exceção. Teste confirma que um valor de esquema que não existe mais no documento recarregado some
-do estado, sem continuar marcado como preenchido.
+do estado, sem continuar marcado como preenchido. Teste confirma que uma falha ao buscar o
+documento OpenAPI não aciona a reconciliação e não apaga nenhum valor já salvo.
 
 ## Tarefa 33.3: painel "Autorizar", um campo por esquema distinto
 
@@ -157,15 +163,21 @@ inteira não renderiza (mesmo padrão de "sem cenário configurado, a aba inteir
 Fase 31). Um campo por esquema distinto, rotulado com o nome do esquema e o tipo (ex. "Bearer
 (http)", "X-Api-Key (apiKey)", "OAuth2Scheme (oauth2, cole um access token)").
 
+Todo texto novo visível (rótulo do campo, preview, nota de `in: query`, avisos da Tarefa 33.4) usa
+`TranslatePipe`/`core/i18n/translations` como qualquer outro texto da UI, nunca string hardcoded
+num idioma só.
+
 Detalhes que resolvem dúvidas e erros clássicos de quem já usou Swagger UI/Scalar:
 
 - Campo `type="password"` com botão de revelar/ocultar (mascarado por padrão): o projeto já tira
   screenshot de verificação visual como rotina (Impeccable, `design-quality.md`), e o dogfooding
   real usa token de API de produção.
-- Um preview, ao lado do campo, do header literal que será enviado, com o valor mascarado (ex.
-  `Authorization: Bearer ••••f82a`): resolve a dúvida recorrente de "digito `Bearer` junto ou
-  não" e o caso de um esquema `apiKey` com `name: "Authorization"` que já espera o valor com
-  prefixo.
+- Um preview, ao lado do campo, do que será enviado com o valor mascarado: para `http`/`bearer` e
+  `oauth2`/`openIdConnect`, o header literal (ex. `Authorization: Bearer ••••f82a`); para `apiKey
+  in: header`, o header com o `name` declarado; para `apiKey in: query`, o parâmetro de query que
+  será anexado à URL (ex. `?api_key=••••f82a`), não um header. Resolve a dúvida recorrente de
+  "digito `Bearer` junto ou não" e o caso de um esquema `apiKey` com `name: "Authorization"` que já
+  espera o valor com prefixo.
 - Esquema `apiKey` com `in: "query"`: nota discreta de que o valor vai para a URL da requisição e
   pode aparecer no log de acesso do host. Não é motivo para recusar (o `spec` declara esse
   mecanismo), só para avisar.
@@ -205,18 +217,31 @@ header com o mesmo nome que a autorização automática calcularia, o manual ven
 `HttpHeaders.set(nome, valor)` (substitui), nunca `.append`, para nunca sair dois `Authorization`
 na mesma requisição.
 
-**Aviso de esquema exigido vazio**: quando `effectiveSecurity` exige um esquema que o usuário
-ainda não preencheu, mostrar um aviso inline no formulário da rota selecionada ("esta operação
-exige `<nome do esquema>` e ele está vazio"), sem bloquear o envio. É o que evita o 401 mudo
-depois de a requisição sair sem header nenhum.
+**Aviso de esquema exigido vazio**: `effectiveSecurity` é uma lista de **alternativas** (semântica
+OR do OpenAPI: `[{Bearer: []}, {ApiKey: []}]` significa "uma OU outra", e cada objeto dentro de uma
+alternativa é AND de esquemas). O aviso não pode olhar esquema por esquema isolado: uma rota com
+duas alternativas, só uma preenchida, dispararia aviso falso sobre a alternativa vazia mesmo a
+requisição saindo perfeitamente autorizada pela outra. Mostrar o aviso inline no formulário da rota
+selecionada ("esta operação exige autenticação e nenhuma das opções configuradas está preenchida")
+só quando **nenhuma** alternativa de `effectiveSecurity` está completamente preenchida. No caso
+comum, uma alternativa só, o comportamento não muda. Sem bloquear o envio.
+
+Caso espelho, mesma área do formulário: operação sem `security` nenhum declarado (documento
+incompleto, bem comum na prática), com um campo de Autorizar preenchido mesmo assim. Nada é
+aplicado, a requisição sai sem o header, e o 401 que vier parece inexplicável com o painel
+"preenchido". Nota discreta, não bloqueante ("esta operação não declara exigir autenticação;
+nenhum valor de Autorizar será aplicado aqui"), pra o 401 mudo não voltar pelo lado oposto.
 
 **Pronto quando:** teste confirma que uma rota com `effectiveSecurity` exigindo um esquema Bearer
 preenchido dispara a requisição com `Authorization: Bearer <valor>` certo, já sem prefixo
 duplicado mesmo colando `"Bearer xyz"` no campo; teste confirma que uma rota com
 `effectiveSecurity` vazio (incluindo o caso `security: []` na operação) não recebe header nenhum
 da autorização automática; teste confirma que um header manual com o mesmo nome sobrescreve o
-automático sem duplicar; teste confirma que o aviso de esquema vazio aparece quando
-`effectiveSecurity` exige algo não preenchido e some assim que o campo é preenchido.
+automático sem duplicar; teste confirma que o aviso de "nenhuma alternativa preenchida" aparece só
+quando todas as alternativas de `effectiveSecurity` estão vazias e some assim que qualquer uma é
+preenchida, com um caso de teste cobrindo duas alternativas e só uma preenchida (sem aviso); teste
+confirma a nota de "não declara autenticação" quando a operação não tem `security` nenhum e o
+usuário já preencheu um campo de Autorizar mesmo assim.
 
 ## Fora de escopo
 
@@ -241,6 +266,11 @@ Critérios de pronto das quatro tarefas acima. `npm run lint`, `format:check`, `
 limpos. Verificação visual manual (Impeccable não roda contra alvo local neste ambiente) na tela
 `/flow/runner`, tema claro e escuro, desktop e `390x844`, incluindo o campo mascarado e o preview
 do header.
+
+Comportamento esperado, não defeito: `sessionStorage` é por aba. Abrir o dashboard numa segunda
+aba pede os valores de Autorizar de novo, mesma sessão de navegador. É a troca consciente da
+Tarefa 33.2 (token não sobrevive nem a sessão inteira do navegador, só à aba), não um bug a
+corrigir depois.
 
 ## Ao terminar
 
