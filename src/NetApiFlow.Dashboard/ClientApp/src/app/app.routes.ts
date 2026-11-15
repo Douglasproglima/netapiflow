@@ -1,10 +1,10 @@
 import { Routes } from '@angular/router';
-import { FlowPageComponent } from './features/flow/flow-page.component';
 
 export const routes: Routes = [
   {
     path: '',
-    component: FlowPageComponent,
+    loadComponent: () =>
+      import('./features/flow/flow-page.component').then((m) => m.FlowPageComponent),
     data: { title: 'nav.flow', subtitle: 'topbar.subtitle.flow' },
   },
   {
