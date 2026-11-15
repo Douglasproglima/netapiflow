@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, output, signal } from '@angular/core';
-import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
@@ -82,6 +82,7 @@ export class EndpointFormComponent {
   });
 
   readonly fieldValues = signal<Record<string, string>>({});
+  readonly customHeaders = signal<{ name: string; value: string }[]>([]);
   readonly sending = signal(false);
   readonly sendError = signal<TranslationKey | null>(null);
   readonly invalidFieldName = signal<string | null>(null);
@@ -111,6 +112,7 @@ export class EndpointFormComponent {
   selectEndpoint(method: string, path: string): void {
     this.selected.set({ method, path });
     this.fieldValues.set({});
+    this.customHeaders.set([]);
     this.sendError.set(null);
     this.invalidFieldName.set(null);
     this.lastTraceId.set(null);
@@ -130,6 +132,34 @@ export class EndpointFormComponent {
   onFieldInput(name: string, event: Event): void {
     const target = event.target as HTMLInputElement | HTMLTextAreaElement;
     this.setFieldValue(name, target.value);
+  }
+
+  addHeader(): void {
+    this.customHeaders.update((headers) => [...headers, { name: '', value: '' }]);
+  }
+
+  removeHeader(index: number): void {
+    this.customHeaders.update((headers) => headers.filter((_, i) => i !== index));
+  }
+
+  setHeaderName(index: number, name: string): void {
+    this.customHeaders.update((headers) =>
+      headers.map((header, i) => (i === index ? { ...header, name } : header)),
+    );
+  }
+
+  setHeaderValue(index: number, value: string): void {
+    this.customHeaders.update((headers) =>
+      headers.map((header, i) => (i === index ? { ...header, value } : header)),
+    );
+  }
+
+  onHeaderNameInput(index: number, event: Event): void {
+    this.setHeaderName(index, (event.target as HTMLInputElement).value);
+  }
+
+  onHeaderValueInput(index: number, event: Event): void {
+    this.setHeaderValue(index, (event.target as HTMLInputElement).value);
   }
 
   methodTagClass(method: string): string {
@@ -172,7 +202,15 @@ export class EndpointFormComponent {
     }
 
     const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
-    this.dispatch(this.api.callEndpoint(form.method, fullPath, body));
+    let headers = new HttpHeaders();
+    for (const header of this.customHeaders()) {
+      const name = header.name.trim();
+      if (name !== '') {
+        headers = headers.set(name, header.value);
+      }
+    }
+
+    this.dispatch(this.api.callEndpoint(form.method, fullPath, body, headers));
   }
 
   private dispatch(request: Observable<HttpResponse<unknown>>): void {

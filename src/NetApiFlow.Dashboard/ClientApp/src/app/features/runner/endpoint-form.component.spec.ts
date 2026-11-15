@@ -142,6 +142,43 @@ describe('EndpointFormComponent', () => {
     expect(dispatchedTraceId).toBe('t1');
   });
 
+  it('sends a configured custom header on the dispatched request', async () => {
+    const fixture = await createComponentWithConfig();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+    fixture.componentInstance.setFieldValue('id', '5');
+    fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+    fixture.componentInstance.addHeader();
+    fixture.componentInstance.setHeaderName(0, 'X-Tenant');
+    fixture.componentInstance.setHeaderValue(0, 'acme');
+    fixture.componentInstance.send();
+    await fixture.whenStable();
+
+    const req = httpMock.expectOne('/api/orders/5');
+    expect(req.request.headers.get('X-Tenant')).toBe('acme');
+    req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+  });
+
+  it('ignores a header row left with a blank name', async () => {
+    const fixture = await createComponentWithConfig();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+    fixture.componentInstance.setFieldValue('id', '5');
+    fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+    fixture.componentInstance.addHeader();
+    fixture.componentInstance.setHeaderValue(0, 'acme');
+    fixture.componentInstance.send();
+    await fixture.whenStable();
+
+    const req = httpMock.expectOne('/api/orders/5');
+    expect(req.request.headers.keys()).toEqual([]);
+    req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+  });
+
   it('blocks the send and flags the empty field when a path param is left blank', async () => {
     const fixture = await createComponentWithConfig();
     httpMock.expectOne('/openapi/v1.json').flush(DOC);

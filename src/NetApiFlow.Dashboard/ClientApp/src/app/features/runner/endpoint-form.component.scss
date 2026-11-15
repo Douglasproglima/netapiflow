@@ -235,6 +235,65 @@
   }
 }
 
+.endpoint-form__headers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.endpoint-form__headers-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--naf-text-muted);
+}
+
+.endpoint-form__headers-add {
+  border: 0;
+  background: none;
+  color: var(--naf-flow-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+.endpoint-form__header-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.5rem;
+
+  input {
+    border: 1px solid var(--naf-border);
+    background: var(--naf-bg);
+    color: var(--naf-text);
+    border-radius: var(--naf-radius-sm);
+    padding: 0 0.75rem;
+    height: 36px;
+    font-size: 0.8125rem;
+    font-family: var(--naf-font-ui);
+  }
+}
+
+.endpoint-form__header-remove {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: var(--naf-text-muted);
+  border-radius: var(--naf-radius-sm);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
+}
+
 .endpoint-form__send {
   width: 100%;
   flex-shrink: 0;
