@@ -84,6 +84,7 @@ export class EndpointFormComponent {
   readonly fieldValues = signal<Record<string, string>>({});
   readonly sending = signal(false);
   readonly sendError = signal<TranslationKey | null>(null);
+  readonly invalidFieldName = signal<string | null>(null);
   readonly lastTraceId = signal<string | null>(null);
 
   constructor() {
@@ -111,6 +112,7 @@ export class EndpointFormComponent {
     this.selected.set({ method, path });
     this.fieldValues.set({});
     this.sendError.set(null);
+    this.invalidFieldName.set(null);
     this.lastTraceId.set(null);
   }
 
@@ -120,6 +122,9 @@ export class EndpointFormComponent {
 
   setFieldValue(name: string, value: string): void {
     this.fieldValues.update((values) => ({ ...values, [name]: value }));
+    if (this.invalidFieldName() === name) {
+      this.invalidFieldName.set(null);
+    }
   }
 
   onFieldInput(name: string, event: Event): void {
@@ -134,6 +139,15 @@ export class EndpointFormComponent {
   send(): void {
     const form = this.form();
     if (!form) {
+      return;
+    }
+
+    const emptyPathField = form.fields.find(
+      (field) => field.kind === 'path' && this.fieldValue(field.name).trim() === '',
+    );
+    if (emptyPathField) {
+      this.invalidFieldName.set(emptyPathField.name);
+      this.sendError.set('action.emptyPathParam');
       return;
     }
 

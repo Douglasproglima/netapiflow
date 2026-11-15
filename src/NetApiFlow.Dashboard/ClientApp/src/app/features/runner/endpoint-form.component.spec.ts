@@ -142,6 +142,24 @@ describe('EndpointFormComponent', () => {
     expect(dispatchedTraceId).toBe('t1');
   });
 
+  it('blocks the send and flags the empty field when a path param is left blank', async () => {
+    const fixture = await createComponentWithConfig();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+    fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+    fixture.componentInstance.send();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.invalidFieldName()).toBe('id');
+    // pt-BR is the default language.
+    expect(fixture.nativeElement.textContent).toContain(
+      'Preencha o parâmetro de rota "id" antes de enviar.',
+    );
+    httpMock.expectNone('/api/orders/');
+  });
+
   it('never renders a Scenarios tab or any hardcoded sample route', async () => {
     const fixture = await createComponentWithConfig();
     httpMock.expectOne('/openapi/v1.json').flush(DOC);

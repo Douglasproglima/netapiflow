@@ -224,6 +224,17 @@
   }
 }
 
+.endpoint-form__field--invalid {
+  input,
+  textarea {
+    border-color: var(--naf-danger);
+  }
+
+  label {
+    color: var(--naf-danger);
+  }
+}
+
 .endpoint-form__send {
   width: 100%;
   flex-shrink: 0;

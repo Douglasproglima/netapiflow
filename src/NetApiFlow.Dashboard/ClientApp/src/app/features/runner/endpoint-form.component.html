@@ -81,7 +81,10 @@
           </div>
 
           @for (field of form.fields; track field.name) {
-            <div class="endpoint-form__field">
+            <div
+              class="endpoint-form__field"
+              [class.endpoint-form__field--invalid]="invalidFieldName() === field.name"
+            >
               <label [for]="'endpoint-form-field-' + field.name"
                 >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
               >
@@ -108,7 +111,7 @@
 
           @if (sendError()) {
             <p class="endpoint-form__status endpoint-form__status--error" role="alert">
-              {{ sendError() | t }}
+              {{ sendError() | t: { name: invalidFieldName() ?? '' } }}
             </p>
           }
 
