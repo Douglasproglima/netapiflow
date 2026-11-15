@@ -427,6 +427,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
             await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
+            await SqlServerSchemaInitializer.NormalizeRouteTemplatesAsync(connection, _tracesTable, cancellationToken);
             _schemaReady = true;
         }
         finally

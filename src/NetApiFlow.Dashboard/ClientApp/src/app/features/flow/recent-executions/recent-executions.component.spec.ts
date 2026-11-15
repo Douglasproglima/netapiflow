@@ -147,15 +147,50 @@ describe('RecentExecutionsComponent', () => {
       ],
     };
 
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
     sse.emit({
       eventId: 1,
       type: 'TraceCompleted',
       traceId: 't2',
       timestamp: '2026-01-01T00:01:00Z',
     });
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
     httpMock.expectOne(() => true).flush(secondPage);
     await fixture.whenStable();
 
     expect(fixture.componentInstance.traces()).toEqual(secondPage.items);
+  });
+
+  it('coalesces a burst of TraceCompleted events into at most one extra fetch (A2)', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    });
+    for (let i = 0; i < 10; i++) {
+      sse.emit({
+        eventId: i,
+        type: 'TraceCompleted',
+        traceId: `t${i}`,
+        timestamp: '2026-01-01T00:01:00Z',
+      });
+    }
+
+    vi.advanceTimersByTime(1500);
+    vi.useRealTimers();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const requests = httpMock.match(() => true);
+    expect(requests.length).toBeLessThanOrEqual(1);
+    requests.forEach((req) => req.flush(PAGE));
   });
 });

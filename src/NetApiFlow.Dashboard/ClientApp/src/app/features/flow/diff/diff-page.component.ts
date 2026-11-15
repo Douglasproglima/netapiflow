@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { ApiService } from '../../../core/api.service';
+import { ConfigService } from '../../../core/config.service';
 import { FlowTraceDetail, NodeVisualState } from '../../../core/models';
 import { httpMethodTagClass } from '../../../shared/http-method-style';
 import { formatDurationMicros } from '../../../shared/duration-format';
@@ -29,6 +30,7 @@ function describeError(error: HttpErrorResponse): string {
 export class DiffPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
 
   readonly traceIdA = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('a'))), {
     initialValue: this.route.snapshot.queryParamMap.get('a'),
@@ -87,9 +89,9 @@ export class DiffPageComponent {
   });
 
   constructor() {
-    this.api
-      .getConfig()
-      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+    this.config.config$.subscribe((config) =>
+      this.slowThresholdMicros.set(config.slowThresholdMicros),
+    );
 
     effect(() => {
       const idA = this.traceIdA();

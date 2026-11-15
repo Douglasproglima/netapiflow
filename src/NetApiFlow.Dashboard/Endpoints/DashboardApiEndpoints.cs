@@ -105,7 +105,7 @@ internal static class DashboardApiEndpoints
         {
             Status = status,
             Method = method,
-            RouteTemplate = route,
+            RouteTemplate = route is null ? null : RouteTemplateNormalizer.Normalize(route),
             Tenant = tenant,
             From = from,
             To = to,
@@ -228,7 +228,7 @@ internal static class DashboardApiEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var detail = await store.GetLastSuccessfulAsync(method, route, cancellationToken);
+        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.Normalize(route), cancellationToken);
         return detail is null ? Results.NoContent() : Results.Json(TraceDetailDto.From(detail), DashboardJsonOptions.Rest);
     }
 
@@ -241,7 +241,7 @@ internal static class DashboardApiEndpoints
             .Where(e => e.RoutePattern.RawText is not null)
             .Select(e => (
                 Methods: e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? (IReadOnlyList<string>)[],
-                RouteTemplate: "/" + e.RoutePattern.RawText!.TrimStart('/'),
+                RouteTemplate: RouteTemplateNormalizer.Normalize(e.RoutePattern.RawText!),
                 DisplayName: e.DisplayName ?? e.RoutePattern.RawText!))
             .Where(e => e.Methods.Count > 0 && policy.ShouldTrace(e.RouteTemplate))
             .SelectMany(e => e.Methods.Select(method => new EndpointDescriptor
@@ -284,7 +284,7 @@ internal static class DashboardApiEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var map = await store.GetArchitectureMapAsync(method, route, new StatsQuery { From = from, To = to }, cancellationToken);
+        var map = await store.GetArchitectureMapAsync(method, RouteTemplateNormalizer.Normalize(route), new StatsQuery { From = from, To = to }, cancellationToken);
         return Results.Json(map, DashboardJsonOptions.Rest);
     }
 

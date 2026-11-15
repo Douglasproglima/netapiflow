@@ -174,6 +174,32 @@ describe('HistoryComponent', () => {
     req.flush(EMPTY_PAGE);
   });
 
+  it('always reflects the latest filter, never a stale page that arrives after a newer one (M4)', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    component.setStatus('Error');
+    await harness.fixture.whenStable();
+    const firstReq = httpMock.expectOne((r) => r.params.get('status') === 'Error');
+
+    component.setStatus('Success');
+    await harness.fixture.whenStable();
+
+    // `switchMap` (M4) unsubscribes the first (now stale) filter's request the moment the
+    // second one starts.
+    expect(firstReq.cancelled).toBe(true);
+
+    const secondReq = httpMock.expectOne((r) => r.params.get('status') === 'Success');
+    secondReq.flush({ items: [makeSummary('t-success')], totalCount: 1 });
+    await harness.fixture.whenStable();
+
+    httpMock.expectOne((r) => r.url === 'api/deploys').flush([]);
+
+    expect(component.result()?.items.map((trace) => trace.traceId)).toEqual(['t-success']);
+  });
+
   it('shows the "no executions yet" message only when there is no active filter', async () => {
     const component = await mount();
     flushConfig();

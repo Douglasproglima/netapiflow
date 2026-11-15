@@ -1,12 +1,14 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { map } from 'rxjs';
+import { Subject, auditTime, catchError, filter, map, merge, of, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
-import { FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
+import { ConfigService } from '../../core/config.service';
+import { FlowSpan, FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
+import { SSE_REFRESH_AUDIT_MS, SseService } from '../../core/sse.service';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
 import { buildGraph, GraphResult, isGhostNodeId } from './graph/graph-builder';
@@ -55,6 +57,8 @@ export class FlowPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  private readonly config = inject(ConfigService);
+  private readonly sse = inject(SseService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly language = inject(LanguageService);
   readonly livePlayer = inject(LiveTracePlayerService);
@@ -74,6 +78,7 @@ export class FlowPageComponent {
 
   readonly liveTraces = signal<FlowTraceSummary[]>([]);
   readonly liveTracesLoading = signal(false);
+  readonly liveTracesError = signal(false);
 
   readonly selectedNodeId = signal<string | null>(null);
   readonly selectedSpanDetail = signal<SpanDetail | null>(null);
@@ -87,6 +92,20 @@ export class FlowPageComponent {
   readonly trace = computed<FlowTraceDetail | null>(
     () => this.importedTrace() ?? this.livePlayer.trace(),
   );
+
+  readonly traceNotFound = computed(
+    () => this.traceId() !== null && !this.importedTrace() && this.livePlayer.notFound(),
+  );
+
+  /**
+   * The last successful execution of the live trace's own (method, route), fetched once per
+   * tracked trace (M1) so a live trace can mark a branch its blueprint predicted but that hasn't
+   * shown up as "not-executed" the same way a replay already can, instead of only ever reporting
+   * what has executed so far.
+   */
+  private readonly liveBlueprintSpans = signal<FlowSpan[] | null>(null);
+  private liveBlueprintTraceId: string | null = null;
+
   readonly graph = computed<GraphResult>(() => {
     const trace = this.trace();
     const slowThresholdMicros = this.slowThresholdMicros();
@@ -99,17 +118,68 @@ export class FlowPageComponent {
         spans: this.replayPlayer.visibleSpans(),
         traceStatus: trace.status,
         slowThresholdMicros,
-        blueprintSpans: trace.spans,
+        fullSpans: trace.spans,
+        inProgress: this.replayPlayer.state() !== 'finished',
       });
     }
 
-    return buildGraph({ spans: trace.spans, traceStatus: trace.status, slowThresholdMicros });
+    return buildGraph({
+      spans: trace.spans,
+      traceStatus: trace.status,
+      slowThresholdMicros,
+      blueprintSpans: this.liveBlueprintSpans() ?? undefined,
+      inProgress: trace.status === 'Running',
+    });
   });
 
+  private readonly spanSelection$ = new Subject<{ traceId: string; nodeId: string }>();
+  private readonly liveTracesTrigger$ = new Subject<void>();
+
   constructor() {
-    this.api
-      .getConfig()
-      .subscribe((config) => this.slowThresholdMicros.set(config.slowThresholdMicros));
+    this.config.config$.subscribe((config) =>
+      this.slowThresholdMicros.set(config.slowThresholdMicros),
+    );
+
+    // `switchMap` (M4) cancels a still-in-flight span lookup for an earlier selection the
+    // moment a new one starts, so its response can never arrive after and overwrite it.
+    this.spanSelection$
+      .pipe(
+        switchMap(({ traceId, nodeId }) => this.api.getSpan(traceId, nodeId)),
+        takeUntilDestroyed(),
+      )
+      .subscribe((detail) => this.selectedSpanDetail.set(detail));
+
+    // Same `auditTime` coalescing as the topbar's in-progress count (M6): a burst of
+    // TraceStarted/TraceCompleted events refreshes the list at most once per window, only while
+    // it is the one actually shown (no trace selected).
+    merge(
+      this.liveTracesTrigger$,
+      this.sse.events$.pipe(
+        filter(
+          (event) =>
+            this.traceId() === null &&
+            (event.type === 'TraceStarted' || event.type === 'TraceCompleted'),
+        ),
+        auditTime(SSE_REFRESH_AUDIT_MS),
+      ),
+    )
+      .pipe(
+        switchMap(() =>
+          this.api.getLiveTraces().pipe(
+            catchError(() => {
+              this.liveTracesError.set(true);
+              return of(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((traces) => {
+        if (traces) {
+          this.liveTraces.set(traces);
+        }
+        this.liveTracesLoading.set(false);
+      });
 
     effect(() => {
       this.actionDrawer.isDrawer.set(this.isActionDrawer());
@@ -120,6 +190,8 @@ export class FlowPageComponent {
       this.selectedNodeId.set(null);
       this.selectedSpanDetail.set(null);
       this.isReplaying.set(false);
+      this.liveBlueprintSpans.set(null);
+      this.liveBlueprintTraceId = null;
 
       if (traceId) {
         this.importedTrace.set(null);
@@ -127,17 +199,44 @@ export class FlowPageComponent {
         this.livePlayer.track(traceId);
       } else {
         this.livePlayer.stop();
-        this.loadLiveTraces();
+        this.liveTracesLoading.set(true);
+        this.liveTracesError.set(false);
+        this.liveTracesTrigger$.next();
       }
     });
 
     effect(() => {
-      const trace = this.trace();
-      if (trace) {
-        this.replayPlayer.load(trace);
+      const trace = this.livePlayer.trace();
+      if (!trace || trace.traceId === this.liveBlueprintTraceId) {
+        return;
       }
+
+      this.liveBlueprintTraceId = trace.traceId;
+      this.api
+        .getBlueprint(trace.method, trace.routeTemplate)
+        .subscribe((blueprint) => this.liveBlueprintSpans.set(blueprint?.spans ?? null));
+    });
+
+    // Keyed by traceId plus whether the trace is still Running (M5), so a live trace's growing
+    // span list never reloads an already-playing replay back to step 0: only a new trace
+    // identity or the trace concluding is a real reason to reload.
+    effect(() => {
+      const trace = this.trace();
+      if (!trace) {
+        return;
+      }
+
+      const loadKey = `${trace.traceId}:${trace.status === 'Running'}`;
+      if (loadKey === this.lastReplayLoadKey) {
+        return;
+      }
+
+      this.lastReplayLoadKey = loadKey;
+      this.replayPlayer.load(trace);
     });
   }
+
+  private lastReplayLoadKey: string | null = null;
 
   readonly replaySpeeds = REPLAY_SPEEDS;
 
@@ -268,7 +367,7 @@ export class FlowPageComponent {
       return;
     }
 
-    this.api.getSpan(traceId, nodeId).subscribe((detail) => this.selectedSpanDetail.set(detail));
+    this.spanSelection$.next({ traceId, nodeId });
   }
 
   backToSummary(): void {
@@ -303,14 +402,6 @@ export class FlowPageComponent {
   onSeek(event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
     this.replayPlayer.seek(value);
-  }
-
-  private loadLiveTraces(): void {
-    this.liveTracesLoading.set(true);
-    this.api.getLiveTraces().subscribe((traces) => {
-      this.liveTraces.set(traces);
-      this.liveTracesLoading.set(false);
-    });
   }
 
   private applyImportedTraceFile(raw: string): void {

@@ -8,6 +8,13 @@ const INITIAL_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
 
 /**
+ * Shared coalescing window for consumers that refresh their own data on `SseService.events$`.
+ * A burst of events inside this window (a fast replay, an N+1 route) still refreshes at most
+ * once per window instead of once per event.
+ */
+export const SSE_REFRESH_AUDIT_MS = 1500;
+
+/**
  * Connects to GET /stream (docs/plano/contratos.md, seção 2) with a real `EventSource`, parsing
  * each named event into a `FlowEvent`. Owns reconnection: on a dropped connection it reconnects
  * with exponential backoff, sending the last event id it saw as `?lastEventId=` (D-22) — the
