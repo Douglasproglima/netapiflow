@@ -4,6 +4,7 @@ import { ApiService } from '../../../core/api.service';
 import { ConfigService } from '../../../core/config.service';
 import { SSE_REFRESH_AUDIT_MS, SseService } from '../../../core/sse.service';
 import { formatDurationMicros } from '../../../shared/duration-format';
+import { catchAsResult } from '../../../shared/observable-result';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../../core/i18n/translations';
 
@@ -159,54 +160,60 @@ export class MetricCardsComponent implements OnDestroy {
 
     this.subscriptions.add(
       merge(of(undefined), this.traceCompleted$)
-        .pipe(switchMap(() => this.api.getMetrics({})))
-        .subscribe({
-          next: (summary) => {
-            this.totalTraces.set(summary.totalTraces);
-            this.errorCount.set(summary.errorCount);
-            this.averageDurationMicros.set(summary.averageDurationMicros);
-            this.maxDurationMicros.set(summary.maxDurationMicros);
-            this.p95DurationMicros.set(summary.p95DurationMicros);
-            this.loading.set(false);
-          },
-          error: () => {
+        .pipe(switchMap(() => catchAsResult(this.api.getMetrics({}))))
+        .subscribe((result) => {
+          if (!result.ok) {
             this.error.set('metrics.error');
             this.loading.set(false);
-          },
+            return;
+          }
+
+          this.error.set(null);
+          const summary = result.value;
+          this.totalTraces.set(summary.totalTraces);
+          this.errorCount.set(summary.errorCount);
+          this.averageDurationMicros.set(summary.averageDurationMicros);
+          this.maxDurationMicros.set(summary.maxDurationMicros);
+          this.p95DurationMicros.set(summary.p95DurationMicros);
+          this.loading.set(false);
         }),
     );
 
     this.subscriptions.add(
       merge(of(undefined), this.traceCompleted$)
-        .pipe(switchMap(() => this.api.getComponentMetrics({})))
-        .subscribe({
-          next: (stats) => {
-            const total = stats.reduce((sum, stat) => sum + stat.executionCount, 0);
-            this.stepsExecuted.set(total);
-          },
-          error: () => {
-            // Steps executed is a bonus figure on top of GET /metrics; its own failure doesn't block
-            // the rest of the strip, which already has its own error state.
-          },
+        .pipe(switchMap(() => catchAsResult(this.api.getComponentMetrics({}))))
+        .subscribe((result) => {
+          // Steps executed is a bonus figure on top of GET /metrics; its own failure doesn't block
+          // the rest of the strip, which already has its own error state.
+          if (!result.ok) {
+            return;
+          }
+
+          const total = result.value.reduce((sum, stat) => sum + stat.executionCount, 0);
+          this.stepsExecuted.set(total);
         }),
     );
 
     this.subscriptions.add(
       merge(of(undefined), this.traceCompleted$)
-        .pipe(switchMap(() => this.api.getTraces({ page: 1, pageSize: SPARKLINE_SAMPLE_SIZE })))
-        .subscribe({
-          next: (result) => {
-            this.sparklineDurations.set(
-              result.items
-                .map((trace) => trace.durationMicros)
-                .filter((value): value is number => value !== null)
-                .reverse(),
-            );
-          },
-          error: () => {
-            // The sparkline is a supplementary visual on top of the p95 figure; its own failure
-            // doesn't block the rest of the strip, which already has its own error state.
-          },
+        .pipe(
+          switchMap(() =>
+            catchAsResult(this.api.getTraces({ page: 1, pageSize: SPARKLINE_SAMPLE_SIZE })),
+          ),
+        )
+        .subscribe((result) => {
+          // The sparkline is a supplementary visual on top of the p95 figure; its own failure
+          // doesn't block the rest of the strip, which already has its own error state.
+          if (!result.ok) {
+            return;
+          }
+
+          this.sparklineDurations.set(
+            result.value.items
+              .map((trace) => trace.durationMicros)
+              .filter((value): value is number => value !== null)
+              .reverse(),
+          );
         }),
     );
   }

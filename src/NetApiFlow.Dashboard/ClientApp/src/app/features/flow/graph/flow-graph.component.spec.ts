@@ -98,6 +98,69 @@ describe('FlowGraphComponent', () => {
     expect(selectedId).toBe('root');
   });
 
+  it('emits nodeSelected on Space, same as Enter', async () => {
+    const spans: FlowSpan[] = [
+      span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),
+    ];
+    const { nodes, edges } = buildGraph({
+      spans,
+      traceStatus: 'Success',
+      slowThresholdMicros: 250_000,
+    });
+
+    const fixture = TestBed.createComponent(FlowGraphComponent);
+    fixture.componentRef.setInput('nodes', nodes);
+    fixture.componentRef.setInput('edges', edges);
+    await fixture.whenStable();
+
+    let selectedId: string | null = null;
+    fixture.componentInstance.nodeSelected.subscribe((id) => (selectedId = id));
+
+    const nodeElement: HTMLElement = fixture.nativeElement.querySelector('.flow-graph__node');
+    nodeElement.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }),
+    );
+
+    expect(selectedId).toBe('root');
+  });
+
+  it('reflects the selected node with aria-pressed="true", and the rest with "false"', async () => {
+    const spans: FlowSpan[] = [
+      span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),
+      span({
+        spanId: 'child',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'D',
+        operation: 'Op2',
+      }),
+    ];
+    const { nodes, edges } = buildGraph({
+      spans,
+      traceStatus: 'Success',
+      slowThresholdMicros: 250_000,
+    });
+
+    const fixture = TestBed.createComponent(FlowGraphComponent);
+    fixture.componentRef.setInput('nodes', nodes);
+    fixture.componentRef.setInput('edges', edges);
+    fixture.componentRef.setInput('selectedNodeId', 'root');
+    await fixture.whenStable();
+
+    const nodeElements: Element[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.flow-graph__node'),
+    );
+    const rootNode = nodeElements.find(
+      (el) => el.querySelector('.flow-graph__node-operation')?.textContent === 'Op',
+    );
+    const childNode = nodeElements.find(
+      (el) => el.querySelector('.flow-graph__node-operation')?.textContent === 'Op2',
+    );
+
+    expect(rootNode?.getAttribute('aria-pressed')).toBe('true');
+    expect(childNode?.getAttribute('aria-pressed')).toBe('false');
+  });
+
   it('keeps the six visual states distinguishable using only text and aria-label, color removed', async () => {
     const realStatesSpans: FlowSpan[] = [
       span({

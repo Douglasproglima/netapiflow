@@ -108,18 +108,25 @@
   }
 }
 
-.flow-details__errbox {
+.flow-details__errbox,
+.flow-details__warnbox {
   margin-top: 0.875rem;
   padding: 0.75rem;
-  background: var(--naf-danger-tint);
 
   b {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--naf-danger-on-tint);
     font-size: 0.8125rem;
     font-weight: 600;
+  }
+}
+
+.flow-details__errbox {
+  background: var(--naf-danger-tint);
+
+  b {
+    color: var(--naf-danger-on-tint);
   }
 
   p {
@@ -130,19 +137,12 @@
 }
 
 .flow-details__warnbox {
-  margin-top: 0.875rem;
-  padding: 0.75rem;
   border-radius: 10px;
   background: var(--naf-warning-tint);
   border: 1px solid rgba(245, 158, 11, 0.55);
 
   b {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
     color: var(--naf-warning-on-tint);
-    font-size: 0.8125rem;
-    font-weight: 600;
   }
 }
 
@@ -308,23 +308,23 @@
   height: 100%;
   border-radius: 3px;
   min-width: 2px;
-  background: var(--naf-idle);
+  background: var(--flow-waterfall-bar, var(--naf-idle));
 }
 
-.flow-waterfall__row[data-state='running'] .flow-waterfall__bar {
-  background: var(--naf-flow-text);
+.flow-waterfall__row[data-state='running'] {
+  --flow-waterfall-bar: var(--naf-flow-text);
 }
 
-.flow-waterfall__row[data-state='completed'] .flow-waterfall__bar {
-  background: var(--naf-success);
+.flow-waterfall__row[data-state='completed'] {
+  --flow-waterfall-bar: var(--naf-success);
 }
 
-.flow-waterfall__row[data-state='slow'] .flow-waterfall__bar {
-  background: var(--naf-warning);
+.flow-waterfall__row[data-state='slow'] {
+  --flow-waterfall-bar: var(--naf-warning);
 }
 
-.flow-waterfall__row[data-state='error'] .flow-waterfall__bar {
-  background: var(--naf-danger);
+.flow-waterfall__row[data-state='error'] {
+  --flow-waterfall-bar: var(--naf-danger);
 }
 
 .flow-waterfall__duration {
