@@ -7,6 +7,52 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-15
+
+### Added
+
+- `NetApiFlow.Dashboard`: "Try an endpoint" now has an optional custom headers section (key/value
+  pairs), for testing an endpoint that requires `Authorization` or any other header.
+
+### Fixed
+
+- `NetApiFlow.Dashboard`: `localStorage` access in the theme and language services no longer
+  throws and blocks app startup in a private-browsing context, a storage-quota failure, or an
+  iframe with storage blocked. Both services fall back to their default (system theme, pt-BR)
+  instead.
+- `NetApiFlow.Dashboard`: an unmatched URL (a typo, a stale bookmark, a removed route) now falls
+  back to the flow page instead of leaving the router outlet blank.
+- `NetApiFlow.Dashboard`: a transient network failure no longer leaves the metrics and recent-
+  executions error state stuck for the rest of the session. The root cause ran deeper than the
+  visible symptom: an unhandled error inside a `switchMap` chain silently killed the whole
+  subscription, so auto-refresh stopped firing entirely after one failure, not just the message.
+- `NetApiFlow.Dashboard`: a live graph node now responds to the Space key (same as Enter) and
+  exposes `aria-pressed` for the selected node.
+- `NetApiFlow.Dashboard`: the sidebar navigation is now wrapped in a `<nav>` landmark with
+  `aria-current` marking the active route.
+- `NetApiFlow.Dashboard`: the SSE connection chip now announces a state change via
+  `aria-live="polite"`.
+- `NetApiFlow.Dashboard`: replaying a trace at 4x speed no longer collapses the minimum visual
+  delay between steps to an imperceptible value; a real multi-second gap between spans is now
+  capped instead of freezing playback for its full duration.
+- `NetApiFlow.Dashboard`: the live in-progress trace list now shows a translated status instead of
+  the literal `"Running"` string regardless of the selected language.
+- `NetApiFlow.Dashboard`: a translation whose text repeats the same placeholder more than once now
+  has every occurrence replaced, not just the first.
+- `NetApiFlow.Dashboard`: "Try an endpoint" now validates every path parameter has a value before
+  sending the request, instead of silently turning an empty one into a broken URL segment.
+- `NetApiFlow.Dashboard`: the embedded Angular build no longer exceeds its initial bundle budget
+  (reduced from 805.71 kB to 528.23 kB via route-level lazy loading) and drops the deprecated
+  `provideNoopAnimations()` provider.
+
+### Known limitation
+
+- `NetApiFlow.Dashboard`: "Try an endpoint" still targets the application's root path, not the
+  dashboard's own mount path, so a host running behind a reverse proxy's `PathBase` sees requests
+  resolved against the dashboard's `<base href>` (`PathBase` + the dashboard's own mount path)
+  rather than `PathBase` alone. Fixing this precisely needs a new `GET /config` field separating
+  the two, deferred to a future minor release.
+
 ## [0.3.1] - 2026-11-15
 
 ### Fixed
