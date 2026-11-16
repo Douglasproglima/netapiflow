@@ -250,6 +250,13 @@ endpoint, preencha parâmetros de rota e de query e um corpo JSON, envie. Isso e
 `MapOpenApi()` (ou endpoint OpenAPI equivalente) na aplicação hospedeira, e avisa quando não
 consegue carregar o documento. As rotas do próprio dashboard ficam de fora da lista.
 
+Quando o documento OpenAPI declara um esquema de segurança (`http`/`bearer`, `apiKey`, `oauth2`,
+`openIdConnect`), aparece uma seção "Autorizar" acima do formulário da requisição. Cole um valor
+no campo mascarado de cada esquema. Um preview ao lado mostra o header ou o parâmetro de consulta
+exato que vai ser enviado. O valor certo é aplicado automaticamente em toda requisição cuja rota
+exige aquele esquema, e um header adicionado à mão sempre vence o automático. O valor colado vive
+só no `sessionStorage` da aba atual: fechar a aba apaga o valor, e nada é gravado em disco.
+
 ## Exportar e importar uma trace
 
 Uma trace aberta no `/flow` pode ser baixada como arquivo `.json` ("Baixar trace (.json)") e

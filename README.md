@@ -247,6 +247,14 @@ path and query parameters and a JSON body, send. It needs `MapOpenApi()` (or an 
 endpoint) in the host application, and says so when the document can't be loaded. The dashboard's
 own routes are filtered out of the list.
 
+When the OpenAPI document declares a security scheme (`http`/`bearer`, `apiKey`, `oauth2`,
+`openIdConnect`), an "Authorize" section appears above the request form. Paste a value into its
+masked field for each scheme; a preview next to it shows the exact header or query parameter that
+will be sent. The right one is applied automatically to every request whose route requires that
+scheme, and a header added by hand always wins over the automatic one. The pasted value lives only
+in `sessionStorage` for the current tab: closing it clears the value, and nothing is written to
+disk.
+
 ## Export and import a trace
 
 A trace on `/flow` can be downloaded as a `.json` file ("Download trace (.json)") and opened again
