@@ -228,10 +228,23 @@ export interface OpenApiOperation {
     required?: boolean;
     content?: Record<string, { schema?: unknown }>;
   };
+  security?: OpenApiSecurityRequirement[];
+}
+
+/** One alternative of an OpenAPI `security` array: AND of every scheme name listed within it. */
+export type OpenApiSecurityRequirement = Record<string, string[]>;
+
+export interface OpenApiSecurityScheme {
+  type: 'http' | 'apiKey' | 'oauth2' | 'openIdConnect' | string;
+  scheme?: string;
+  in?: 'header' | 'query' | 'cookie';
+  name?: string;
 }
 
 export interface OpenApiDocument {
   paths?: Record<string, Record<string, OpenApiOperation>>;
+  components?: { securitySchemes?: Record<string, OpenApiSecurityScheme> };
+  security?: OpenApiSecurityRequirement[];
 }
 
 /** GET /deploys list item and POST /deploys response body. */

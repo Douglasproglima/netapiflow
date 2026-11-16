@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { EndpointFormComponent } from './endpoint-form.component';
 import { DashboardConfig, OpenApiDocument } from '../../core/models';
+import { RunnerCredentialsService } from '../../core/runner-credentials.service';
 
 const CONFIG: DashboardConfig = {
   slowThresholdMicros: 250_000,
@@ -27,10 +28,39 @@ const DOC: OpenApiDocument = {
   },
 };
 
+const DOC_WITH_SECURITY: OpenApiDocument = {
+  components: {
+    securitySchemes: {
+      Bearer: { type: 'http', scheme: 'bearer' },
+      ApiKeyScheme: { type: 'apiKey', in: 'header', name: 'X-Api-Key' },
+      OAuth2Scheme: { type: 'oauth2' },
+    },
+  },
+  paths: {
+    '/api/orders/{id}': {
+      get: {
+        operationId: 'GetOrder',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        security: [{ Bearer: [] }, { ApiKeyScheme: [] }],
+      },
+      delete: {
+        operationId: 'DeleteOrder',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        security: [],
+      },
+      post: {
+        operationId: 'UndeclaredOrder',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      },
+    },
+  },
+};
+
 describe('EndpointFormComponent', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
+    sessionStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -39,6 +69,7 @@ describe('EndpointFormComponent', () => {
 
   afterEach(() => {
     httpMock.verify();
+    sessionStorage.clear();
   });
 
   async function createComponentWithConfig(
@@ -206,5 +237,202 @@ describe('EndpointFormComponent', () => {
     expect(nativeElement.querySelector('[role="tab"]')).toBeNull();
     expect(nativeElement.querySelector('[role="tablist"]')).toBeNull();
     expect(nativeElement.textContent).not.toContain('/api/orders/1');
+  });
+
+  it('keeps a custom header filled in after switching to a different endpoint', async () => {
+    const credentials = TestBed.inject(RunnerCredentialsService);
+    const fixture = await createComponentWithConfig();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+    fixture.componentInstance.addHeader();
+    fixture.componentInstance.setHeaderName(0, 'X-Tenant');
+    fixture.componentInstance.setHeaderValue(0, 'acme');
+
+    fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+
+    expect(credentials.customHeaders()).toEqual([{ name: 'X-Tenant', value: 'acme' }]);
+  });
+
+  it('reconciles saved credentials against the newly loaded document once the fetch succeeds', async () => {
+    const credentials = TestBed.inject(RunnerCredentialsService);
+    credentials.setAuthValue('RetiredScheme', 'stale-token');
+
+    const fixture = await createComponentWithConfig();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    expect(credentials.authValue('RetiredScheme')).toBe('');
+  });
+
+  it('never reconciles saved credentials when the document fetch fails', async () => {
+    const credentials = TestBed.inject(RunnerCredentialsService);
+    credentials.setAuthValue('Bearer', 'still-valid-token');
+
+    const fixture = await createComponentWithConfig();
+    httpMock
+      .expectOne('/openapi/v1.json')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+
+    expect(credentials.authValue('Bearer')).toBe('still-valid-token');
+  });
+
+  describe('Authorize section', () => {
+    it('does not render when the document declares no security scheme', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      await fixture.whenStable();
+
+      const nativeElement: HTMLElement = fixture.nativeElement;
+      expect(nativeElement.querySelector('.endpoint-form__authorize')).toBeNull();
+    });
+
+    it('renders one field per declared scheme, including oauth2, with name and type in the label', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      await fixture.whenStable();
+
+      const nativeElement: HTMLElement = fixture.nativeElement;
+      const rows = nativeElement.querySelectorAll('.endpoint-form__authorize-row');
+      expect(rows).toHaveLength(3);
+
+      const labelText = nativeElement.textContent ?? '';
+      // pt-BR is the default language.
+      expect(labelText).toContain('Bearer (http)');
+      expect(labelText).toContain('ApiKeyScheme (apiKey)');
+      expect(labelText).toContain('OAuth2Scheme (oauth2, cole um access token)');
+    });
+
+    it('previews the masked header that will be sent as the value is typed', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      credentials.setAuthValue('Bearer', 'abcdef82a');
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain(
+        'Enviado como header: Authorization: Bearer ••••f82a',
+      );
+    });
+  });
+
+  describe('automatic authorization header', () => {
+    it('applies Authorization: Bearer automatically for a required, filled scheme, stripping an already-pasted "Bearer " prefix', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      credentials.setAuthValue('Bearer', 'Bearer xyz');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+
+      const req = httpMock.expectOne('/api/orders/5');
+      expect(req.request.headers.get('Authorization')).toBe('Bearer xyz');
+      req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+    });
+
+    it('applies no header when effectiveSecurity is empty, even for an operation explicitly marked security: []', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('DELETE', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      credentials.setAuthValue('Bearer', 'xyz');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+
+      const req = httpMock.expectOne('/api/orders/5');
+      expect(req.request.headers.has('Authorization')).toBe(false);
+      req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+    });
+
+    it('lets a manual header with the same name override the automatic one, without duplicating it', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      credentials.setAuthValue('Bearer', 'auto-token');
+      fixture.componentInstance.addHeader();
+      fixture.componentInstance.setHeaderName(0, 'Authorization');
+      fixture.componentInstance.setHeaderValue(0, 'Bearer manual-token');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+
+      const req = httpMock.expectOne('/api/orders/5');
+      expect(req.request.headers.getAll('Authorization')).toEqual(['Bearer manual-token']);
+      req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+    });
+
+    it('shows the "no alternative filled" warning only when every OR alternative is empty, and clears once one is filled', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain(
+        'Esta operação exige autenticação e nenhuma das opções acima está preenchida.',
+      );
+
+      credentials.setAuthValue('ApiKeyScheme', 'xyz');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Esta operação exige autenticação e nenhuma das opções acima está preenchida.',
+      );
+    });
+
+    it('shows the mirrored "not declared" note when the operation requires no security but an Authorize field is filled anyway', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      await fixture.whenStable();
+      // Nothing filled in yet: no note.
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Esta operação não declara exigir autenticação',
+      );
+
+      credentials.setAuthValue('Bearer', 'xyz');
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain(
+        'Esta operação não declara exigir autenticação; nenhum valor de Autorizar será aplicado aqui.',
+      );
+
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+
+      const req = httpMock.expectOne('/api/orders/5');
+      expect(req.request.headers.has('Authorization')).toBe(false);
+      req.flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+    });
   });
 });

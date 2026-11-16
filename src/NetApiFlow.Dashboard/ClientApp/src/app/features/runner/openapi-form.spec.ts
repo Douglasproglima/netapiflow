@@ -1,5 +1,14 @@
-import { buildEndpointForm, listOpenApiEndpoints, partitionDashboardRoutes } from './openapi-form';
-import { OpenApiDocument } from '../../core/models';
+import {
+  buildAuthApplication,
+  buildEndpointForm,
+  effectiveSecurity,
+  hasSecurityDeclaration,
+  listOpenApiEndpoints,
+  listSecuritySchemes,
+  partitionDashboardRoutes,
+  previewAuthApplication,
+} from './openapi-form';
+import { OpenApiDocument, OpenApiSecurityScheme } from '../../core/models';
 
 const DOC: OpenApiDocument = {
   paths: {
@@ -121,5 +130,190 @@ describe('buildEndpointForm', () => {
   it('returns null when the method/path pair is not in the document', () => {
     expect(buildEndpointForm(DOC, 'delete', '/api/orders/{id}')).toBeNull();
     expect(buildEndpointForm(DOC, 'get', '/unknown')).toBeNull();
+  });
+});
+
+describe('listSecuritySchemes', () => {
+  it('returns every declared scheme, including oauth2 and openIdConnect, without filtering by type', () => {
+    const doc: OpenApiDocument = {
+      components: {
+        securitySchemes: {
+          Bearer: { type: 'http', scheme: 'bearer' },
+          ApiKeyHeader: { type: 'apiKey', in: 'header', name: 'X-Api-Key' },
+          OAuth2Scheme: { type: 'oauth2' },
+          OidcScheme: { type: 'openIdConnect' },
+        },
+      },
+    };
+
+    const schemes = listSecuritySchemes(doc);
+
+    expect(schemes).toHaveLength(4);
+    expect(schemes).toContainEqual({ name: 'Bearer', scheme: { type: 'http', scheme: 'bearer' } });
+    expect(schemes).toContainEqual({
+      name: 'ApiKeyHeader',
+      scheme: { type: 'apiKey', in: 'header', name: 'X-Api-Key' },
+    });
+    expect(schemes).toContainEqual({ name: 'OAuth2Scheme', scheme: { type: 'oauth2' } });
+    expect(schemes).toContainEqual({ name: 'OidcScheme', scheme: { type: 'openIdConnect' } });
+  });
+
+  it('returns an empty list, without throwing, when the document declares no securitySchemes', () => {
+    expect(listSecuritySchemes({})).toEqual([]);
+    expect(listSecuritySchemes({ components: {} })).toEqual([]);
+  });
+});
+
+describe('effectiveSecurity', () => {
+  const doc: OpenApiDocument = {
+    security: [{ Bearer: [] }],
+    paths: {
+      '/api/orders': {
+        get: { security: [{ ApiKey: [] }] },
+        delete: { security: [] },
+        post: {},
+      },
+    },
+  };
+
+  it("favors the operation's own security over the document root", () => {
+    expect(effectiveSecurity(doc, 'get', '/api/orders')).toEqual([{ ApiKey: [] }]);
+  });
+
+  it('treats an explicit empty security array on the operation as public, even with a root requirement', () => {
+    expect(effectiveSecurity(doc, 'delete', '/api/orders')).toEqual([]);
+  });
+
+  it('falls back to the document root security when the operation declares no security key', () => {
+    expect(effectiveSecurity(doc, 'post', '/api/orders')).toEqual([{ Bearer: [] }]);
+  });
+
+  it('returns an empty list when neither the operation nor the root declares security', () => {
+    expect(effectiveSecurity({ paths: { '/x': { get: {} } } }, 'get', '/x')).toEqual([]);
+  });
+});
+
+describe('hasSecurityDeclaration', () => {
+  it('is true when the operation declares its own security, even an explicit empty one', () => {
+    const doc: OpenApiDocument = { paths: { '/x': { get: { security: [] } } } };
+    expect(hasSecurityDeclaration(doc, 'get', '/x')).toBe(true);
+  });
+
+  it('is true when only the document root declares security', () => {
+    const doc: OpenApiDocument = { security: [{ Bearer: [] }], paths: { '/x': { get: {} } } };
+    expect(hasSecurityDeclaration(doc, 'get', '/x')).toBe(true);
+  });
+
+  it('is false when neither the operation nor the root declares security at all', () => {
+    const doc: OpenApiDocument = { paths: { '/x': { get: {} } } };
+    expect(hasSecurityDeclaration(doc, 'get', '/x')).toBe(false);
+  });
+});
+
+describe('buildAuthApplication', () => {
+  const bearerScheme: OpenApiSecurityScheme = { type: 'http', scheme: 'bearer' };
+  const oauth2Scheme: OpenApiSecurityScheme = { type: 'oauth2' };
+  const oidcScheme: OpenApiSecurityScheme = { type: 'openIdConnect' };
+  const apiKeyHeaderScheme: OpenApiSecurityScheme = {
+    type: 'apiKey',
+    in: 'header',
+    name: 'X-Api-Key',
+  };
+  const apiKeyQueryScheme: OpenApiSecurityScheme = { type: 'apiKey', in: 'query', name: 'api_key' };
+  const apiKeyCookieScheme: OpenApiSecurityScheme = { type: 'apiKey', in: 'cookie', name: 'sid' };
+  const basicScheme: OpenApiSecurityScheme = { type: 'http', scheme: 'basic' };
+
+  it('builds an Authorization: Bearer header for an http/bearer scheme', () => {
+    expect(buildAuthApplication(bearerScheme, 'xyz')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer xyz',
+    });
+  });
+
+  it('treats oauth2 and openIdConnect as "paste an access token", same as http/bearer', () => {
+    expect(buildAuthApplication(oauth2Scheme, 'xyz')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer xyz',
+    });
+    expect(buildAuthApplication(oidcScheme, 'xyz')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer xyz',
+    });
+  });
+
+  it('trims whitespace and strips an already-pasted "Bearer " prefix, case-insensitively', () => {
+    expect(buildAuthApplication(bearerScheme, '  xyz\n')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer xyz',
+    });
+    expect(buildAuthApplication(bearerScheme, 'Bearer xyz')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer xyz',
+    });
+    expect(buildAuthApplication(bearerScheme, 'bearer xyz')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer xyz',
+    });
+  });
+
+  it('builds a named header for apiKey in:header', () => {
+    expect(buildAuthApplication(apiKeyHeaderScheme, 'xyz')).toEqual({
+      target: 'header',
+      name: 'X-Api-Key',
+      value: 'xyz',
+    });
+  });
+
+  it('builds a named query parameter for apiKey in:query', () => {
+    expect(buildAuthApplication(apiKeyQueryScheme, 'xyz')).toEqual({
+      target: 'query',
+      name: 'api_key',
+      value: 'xyz',
+    });
+  });
+
+  it('returns null for apiKey in:cookie, out of reach for this panel', () => {
+    expect(buildAuthApplication(apiKeyCookieScheme, 'xyz')).toBeNull();
+  });
+
+  it('returns null for http/basic, out of scope for this phase', () => {
+    expect(buildAuthApplication(basicScheme, 'xyz')).toBeNull();
+  });
+
+  it('returns null when the value is empty or only whitespace', () => {
+    expect(buildAuthApplication(bearerScheme, '')).toBeNull();
+    expect(buildAuthApplication(bearerScheme, '   ')).toBeNull();
+  });
+});
+
+describe('previewAuthApplication', () => {
+  it('masks everything but the last 4 characters of the bearer token', () => {
+    expect(previewAuthApplication({ type: 'http', scheme: 'bearer' }, 'abcdef82a')).toEqual({
+      target: 'header',
+      name: 'Authorization',
+      value: 'Bearer ••••f82a',
+    });
+  });
+
+  it('masks the apiKey query preview the same way', () => {
+    expect(
+      previewAuthApplication({ type: 'apiKey', in: 'query', name: 'api_key' }, 'abcdef82a'),
+    ).toEqual({ target: 'query', name: 'api_key', value: '••••f82a' });
+  });
+
+  it('fully masks a value with 4 characters or fewer', () => {
+    expect(
+      previewAuthApplication({ type: 'apiKey', in: 'header', name: 'X-Api-Key' }, 'abc'),
+    ).toEqual({ target: 'header', name: 'X-Api-Key', value: '••••' });
+  });
+
+  it('returns null when there is nothing to preview', () => {
+    expect(previewAuthApplication({ type: 'http', scheme: 'bearer' }, '')).toBeNull();
   });
 });

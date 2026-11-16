@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
+### Added
+
+- `NetApiFlow.Dashboard`: "Try an endpoint" reads the host's OpenAPI `securitySchemes` and shows
+  an "Authorize" section above the request form. Paste a value for each declared scheme (Bearer,
+  API key, or a pasted access token for OAuth2/OpenID Connect); the right header or query
+  parameter is applied automatically to every request whose route requires it, a manually added
+  header with the same name still wins, and the value lives only in `sessionStorage` for the
+  current browser tab.
+
 ## [0.3.2] - 2026-11-15
 
 ### Added

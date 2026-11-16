@@ -384,6 +384,13 @@ public sealed record RouteStat
 }
 ```
 
+`RouteTemplate` é sempre normalizado (D-124): barra inicial, sem barra final, preservando o
+restante do texto do `RoutePattern` como vem (incluindo parâmetro e restrição, ex.
+`/api/orders/{id:int}`). A normalização acontece na gravação (middleware) e em todo ponto de
+entrada que recebe um `route` de fora (`/traces`, `/blueprint`, `GET /endpoints`), usando o mesmo
+helper interno. Nenhum `ITraceStore` precisa normalizar por conta própria: ao chegar nele, o valor
+já está no formato canônico dos dois lados da comparação.
+
 `GetArchitectureMapAsync` e `ArchitectureMap` foram acrescentados a `ITraceStore` na Fase 16
 (D-83): grafo estático da rota (`method`, `routeTemplate`), união de todas as execuções
 registradas na janela de `StatsQuery`, não um trace em particular. Nó por `(Component,
@@ -545,7 +552,7 @@ Query string:
 |---|---|---|---|
 | `status` | `Running` \| `Success` \| `Error` | não | `FlowTrace.Status` |
 | `method` | string | não | `FlowTrace.Method`, exato |
-| `route` | string | não | `FlowTrace.RouteTemplate`, exato (não é glob) |
+| `route` | string | não | `FlowTrace.RouteTemplate`, exato (não é glob), normalizado antes de comparar (D-124) |
 | `tenant` | string | não | tag `tenant` do trace (seção 6.9 do prompt) |
 | `from` | ISO 8601 | não | `StartedAt >= from` |
 | `to` | ISO 8601 | não | `StartedAt <= to` |
@@ -690,7 +697,8 @@ existirem.
 Spans da última execução bem-sucedida do endpoint, usados pelo frontend para inferir etapas
 "não executadas" (seção 7.2 do prompt).
 
-Query string: `method` (obrigatório), `route` (obrigatório, route template exato).
+Query string: `method` (obrigatório), `route` (obrigatório, route template exato, normalizado
+antes de comparar, D-124).
 
 Resposta `200`, mesma forma de `/traces/{traceId}` (trace + spans). `204` sem corpo se não
 houver execução bem-sucedida anterior daquele método/rota. `400` se faltar `method` ou `route`.
@@ -797,8 +805,9 @@ API hospedeira independente de ter sido executada ou não.
 Acrescentada na Fase 16 (D-83), base do mapa de arquitetura vivo (D-60 item E). Mapa estático de
 uma rota, forma de `ArchitectureMap`.
 
-Query string: `method` (obrigatório), `route` (obrigatório, route template exato, mesma
-convenção de `/blueprint`), `from`/`to` (opcionais, forma de `StatsQuery`).
+Query string: `method` (obrigatório), `route` (obrigatório, route template exato, normalizado
+antes de comparar como todo `route` desta API, D-124, mesma convenção de `/blueprint`), `from`/`to`
+(opcionais, forma de `StatsQuery`).
 
 Resposta `200`:
 

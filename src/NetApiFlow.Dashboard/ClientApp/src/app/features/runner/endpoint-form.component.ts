@@ -5,13 +5,21 @@ import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
-import { OpenApiDocument } from '../../core/models';
+import { OpenApiDocument, OpenApiSecurityScheme } from '../../core/models';
+import { RunnerCredentialsService } from '../../core/runner-credentials.service';
 import { httpMethodTagClass } from '../../shared/http-method-style';
 import {
+  AuthApplication,
+  buildAuthApplication,
   buildEndpointForm,
+  effectiveSecurity,
   FormFieldKind,
+  hasSecurityDeclaration,
   listOpenApiEndpoints,
+  listSecuritySchemes,
   partitionDashboardRoutes,
+  previewAuthApplication,
+  SecuritySchemeEntry,
 } from './openapi-form';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
@@ -37,6 +45,7 @@ export class EndpointFormComponent {
   private readonly api = inject(ApiService);
   private readonly config = inject(ConfigService);
   private readonly document = inject(DOCUMENT);
+  protected readonly credentials = inject(RunnerCredentialsService);
 
   readonly traceDispatched = output<string>();
 
@@ -81,8 +90,63 @@ export class EndpointFormComponent {
     return doc && selected ? buildEndpointForm(doc, selected.method, selected.path) : null;
   });
 
+  private readonly securitySchemes = computed(() => {
+    const doc = this.openApiDocument();
+    return doc ? listSecuritySchemes(doc) : [];
+  });
+
+  /** `apiKey in: cookie` is out of reach for this panel: a real session cookie already rides
+   *  along natively on a same-origin request, and `fetch` cannot set `Cookie` manually. */
+  readonly authorizeSchemes = computed(() =>
+    this.securitySchemes().filter(
+      (entry) => !(entry.scheme.type === 'apiKey' && entry.scheme.in === 'cookie'),
+    ),
+  );
+
+  private readonly schemesByName = computed(
+    () => new Map(this.securitySchemes().map((entry) => [entry.name, entry.scheme])),
+  );
+
+  private readonly securityAlternatives = computed(() => {
+    const doc = this.openApiDocument();
+    const selected = this.selected();
+    return doc && selected ? effectiveSecurity(doc, selected.method, selected.path) : [];
+  });
+
+  private readonly operationDeclaresSecurity = computed(() => {
+    const doc = this.openApiDocument();
+    const selected = this.selected();
+    return !!doc && !!selected && hasSecurityDeclaration(doc, selected.method, selected.path);
+  });
+
+  /**
+   * `effectiveSecurity` is a list of OR alternatives (each itself an AND of scheme names), so a
+   * route with two alternatives where only one is filled in is already fully authorized: the
+   * warning only fires when every alternative still has at least one empty scheme.
+   */
+  readonly noAlternativeFilled = computed(() => {
+    const alternatives = this.securityAlternatives();
+    if (alternatives.length === 0) {
+      return false;
+    }
+    return !alternatives.some((alternative) =>
+      Object.keys(alternative).every((name) => this.credentials.authValue(name).trim() !== ''),
+    );
+  });
+
+  /** Mirror of the warning above: nothing declared here, yet the user filled a value anyway. */
+  readonly noSecurityDeclaredButFilled = computed(() => {
+    if (this.operationDeclaresSecurity()) {
+      return false;
+    }
+    return this.authorizeSchemes().some(
+      (entry) => this.credentials.authValue(entry.name).trim() !== '',
+    );
+  });
+
+  private readonly revealedSchemeNames = signal<ReadonlySet<string>>(new Set());
+
   readonly fieldValues = signal<Record<string, string>>({});
-  readonly customHeaders = signal<{ name: string; value: string }[]>([]);
   readonly sending = signal(false);
   readonly sendError = signal<TranslationKey | null>(null);
   readonly invalidFieldName = signal<string | null>(null);
@@ -97,6 +161,7 @@ export class EndpointFormComponent {
       next: (doc) => {
         this.openApiDocument.set(doc);
         this.loading.set(false);
+        this.credentials.reconcile(listSecuritySchemes(doc).map((entry) => entry.name));
       },
       error: () => {
         this.loadError.set('action.openApiError.title');
@@ -112,7 +177,6 @@ export class EndpointFormComponent {
   selectEndpoint(method: string, path: string): void {
     this.selected.set({ method, path });
     this.fieldValues.set({});
-    this.customHeaders.set([]);
     this.sendError.set(null);
     this.invalidFieldName.set(null);
     this.lastTraceId.set(null);
@@ -134,24 +198,64 @@ export class EndpointFormComponent {
     this.setFieldValue(name, target.value);
   }
 
+  credentialValue(schemeName: string): string {
+    return this.credentials.authValue(schemeName);
+  }
+
+  onAuthValueInput(schemeName: string, event: Event): void {
+    this.credentials.setAuthValue(schemeName, (event.target as HTMLInputElement).value);
+  }
+
+  isRevealed(schemeName: string): boolean {
+    return this.revealedSchemeNames().has(schemeName);
+  }
+
+  toggleReveal(schemeName: string): void {
+    this.revealedSchemeNames.update((names) => {
+      const next = new Set(names);
+      if (next.has(schemeName)) {
+        next.delete(schemeName);
+      } else {
+        next.add(schemeName);
+      }
+      return next;
+    });
+  }
+
+  schemeLabelKey(scheme: OpenApiSecurityScheme): TranslationKey {
+    return scheme.type === 'oauth2' || scheme.type === 'openIdConnect'
+      ? 'action.authorize.schemeLabel.token'
+      : 'action.authorize.schemeLabel.plain';
+  }
+
+  authPreview(entry: SecuritySchemeEntry): AuthApplication | null {
+    return previewAuthApplication(entry.scheme, this.credentials.authValue(entry.name));
+  }
+
+  authPreviewKey(preview: AuthApplication): TranslationKey {
+    return preview.target === 'query'
+      ? 'action.authorize.preview.query'
+      : 'action.authorize.preview.header';
+  }
+
+  isQueryScheme(scheme: OpenApiSecurityScheme): boolean {
+    return scheme.type === 'apiKey' && scheme.in === 'query';
+  }
+
   addHeader(): void {
-    this.customHeaders.update((headers) => [...headers, { name: '', value: '' }]);
+    this.credentials.addHeader();
   }
 
   removeHeader(index: number): void {
-    this.customHeaders.update((headers) => headers.filter((_, i) => i !== index));
+    this.credentials.removeHeader(index);
   }
 
   setHeaderName(index: number, name: string): void {
-    this.customHeaders.update((headers) =>
-      headers.map((header, i) => (i === index ? { ...header, name } : header)),
-    );
+    this.credentials.setHeaderName(index, name);
   }
 
   setHeaderValue(index: number, value: string): void {
-    this.customHeaders.update((headers) =>
-      headers.map((header, i) => (i === index ? { ...header, value } : header)),
-    );
+    this.credentials.setHeaderValue(index, value);
   }
 
   onHeaderNameInput(index: number, event: Event): void {
@@ -201,9 +305,33 @@ export class EndpointFormComponent {
       }
     }
 
-    const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
     let headers = new HttpHeaders();
-    for (const header of this.customHeaders()) {
+    const requiredSchemeNames = new Set(
+      this.securityAlternatives().flatMap((alternative) => Object.keys(alternative)),
+    );
+    for (const schemeName of requiredSchemeNames) {
+      const scheme = this.schemesByName().get(schemeName);
+      if (!scheme) {
+        continue;
+      }
+      const application = buildAuthApplication(scheme, this.credentials.authValue(schemeName));
+      if (!application) {
+        continue;
+      }
+      if (application.target === 'query') {
+        queryParts.push(
+          `${encodeURIComponent(application.name)}=${encodeURIComponent(application.value)}`,
+        );
+      } else {
+        headers = headers.set(application.name, application.value);
+      }
+    }
+
+    const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
+
+    // A manual header always wins over the automatic one: .set() replaces rather than adds, so
+    // the same header name never goes out twice.
+    for (const header of this.credentials.customHeaders()) {
       const name = header.name.trim();
       if (name !== '') {
         headers = headers.set(name, header.value);
