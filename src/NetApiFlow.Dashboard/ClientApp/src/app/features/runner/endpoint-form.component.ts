@@ -329,8 +329,8 @@ export class EndpointFormComponent {
 
     const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
 
-    // A manual header (Tarefa 32.10) always wins over the automatic one: .set() replaces rather
-    // than adds, so the same header name never goes out twice.
+    // A manual header always wins over the automatic one: .set() replaces rather than adds, so
+    // the same header name never goes out twice.
     for (const header of this.credentials.customHeaders()) {
       const name = header.name.trim();
       if (name !== '') {
