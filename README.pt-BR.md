@@ -256,6 +256,7 @@ no campo mascarado de cada esquema. Um preview ao lado mostra o header ou o par�
 exato que vai ser enviado. O valor certo é aplicado automaticamente em toda requisição cuja rota
 exige aquele esquema, e um header adicionado à mão sempre vence o automático. O valor colado vive
 só no `sessionStorage` da aba atual: fechar a aba apaga o valor, e nada é gravado em disco.
+
 ## Exportar e importar uma trace
 
 Uma trace aberta no `/flow` pode ser baixada como arquivo `.json` ("Baixar trace (.json)") e
