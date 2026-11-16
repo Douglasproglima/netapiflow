@@ -245,23 +245,10 @@ a forma da série recente ao lado dele. Os dois atualizam conforme as traces vã
 verdade para a sua API a partir do dashboard, para o grafo ter o que desenhar sem você sair do
 navegador nem abrir um cliente REST.
 
-A aba "Personalizado" monta o formulário a partir do documento OpenAPI da sua própria aplicação:
-escolha um endpoint, preencha parâmetros de rota e de query e um corpo JSON, envie. Isso exige um
+O painel monta o formulário a partir do documento OpenAPI da sua própria aplicação: escolha um
+endpoint, preencha parâmetros de rota e de query e um corpo JSON, envie. Isso exige um
 `MapOpenApi()` (ou endpoint OpenAPI equivalente) na aplicação hospedeira, e avisa quando não
 consegue carregar o documento. As rotas do próprio dashboard ficam de fora da lista.
-
-A aba "Cenários" são quatro requisições de um clique feitas para os samples que acompanham o
-repositório: Sucesso, Lento, Erro e Sequencial (N+1), cada uma produzindo uma trace de formato
-diferente. Elas apontam para as rotas de `samples/SampleApi.Controllers` e
-`samples/SampleApi.MinimalMediatR`, ou seja, servem para demonstrar o dashboard, não para
-exercitar a sua API. Para a sua API, use a aba "Personalizado".
-
-Na mesma aba há um seletor de atraso artificial (nenhum, 250 ms, 1000 ms, 3000 ms), aplicado ao
-cenário antes de disparar, para produzir uma trace realisticamente lenta sem carga de verdade. O
-atraso vai no header de requisição `X-NetApiFlow-Demo-Delay-Ms` e só tem efeito se a aplicação
-hospedeira respeitar esse header. Respeitá-lo é código de sample (`DemoDelayMiddleware`, nos dois
-projetos de exemplo), não faz parte de nenhum pacote publicado: o NetApiFlow nunca atrasa uma
-requisição sua.
 
 ## Exportar e importar uma trace
 
