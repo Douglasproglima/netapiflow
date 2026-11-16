@@ -14,6 +14,13 @@ que o NetApiFlow já usa como `TraceId`, fato real, confirmado na documentação
 Microsoft, não especulação). As duas estão registradas em `docs/plano/roadmap-valor.md` para
 decisão própria, fora deste hotfix.
 
+Revisão de uma segunda IA sobre este mesmo plano (D-134) corrigiu duas coisas antes da
+implementação terminar: a Tarefa 34.6 original (`ConfigureAwait(false)` espalhado por `src/`)
+foi substituída por uma tarefa de documentação, porque o próprio time do ASP.NET Core
+deliberadamente não usa `ConfigureAwait(false)` em código acoplado ao ASP.NET Core, e o
+NetApiFlow é exatamente isso; e a Tarefa 34.5 ganhou um critério de pronto mais forte, cobrindo o
+comportamento que o mecanismo existe pra resolver, não só o efeito colateral da correção.
+
 ## Regra geral desta fase
 
 Toda tarefa escreve primeiro o teste que prova o comportamento esperado, confirma que ele falha
@@ -79,18 +86,22 @@ continua passando nos dois TFMs sem alteração.
 ## Tarefa 34.4: documentar por que `net8.0` continua suportado mesmo fora do ciclo de vida oficial
 
 `net8.0` e `net9.0` saíram de suporte em 10/11/2026 (confirmado na política oficial de suporte da
-Microsoft), mesmo dia em que `net11.0` foi lançado. O ADR-0003 já previa esse momento ("quando
-`net8.0` sair de suporte, trocar por `net12.0`"), mas a decisão de quando trocar ainda não foi
-tomada, e enquanto não for, o README não diz nada sobre o assunto: alguém que notar a
-inconsistência vai levantar isso como achado, quando já é uma decisão consciente de alcance.
+Microsoft), mesmo dia em que `net11.0` foi lançado. O ADR-0003 previa esse momento ("quando
+`net8.0` sair de suporte, trocar por `net12.0`"), mas essa cláusula tem um furo que ninguém tinha
+visto até a revisão de D-134: `net12.0` só deve lançar em novembro de 2027, quase um ano depois
+de `net8.0` já estar fora de suporte agora. A troca direta que o ADR previa é literalmente
+impossível de executar hoje. Não dá pra escrever uma frase de "decisão deliberada" que finja um
+plano fechado que não existe.
 
-Uma frase no README.md e no README.pt-BR.md, na seção de requisitos ou de target frameworks,
-dizendo que `net8.0` segue suportado pelo pacote por decisão deliberada de alcance mesmo fora do
-ciclo de vida oficial da Microsoft, e que a troca por `net12.0` está prevista no ADR-0003 quando a
-Planejadora decidir o momento.
+Uma frase honesta no README.md e no README.pt-BR.md, na seção de requisitos ou de target
+frameworks: `net8.0` segue suportado pelo pacote por enquanto, mesmo fora do ciclo de vida oficial
+da Microsoft, porque a próxima LTS (`net12.0`) ainda não existe; a decisão de quando sair está sob
+investigação (ligada à Tarefa 19 do `roadmap-valor.md`, que também cobre o furo de doze meses do
+próprio ADR-0003), não fechada ainda.
 
-**Pronto quando:** a frase está nos dois READMEs. Não decide quando trocar, só documenta a decisão
-de continuar como está por enquanto.
+**Pronto quando:** a frase está nos dois READMEs, e não afirma um plano que o ADR-0003 não
+sustenta de verdade. Não decide quando trocar, só documenta honestamente que a decisão está em
+aberto e por quê.
 
 ## Tarefa 34.5: `FlowStep.MarkError` não pode gravar em `exception.Data` do usuário
 
@@ -106,26 +117,45 @@ objeto do usuário. `OriginClaimedExceptions.TryGetValue(exception, out _)` no l
 `exception.Data.Contains(...)`, `OriginClaimedExceptions.Add(exception, Sentinel)` no lugar de
 `exception.Data[...] = true`.
 
+Esta é uma correção comportamental, não documental: o `OriginClaimedKey` existe pra resolver um
+cenário específico (uma camada externa captura e relança a mesma instância de exceção sem
+reivindicar a origem pra si), e a troca de mecanismo precisa continuar resolvendo exatamente esse
+cenário, não só parar de tocar em `exception.Data`.
+
 **Pronto quando:** teste novo em `StepTests.cs` confirma que, depois de `MarkError`, a exceção
-lançada tem `exception.Data.Count` igual a zero (hoje seria um). O teste existente
-`MarkError_SetsErrorTagsAndStatus` continua passando sem alteração, porque as tags na `Activity`
-não mudam, só onde o marcador de origem é guardado.
+lançada tem `exception.Data.Count` igual a zero (hoje seria um). Teste novo adicional confirma o
+cenário de origem de verdade: dois `FlowStep` aninhados chamam `MarkError` com a **mesma
+instância** de exceção (simulando uma camada externa capturando e relançando sem reivindicar),
+e só o primeiro `MarkError` (o mais interno) marca `netapiflow.error.origin` como `true`; o
+segundo marca `false`. O teste existente `MarkError_SetsErrorTagsAndStatus` continua passando
+sem alteração, porque as tags na `Activity` não mudam, só onde o marcador de origem é guardado.
 
-## Tarefa 34.6: `ConfigureAwait(false)` em todo `src/`, travado por regra de analyzer
+## Tarefa 34.6: documentar por que `src/` não usa `ConfigureAwait(false)`, em vez de adicionar
 
-`ConfigureAwait` não aparece em nenhum arquivo de `src/`. Em ASP.NET Core não existe
-`SynchronizationContext` capturado, então o comportamento em produção não muda nada, mas é
-biblioteca publicada, e ausência total é indistinguível de esquecimento pra quem olha de fora.
-Travar a decisão no build, não deixar na memória de quem escreve código novo depois.
+Revisado depois da implementação ter começado (D-134): espalhar `.ConfigureAwait(false)` por
+todo `await` de `src/` foi a tarefa original, e está cancelada. O próprio time do ASP.NET Core
+deliberadamente não usa `ConfigureAwait(false)` em código acoplado ao framework, justamente
+porque não existe `SynchronizationContext` ali: não há nada pra evitar capturar. O núcleo do
+NetApiFlow só tem `FrameworkReference` pro `Microsoft.AspNetCore.App` (D-02, núcleo sem
+dependência externa), é uma lib de ASP.NET Core por construção, não uma lib de propósito geral
+que também precisa rodar fora dele. Adicionar a chamada em umas cinquenta ocorrências é diff
+grande, risco real de erro humano (um `await` sem `.ConfigureAwait` esquecido no meio de
+cinquenta com fica pior que não ter nenhum), e não resolve problema nenhum que exista de verdade.
 
-Adicionar `.ConfigureAwait(false)` em todo `await` dentro de `src/` (núcleo e pacotes opcionais,
-não nos samples nem nos testes, onde o contexto de execução é diferente e a regra não se aplica
-do mesmo jeito). Habilitar `dotnet_diagnostic.CA2007.severity = warning` no `.editorconfig`
-raiz, que vira erro de build por causa do `TreatWarningsAsErrors` já ligado.
+O problema que a auditoria realmente aponta não é a ausência do `ConfigureAwait`, é a ausência
+**não estar escrita**: fica indistinguível de esquecimento pra quem olha de fora. Isso se resolve
+registrando a decisão, não com código.
 
-**Pronto quando:** `dotnet build NetApiFlow.slnx -c Release` continua com zero avisos depois da
-mudança. Remover um `.ConfigureAwait(false)` de propósito, num teste manual local, faz o build
-falhar com CA2007, confirmando que a regra está travada de verdade, não só documentada.
+Registrar a decisão num ADR novo (próximo número livre em `docs/adr/`), curto, três ou quatro
+frases: o núcleo é acoplado ao ASP.NET Core por `FrameworkReference`, não existe
+`SynchronizationContext` nesse contexto, `ConfigureAwait(false)` não muda nenhum comportamento
+aqui, e por isso a ausência é deliberada. `dotnet_diagnostic.CA2007.severity = none` explícito no
+`.editorconfig` raiz, com a referência ao ADR ao lado (não repetindo o texto do ADR, só
+apontando pra ele), pra `CA2007` nunca disparar por acidente numa versão futura do SDK que mude o
+que entra em `latest-recommended`.
+
+**Pronto quando:** o ADR existe, está em `docs/adr/README.md` (índice). `.editorconfig` tem a
+linha de `CA2007` explícita. `dotnet build NetApiFlow.slnx -c Release` continua com zero avisos.
 
 ## Tarefa 34.7: documentar que `GetRecentTrace(IServiceProvider, string)` é cenário de teste
 
@@ -148,11 +178,14 @@ automatizado pra isso.
   compatibilidade possível (mesma régua do D-75), decisão que precisa da Planejadora antes da
   1.0, não cabe num hotfix PATCH. Registrado em `roadmap-valor.md`.
 - Qualquer trabalho sobre `net11.0`: precisa de fase de investigação própria antes de qualquer
-  ADR, não é tarefa de hotfix. Registrado em `roadmap-valor.md`.
+  ADR, não é tarefa de hotfix. Registrado em `roadmap-valor.md` (item 16, que agora também cobre
+  o furo de doze meses do ADR-0003, achado em D-134).
 - Rodar a suíte completa de integração com Testcontainers, testar Native AOT publicado de
-  verdade, e reinstalar o `0.4.1` do zero numa API de terceiro: três verificações que valem mais
-  que qualquer leitura de código, fora do escopo das tarefas em si, mas exigidas no "Aceite da
-  fase" abaixo antes de liberar o hotfix.
+  verdade, e reinstalar o pacote publicado do zero numa API de terceiro: três verificações que
+  valem mais que qualquer leitura de código, fora do escopo das tarefas em si, mas exigidas no
+  "Aceite da fase" abaixo antes de liberar o hotfix. A reinstalação do pacote publicado está
+  rodando em paralelo às tarefas de código (D-134: fazer antes de fechar o escopo, não depois,
+  pra qualquer achado novo entrar neste mesmo hotfix em vez de virar um `0.4.2` logo em seguida).
 
 ## Aceite da fase
 
