@@ -242,21 +242,10 @@ shape of the recent series next to it. Both refresh as traces complete.
 API from the dashboard, so the graph has something to draw without you leaving the browser or
 reaching for a REST client.
 
-The "Custom" tab builds its form from your application's own OpenAPI document: pick an endpoint,
-fill in path and query parameters and a JSON body, send. It needs `MapOpenApi()` (or an equivalent
-OpenAPI endpoint) in the host application, and says so when the document can't be loaded. The
-dashboard's own routes are filtered out of the list.
-
-The "Scenarios" tab is four one-click requests built for the bundled samples: Success, Slow,
-Error and Sequential (N+1), each one producing a trace with a distinct shape. They target the
-routes in `samples/SampleApi.Controllers` and `samples/SampleApi.MinimalMediatR`, so they are
-there to demo the dashboard, not to exercise your own API: use the "Custom" tab for that.
-
-The same tab has an artificial delay selector (none, 250 ms, 1000 ms, 3000 ms) applied to the
-scenario before it is sent, to produce a believably slow trace without real load. The delay is
-sent as an `X-NetApiFlow-Demo-Delay-Ms` request header and only has an effect if the host honors
-it. Honoring it is sample code (`DemoDelayMiddleware` in both sample projects), not part of any
-published package: NetApiFlow never delays a request of yours.
+The panel builds its form from your application's own OpenAPI document: pick an endpoint, fill in
+path and query parameters and a JSON body, send. It needs `MapOpenApi()` (or an equivalent OpenAPI
+endpoint) in the host application, and says so when the document can't be loaded. The dashboard's
+own routes are filtered out of the list.
 
 ## Export and import a trace
 
