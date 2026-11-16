@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
 ### Added
 
 - `NetApiFlow.Dashboard`: "Try an endpoint" reads the host's OpenAPI `securitySchemes` and shows
