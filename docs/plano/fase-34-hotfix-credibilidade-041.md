@@ -51,7 +51,7 @@ quais não são.
 
 ## Tarefa 34.2: documentar o limite de `/traces/live` em implantação com múltiplas réplicas
 
-Achado já registrado em D-132: `GetLiveTraces` (`DashboardApiEndpoints.cs`) lê o `FlowRecorder`
+Achado já registrado em D-133: `GetLiveTraces` (`DashboardApiEndpoints.cs`) lê o `FlowRecorder`
 injetado, estado em memória de um único processo. Com várias réplicas atrás de um balanceador sem
 sticky session, `/flow` mostra só o que a réplica que respondeu àquela chamada viu, e o próprio
 navegador pode pular de réplica a cada requisição. É consequência do desenho, não bug, mas nunca
@@ -106,7 +106,7 @@ plano fechado que não existe.
 Uma frase honesta no README.md e no README.pt-BR.md, na seção de requisitos ou de target
 frameworks: `net8.0` segue suportado pelo pacote por enquanto, mesmo fora do ciclo de vida oficial
 da Microsoft, porque a próxima LTS (`net12.0`) ainda não existe; a decisão de quando sair está sob
-investigação (ligada à Tarefa 19 do `roadmap-valor.md`, que também cobre o furo de doze meses do
+investigação (ligada ao item 16 do `roadmap-valor.md`, que também cobre o furo de doze meses do
 próprio ADR-0003), não fechada ainda.
 
 **Pronto quando:** a frase está nos dois READMEs, e não afirma um plano que o ADR-0003 não
