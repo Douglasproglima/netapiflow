@@ -164,6 +164,12 @@ public enum ExternalActivitySource
     /// <see cref="ComponentType.Database"/> span. Deduplicated against <c>NetApiFlow.EntityFrameworkCore</c>'s
     /// own span for the same command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.</summary>
     Npgsql = 2,
+
+    /// <summary>SQL commands from Microsoft.Data.SqlClient's own <c>ActivitySource</c> (same
+    /// mechanism as <see cref="Npgsql"/>, applied to SQL Server, Fase 37), mapped to a
+    /// <see cref="ComponentType.Database"/> span. Deduplicated the same way against
+    /// <c>NetApiFlow.EntityFrameworkCore</c>'s own span for the same command.</summary>
+    SqlClient = 4,
 }
 
 public sealed class RetentionOptions
@@ -856,7 +862,8 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
   "version": "0.1.0",
   "tailSamplingEnabled": false,
   "successSampleRate": 0.1,
-  "openApiDocumentPath": "/openapi/v1.json"
+  "openApiDocumentPath": "/openapi/v1.json",
+  "hostPathBase": ""
 }
 ```
 
@@ -872,6 +879,14 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 `/openapi/v1.json`), o caminho raiz-relativo de onde o host serve o próprio documento OpenAPI.
 O painel "Testar um endpoint" lê daqui em vez de assumir o caminho padrão do `MapOpenApi()`,
 porque a maioria dos projetos .NET existentes serve OpenAPI por Swashbuckle, em outro caminho.
+
+`hostPathBase` (Fase 37, item 1 do roadmap de valor) é `HttpContext.Request.PathBase` lido no
+momento da própria chamada a `/config`, string vazia quando o host não usa `PathBase` nenhum.
+Existe porque `<base href>` do dashboard combina `{PathBase}{DashboardPath}`, e o painel "Testar
+um endpoint" monta a URL do endpoint do usuário a partir da raiz real do host
+(`{origin}{PathBase}{caminho do OpenAPI}`), nunca a partir do `<base href>` combinado, porque o
+caminho do OpenAPI do usuário já é relativo à raiz do próprio host, não ao caminho onde o
+dashboard foi montado.
 
 ### POST `/deploys`
 
