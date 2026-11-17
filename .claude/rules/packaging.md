@@ -4,8 +4,9 @@
 
 - `PackageId` com prefixo `NetApiFlow` (`NetApiFlow`, `NetApiFlow.Dashboard`,
   `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`, `NetApiFlow.Storage.PostgreSql`,
-  `NetApiFlow.Storage.SqlServer`, `NetApiFlow.Mcp`). Conferidos como livres no nuget.org antes do
-  uso (tarefa 0.1; `NetApiFlow.Mcp` conferido pela Planejadora em 2026-11-04, D-72).
+  `NetApiFlow.Storage.SqlServer`, `NetApiFlow.Mcp`, `NetApiFlow.Testing`). Conferidos como livres
+  no nuget.org antes do uso (tarefa 0.1; `NetApiFlow.Mcp` conferido pela Planejadora em
+  2026-11-04, D-72; `NetApiFlow.Testing` conferido pela Planejadora em 2026-11-17, ADR-0022).
 - `PackageReadmeFile`, `PackageIcon` (`docs/images/icon.png`, tarefa 0.7), `PackageTags`,
   `RepositoryUrl` (`https://github.com/Douglasproglima/netapiflow`),
   `PackageLicenseExpression=MIT`. Autor e licença herdados de `Directory.Build.props`
