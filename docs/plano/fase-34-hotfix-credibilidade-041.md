@@ -195,14 +195,32 @@ antes do tipo importado por `using`. Dentro de qualquer namespace nomeado o prob
 por isso nenhum teste da suíte pegou isso: nenhum teste nem sample do repositório chama `Step()` a
 partir da global namespace.
 
-Trocar, nos dois READMEs, o par de snippets "Manual form"/"Tagging a step": em vez de
-`using NetApiFlow;` mais `NetApiFlow.Step(...)`, usar `using static NetApiFlow.NetApiFlow;` mais
-`Step(...)` sem qualificação. Essa forma compila nos dois cenários (global namespace e namespace
-normal) e lê mais limpo que a atual. Só texto nos dois READMEs, nenhuma mudança de API.
+Trocar, nos dois READMEs, o par de snippets "Manual form"/"Tagging a step": acrescentar
+`using static NetApiFlow.NetApiFlow;` ao lado do `using NetApiFlow;` que já estava lá (o `using`
+simples continua necessário, por causa de `ComponentType` e da extensão `AddNetApiFlow`; a
+Executora testou e confirmou que uma troca pura quebra os dois com `CS0103`/`CS1061`), e usar
+`Step(...)` sem qualificação no corpo. Essa forma compila nos dois cenários (global namespace e
+namespace normal) e lê mais limpo que a atual. Só texto nos dois READMEs, nenhuma mudança de API.
 
-**Pronto quando:** os dois snippets usam `using static NetApiFlow.NetApiFlow;`. Conferir colando o
-snippet novo num `Program.cs` de top-level statements isolado (fora do repositório) e rodando
-`dotnet build`: zero erro.
+**Pronto quando:** os dois snippets têm as duas linhas de `using`. Conferir colando o snippet novo
+num `Program.cs` de top-level statements isolado (fora do repositório) e rodando `dotnet build`:
+zero erro.
+
+## Tarefa 34.9: o mesmo defeito, num terceiro snippet do README
+
+Achado da Executora, verificando a Tarefa 34.8: o snippet de "Asserting on flow in tests"
+(`OrdersEndpointTests`, logo abaixo da seção que a Tarefa 34.7 acabou de marcar como o caminho
+recomendado pra teste de integração) também não declara namespace, cai na global namespace do
+mesmo jeito, e `NetApiFlow.GetRecentTrace(factory.Services, traceId)` dá o mesmo `CS0234`.
+Confirmado por inspeção direta: `GetRecentTrace` é método estático da mesma classe `NetApiFlow`,
+mesmo namespace, mesma causa do D-136.
+
+Mesmo remédio: acrescentar `using static NetApiFlow.NetApiFlow;` ao lado do `using` já existente
+no snippet, e trocar `NetApiFlow.GetRecentTrace(...)` por `GetRecentTrace(...)` sem qualificação.
+
+**Pronto quando:** o snippet de "Asserting on flow in tests" tem as duas linhas de `using` e a
+chamada sem qualificação. Mesma conferência da Tarefa 34.8: colar o snippet isolado, `dotnet
+build`, zero erro.
 
 ## Fora de escopo
 
@@ -221,7 +239,7 @@ snippet novo num `Program.cs` de top-level statements isolado (fora do repositó
 
 ## Aceite da fase
 
-Critérios de pronto das oito tarefas acima. `dotnet build NetApiFlow.slnx -c Release` e
+Critérios de pronto das nove tarefas acima. `dotnet build NetApiFlow.slnx -c Release` e
 `dotnet format NetApiFlow.slnx --verify-no-changes` limpos nos dois TFMs. Suíte completa,
 incluindo `NetApiFlow.Storage.Tests` com Testcontainers real (Postgres e SQL Server), rodada pelo
 menos uma vez antes do merge, não só a suíte rápida. `dotnet pack NetApiFlow.slnx -c Release`
