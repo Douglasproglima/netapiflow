@@ -628,6 +628,13 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   on the very next request. Persisted history does not have this problem: with a storage package
   configured every replica writes to the same database, so `GET /traces/{traceId}` and the History
   screen find a trace no matter which replica recorded it.
+- `net8.0` left Microsoft's official support window on 10 November 2026, and NetApiFlow still ships
+  an asset for it. It stays for now because there is nowhere to move it to yet: the next LTS,
+  `net12.0`, is only expected in November 2027, so dropping `net8.0` today would leave `net10.0` as
+  the single supported target. When to stop shipping `net8.0` is an open question here, still under
+  investigation, not a date already chosen. Keeping it does mean the package has a target framework
+  that no longer gets servicing updates from Microsoft, which is worth knowing if your own policy
+  forbids that.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

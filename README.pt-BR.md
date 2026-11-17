@@ -639,6 +639,13 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   requisição seguinte. O histórico persistido não sofre disso: com um pacote de storage
   configurado, todas as réplicas escrevem no mesmo banco, então o `GET /traces/{traceId}` e a tela
   de histórico acham a trace independentemente de qual réplica gravou.
+- O `net8.0` saiu do ciclo de vida oficial da Microsoft em 10 de novembro de 2026, e o NetApiFlow
+  continua publicando um artefato para ele. Ele fica por enquanto porque ainda não há para onde ir:
+  a próxima LTS, o `net12.0`, só deve sair em novembro de 2027, então tirar o `net8.0` hoje
+  deixaria o `net10.0` como alvo único. Quando parar de publicar para `net8.0` é uma pergunta em
+  aberto aqui, ainda sob investigação, não uma data já escolhida. Manter significa que o pacote tem
+  um alvo que não recebe mais correção da Microsoft, o que vale saber se a sua própria política
+  proíbe isso.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.
