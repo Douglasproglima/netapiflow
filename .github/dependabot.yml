@@ -9,6 +9,15 @@ updates:
       nuget-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+          - "minor"
+    ignore:
+      # MediatR 15 changed the pipeline behavior delegate signature (requires forwarding
+      # cancellationToken) and dropped net8.0 (D-139). A major bump needs a source change in
+      # FlowTrackingBehavior.cs first, not an automated PR.
+      - dependency-name: "MediatR"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -19,6 +28,9 @@ updates:
       github-actions-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+          - "minor"
 
   - package-ecosystem: "npm"
     directory: "/src/NetApiFlow.Dashboard/ClientApp"
@@ -29,3 +41,15 @@ updates:
       npm-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+          - "minor"
+    ignore:
+      # @angular/build and @angular/compiler-cli pin a strict typescript peer range
+      # (>=6.0 <6.1, confirmed in their package.json); a patch bump of Angular doesn't widen
+      # it. TypeScript 7 needs its own PR once Angular's peer range allows it (D-139).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # .claude/rules/design-quality.md: impeccable is pinned on purpose, updated only as a
+      # deliberate decision after reading its changelog, never via an automated bump.
+      - dependency-name: "impeccable"
