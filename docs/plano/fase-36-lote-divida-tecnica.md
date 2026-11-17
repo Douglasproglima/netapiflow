@@ -1,6 +1,6 @@
 # Fase 36: lote de dívida técnica pequena, sem mudança de API pública
 
-Nove achados pequenos do `roadmap-valor.md`, triados pela Planejadora (D-142) por não exigirem
+Dez achados pequenos do `roadmap-valor.md`, triados pela Planejadora (D-142) por não exigirem
 nenhuma decisão de arquitetura ou de produto: cada um já tem forma decidida, precedente
 estabelecido no próprio código, ou decisão de forma fechada nesta entrada. PATCH, sem mudança em
 `contratos.md`, sem ADR. Cada tarefa é um commit.
@@ -151,6 +151,29 @@ agregada quando o host roda múltiplas réplicas. Resolver de verdade (visão ao
 
 **Pronto quando:** parágrafo presente nos dois READMEs, conteúdo equivalente (regra de idioma do
 `CLAUDE.md`).
+
+## Tarefa 36.10: projeto de verificação AOT pro caminho manual (item 20)
+
+Projeto novo em `tests/manual-verification/`, irmão de `AotAnnotationVerification` (D-136). Aquele
+projeto já prova que `AddFlowTracked`/`DecorateFlowTracked` emitem os avisos `IL3050`/`IL2026`
+esperados quando usados sob `PublishAot=true`. Falta o outro lado da mesma frase, a que o próprio
+atributo recomenda ao usuário como alternativa segura ("use `NetApiFlow.Step` ou o interceptor do
+EF Core em vez disso", README e comentário XML do atributo): nenhum teste prova que essa alternativa
+é de fato AOT-safe.
+
+Projeto novo (`AotManualPathVerification` ou nome equivalente), `PublishAot=true`, chamando só
+`AddNetApiFlow()` mais `NetApiFlow.Step(...)` mais o interceptor do `NetApiFlow.EntityFrameworkCore`,
+sem `AddFlowTracked`/`DecorateFlowTracked`. Critério de pronto: `dotnet publish` com zero aviso de
+AOT ou trimming.
+
+Se o `dotnet publish` acusar algum aviso: **não forçar nem contornar**. Isso significa que a frase
+do README/comentário XML está errada, recomendando como "alternativa segura" algo que não é
+AOT-safe de verdade. Nesse caso, o achado em si é o entregável desta tarefa: documentar o aviso
+exato no resumo de fim de fase, sem tentar calar o avisador, e seguir para a próxima tarefa. A
+correção da frase (se for o caso) é decisão da Planejadora a partir desse achado, não desta tarefa.
+
+**Pronto quando:** projeto criado, `dotnet publish -c Release` rodado contra ele, e o resultado
+(zero aviso, ou a lista exata de avisos) registrado no resumo de fim de fase.
 
 ## Fora de escopo
 
