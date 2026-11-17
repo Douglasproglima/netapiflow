@@ -33,3 +33,4 @@ Discussion é o lugar certo pra uma conversa permanente.
 | [ADR-0018](0018-ingestao-npgsql-dedup-por-parent.md) | Ingestão nativa da `ActivitySource` do Npgsql, dedup por cadeia de `Parent` | Aceito | [#190](https://github.com/Douglasproglima/netapiflow/discussions/190) |
 | [ADR-0019](0019-visibilidade-pre-pipeline.md) | Visibilidade de pré-pipeline: Authorization via `DiagnosticSource`, Resource via filtro nativo | Aceito | [#191](https://github.com/Douglasproglima/netapiflow/discussions/191) |
 | [ADR-0020](0020-visibilidade-cancelamento.md) | `FlowStatus` ganha `Cancelled` e `Timeout`, separados de `Error` | Aceito | [#203](https://github.com/Douglasproglima/netapiflow/discussions/203) |
+| [ADR-0021](0021-sem-configureawait-em-codigo-de-aspnet-core.md) | `src/` não usa `ConfigureAwait(false)` | Aceito | A criar na PR do hotfix `0.4.1` |

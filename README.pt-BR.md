@@ -73,12 +73,20 @@ em cada camada. Elas se combinam livremente na mesma requisição.
 Forma manual, usada explicitamente:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 {
-    using var step = NetApiFlow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    using var step = Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
     return await _dbContext.Orders.FindAsync([id], cancellationToken);
 }
 ```
+
+O `using static` é o que permite escrever `Step(...)` sem qualificar. Escrever
+`NetApiFlow.Step(...)` só compila de dentro de um namespace seu: a partir da global namespace, que
+é onde um `Program.cs` de top-level statements coloca o seu código, o nome `NetApiFlow` resolve
+para o namespace do pacote, não para a classe, e o compilador acusa `CS0234`.
 
 Forma automática, de `samples/SampleApi.Controllers/Program.cs`. `OrderService`/`OrderRepository`
 não têm nenhum código do NetApiFlow. Toda chamada a eles é rastreada só por causa deste registro:
@@ -128,7 +136,10 @@ Uma etapa aberta com `NetApiFlow.Step(...)` aceita tags livres, chave e valor, g
 span:
 
 ```csharp
-using var step = NetApiFlow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
+using var step = Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
 step.Tag("order.status", order.Status);
 step.Tag("payment.provider", provider.Name);
 ```
@@ -156,6 +167,9 @@ buffer em memória, mantido enquanto a persistência ainda não processou. Não 
 `Task.Delay` nem de laço de retentativa esperando a escrita assíncrona terminar:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
     : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -167,7 +181,7 @@ public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
         var response = await client.GetAsync("/api/orders/42");
 
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
-        var trace = NetApiFlow.GetRecentTrace(factory.Services, traceId);
+        var trace = GetRecentTrace(factory.Services, traceId);
 
         Assert.NotNull(trace);
         Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
@@ -625,6 +639,27 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   o trace da requisição.
 - O rastreamento automático (`AddFlowTracked`/`DecorateFlowTracked`) não dá suporte a retorno do
   tipo `IAsyncEnumerable<T>` nesta versão.
+- O rastreamento automático também não funciona sob Native AOT. Tanto `AddFlowTracked` quanto
+  `DecorateFlowTracked` montam o proxy com `DispatchProxy`, que gera um tipo em tempo de execução, e
+  o `DecorateFlowTracked` ainda casa tipos de implementação por reflexão. Os dois têm
+  `[RequiresDynamicCode]` (e o `DecorateFlowTracked` também `[RequiresUnreferencedCode]`), então
+  você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. As
+  formas de marcação que continuam seguras sob Native AOT e trimming são o `NetApiFlow.Step(...)` e
+  o interceptor do `NetApiFlow.EntityFrameworkCore`. Nenhum dos dois gera código em tempo de
+  execução.
+- A visão ao vivo é por processo, não por cluster. O `GET /traces/live` lê o gravador em memória da
+  réplica que respondeu àquela chamada. Atrás de um balanceador sem sticky session, o `/flow` mostra
+  só o tráfego que aquela réplica atendeu, e o navegador pode cair em outra réplica já na
+  requisição seguinte. O histórico persistido não sofre disso: com um pacote de storage
+  configurado, todas as réplicas escrevem no mesmo banco, então o `GET /traces/{traceId}` e a tela
+  de histórico acham a trace independentemente de qual réplica gravou.
+- O `net8.0` saiu do ciclo de vida oficial da Microsoft em 10 de novembro de 2026, e o NetApiFlow
+  continua publicando um artefato para ele. Ele fica por enquanto porque ainda não há para onde ir:
+  a próxima LTS, o `net12.0`, só deve sair em novembro de 2027, então tirar o `net8.0` hoje
+  deixaria o `net10.0` como alvo único. Quando parar de publicar para `net8.0` é uma pergunta em
+  aberto aqui, ainda sob investigação, não uma data já escolhida. Manter significa que o pacote tem
+  um alvo que não recebe mais correção da Microsoft, o que vale saber se a sua própria política
+  proíbe isso.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.
