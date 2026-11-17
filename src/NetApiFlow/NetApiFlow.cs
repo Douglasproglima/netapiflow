@@ -39,7 +39,11 @@ public static class NetApiFlow
     /// read <c>X-NetApiFlow-TraceId</c> off the response, then call this. Only looks at the in-memory buffer of
     /// recently-completed traces, never falls back to <see cref="ITraceStore"/>, so it never races the
     /// persistence queue. <see langword="null"/> when the trace already aged out of the buffer or tracing was
-    /// never registered.</summary>
+    /// never registered.
+    /// <para>Written for an integration test, and only for one: it takes an <see cref="IServiceProvider"/>
+    /// because a test host has one at hand and no injected dependencies. Do not call it from inside a
+    /// request pipeline, a controller or a service. There it is a service locator, it reads a buffer that
+    /// is deliberately small and lossy, and the trace it would return is the one still being recorded.</para></summary>
     public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId) =>
         services.GetService<FlowRecorder>()?.GetRecentlyCompleted(traceId);
 }

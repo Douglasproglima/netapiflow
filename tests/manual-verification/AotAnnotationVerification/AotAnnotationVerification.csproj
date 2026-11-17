@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ProjectReference, unlike the sibling package verification: the warnings come from the
+         trimming analyzer reading attributes in the IL, identical whether NetApiFlow arrives as a
+         project or as a .nupkg, and this way the check runs without packing a feed first. -->
+    <ProjectReference Include="..\..\..\src\NetApiFlow\NetApiFlow.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -67,4 +67,51 @@ public class StepTests
         activity.GetTagItem("netapiflow.error.origin").ShouldBe(bool.TrueString);
         activity.Status.ShouldBe(ActivityStatusCode.Error);
     }
+
+    [Fact]
+    public void MarkError_LeavesTheCallerExceptionUntouched()
+    {
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == FlowActivitySource.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var exception = new InvalidOperationException("boom");
+
+        var step = NetApiFlow.Step("Component", "Operation");
+        step.MarkError(exception);
+        step.Dispose();
+
+        exception.Data.Count.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MarkError_WhenAnOuterStepMarksTheSameException_OnlyTheInnerStepClaimsOrigin()
+    {
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == FlowActivitySource.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var exception = new InvalidOperationException("boom");
+
+        var outer = NetApiFlow.Step("OuterComponent", "Operation");
+        var outerActivity = Activity.Current;
+        var inner = NetApiFlow.Step("InnerComponent", "Operation");
+        var innerActivity = Activity.Current;
+
+        inner.MarkError(exception);
+        inner.Dispose();
+        outer.MarkError(exception);
+        outer.Dispose();
+
+        innerActivity.ShouldNotBeNull();
+        outerActivity.ShouldNotBeNull();
+        innerActivity.GetTagItem("netapiflow.error.origin").ShouldBe(bool.TrueString);
+        outerActivity.GetTagItem("netapiflow.error.origin").ShouldBe(bool.FalseString);
+    }
 }
