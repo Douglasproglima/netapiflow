@@ -7,6 +7,40 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-16
+
+### Fixed
+
+- `NetApiFlow`: `FlowStep.MarkError` no longer writes to the caught exception's own `Data`
+  dictionary to track which step first claimed its origin. A non-string key there could surprise
+  application or logging code that enumerates `Data`; the tracking now lives in a
+  `ConditionalWeakTable` outside the exception itself.
+- `NetApiFlow.Dashboard`: a `net8.0` host no longer risks `Microsoft.Extensions.FileProviders.Embedded`
+  resolving to a `10.x` assembly it did not ask for. The dependency is now pinned per target
+  framework (`8.0.34` for `net8.0`, `10.0.0` for `net10.0`), with package pruning explicitly
+  disabled for the `net8.0` group so the package's build-time manifest generation still runs.
+- `AddFlowTracked`/`DecorateFlowTracked` are now annotated `[RequiresDynamicCode]` (and
+  `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so a Native AOT build reports the
+  incompatibility at build time instead of failing at startup with no warning.
+- README.md/README.pt-BR.md: the manual marking and trace-assertion snippets
+  (`NetApiFlow.Step(...)`, `NetApiFlow.GetRecentTrace(...)`) did not compile when copied into code
+  with no namespace declared, for example a minimal API's top-level `Program.cs`, because of the
+  name collision between the `NetApiFlow` namespace and the `NetApiFlow` class. Both snippets now
+  add `using static NetApiFlow.NetApiFlow;` and call the member unqualified.
+
+### Known limitation
+
+- `GetRecentTrace(IServiceProvider, string)`'s XML doc now states explicitly that it is meant for
+  integration tests built on `WebApplicationFactory`, not for use inside the normal request
+  pipeline.
+- The live trace view (`GET /traces/live`, the "Live" tab) reads the in-memory recorder of
+  whichever replica answered the call; behind a load balancer without sticky sessions, each
+  request can land on a different replica. Documented in the README; persisted history (with a
+  storage package configured) does not have this problem.
+- `net8.0` left Microsoft's official support window on 10 November 2026. NetApiFlow still ships an
+  asset for it for now, because the next LTS (`net12.0`) is not expected until November 2027; when
+  to stop shipping `net8.0` is still an open question.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added

@@ -13,9 +13,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Wires the GenerateEmbeddedFilesManifest build task (ManifestEmbeddedFileProvider's runtime type is already part of Microsoft.AspNetCore.App). -->
+    <!-- Supplies ManifestEmbeddedFileProvider and wires the GenerateEmbeddedFilesManifest build task. -->
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
   </ItemGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <!--
+      On net8.0 the package version matches what Microsoft.AspNetCore.App 8.0 already carries, so
+      the SDK prunes it as framework-provided. That also drops its MSBuild task, and the Angular
+      dist/ then ships with no embedded files manifest for ManifestEmbeddedFileProvider to read:
+      a build that succeeds and a dashboard that throws on the first request.
+    -->
+    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
+  </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\docs\images\icon.png" Pack="true" PackagePath="\" />

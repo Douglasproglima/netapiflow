@@ -72,12 +72,20 @@ layer. They compose freely in the same request.
 Manual form, used explicitly:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 {
-    using var step = NetApiFlow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    using var step = Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
     return await _dbContext.Orders.FindAsync([id], cancellationToken);
 }
 ```
+
+The `using static` is what lets you write `Step(...)` unqualified. Writing `NetApiFlow.Step(...)`
+instead only compiles from inside a namespace of your own: from the global namespace, which is
+where a top-level-statements `Program.cs` puts your code, `NetApiFlow` resolves to this package's
+namespace rather than its class, and the compiler reports `CS0234`.
 
 Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/`OrderRepository`
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
@@ -126,7 +134,10 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
 
 ```csharp
-using var step = NetApiFlow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
+using var step = Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
 step.Tag("order.status", order.Status);
 step.Tag("payment.provider", provider.Name);
 ```
@@ -154,6 +165,9 @@ in-memory buffer kept while persistence catches up, so there's no `Task.Delay` o
 waiting for the asynchronous write to finish:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
     : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -165,7 +179,7 @@ public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
         var response = await client.GetAsync("/api/orders/42");
 
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
-        var trace = NetApiFlow.GetRecentTrace(factory.Services, traceId);
+        var trace = GetRecentTrace(factory.Services, traceId);
 
         Assert.NotNull(trace);
         Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
@@ -615,6 +629,26 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   as a new root rather than nested under the request's trace.
 - Automatic tracking (`AddFlowTracked`/`DecorateFlowTracked`) does not support `IAsyncEnumerable<T>`
   return types in this version.
+- Automatic tracking does not work under Native AOT either. Both `AddFlowTracked` and
+  `DecorateFlowTracked` build their proxy with `DispatchProxy`, which emits a type at run time, and
+  `DecorateFlowTracked` also matches implementation types by reflection. Both carry
+  `[RequiresDynamicCode]` (and `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so you get
+  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking forms
+  that stay safe under Native AOT and trimming are `NetApiFlow.Step(...)` and the
+  `NetApiFlow.EntityFrameworkCore` interceptor. Neither generates code at run time.
+- The live view is per process, not per cluster. `GET /traces/live` reads the in-memory recorder of
+  whichever replica answered that call, so behind a load balancer without sticky sessions `/flow`
+  shows only the traffic that one replica handled, and the browser can land on a different replica
+  on the very next request. Persisted history does not have this problem: with a storage package
+  configured every replica writes to the same database, so `GET /traces/{traceId}` and the History
+  screen find a trace no matter which replica recorded it.
+- `net8.0` left Microsoft's official support window on 10 November 2026, and NetApiFlow still ships
+  an asset for it. It stays for now because there is nowhere to move it to yet: the next LTS,
+  `net12.0`, is only expected in November 2027, so dropping `net8.0` today would leave `net10.0` as
+  the single supported target. When to stop shipping `net8.0` is an open question here, still under
+  investigation, not a date already chosen. Keeping it does mean the package has a target framework
+  that no longer gets servicing updates from Microsoft, which is worth knowing if your own policy
+  forbids that.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

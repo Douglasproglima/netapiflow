@@ -23,8 +23,14 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
   </ItemGroup>
 
-  <!-- Build-time only (netstandard2.0 MSBuild tooling): one version works for every TargetFramework consuming it. -->
-  <ItemGroup>
+  <!-- Runtime dependency of NetApiFlow.Dashboard (ManifestEmbeddedFileProvider serves the embedded
+       Angular dist/), so it follows the consumer's TargetFramework like the one above. A single
+       10.0.0 made the net8.0 assembly bind against 10.0.0.0, which no ASP.NET Core 8 shared
+       framework can satisfy on its own. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.34" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
   </ItemGroup>
 
