@@ -73,12 +73,20 @@ em cada camada. Elas se combinam livremente na mesma requisição.
 Forma manual, usada explicitamente:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 {
-    using var step = NetApiFlow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    using var step = Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
     return await _dbContext.Orders.FindAsync([id], cancellationToken);
 }
 ```
+
+O `using static` é o que permite escrever `Step(...)` sem qualificar. Escrever
+`NetApiFlow.Step(...)` só compila de dentro de um namespace seu: a partir da global namespace, que
+é onde um `Program.cs` de top-level statements coloca o seu código, o nome `NetApiFlow` resolve
+para o namespace do pacote, não para a classe, e o compilador acusa `CS0234`.
 
 Forma automática, de `samples/SampleApi.Controllers/Program.cs`. `OrderService`/`OrderRepository`
 não têm nenhum código do NetApiFlow. Toda chamada a eles é rastreada só por causa deste registro:
@@ -128,7 +136,10 @@ Uma etapa aberta com `NetApiFlow.Step(...)` aceita tags livres, chave e valor, g
 span:
 
 ```csharp
-using var step = NetApiFlow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
+using var step = Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
 step.Tag("order.status", order.Status);
 step.Tag("payment.provider", provider.Name);
 ```

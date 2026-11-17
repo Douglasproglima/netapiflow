@@ -72,12 +72,20 @@ layer. They compose freely in the same request.
 Manual form, used explicitly:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 {
-    using var step = NetApiFlow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    using var step = Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
     return await _dbContext.Orders.FindAsync([id], cancellationToken);
 }
 ```
+
+The `using static` is what lets you write `Step(...)` unqualified. Writing `NetApiFlow.Step(...)`
+instead only compiles from inside a namespace of your own: from the global namespace, which is
+where a top-level-statements `Program.cs` puts your code, `NetApiFlow` resolves to this package's
+namespace rather than its class, and the compiler reports `CS0234`.
 
 Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/`OrderRepository`
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
@@ -126,7 +134,10 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
 
 ```csharp
-using var step = NetApiFlow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
+using var step = Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
 step.Tag("order.status", order.Status);
 step.Tag("payment.provider", provider.Name);
 ```
