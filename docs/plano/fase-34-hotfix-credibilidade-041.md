@@ -83,6 +83,16 @@ declarada pro grupo `net8.0` é `Microsoft.Extensions.FileProviders.Embedded >= 
 `10.0.0`. Teste de integração existente que resolve `index.html` via `ManifestEmbeddedFileProvider`
 continua passando nos dois TFMs sem alteração.
 
+**Achado da Executora, fora do que este plano previa (D-135):** fixar a versão por TFM não bastou.
+O package pruning do SDK `net10.0`, em restore, colapsa a referência pro grupo `net8.0` porque o
+`lib/` do pacote já é satisfeito pelo shared framework instalado, e no caminho descarta junto os
+assets de `build/` (a task MSBuild que gera o manifesto embutido), quebrando em tempo de execução
+sem warning nenhum no build. Fix adicional, só no grupo condicional de `net8.0`:
+`<RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>`. Aprovado depois de conferir a
+cadeia causal e a suíte completa (775 testes, Testcontainers real) passando. O comentário antigo
+removido ("build-time only") tinha uma parte de verdade que a primeira análise da Planejadora não
+tinha capturado: os assets de `build/` são mesmo build-time only, só o `lib/` é que é runtime.
+
 ## Tarefa 34.4: documentar por que `net8.0` continua suportado mesmo fora do ciclo de vida oficial
 
 `net8.0` e `net9.0` saíram de suporte em 10/11/2026 (confirmado na política oficial de suporte da
