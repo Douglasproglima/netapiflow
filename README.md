@@ -622,6 +622,12 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking forms
   that stay safe under Native AOT and trimming are `NetApiFlow.Step(...)` and the
   `NetApiFlow.EntityFrameworkCore` interceptor. Neither generates code at run time.
+- The live view is per process, not per cluster. `GET /traces/live` reads the in-memory recorder of
+  whichever replica answered that call, so behind a load balancer without sticky sessions `/flow`
+  shows only the traffic that one replica handled, and the browser can land on a different replica
+  on the very next request. Persisted history does not have this problem: with a storage package
+  configured every replica writes to the same database, so `GET /traces/{traceId}` and the History
+  screen find a trace no matter which replica recorded it.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

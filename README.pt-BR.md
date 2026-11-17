@@ -633,6 +633,12 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   formas de marcação que continuam seguras sob Native AOT e trimming são o `NetApiFlow.Step(...)` e
   o interceptor do `NetApiFlow.EntityFrameworkCore`. Nenhum dos dois gera código em tempo de
   execução.
+- A visão ao vivo é por processo, não por cluster. O `GET /traces/live` lê o gravador em memória da
+  réplica que respondeu àquela chamada. Atrás de um balanceador sem sticky session, o `/flow` mostra
+  só o tráfego que aquela réplica atendeu, e o navegador pode cair em outra réplica já na
+  requisição seguinte. O histórico persistido não sofre disso: com um pacote de storage
+  configurado, todas as réplicas escrevem no mesmo banco, então o `GET /traces/{traceId}` e a tela
+  de histórico acham a trace independentemente de qual réplica gravou.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.
