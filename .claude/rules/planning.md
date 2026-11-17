@@ -40,3 +40,16 @@ Risco marcado como `Planejado` (não `Mitigado`) em `docs/plano/riscos.md` não 
 a menos que o próprio arquivo de fase diga o contrário. Mas a tarefa que prova a mitigação
 precisa estar na fase indicada na coluna "Fase" daquele risco. Se chegar lá sem a prova, é
 critério de aceite não cumprido.
+
+## Citar `roadmap-valor.md` dentro de `decisoes.md`
+
+`decisoes.md` é append-only; `roadmap-valor.md` é vivo, a Planejadora reordena e renumera a
+tabela sempre que um item é entregue ou a prioridade muda. Uma entrada de `decisoes.md` que cita
+só "item N do roadmap" aponta pra uma posição que pode já ter mudado quando alguém ler a decisão
+meses depois, e aí a referência leva pro item errado sem avisar.
+
+Toda entrada nova de `decisoes.md` que citar um item do `roadmap-valor.md` cita o número junto
+com um trecho curto do próprio texto do item (ex. "item 18 do roadmap, renomear `NetApiFlow`
+por causa do CA1724"), não só o número sozinho. O trecho sobrevive à renumeração, o número não.
+Entradas antigas que só têm o número (várias existem, de antes desta regra) não precisam de
+correção retroativa.
