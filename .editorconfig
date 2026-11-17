@@ -17,6 +17,10 @@ csharp_using_directive_placement = outside_namespace:warning
 dotnet_sort_system_directives_first = true
 dotnet_diagnostic.CS1591.severity = warning
 
+# Off on purpose, not by omission: see docs/adr/0021-sem-configureawait-em-codigo-de-aspnet-core.md.
+# Pinned here so a future SDK cannot turn it on by changing what latest-recommended includes.
+dotnet_diagnostic.CA2007.severity = none
+
 # Test method names use PascalCase with underscores (Method_Scenario_ExpectedResult).
 # Tests and samples are not published NuGet surface, so XML docs are not required there.
 [{tests,samples}/**.cs]
