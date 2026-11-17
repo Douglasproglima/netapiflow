@@ -167,6 +167,9 @@ buffer em memória, mantido enquanto a persistência ainda não processou. Não 
 `Task.Delay` nem de laço de retentativa esperando a escrita assíncrona terminar:
 
 ```csharp
+using NetApiFlow;
+using static NetApiFlow.NetApiFlow;
+
 public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
     : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -178,7 +181,7 @@ public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
         var response = await client.GetAsync("/api/orders/42");
 
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
-        var trace = NetApiFlow.GetRecentTrace(factory.Services, traceId);
+        var trace = GetRecentTrace(factory.Services, traceId);
 
         Assert.NotNull(trace);
         Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
