@@ -625,6 +625,14 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   o trace da requisição.
 - O rastreamento automático (`AddFlowTracked`/`DecorateFlowTracked`) não dá suporte a retorno do
   tipo `IAsyncEnumerable<T>` nesta versão.
+- O rastreamento automático também não funciona sob Native AOT. Tanto `AddFlowTracked` quanto
+  `DecorateFlowTracked` montam o proxy com `DispatchProxy`, que gera um tipo em tempo de execução, e
+  o `DecorateFlowTracked` ainda casa tipos de implementação por reflexão. Os dois têm
+  `[RequiresDynamicCode]` (e o `DecorateFlowTracked` também `[RequiresUnreferencedCode]`), então
+  você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. As
+  formas de marcação que continuam seguras sob Native AOT e trimming são o `NetApiFlow.Step(...)` e
+  o interceptor do `NetApiFlow.EntityFrameworkCore`. Nenhum dos dois gera código em tempo de
+  execução.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.

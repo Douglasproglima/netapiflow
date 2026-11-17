@@ -615,6 +615,13 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   as a new root rather than nested under the request's trace.
 - Automatic tracking (`AddFlowTracked`/`DecorateFlowTracked`) does not support `IAsyncEnumerable<T>`
   return types in this version.
+- Automatic tracking does not work under Native AOT either. Both `AddFlowTracked` and
+  `DecorateFlowTracked` build their proxy with `DispatchProxy`, which emits a type at run time, and
+  `DecorateFlowTracked` also matches implementation types by reflection. Both carry
+  `[RequiresDynamicCode]` (and `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so you get
+  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking forms
+  that stay safe under Native AOT and trimming are `NetApiFlow.Step(...)` and the
+  `NetApiFlow.EntityFrameworkCore` interceptor. Neither generates code at run time.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.
