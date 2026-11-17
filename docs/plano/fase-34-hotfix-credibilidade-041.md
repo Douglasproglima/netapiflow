@@ -182,6 +182,28 @@ comportamento.
 **Pronto quando:** o comentário XML está lá. Critério de pronto é só documentação, não tem teste
 automatizado pra isso.
 
+## Tarefa 34.8: corrigir o snippet de marcação manual do README, que não compila
+
+Achado da Planejadora (D-136), verificando se a frase do atributo AOT na Tarefa 34.1 ("use
+`NetApiFlow.Step(...)` em vez disso") era sustentada por algum teste real. O snippet do próprio
+README (`using NetApiFlow;` seguido de `NetApiFlow.Step(...)`) não compila quando o código que
+chama fica na global namespace, caso mais comum de todos: um `Program.cs` de top-level statements,
+exatamente o estilo que o README usa em todo canto. Erro `CS0234`, porque o namespace `NetApiFlow`
+e a classe estática `NetApiFlow` compartilham o nome (o mesmo achado de CA1724, item 15 do
+`roadmap-valor.md`), e partindo da global namespace a busca de identificador encontra o namespace
+antes do tipo importado por `using`. Dentro de qualquer namespace nomeado o problema não aparece,
+por isso nenhum teste da suíte pegou isso: nenhum teste nem sample do repositório chama `Step()` a
+partir da global namespace.
+
+Trocar, nos dois READMEs, o par de snippets "Manual form"/"Tagging a step": em vez de
+`using NetApiFlow;` mais `NetApiFlow.Step(...)`, usar `using static NetApiFlow.NetApiFlow;` mais
+`Step(...)` sem qualificação. Essa forma compila nos dois cenários (global namespace e namespace
+normal) e lê mais limpo que a atual. Só texto nos dois READMEs, nenhuma mudança de API.
+
+**Pronto quando:** os dois snippets usam `using static NetApiFlow.NetApiFlow;`. Conferir colando o
+snippet novo num `Program.cs` de top-level statements isolado (fora do repositório) e rodando
+`dotnet build`: zero erro.
+
 ## Fora de escopo
 
 - Renomear `public static class NetApiFlow` (CA1724): breaking change real, sem alias de
@@ -199,7 +221,7 @@ automatizado pra isso.
 
 ## Aceite da fase
 
-Critérios de pronto das sete tarefas acima. `dotnet build NetApiFlow.slnx -c Release` e
+Critérios de pronto das oito tarefas acima. `dotnet build NetApiFlow.slnx -c Release` e
 `dotnet format NetApiFlow.slnx --verify-no-changes` limpos nos dois TFMs. Suíte completa,
 incluindo `NetApiFlow.Storage.Tests` com Testcontainers real (Postgres e SQL Server), rodada pelo
 menos uma vez antes do merge, não só a suíte rápida. `dotnet pack NetApiFlow.slnx -c Release`
