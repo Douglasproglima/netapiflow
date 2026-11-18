@@ -440,8 +440,13 @@ duplicating. That's the answer to "the request took 400 ms but my controller onl
 output caching. It is off by default and changes nothing for anyone who hasn't turned it on.
 Minimal API routes have no MVC filter stage, so they see no new step either way.
 
-`ExternalSources` ingests the `Activity` instances the .NET runtime and the Npgsql driver already
-produce, with no code change in your services.
+`ExternalSources` ingests the `Activity` instances the .NET runtime and the common database
+drivers already produce, with no code change in your services.
+
+In `Development` all three are on by default, so a new install shows outbound HTTP and SQL without
+configuring anything. Everywhere else the default stays `None`. Whatever you state explicitly
+wins, from configuration or from code, including setting it back to
+`ExternalActivitySource.None` while developing.
 
 `HttpClient` covers outbound calls (ADR-0012). The outbound URL is reduced to
 `scheme://host[:port]/path` before it is ever recorded: query string and fragment are never

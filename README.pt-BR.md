@@ -443,8 +443,13 @@ tempo foi para a autorização ou para um resource filter, como output caching. 
 padrão e não muda nada para quem não ligou. Rota de Minimal API não tem estágio de filtro do MVC,
 então não ganha etapa nova de nenhum jeito.
 
-`ExternalSources` ingere a `Activity` que o runtime .NET e o driver do Npgsql já produzem, sem
-nenhuma mudança de código nos seus serviços.
+`ExternalSources` ingere a `Activity` que o runtime .NET e os drivers de banco mais comuns já
+produzem, sem nenhuma mudança de código nos seus serviços.
+
+Em `Development` as três vêm ligadas por padrão, então uma instalação nova já mostra HTTP de saída
+e SQL sem configurar nada. Em qualquer outro ambiente o padrão continua `None`. O que você
+declarar explicitamente sempre vence, por configuração ou por código, inclusive voltar o valor
+para `ExternalActivitySource.None` em desenvolvimento.
 
 `HttpClient` cobre chamada de saída (ADR-0012). A URL de saída é reduzida a
 `scheme://host[:porta]/path` antes de ser gravada. Query string e fragment nunca são capturados, a
