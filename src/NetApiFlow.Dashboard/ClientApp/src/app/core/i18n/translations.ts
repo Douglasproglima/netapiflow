@@ -57,6 +57,7 @@ const en = {
   'action.field.kind.path': 'path',
   'action.field.kind.query': 'query',
   'action.field.kind.body': 'body',
+  'action.endpointRequiresAuth': 'Requires authentication',
   'action.authorize.title': 'Authorize',
   'action.authorize.schemeLabel.plain': '{name} ({type})',
   'action.authorize.schemeLabel.token': '{name} ({type}, paste an access token)',
@@ -65,6 +66,8 @@ const en = {
   'action.authorize.hide': 'Hide value',
   'action.authorize.preview.header': 'Sent as header: {name}: {value}',
   'action.authorize.preview.query': 'Sent as query parameter: ?{name}={value}',
+  'action.authorize.expiresIn': 'Expires in {minutes} min',
+  'action.authorize.expired': 'Expired {minutes} min ago',
   'action.authorize.queryWarning':
     'This value is sent in the request URL and may appear in the host access log.',
   'action.authorize.noAlternativeFilled':
@@ -374,6 +377,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.field.kind.path': 'caminho',
   'action.field.kind.query': 'consulta',
   'action.field.kind.body': 'corpo',
+  'action.endpointRequiresAuth': 'Requer autenticação',
   'action.authorize.title': 'Autorizar',
   'action.authorize.schemeLabel.plain': '{name} ({type})',
   'action.authorize.schemeLabel.token': '{name} ({type}, cole um access token)',
@@ -382,6 +386,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.authorize.hide': 'Ocultar valor',
   'action.authorize.preview.header': 'Enviado como header: {name}: {value}',
   'action.authorize.preview.query': 'Enviado como parâmetro de consulta: ?{name}={value}',
+  'action.authorize.expiresIn': 'Expira em {minutes} min',
+  'action.authorize.expired': 'Expirado há {minutes} min',
   'action.authorize.queryWarning':
     'Esse valor vai na URL da requisição e pode aparecer no log de acesso do host.',
   'action.authorize.noAlternativeFilled':

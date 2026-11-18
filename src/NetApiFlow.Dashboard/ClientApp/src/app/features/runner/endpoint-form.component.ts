@@ -11,12 +11,15 @@ import { httpMethodTagClass } from '../../shared/http-method-style';
 import {
   AuthApplication,
   buildAuthApplication,
+  decodeJwtExpiry,
+  isTokenBearingScheme,
   buildEndpointForm,
   effectiveSecurity,
   FormFieldKind,
   hasSecurityDeclaration,
   listOpenApiEndpoints,
   listSecuritySchemes,
+  OpenApiEndpoint,
   partitionDashboardRoutes,
   previewAuthApplication,
   resolveAgainstHostRoot,
@@ -83,6 +86,20 @@ export class EndpointFormComponent {
       ? visible.filter((endpoint) => endpoint.path.toLowerCase().includes(filter))
       : visible;
   });
+
+  /**
+   * Deliberately not `hasSecurityDeclaration`, which is true for an operation declaring
+   * `security: []` as well. OpenAPI defines that empty array as "explicitly public", so a lock
+   * there would claim the opposite of what the document says.
+   */
+  requiresAuth(endpoint: OpenApiEndpoint): boolean {
+    const doc = this.openApiDocument();
+    return !!doc && effectiveSecurity(doc, endpoint.method, endpoint.path).length > 0;
+  }
+
+  readonly anyEndpointRequiresAuth = computed(() =>
+    this.endpointsPartition().visible.some((endpoint) => this.requiresAuth(endpoint)),
+  );
 
   readonly selected = signal<{ method: string; path: string } | null>(null);
   readonly form = computed(() => {
@@ -174,14 +191,30 @@ export class EndpointFormComponent {
     });
   }
 
-  private loadOpenApiDocument(path: string): void {
-    this.api.loadOpenApiDocument(path).subscribe({
+  /**
+   * A host that keeps its own OpenAPI document behind the same authorization as its endpoints
+   * answers 401 here, and the Runner has nothing to show. When a bearer value was already sent
+   * from this panel, one retry carries it; anything else, including a second failure, falls
+   * through to the error state.
+   */
+  private loadOpenApiDocument(path: string, bearerValue: string | null = null): void {
+    const headers = bearerValue
+      ? new HttpHeaders({ Authorization: `Bearer ${bearerValue}` })
+      : undefined;
+
+    this.api.loadOpenApiDocument(path, headers).subscribe({
       next: (doc) => {
         this.openApiDocument.set(doc);
         this.loading.set(false);
         this.credentials.reconcile(listSecuritySchemes(doc).map((entry) => entry.name));
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
+        const storedBearer = this.credentials.lastBearerValue();
+        if (error.status === 401 && bearerValue === null && storedBearer) {
+          this.loadOpenApiDocument(path, storedBearer);
+          return;
+        }
+
         this.loadError.set('action.openApiError.title');
         this.loading.set(false);
       },
@@ -258,6 +291,26 @@ export class EndpointFormComponent {
 
   isQueryScheme(scheme: OpenApiSecurityScheme): boolean {
     return scheme.type === 'apiKey' && scheme.in === 'query';
+  }
+
+  /**
+   * How long the pasted token has left, for a scheme that carries one. Presentation only: an
+   * expired token never blocks the request, the server is the one that rejects it.
+   */
+  authExpiry(entry: SecuritySchemeEntry): { key: TranslationKey; minutes: number } | null {
+    if (!isTokenBearingScheme(entry.scheme)) {
+      return null;
+    }
+
+    const expiry = decodeJwtExpiry(this.credentials.authValue(entry.name));
+    if (!expiry) {
+      return null;
+    }
+
+    const minutes = Math.round((expiry.getTime() - Date.now()) / 60_000);
+    return minutes >= 0
+      ? { key: 'action.authorize.expiresIn', minutes }
+      : { key: 'action.authorize.expired', minutes: -minutes };
   }
 
   addHeader(): void {
@@ -342,6 +395,9 @@ export class EndpointFormComponent {
         );
       } else {
         headers = headers.set(application.name, application.value);
+        if (application.name === 'Authorization') {
+          this.credentials.recordBearerUsage(application.value.replace(/^Bearer\s+/i, ''));
+        }
       }
     }
 

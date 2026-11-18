@@ -41,7 +41,10 @@
         @if (endpoints().length === 0) {
           <p class="endpoint-form__status">{{ 'action.noEndpoints' | t }}</p>
         } @else {
-          <ul class="endpoint-form__endpoints">
+          <ul
+            class="endpoint-form__endpoints"
+            [class.endpoint-form__endpoints--with-lock-column]="anyEndpointRequiresAuth()"
+          >
             @for (endpoint of endpoints(); track endpoint.method + ' ' + endpoint.path) {
               <li>
                 <button
@@ -56,6 +59,27 @@
                   <span class="naf-tag" [class]="methodTagClass(endpoint.method)">{{
                     endpoint.method
                   }}</span>
+                  @if (anyEndpointRequiresAuth()) {
+                    <span class="endpoint-form__endpoint-lock">
+                      @if (requiresAuth(endpoint)) {
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.75"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          width="16"
+                          height="16"
+                          role="img"
+                          [attr.aria-label]="'action.endpointRequiresAuth' | t"
+                        >
+                          <rect x="4.75" y="10.5" width="14.5" height="9" rx="2" />
+                          <path d="M8.25 10.5V7.75a3.75 3.75 0 0 1 7.5 0v2.75" />
+                        </svg>
+                      }
+                    </span>
+                  }
                   <span class="endpoint-form__endpoint-path">{{ endpoint.path }}</span>
                 </button>
               </li>
@@ -163,6 +187,16 @@
                       {{
                         authPreviewKey(preview) | t: { name: preview.name, value: preview.value }
                       }}
+                    </p>
+                  }
+                  @if (authExpiry(entry); as expiry) {
+                    <p
+                      class="endpoint-form__authorize-expiry"
+                      [class.endpoint-form__authorize-expiry--expired]="
+                        expiry.key === 'action.authorize.expired'
+                      "
+                    >
+                      {{ expiry.key | t: { minutes: expiry.minutes } }}
                     </p>
                   }
                   @if (isQueryScheme(entry.scheme)) {

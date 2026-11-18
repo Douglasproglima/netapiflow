@@ -16,4 +16,13 @@ public enum ExternalActivitySource
     /// command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.
     /// </summary>
     Npgsql = 2,
+
+    /// <summary>
+    /// SQL commands from Microsoft.Data.SqlClient, mapped to a <see cref="ComponentType.Database"/>
+    /// span, so data access outside EF Core (Dapper, a raw command) is still recorded. Deduplicated
+    /// against <c>NetApiFlow.EntityFrameworkCore</c>'s own span for the same command, never both.
+    /// Needs a driver that publishes its diagnostic payload as a key/value list, which
+    /// Microsoft.Data.SqlClient does from 6.0; an older driver records nothing here.
+    /// </summary>
+    SqlClient = 4,
 }
