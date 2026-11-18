@@ -34,197 +34,199 @@
     }
 
     <div class="flow-workspace__center">
-      <div class="flow-workspace__toolbar">
-        <input
-          #importFileInput
-          type="file"
-          accept=".json"
-          class="flow-workspace__import-input"
-          tabindex="-1"
-          aria-hidden="true"
-          (change)="onImportFileSelected($event)"
-        />
-        <button type="button" mat-stroked-button (click)="importFileInput.click()">
-          {{ 'import.button' | t }}
-        </button>
-
-        @if (importedTrace()) {
-          <span class="naf-chip naf-chip--warning">
-            <span class="naf-chip__dot"></span>
-            {{ 'import.badge' | t }}
-          </span>
-          <button type="button" mat-stroked-button (click)="exitImportedTrace()">
-            {{ 'import.exit' | t }}
+      <div class="flow-workspace__graph-area">
+        <div class="flow-workspace__toolbar">
+          <input
+            #importFileInput
+            type="file"
+            accept=".json"
+            class="flow-workspace__import-input"
+            tabindex="-1"
+            aria-hidden="true"
+            (change)="onImportFileSelected($event)"
+          />
+          <button type="button" mat-stroked-button (click)="importFileInput.click()">
+            {{ 'import.button' | t }}
           </button>
+
+          @if (importedTrace()) {
+            <span class="naf-chip naf-chip--warning">
+              <span class="naf-chip__dot"></span>
+              {{ 'import.badge' | t }}
+            </span>
+            <button type="button" mat-stroked-button (click)="exitImportedTrace()">
+              {{ 'import.exit' | t }}
+            </button>
+          }
+        </div>
+
+        @if (importErrorKey(); as errorKey) {
+          <p class="flow-workspace__import-error" role="alert">{{ errorKey | t }}</p>
         }
-      </div>
 
-      @if (importErrorKey(); as errorKey) {
-        <p class="flow-workspace__import-error" role="alert">{{ errorKey | t }}</p>
-      }
+        @if (trace(); as trace) {
+          <div class="flow-workspace__graph-header">
+            <h2>{{ 'graph.title' | t }}</h2>
+            <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
+            <span class="flow-workspace__route">{{ trace.routeTemplate }}</span>
+            <span class="flow-workspace__trace-id naf-mono"
+              >{{ shortTraceId(trace.traceId) }}
+              <button
+                type="button"
+                class="flow-workspace__copy"
+                [attr.aria-label]="'graph.copyTraceId' | t"
+                (click)="copyTraceId(trace.traceId)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  width="14"
+                  height="14"
+                >
+                  <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+                  <path
+                    d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
+                  />
+                </svg>
+              </button>
+            </span>
+            <span class="flow-workspace__graph-header-end">
+              @if (isFollowingLiveRunning()) {
+                <button mat-stroked-button type="button" (click)="toggleLivePause()">
+                  {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
+                </button>
+              }
+              <button mat-stroked-button type="button" (click)="exportTrace()">
+                {{ 'export.button' | t }}
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="trace.status === 'Running'"
+                (click)="toggleReplay()"
+              >
+                {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
+              </button>
+            </span>
+          </div>
 
-      @if (trace(); as trace) {
-        <div class="flow-workspace__graph-header">
-          <h2>{{ 'graph.title' | t }}</h2>
-          <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
-          <span class="flow-workspace__route">{{ trace.routeTemplate }}</span>
-          <span class="flow-workspace__trace-id naf-mono"
-            >{{ shortTraceId(trace.traceId) }}
+          @if (errorOrigin(); as origin) {
             <button
               type="button"
-              class="flow-workspace__copy"
-              [attr.aria-label]="'graph.copyTraceId' | t"
-              (click)="copyTraceId(trace.traceId)"
+              class="flow-workspace__banner flow-workspace__banner--danger"
+              (click)="onNodeSelected(origin.spanId)"
             >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="1.75"
-                width="14"
-                height="14"
+                stroke-width="1.8"
+                width="18"
+                height="18"
               >
-                <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
-                <path
-                  d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"
-                />
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5v5.5M12 16.4v.1" />
               </svg>
+              {{
+                'graph.errorOrigin'
+                  | t
+                    : {
+                        component: origin.component,
+                        status: trace.httpStatus ?? '—',
+                        duration: formatDuration(trace.durationMicros),
+                      }
+              }}
             </button>
-          </span>
-          <span class="flow-workspace__graph-header-end">
-            @if (isFollowingLiveRunning()) {
-              <button mat-stroked-button type="button" (click)="toggleLivePause()">
-                {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
-              </button>
-            }
-            <button mat-stroked-button type="button" (click)="exportTrace()">
-              {{ 'export.button' | t }}
-            </button>
+          } @else if (slowestStep(); as step) {
             <button
-              mat-stroked-button
               type="button"
-              [disabled]="trace.status === 'Running'"
-              (click)="toggleReplay()"
+              class="flow-workspace__banner flow-workspace__banner--warning"
+              (click)="onNodeSelected(step.spanId)"
             >
-              {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                width="18"
+                height="18"
+              >
+                <circle cx="12" cy="12" r="7" />
+                <path d="M12 8v4l2.5 1.5" />
+              </svg>
+              {{
+                'graph.slowestStep'
+                  | t: { component: step.component, duration: formatDuration(step.durationMicros) }
+              }}
             </button>
-          </span>
+          }
+        }
+
+        <div class="flow-workspace__canvas">
+          @if (trace(); as trace) {
+            <app-flow-graph
+              [nodes]="graph().nodes"
+              [edges]="graph().edges"
+              [selectedNodeId]="selectedNodeId()"
+              (nodeSelected)="onNodeSelected($event)"
+            />
+          } @else if (traceNotFound()) {
+            <div class="flow-workspace__empty flow-workspace__empty--not-found">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                width="28"
+                height="28"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M9 9l6 6M15 9l-6 6" />
+              </svg>
+              <p>{{ 'graph.notFound.title' | t }}</p>
+              <p class="flow-workspace__empty-hint">{{ 'graph.notFound.hint' | t }}</p>
+            </div>
+          } @else if (liveTracesLoading()) {
+            <p class="flow-workspace__status" role="status">{{ 'graph.loading' | t }}</p>
+          } @else if (liveTracesError()) {
+            <p class="flow-workspace__status" role="alert">{{ 'graph.liveTracesError' | t }}</p>
+          } @else if (liveTraces().length === 0) {
+            <div class="flow-workspace__empty">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                width="28"
+                height="28"
+              >
+                <path d="M4 12 H9 L11 6 L14 18 L16 12 H20" />
+              </svg>
+              <p>{{ 'graph.empty.title' | t }}</p>
+              <p class="flow-workspace__empty-hint">{{ 'graph.empty.hint' | t }}</p>
+            </div>
+          } @else {
+            <ul class="flow-workspace__live-list">
+              @for (summary of liveTraces(); track summary.traceId) {
+                <li>
+                  <button
+                    type="button"
+                    class="flow-workspace__live-item"
+                    (click)="openTrace(summary.traceId)"
+                  >
+                    <span class="naf-tag" [class]="methodTagClass(summary.method)">{{
+                      summary.method
+                    }}</span>
+                    <span>{{ summary.routeTemplate }}</span>
+                    <span>{{ 'node.state.running' | t }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
         </div>
-
-        @if (errorOrigin(); as origin) {
-          <button
-            type="button"
-            class="flow-workspace__banner flow-workspace__banner--danger"
-            (click)="onNodeSelected(origin.spanId)"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              width="18"
-              height="18"
-            >
-              <circle cx="12" cy="12" r="8.5" />
-              <path d="M12 7.5v5.5M12 16.4v.1" />
-            </svg>
-            {{
-              'graph.errorOrigin'
-                | t
-                  : {
-                      component: origin.component,
-                      status: trace.httpStatus ?? '—',
-                      duration: formatDuration(trace.durationMicros),
-                    }
-            }}
-          </button>
-        } @else if (slowestStep(); as step) {
-          <button
-            type="button"
-            class="flow-workspace__banner flow-workspace__banner--warning"
-            (click)="onNodeSelected(step.spanId)"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              width="18"
-              height="18"
-            >
-              <circle cx="12" cy="12" r="7" />
-              <path d="M12 8v4l2.5 1.5" />
-            </svg>
-            {{
-              'graph.slowestStep'
-                | t: { component: step.component, duration: formatDuration(step.durationMicros) }
-            }}
-          </button>
-        }
-      }
-
-      <div class="flow-workspace__canvas">
-        @if (trace(); as trace) {
-          <app-flow-graph
-            [nodes]="graph().nodes"
-            [edges]="graph().edges"
-            [selectedNodeId]="selectedNodeId()"
-            (nodeSelected)="onNodeSelected($event)"
-          />
-        } @else if (traceNotFound()) {
-          <div class="flow-workspace__empty flow-workspace__empty--not-found">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              width="28"
-              height="28"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M9 9l6 6M15 9l-6 6" />
-            </svg>
-            <p>{{ 'graph.notFound.title' | t }}</p>
-            <p class="flow-workspace__empty-hint">{{ 'graph.notFound.hint' | t }}</p>
-          </div>
-        } @else if (liveTracesLoading()) {
-          <p class="flow-workspace__status" role="status">{{ 'graph.loading' | t }}</p>
-        } @else if (liveTracesError()) {
-          <p class="flow-workspace__status" role="alert">{{ 'graph.liveTracesError' | t }}</p>
-        } @else if (liveTraces().length === 0) {
-          <div class="flow-workspace__empty">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              width="28"
-              height="28"
-            >
-              <path d="M4 12 H9 L11 6 L14 18 L16 12 H20" />
-            </svg>
-            <p>{{ 'graph.empty.title' | t }}</p>
-            <p class="flow-workspace__empty-hint">{{ 'graph.empty.hint' | t }}</p>
-          </div>
-        } @else {
-          <ul class="flow-workspace__live-list">
-            @for (summary of liveTraces(); track summary.traceId) {
-              <li>
-                <button
-                  type="button"
-                  class="flow-workspace__live-item"
-                  (click)="openTrace(summary.traceId)"
-                >
-                  <span class="naf-tag" [class]="methodTagClass(summary.method)">{{
-                    summary.method
-                  }}</span>
-                  <span>{{ summary.routeTemplate }}</span>
-                  <span>{{ 'node.state.running' | t }}</span>
-                </button>
-              </li>
-            }
-          </ul>
-        }
       </div>
 
       @if (isReplaying()) {
