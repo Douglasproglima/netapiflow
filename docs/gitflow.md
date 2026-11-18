@@ -45,7 +45,15 @@ A skill `/release` do Claude Code guia esse processo.
 1. Criar `hotfix/<versao>` a partir de `main`, com o `PATCH` incrementado.
 2. Corrigir, atualizar o `CHANGELOG.md`.
 3. PR para `main` (squash), tag `v<versao>`.
-4. Merge de `main` de volta em `develop`.
+4. `release.yml` só publica pacote, nunca cria a página de Release no GitHub (mesma lacuna que a
+   skill `/release` já documenta no passo 10, achada ali em `v0.2.0`/`v0.3.0`). Sem este passo
+   manual, a tag existe e o nuget.org recebe o pacote, mas `gh release list` continua mostrando a
+   versão anterior como "Latest": aconteceu de verdade com `v0.4.1` a `v0.4.4`, quatro hotfixes
+   seguidos sem Release nenhum, porque nenhum dos dois (`release.yml` e este resumo de 4 passos)
+   cobria o passo. Criar com
+   `gh release create v<versao> --title v<versao> --notes-file <corpo> --target main`, corpo
+   sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
+5. Merge de `main` de volta em `develop`.
 
 ## Versionamento: SemVer (D-01)
 
