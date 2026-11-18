@@ -6,7 +6,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { App } from './app';
-import { SseService } from './core/sse.service';
+import { SSE_REFRESH_AUDIT_MS, SseService } from './core/sse.service';
 import { FlowEvent } from './core/models';
 import { ThemeService } from './core/theme.service';
 
@@ -51,6 +51,22 @@ function fakeSseService() {
 
 function fakeThemeService() {
   return { isDark: signal(true), toggle: vi.fn() };
+}
+
+// The refresh is behind `auditTime`, whose timer is scheduled the moment the event arrives, so
+// the fake clock has to be in place before emitting, not after.
+async function emitAndAwaitRefresh(
+  emit: () => void,
+  fixture: { detectChanges: () => void },
+): Promise<void> {
+  vi.useFakeTimers({
+    toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+  });
+  emit();
+  vi.advanceTimersByTime(SSE_REFRESH_AUDIT_MS + 100);
+  vi.useRealTimers();
+  await Promise.resolve();
+  fixture.detectChanges();
 }
 
 describe('App', () => {
@@ -288,6 +304,49 @@ describe('App', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.inProgressCount()).toBe(1);
+  });
+
+  it('keeps refreshing the in-progress count after GET /traces/live fails', async () => {
+    const { fixture, sse } = setup(false);
+    await fixture.whenStable();
+    httpMock.expectOne('api/config').flush({ slowThresholdMicros: 250_000, version: '0.1.0' });
+    httpMock.expectOne('api/traces/live').flush([{ traceId: 't1' } as never]);
+    await fixture.whenStable();
+    expect(fixture.componentInstance.inProgressCount()).toBe(1);
+
+    await emitAndAwaitRefresh(
+      () =>
+        sse.emit({
+          eventId: 1,
+          type: 'TraceCompleted',
+          traceId: 't1',
+          timestamp: '2026-01-01T00:00:00Z',
+        }),
+      fixture,
+    );
+    httpMock
+      .expectOne('api/traces/live')
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.inProgressCount()).toBe(1);
+
+    await emitAndAwaitRefresh(
+      () =>
+        sse.emit({
+          eventId: 2,
+          type: 'TraceStarted',
+          traceId: 't2',
+          timestamp: '2026-01-01T00:00:01Z',
+        }),
+      fixture,
+    );
+    httpMock
+      .expectOne('api/traces/live')
+      .flush([{ traceId: 't2' } as never, { traceId: 't3' } as never]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.inProgressCount()).toBe(2);
   });
 
   it('announces the SSE connection chip with aria-live="polite", regardless of connection state', async () => {

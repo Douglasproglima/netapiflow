@@ -5,7 +5,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { auditTime, filter, map, merge, of, startWith, switchMap } from 'rxjs';
+import { auditTime, catchError, filter, map, merge, of, startWith, switchMap } from 'rxjs';
 import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ActionDrawerService } from './core/action-drawer.service';
 import { ApiService } from './core/api.service';
@@ -121,8 +121,12 @@ export class App implements OnInit, OnDestroy {
         auditTime(SSE_REFRESH_AUDIT_MS),
       ),
     )
-      .pipe(switchMap(() => this.api.getLiveTraces()))
-      .subscribe((traces) => this.inProgressCount.set(traces.length));
+      .pipe(switchMap(() => this.api.getLiveTraces().pipe(catchError(() => of(null)))))
+      .subscribe((traces) => {
+        if (traces) {
+          this.inProgressCount.set(traces.length);
+        }
+      });
   }
 
   ngOnDestroy(): void {
