@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-18
+
+### Fixed
+
+- `NetApiFlow.Dashboard`: on a short browser window, such as the content height a real 1080p
+  monitor leaves after its taskbar and the browser's own tabs/address bar, the replay bar's play
+  button could be clipped out of the graph card and become unclickable. The replay bar no longer
+  shares the graph card's clipped area, so it always keeps its own space and stays fully visible
+  and clickable regardless of viewport height.
+
 ## [0.4.3] - 2026-11-18
 
 ### Fixed
