@@ -11,6 +11,8 @@ import { httpMethodTagClass } from '../../shared/http-method-style';
 import {
   AuthApplication,
   buildAuthApplication,
+  decodeJwtExpiry,
+  isTokenBearingScheme,
   buildEndpointForm,
   effectiveSecurity,
   FormFieldKind,
@@ -240,6 +242,26 @@ export class EndpointFormComponent {
 
   isQueryScheme(scheme: OpenApiSecurityScheme): boolean {
     return scheme.type === 'apiKey' && scheme.in === 'query';
+  }
+
+  /**
+   * How long the pasted token has left, for a scheme that carries one. Presentation only: an
+   * expired token never blocks the request, the server is the one that rejects it.
+   */
+  authExpiry(entry: SecuritySchemeEntry): { key: TranslationKey; minutes: number } | null {
+    if (!isTokenBearingScheme(entry.scheme)) {
+      return null;
+    }
+
+    const expiry = decodeJwtExpiry(this.credentials.authValue(entry.name));
+    if (!expiry) {
+      return null;
+    }
+
+    const minutes = Math.round((expiry.getTime() - Date.now()) / 60_000);
+    return minutes >= 0
+      ? { key: 'action.authorize.expiresIn', minutes }
+      : { key: 'action.authorize.expired', minutes: -minutes };
   }
 
   addHeader(): void {

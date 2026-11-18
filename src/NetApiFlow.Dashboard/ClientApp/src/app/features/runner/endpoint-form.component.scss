@@ -309,6 +309,16 @@
   color: var(--naf-text-muted);
 }
 
+.endpoint-form__authorize-expiry {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--naf-text-muted);
+
+  &--expired {
+    color: var(--naf-danger-on-tint);
+  }
+}
+
 .endpoint-form__headers {
   display: flex;
   flex-direction: column;
