@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+
+    <!-- Above the version NetApiFlow.Storage.SqlServer pins: the interop reads a payload shape
+         the driver only publishes from 6.0 on, and this project is where that is proven. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" VersionOverride="6.1.1" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+</Project>
