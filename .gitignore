@@ -19,6 +19,7 @@ artifacts/
 *.nupkg
 *.snupkg
 BenchmarkDotNet.Artifacts/
+tests/manual-verification/local-packages/
 
 # Node / Angular (src/NetApiFlow.Dashboard/ClientApp)
 node_modules/
