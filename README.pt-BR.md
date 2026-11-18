@@ -469,8 +469,10 @@ como span `Database` em vez de deixar um buraco no fluxo. A deduplicação contr
 `NetApiFlow.EntityFrameworkCore` é igual à do Npgsql, e a regra do `CaptureSqlText` vale do mesmo
 jeito. Uma diferença que vale saber: diferente do Npgsql, o `Microsoft.Data.SqlClient` não publica
 `ActivitySource` própria, então o NetApiFlow lê os eventos de diagnóstico do driver. Esses eventos
-só trazem um payload legível a partir do `Microsoft.Data.SqlClient` 6.0. Em driver mais antigo a
-flag é aceita e simplesmente não grava nada.
+só trazem um payload legível a partir do `Microsoft.Data.SqlClient` 6.0. Se a sua aplicação fixa
+um driver mais antigo, a flag é aceita mas não grava nada, e o NetApiFlow registra isso uma vez,
+em nível `Information`, dizendo qual versão é necessária. Melhor que te deixar com a feature
+ligada e o fluxo vazio.
 
 Montando o dashboard num caminho diferente do padrão, e protegendo-o:
 

@@ -71,15 +71,11 @@
     <PackageVersion Include="Npgsql" Version="8.0.5" />
 
     <!-- NetApiFlow.Storage.SqlServer -->
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.2" />
 
-    <!-- Test-only: exercises the SqlClient interop against a driver new enough to publish its
-         diagnostic payload as a key/value list, which the storage package itself does not need. -->
+    <!-- Test-only: the SqlClient interop test needs a real SQL Server provider for its dedup case. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.22" />
 
-    <!-- Pinned above what the SqlClient 6.x test graph resolves on its own: the versions it picks
-         (8.0.1, 9.0.4) carry a known advisory, and NuGet audit is an error here. -->
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="9.0.22" />
 
     <!-- SourceLink (every src/ package) -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
