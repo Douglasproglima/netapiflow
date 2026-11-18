@@ -1,0 +1,52 @@
+{
+  "totalExecutions": 16,
+  "nodes": [
+    {
+      "component": "OrdersController",
+      "operation": "Get",
+      "type": "Controller",
+      "executionCount": 16
+    },
+    {
+      "component": "OrderService",
+      "operation": "GetAsync",
+      "type": "Service",
+      "executionCount": 16
+    },
+    {
+      "component": "OrderRepository",
+      "operation": "FindAsync",
+      "type": "Repository",
+      "executionCount": 16
+    },
+    {
+      "component": "EntityFrameworkCore",
+      "operation": "SELECT Orders",
+      "type": "Database",
+      "executionCount": 16
+    }
+  ],
+  "edges": [
+    {
+      "fromComponent": "OrdersController",
+      "fromOperation": "Get",
+      "toComponent": "OrderService",
+      "toOperation": "GetAsync",
+      "callCount": 16
+    },
+    {
+      "fromComponent": "OrderService",
+      "fromOperation": "GetAsync",
+      "toComponent": "OrderRepository",
+      "toOperation": "FindAsync",
+      "callCount": 16
+    },
+    {
+      "fromComponent": "OrderRepository",
+      "fromOperation": "FindAsync",
+      "toComponent": "EntityFrameworkCore",
+      "toOperation": "SELECT Orders",
+      "callCount": 16
+    }
+  ]
+}

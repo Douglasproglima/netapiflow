@@ -1,0 +1,8 @@
+{
+  "slowThresholdMicros": 250000,
+  "version": "0.4.1",
+  "tailSamplingEnabled": false,
+  "successSampleRate": 0.1,
+  "openApiDocumentPath": "/openapi/v1.json",
+  "hostPathBase": ""
+}

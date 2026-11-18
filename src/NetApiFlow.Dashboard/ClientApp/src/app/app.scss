@@ -302,3 +302,16 @@
   height: 100%;
   overflow-x: hidden;
 }
+
+// Demo build only. Permanent and always visible: the data behind these screens was recorded, and
+// a banner that fades out would let someone read a stale number as live.
+.app-demo-banner {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: var(--naf-warning-tint);
+  color: var(--naf-warning-on-tint);
+  border-bottom: 1px solid var(--naf-border);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  text-align: center;
+}

@@ -1,0 +1,8 @@
+{
+  "totalTraces": 28,
+  "errorCount": 0,
+  "errorRate": 0,
+  "averageDurationMicros": 156242,
+  "p95DurationMicros": 273333,
+  "maxDurationMicros": 422118
+}

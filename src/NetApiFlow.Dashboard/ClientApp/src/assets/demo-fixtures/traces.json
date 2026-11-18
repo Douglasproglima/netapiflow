@@ -1,0 +1,285 @@
+{
+  "items": [
+    {
+      "traceId": "ddb1a34536d78e6e3971f07cea2c1657",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 404,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:20.698516Z",
+      "durationMicros": 2935,
+      "truncated": false
+    },
+    {
+      "traceId": "54c0c7b99400d9cd2b459a59e14d323d",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 404,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:20.442674Z",
+      "durationMicros": 254817,
+      "truncated": false
+    },
+    {
+      "traceId": "98ca608afc9869a0fc3078e924f1f53a",
+      "method": "GET",
+      "routeTemplate": "/api/orders/sequential",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:20.187823Z",
+      "durationMicros": 253225,
+      "truncated": false
+    },
+    {
+      "traceId": "7fdb4a0816e4a76920a5b96799beb5cf",
+      "method": "GET",
+      "routeTemplate": "/api/orders/sequential",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:20.186595Z",
+      "durationMicros": 349,
+      "truncated": false
+    },
+    {
+      "traceId": "b88a8cbb568056e06421266793cc500a",
+      "method": "GET",
+      "routeTemplate": "/api/orders/sequential",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.930000Z",
+      "durationMicros": 255427,
+      "truncated": false
+    },
+    {
+      "traceId": "e8044eca7253f3a520110af70d0651c2",
+      "method": "GET",
+      "routeTemplate": "/api/orders/parallel",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.661991Z",
+      "durationMicros": 266369,
+      "truncated": false
+    },
+    {
+      "traceId": "387a2d343d0afac8c653896ae63adc2e",
+      "method": "GET",
+      "routeTemplate": "/api/orders/parallel",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.660520Z",
+      "durationMicros": 366,
+      "truncated": false
+    },
+    {
+      "traceId": "ad280bb3a0b3085482fb163f7a2acd67",
+      "method": "GET",
+      "routeTemplate": "/api/orders/parallel",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.406887Z",
+      "durationMicros": 252330,
+      "truncated": false
+    },
+    {
+      "traceId": "c12398fe31ccec43b2bd7f4b094e0cff",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.403375Z",
+      "durationMicros": 2489,
+      "truncated": false
+    },
+    {
+      "traceId": "55b1764561d93f77ae96ff28c362cb19",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.156452Z",
+      "durationMicros": 245618,
+      "truncated": false
+    },
+    {
+      "traceId": "e5d22dc41a09dc7fda8fcec79fc809de",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:19.152307Z",
+      "durationMicros": 2844,
+      "truncated": false
+    },
+    {
+      "traceId": "95d016baa3a77a76cf4c76eb9e7ddff1",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:18.889969Z",
+      "durationMicros": 261060,
+      "truncated": false
+    },
+    {
+      "traceId": "d5c748fb074c01605afc8f2a648388f7",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:18.885492Z",
+      "durationMicros": 2964,
+      "truncated": false
+    },
+    {
+      "traceId": "2d05fdd0ce4e1736bf3c0c66c4ad1a5a",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:22:18.624551Z",
+      "durationMicros": 255205,
+      "truncated": false
+    },
+    {
+      "traceId": "a21b3a105249395843da784c7488f26f",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 404,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:04.832386Z",
+      "durationMicros": 2527,
+      "truncated": false
+    },
+    {
+      "traceId": "c5c57ac9f40fa78e08964edb01fe62f3",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 404,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:04.557787Z",
+      "durationMicros": 273333,
+      "truncated": false
+    },
+    {
+      "traceId": "e601448b8337740506965d195a5b04b1",
+      "method": "GET",
+      "routeTemplate": "/api/orders/sequential",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:04.289795Z",
+      "durationMicros": 266132,
+      "truncated": false
+    },
+    {
+      "traceId": "6e2b41499b48b36ab8007cf37e86028e",
+      "method": "GET",
+      "routeTemplate": "/api/orders/sequential",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:04.286995Z",
+      "durationMicros": 1686,
+      "truncated": false
+    },
+    {
+      "traceId": "e630db483a5eee329a9f01d837d10aaa",
+      "method": "GET",
+      "routeTemplate": "/api/orders/sequential",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:04.026420Z",
+      "durationMicros": 258772,
+      "truncated": false
+    },
+    {
+      "traceId": "3ac9c1b4a37ce86dd073a08b9cb28bd6",
+      "method": "GET",
+      "routeTemplate": "/api/orders/parallel",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:03.786056Z",
+      "durationMicros": 239111,
+      "truncated": false
+    },
+    {
+      "traceId": "875db476df8b577d524df5069d9416c3",
+      "method": "GET",
+      "routeTemplate": "/api/orders/parallel",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:03.783538Z",
+      "durationMicros": 1230,
+      "truncated": false
+    },
+    {
+      "traceId": "3ff3c98d4da2ebc1e93da0fa32050669",
+      "method": "GET",
+      "routeTemplate": "/api/orders/parallel",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:03.513145Z",
+      "durationMicros": 269181,
+      "truncated": false
+    },
+    {
+      "traceId": "570acaf8fc977f75799fcabecd50a7a4",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:03.475289Z",
+      "durationMicros": 2839,
+      "truncated": false
+    },
+    {
+      "traceId": "21a6844937148315c3d2e121379e02b0",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:03.215893Z",
+      "durationMicros": 258143,
+      "truncated": false
+    },
+    {
+      "traceId": "6e1545c70049eca4584e0afb1e0ff5f1",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:03.212159Z",
+      "durationMicros": 2689,
+      "truncated": false
+    },
+    {
+      "traceId": "a9a3a68a10d801f3107cd2350f402bd9",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:02.945061Z",
+      "durationMicros": 265103,
+      "truncated": false
+    },
+    {
+      "traceId": "bc2d87b08f719a37a1f4be78eee1ddf5",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:02.887362Z",
+      "durationMicros": 55934,
+      "truncated": false
+    },
+    {
+      "traceId": "fe0e538584046e5e4bb7feafaea8484f",
+      "method": "GET",
+      "routeTemplate": "/api/orders/{id:int}",
+      "httpStatus": 200,
+      "status": "Success",
+      "startedAt": "2026-11-18T11:20:02.458278Z",
+      "durationMicros": 422118,
+      "truncated": false
+    }
+  ],
+  "totalCount": 28
+}
