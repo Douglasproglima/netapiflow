@@ -66,6 +66,8 @@ const en = {
   'action.authorize.hide': 'Hide value',
   'action.authorize.preview.header': 'Sent as header: {name}: {value}',
   'action.authorize.preview.query': 'Sent as query parameter: ?{name}={value}',
+  'action.authorize.expiresIn': 'Expires in {minutes} min',
+  'action.authorize.expired': 'Expired {minutes} min ago',
   'action.authorize.queryWarning':
     'This value is sent in the request URL and may appear in the host access log.',
   'action.authorize.noAlternativeFilled':
@@ -384,6 +386,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.authorize.hide': 'Ocultar valor',
   'action.authorize.preview.header': 'Enviado como header: {name}: {value}',
   'action.authorize.preview.query': 'Enviado como parâmetro de consulta: ?{name}={value}',
+  'action.authorize.expiresIn': 'Expira em {minutes} min',
+  'action.authorize.expired': 'Expirado há {minutes} min',
   'action.authorize.queryWarning':
     'Esse valor vai na URL da requisição e pode aparecer no log de acesso do host.',
   'action.authorize.noAlternativeFilled':

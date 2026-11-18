@@ -7,6 +7,7 @@ export interface CustomHeader {
 
 const AUTH_VALUES_KEY = 'naf-runner-auth-values';
 const CUSTOM_HEADERS_KEY = 'naf-runner-custom-headers';
+const LAST_BEARER_KEY = 'naf-runner-last-bearer';
 
 function readStoredJson<T>(key: string, fallback: T): T {
   try {
@@ -41,6 +42,9 @@ export class RunnerCredentialsService {
   private readonly customHeadersState = signal<CustomHeader[]>(
     readStoredJson(CUSTOM_HEADERS_KEY, []),
   );
+  private readonly lastBearerState = signal<string | null>(
+    readStoredJson<string | null>(LAST_BEARER_KEY, null),
+  );
 
   readonly customHeaders = this.customHeadersState.asReadonly();
 
@@ -50,6 +54,20 @@ export class RunnerCredentialsService {
 
   setAuthValue(schemeName: string, value: string): void {
     this.updateAuthValues((values) => ({ ...values, [schemeName]: value }));
+  }
+
+  /**
+   * The most recent `Authorization: Bearer` value the panel actually sent, kept apart from the
+   * per-scheme values because it is not tied to any scheme: it is what the Runner falls back to
+   * when the host locks its own OpenAPI document behind the same token.
+   */
+  lastBearerValue(): string | null {
+    return this.lastBearerState();
+  }
+
+  recordBearerUsage(value: string): void {
+    this.lastBearerState.set(value);
+    writeStoredJson(LAST_BEARER_KEY, value);
   }
 
   addHeader(): void {

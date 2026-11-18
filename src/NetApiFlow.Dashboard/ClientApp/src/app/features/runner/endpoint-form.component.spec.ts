@@ -56,6 +56,29 @@ const DOC_WITH_SECURITY: OpenApiDocument = {
   },
 };
 
+const DOC_WITH_UNAPPLIABLE_SECURITY: OpenApiDocument = {
+  components: {
+    securitySchemes: {
+      BasicScheme: { type: 'http', scheme: 'basic' },
+    },
+  },
+  paths: {
+    '/api/orders/{id}': {
+      get: {
+        operationId: 'GetOrder',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        security: [{ BasicScheme: [] }],
+      },
+    },
+  },
+};
+
+function jwtExpiringInSeconds(seconds: number): string {
+  const exp = Math.floor(Date.now() / 1000) + seconds;
+  const payload = btoa(JSON.stringify({ sub: 'user', exp })).replace(/=+$/, '');
+  return `header.${payload}.signature`;
+}
+
 describe('EndpointFormComponent', () => {
   let httpMock: HttpTestingController;
 
@@ -279,6 +302,55 @@ describe('EndpointFormComponent', () => {
     expect(credentials.authValue('Bearer')).toBe('still-valid-token');
   });
 
+  describe('retrying the OpenAPI document with a remembered bearer value', () => {
+    it('shows the error directly on 401 when nothing was ever sent from this panel', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain(
+        'Não foi possível carregar o documento OpenAPI.',
+      );
+    });
+
+    it('retries once with the remembered value and loads the document', async () => {
+      TestBed.inject(RunnerCredentialsService).recordBearerUsage('abcdef82a');
+      const fixture = await createComponentWithConfig();
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      const retry = httpMock.expectOne('/openapi/v1.json');
+      expect(retry.request.headers.get('Authorization')).toBe('Bearer abcdef82a');
+      retry.flush(DOC);
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.endpoints()).toHaveLength(1);
+      expect(fixture.componentInstance.loadError()).toBeNull();
+    });
+
+    it('gives up after one retry, without looping', async () => {
+      TestBed.inject(RunnerCredentialsService).recordBearerUsage('abcdef82a');
+      const fixture = await createComponentWithConfig();
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      httpMock.expectNone('/openapi/v1.json');
+      expect(fixture.componentInstance.loadError()).toBe('action.openApiError.title');
+    });
+  });
+
   describe('route list lock icon', () => {
     function lockLabels(fixture: ComponentFixture<EndpointFormComponent>): string[] {
       const nativeElement: HTMLElement = fixture.nativeElement;
@@ -353,6 +425,70 @@ describe('EndpointFormComponent', () => {
       expect(fixture.nativeElement.textContent).toContain(
         'Enviado como header: Authorization: Bearer ••••f82a',
       );
+    });
+
+    it('shows how long a pasted JWT has left, and says so when it already expired', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      credentials.setAuthValue('Bearer', jwtExpiringInSeconds(14 * 60));
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain('Expira em 14 min');
+
+      credentials.setAuthValue('Bearer', jwtExpiringInSeconds(-3 * 60));
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Expirado há 3 min');
+    });
+
+    it('shows no expiry hint for a token that is not a JWT', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      credentials.setAuthValue('Bearer', 'd7f3a9c1e5b2');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.endpoint-form__authorize-expiry')).toBeNull();
+    });
+
+    it('keeps warning when the only filled scheme is one the panel cannot apply', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_UNAPPLIABLE_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      await fixture.whenStable();
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(true);
+
+      credentials.setAuthValue('BasicScheme', 'dXNlcjpwYXNz');
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(true);
+    });
+
+    it('stops warning once a scheme the panel can actually apply is filled', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      await fixture.whenStable();
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(true);
+
+      credentials.setAuthValue('Bearer', 'abcdef82a');
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(false);
     });
   });
 

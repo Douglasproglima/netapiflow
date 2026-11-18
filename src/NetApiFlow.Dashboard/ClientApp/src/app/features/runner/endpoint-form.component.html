@@ -189,6 +189,16 @@
                       }}
                     </p>
                   }
+                  @if (authExpiry(entry); as expiry) {
+                    <p
+                      class="endpoint-form__authorize-expiry"
+                      [class.endpoint-form__authorize-expiry--expired]="
+                        expiry.key === 'action.authorize.expired'
+                      "
+                    >
+                      {{ expiry.key | t: { minutes: expiry.minutes } }}
+                    </p>
+                  }
                   @if (isQueryScheme(entry.scheme)) {
                     <p class="endpoint-form__authorize-note">
                       {{ 'action.authorize.queryWarning' | t }}

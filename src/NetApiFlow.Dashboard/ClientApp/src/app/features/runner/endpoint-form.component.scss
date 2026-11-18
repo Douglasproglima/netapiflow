@@ -103,7 +103,9 @@
 
 .endpoint-form__list-wrapper {
   flex: 1 1 auto;
-  min-height: 0;
+  // Three whole route rows (36px each, rounded to the 8px grid) before the list has to scroll.
+  // Without a floor, a short window shrinks it past a single readable row.
+  min-height: 112px;
   max-height: 55%;
   overflow-y: auto;
 }
@@ -319,6 +321,16 @@
   margin: 0;
   font-size: 0.6875rem;
   color: var(--naf-text-muted);
+}
+
+.endpoint-form__authorize-expiry {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--naf-text-muted);
+
+  &--expired {
+    color: var(--naf-danger-on-tint);
+  }
 }
 
 .endpoint-form__headers {
