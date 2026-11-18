@@ -56,6 +56,23 @@ const DOC_WITH_SECURITY: OpenApiDocument = {
   },
 };
 
+const DOC_WITH_UNAPPLIABLE_SECURITY: OpenApiDocument = {
+  components: {
+    securitySchemes: {
+      BasicScheme: { type: 'http', scheme: 'basic' },
+    },
+  },
+  paths: {
+    '/api/orders/{id}': {
+      get: {
+        operationId: 'GetOrder',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        security: [{ BasicScheme: [] }],
+      },
+    },
+  },
+};
+
 describe('EndpointFormComponent', () => {
   let httpMock: HttpTestingController;
 
@@ -325,6 +342,38 @@ describe('EndpointFormComponent', () => {
       expect(fixture.nativeElement.textContent).toContain(
         'Enviado como header: Authorization: Bearer ••••f82a',
       );
+    });
+
+    it('keeps warning when the only filled scheme is one the panel cannot apply', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_UNAPPLIABLE_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      await fixture.whenStable();
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(true);
+
+      credentials.setAuthValue('BasicScheme', 'dXNlcjpwYXNz');
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(true);
+    });
+
+    it('stops warning once a scheme the panel can actually apply is filled', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      await fixture.whenStable();
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(true);
+
+      credentials.setAuthValue('Bearer', 'abcdef82a');
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.noAlternativeFilled()).toBe(false);
     });
   });
 
