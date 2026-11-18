@@ -53,19 +53,24 @@ Push, merge, tag, abrir ou mergear PR e criar release são visíveis publicament
 repositório é público). Nunca fazer nenhuma delas sem confirmação explícita na conversa.
 Confirmação vale para aquela ação, não para as próximas.
 
-### Exceção: PR só de documentação (D-109)
+### Exceção: PR só de documentação (D-109, critério ajustado pela D-154)
 
-Quando toda a mudança está em `README.md`, `README.pt-BR.md`, `CHANGELOG.md`, `docs/plano/`,
-`docs/adr/` ou `.claude/`, sem nenhum arquivo em `src/`, `tests/`, `samples/` ou `ClientApp/`: não
-perguntar confirmação em cada etapa (criar branch, empurrar, abrir PR, mergear). Juntar tudo numa
-branch e numa PR só, esperar o CI (segundos, por causa do `docs_only` do `detect-changes`) e
-mergear assim que ficar verde, sem pergunta extra de "posso mergear". Pedido explícito do usuário:
-o processo de confirmar passo a passo é burocracia demais pra um tipo de mudança de baixo risco e
-fácil de reverter.
+O critério é **nenhum arquivo de código no diff**, não o diretório onde o arquivo mora: um `.md`
+é documentação em qualquer lugar do repositório (inclusive dentro de `tests/`, como
+`tests/manual-verification/README.md`), e um arquivo de código continua código mesmo fora de
+`src/`/`tests/`/`samples/`/`ClientApp/`. Quando toda a mudança do PR é `.md` (README, CHANGELOG,
+`docs/plano/`, `docs/adr/`, `.claude/`, ou qualquer outro texto fora de código), sem nenhum
+`.cs`/`.csproj`/`.ts`/`.html`/`.scss`/config de build: não perguntar confirmação em cada etapa
+(criar branch, empurrar, abrir PR, mergear). Juntar tudo numa branch e numa PR só, esperar o CI
+(segundos, por causa do `docs_only` do `detect-changes`) e mergear assim que ficar verde, sem
+pergunta extra de "posso mergear". Pedido explícito do usuário: o processo de confirmar passo a
+passo é burocracia demais pra um tipo de mudança de baixo risco e fácil de reverter.
 
-Essa exceção nunca se estende a uma PR que também toque `src/`, `tests/`, `samples/` ou
-`ClientApp/`, mesmo que a maior parte do diff seja documentação: nesse caso vale a regra geral
-acima, sem exceção.
+Essa exceção nunca se estende a uma PR que também toque qualquer arquivo de código, mesmo que a
+maior parte do diff seja documentação: nesse caso vale a regra geral acima, sem exceção. Na dúvida
+sobre se um arquivo conta como código (ex. um `.json` de configuração, um `.yml` de workflow),
+tratar como código e perguntar: o custo de perguntar à toa é bem menor que o de mergear sem
+confirmação algo que devia ter sido confirmado.
 
 ## Limpeza depois do merge
 
