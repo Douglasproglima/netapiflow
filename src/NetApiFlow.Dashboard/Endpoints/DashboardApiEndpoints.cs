@@ -288,7 +288,7 @@ internal static class DashboardApiEndpoints
         return Results.Json(map, DashboardJsonOptions.Rest);
     }
 
-    private static IResult GetConfig(IOptions<NetApiFlowOptions> options)
+    private static IResult GetConfig(IOptions<NetApiFlowOptions> options, HttpContext httpContext)
     {
         var config = new DashboardConfig
         {
@@ -297,6 +297,7 @@ internal static class DashboardApiEndpoints
             TailSamplingEnabled = options.Value.TailSampling.Enabled,
             SuccessSampleRate = options.Value.TailSampling.SuccessSampleRate,
             OpenApiDocumentPath = options.Value.OpenApiDocumentPath,
+            HostPathBase = httpContext.Request.PathBase.Value ?? string.Empty,
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);

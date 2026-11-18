@@ -8,6 +8,7 @@ import {
   listSecuritySchemes,
   partitionDashboardRoutes,
   previewAuthApplication,
+  resolveAgainstHostRoot,
 } from './openapi-form';
 import { OpenApiDocument, OpenApiSecurityScheme } from '../../core/models';
 
@@ -356,5 +357,24 @@ describe('decodeJwtExpiry', () => {
 
   it('returns null for an empty value', () => {
     expect(decodeJwtExpiry('')).toBeNull();
+  });
+});
+
+describe('resolveAgainstHostRoot', () => {
+  it('leaves the path untouched when the host uses no PathBase', () => {
+    expect(resolveAgainstHostRoot('', '/api/orders/5')).toBe('/api/orders/5');
+  });
+
+  it('prefixes the host PathBase, never the dashboard mount path', () => {
+    expect(resolveAgainstHostRoot('/app', '/api/orders/5')).toBe('/app/api/orders/5');
+    expect(resolveAgainstHostRoot('/app', '/openapi/v1.json')).toBe('/app/openapi/v1.json');
+  });
+
+  it('does not double the separator when the PathBase carries a trailing slash', () => {
+    expect(resolveAgainstHostRoot('/app/', '/api/orders/5')).toBe('/app/api/orders/5');
+  });
+
+  it('inserts the separator for a path declared without a leading slash', () => {
+    expect(resolveAgainstHostRoot('/app', 'api/orders/5')).toBe('/app/api/orders/5');
   });
 });

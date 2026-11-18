@@ -10,6 +10,7 @@ const CONFIG: DashboardConfig = {
   tailSamplingEnabled: false,
   successSampleRate: 0.1,
   openApiDocumentPath: '/openapi/v1.json',
+  hostPathBase: '',
 };
 
 const ROUTE_STATS: RouteStat[] = [
