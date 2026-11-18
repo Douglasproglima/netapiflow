@@ -14,7 +14,7 @@ public static class FlowTrackedServiceCollectionExtensions
     /// not by registering the interface separately, so DI does not create a second lifetime scope
     /// for the underlying implementation).
     /// </summary>
-    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy, which emits a new type at run time and has no Native AOT equivalent. Under Native AOT, mark steps with NetApiFlow.Step or the NetApiFlow.EntityFrameworkCore interceptor instead.")]
+    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy, which emits a new type at run time and has no Native AOT equivalent. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
     public static IServiceCollection AddFlowTracked<TInterface, TImplementation>(
         this IServiceCollection services,
         ComponentType componentType,
@@ -38,7 +38,7 @@ public static class FlowTrackedServiceCollectionExtensions
     /// type or by instance) can be matched; factory-based registrations are left untouched, since
     /// their concrete type is not known without invoking the factory.
     /// </summary>
-    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with NetApiFlow.Step or the NetApiFlow.EntityFrameworkCore interceptor instead.")]
+    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection, so trimming can remove a type that would otherwise be decorated, silently dropping its steps.")]
     public static IServiceCollection DecorateFlowTracked(
         this IServiceCollection services,

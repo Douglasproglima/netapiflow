@@ -698,10 +698,16 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   `DecorateFlowTracked` montam o proxy com `DispatchProxy`, que gera um tipo em tempo de execução, e
   o `DecorateFlowTracked` ainda casa tipos de implementação por reflexão. Os dois têm
   `[RequiresDynamicCode]` (e o `DecorateFlowTracked` também `[RequiresUnreferencedCode]`), então
-  você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. As
-  formas de marcação que continuam seguras sob Native AOT e trimming são o `NetApiFlow.Step(...)` e
-  o interceptor do `NetApiFlow.EntityFrameworkCore`. Nenhum dos dois gera código em tempo de
-  execução.
+  você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. A
+  forma de marcação que continua segura sob Native AOT e trimming é o `NetApiFlow.Step(...)`: uma
+  aplicação que chama só `AddNetApiFlow()` e `Step(...)` publica com zero aviso de AOT ou trimming,
+  e existe uma verificação no repositório que prova isso.
+- O interceptor do `NetApiFlow.EntityFrameworkCore` é outra conversa. O interceptor em si não emite
+  aviso nenhum, mas o próprio EF Core declara que não é totalmente compatível com Native AOT, e uma
+  aplicação publicada que o usa acusa isso: `IL2026`/`IL3050` no construtor do `DbContext` e
+  `IL2104`/`IL3053` nos assemblies do EF Core. Essa limitação é do EF Core, não do NetApiFlow, e
+  nenhuma mudança aqui tira ela. Sob Native AOT, marque o acesso a banco com `NetApiFlow.Step(...)`
+  se você quer uma publicação sem aviso.
 - A visão ao vivo é por processo, não por cluster. O `GET /traces/live` lê o gravador em memória da
   réplica que respondeu àquela chamada. Atrás de um balanceador sem sticky session, o `/flow` mostra
   só o tráfego que aquela réplica atendeu, e o navegador pode cair em outra réplica já na
