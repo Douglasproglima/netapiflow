@@ -67,3 +67,36 @@ Three warnings are expected, and no fewer. Silence means an annotation was dropp
 This one uses a `ProjectReference` instead of the local feed. The analyzer reads the attributes
 straight from the IL, so a project and a `.nupkg` give the same answer, and this way the check runs
 without packing anything first.
+
+## Native AOT manual-path verification
+
+The sibling check above proves the two proxy-based forms warn. This one checks the other half of
+the same sentence: the README recommends `NetApiFlow.Step(...)` and the
+`NetApiFlow.EntityFrameworkCore` interceptor as the forms that stay safe under Native AOT.
+`AotManualPathVerification` uses only those two, never `AddFlowTracked`/`DecorateFlowTracked`.
+
+```bash
+cd tests/manual-verification/AotManualPathVerification
+dotnet publish -c Release
+```
+
+On Windows the ILC step shells out to the MSVC linker through `vswhere.exe`. If the publish ends
+in `MSB3073` naming `link.exe`, add the installer directory to `PATH` (typically
+`C:\Program Files (x86)\Microsoft Visual Studio\Installer`) and run it again. That failure is a
+local toolchain gap, not a result.
+
+**The target is zero AOT or trimming warnings, and it is not met today.** The warnings are the
+point of the check, so none of them are suppressed here. Current state:
+
+- Three call sites in `src/NetApiFlow/Configuration/NetApiFlowOptionsSetup.cs` (lines 14, 16 and
+  22) each report both `IL2026` and `IL3050`, six warnings in total. They come from
+  `ConfigurationBinder.Bind` and `ConfigurationBinder.Get<string[]>`, which bind
+  `NetApiFlowOptions` from the `NetApiFlow` configuration section. `AddNetApiFlow()` registers that
+  binder unconditionally, so every Native AOT host gets these six whether or not it uses a
+  configuration file. Reproduced with nothing but `AddNetApiFlow()` and `Step(...)` in the host,
+  no EF Core referenced at all.
+- `NetApiFlow.Step(...)` itself contributes no warning.
+- The EF Core half brings `IL2026`/`IL3050` on the `DbContext` constructor, `IL2104`/`IL3053` on
+  `Microsoft.EntityFrameworkCore`, `.Relational` and `.Sqlite`, and four `IL3002`. None originate
+  in `NetApiFlow.EntityFrameworkCore`, but the interceptor cannot be used without EF Core, which
+  documents itself as not fully compatible with Native AOT.
