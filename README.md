@@ -195,6 +195,45 @@ It returns `null` when the trace already aged out of the in-memory buffer (500 t
 between the call and the assertion) or when NetApiFlow was never registered, never when the HTTP
 call itself failed.
 
+### `NetApiFlow.Testing`
+
+The same test, written with the optional `NetApiFlow.Testing` package, which skips the header
+read and the null check and names the rule instead of spelling out the LINQ:
+
+```csharp
+using NetApiFlow;
+using NetApiFlow.Testing;
+
+public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task GetOrder_DoesNotTriggerMoreThanOneDatabaseQuery()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.GetFlowTrace(factory.Services)
+            .ShouldHaveNoErrors()
+            .ShouldCallAtMost(ComponentType.Database, 1)
+            .ShouldHaveCalled("OrderRepository", "FindAsync")
+            .ShouldNeverCall("PaymentGateway");
+    }
+}
+```
+
+Five assertions, all chainable: `ShouldHaveStatus`, `ShouldHaveNoErrors`, `ShouldCallAtMost`,
+`ShouldHaveCalled` and `ShouldNeverCall`. `ShouldHaveCalled`/`ShouldNeverCall` match on the
+component alone when the operation is left out, or on the exact pair when it is given.
+
+The package references nothing but `NetApiFlow` itself, so it imposes no assertion library on
+your test project. A failed assertion throws `FlowAssertionException` with a message saying what
+was expected and what was found, for example
+`Expected at most 1 Database calls, found 5.`; every test framework reports that as a failure.
+`GetFlowTrace` throws the same exception instead of returning `null` when the response carries no
+`X-NetApiFlow-TraceId` header or the trace already left the buffer.
+
 ## Optional packages
 
 | Package | Adds |
@@ -206,6 +245,7 @@ call itself failed.
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persists traces to SQL Server instead of memory |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | A read-only MCP server so an AI agent can query traces directly |
 | [`NetApiFlow.OpenTelemetry`](https://www.nuget.org/packages/NetApiFlow.OpenTelemetry) | Exports traces to any OTLP backend (Jaeger, Tempo, Aspire Dashboard, Honeycomb, a collector) |
+| [`NetApiFlow.Testing`](https://www.nuget.org/packages/NetApiFlow.Testing) | Assertions over the recorded flow, for integration tests |
 
 The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework. Every
 one of the above is opt-in.
