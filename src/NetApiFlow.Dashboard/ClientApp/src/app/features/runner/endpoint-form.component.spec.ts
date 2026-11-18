@@ -73,6 +73,12 @@ const DOC_WITH_UNAPPLIABLE_SECURITY: OpenApiDocument = {
   },
 };
 
+function jwtExpiringInSeconds(seconds: number): string {
+  const exp = Math.floor(Date.now() / 1000) + seconds;
+  const payload = btoa(JSON.stringify({ sub: 'user', exp })).replace(/=+$/, '');
+  return `header.${payload}.signature`;
+}
+
 describe('EndpointFormComponent', () => {
   let httpMock: HttpTestingController;
 
@@ -342,6 +348,38 @@ describe('EndpointFormComponent', () => {
       expect(fixture.nativeElement.textContent).toContain(
         'Enviado como header: Authorization: Bearer ••••f82a',
       );
+    });
+
+    it('shows how long a pasted JWT has left, and says so when it already expired', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      credentials.setAuthValue('Bearer', jwtExpiringInSeconds(14 * 60));
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain('Expira em 14 min');
+
+      credentials.setAuthValue('Bearer', jwtExpiringInSeconds(-3 * 60));
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Expirado há 3 min');
+    });
+
+    it('shows no expiry hint for a token that is not a JWT', async () => {
+      const credentials = TestBed.inject(RunnerCredentialsService);
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('GET', '/api/orders/{id}');
+      credentials.setAuthValue('Bearer', 'd7f3a9c1e5b2');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.endpoint-form__authorize-expiry')).toBeNull();
     });
 
     it('keeps warning when the only filled scheme is one the panel cannot apply', async () => {
