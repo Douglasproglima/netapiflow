@@ -13,7 +13,7 @@ public sealed class FlowTrackingBehavior<TRequest, TResponse> : IPipelineBehavio
 
         try
         {
-            return await next();
+            return await next(cancellationToken);
         }
         catch (Exception ex)
         {

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Shouldly" Version="4.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Installed from the local feed (nuget.config), not a ProjectReference, which recompiles
+         against whatever MediatR the repo pins and so can never catch a binary incompatibility.
+         MediatR is pinned above the version NetApiFlow.MediatR was compiled against on purpose. -->
+    <PackageReference Include="NetApiFlow.MediatR" Version="0.4.2" />
+    <PackageReference Include="MediatR" Version="12.5.0" />
+  </ItemGroup>
+
+</Project>
