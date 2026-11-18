@@ -168,14 +168,30 @@ export class EndpointFormComponent {
     this.config.config$.subscribe((config) => this.loadOpenApiDocument(config.openApiDocumentPath));
   }
 
-  private loadOpenApiDocument(path: string): void {
-    this.api.loadOpenApiDocument(path).subscribe({
+  /**
+   * A host that keeps its own OpenAPI document behind the same authorization as its endpoints
+   * answers 401 here, and the Runner has nothing to show. When a bearer value was already sent
+   * from this panel, one retry carries it; anything else, including a second failure, falls
+   * through to the error state.
+   */
+  private loadOpenApiDocument(path: string, bearerValue: string | null = null): void {
+    const headers = bearerValue
+      ? new HttpHeaders({ Authorization: `Bearer ${bearerValue}` })
+      : undefined;
+
+    this.api.loadOpenApiDocument(path, headers).subscribe({
       next: (doc) => {
         this.openApiDocument.set(doc);
         this.loading.set(false);
         this.credentials.reconcile(listSecuritySchemes(doc).map((entry) => entry.name));
       },
-      error: () => {
+      error: (error: HttpErrorResponse) => {
+        const storedBearer = this.credentials.lastBearerValue();
+        if (error.status === 401 && bearerValue === null && storedBearer) {
+          this.loadOpenApiDocument(path, storedBearer);
+          return;
+        }
+
         this.loadError.set('action.openApiError.title');
         this.loading.set(false);
       },
@@ -356,6 +372,9 @@ export class EndpointFormComponent {
         );
       } else {
         headers = headers.set(application.name, application.value);
+        if (application.name === 'Authorization') {
+          this.credentials.recordBearerUsage(application.value.replace(/^Bearer\s+/i, ''));
+        }
       }
     }
 
