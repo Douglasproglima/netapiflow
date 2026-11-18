@@ -466,8 +466,10 @@ as a `Database` span instead of leaving a gap in the flow. It is deduplicated ag
 `NetApiFlow.EntityFrameworkCore` exactly like the Npgsql one, and obeys the same `CaptureSqlText`
 rule. One difference worth knowing: unlike Npgsql, `Microsoft.Data.SqlClient` publishes no
 `ActivitySource` of its own, so NetApiFlow reads the driver's diagnostic events instead. Those
-events only carry a readable payload from `Microsoft.Data.SqlClient` 6.0 on; on an older driver
-the flag is accepted and simply records nothing.
+events only carry a readable payload from `Microsoft.Data.SqlClient` 6.0 on. If your application
+pins an older driver, the flag is accepted but records nothing, and NetApiFlow logs that once at
+`Information` level naming the version requirement, rather than leaving you with an enabled
+feature and an empty flow.
 
 Mounting the dashboard at a path other than the default, and protecting it:
 

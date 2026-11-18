@@ -8,10 +8,9 @@
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
 
-    <!-- Above the version NetApiFlow.Storage.SqlServer pins: the interop reads a payload shape
-         the driver only publishes from 6.0 on, and this project is where that is proven. -->
-    <PackageReference Include="Microsoft.Data.SqlClient" VersionOverride="6.1.1" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <!-- No VersionOverride on purpose: this has to exercise the very version the packages pin,
+         because that is the one a consumer of NetApiFlow.Storage.SqlServer actually restores. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" />
   </ItemGroup>
 
   <ItemGroup>

@@ -54,8 +54,14 @@ internal sealed partial class SqlClientCommandListener
     {
         try
         {
-            if (_disposed || value.Value is not IReadOnlyList<KeyValuePair<string, object>> payload)
+            if (_disposed)
             {
+                return;
+            }
+
+            if (value.Value is not IReadOnlyList<KeyValuePair<string, object>> payload)
+            {
+                WarnOnceAboutUnreadablePayload(value.Value);
                 return;
             }
 
@@ -77,6 +83,23 @@ internal sealed partial class SqlClientCommandListener
             Log.EventProcessingFailed(_logger, value.Key, ex);
         }
     }
+
+    /// <summary>
+    /// Logged once per process, not per command: a driver whose payload cannot be read produces
+    /// no span at all, and the only thing worse than that is it happening silently. Older
+    /// Microsoft.Data.SqlClient releases write an anonymous type here instead of a key/value list.
+    /// </summary>
+    private void WarnOnceAboutUnreadablePayload(object? payload)
+    {
+        if (Interlocked.Exchange(ref _unreadablePayloadReported, 1) != 0)
+        {
+            return;
+        }
+
+        Log.PayloadNotReadable(_logger, payload?.GetType().FullName ?? "null");
+    }
+
+    private int _unreadablePayloadReported;
 
     public void OnError(Exception error)
     {
@@ -159,5 +182,10 @@ internal sealed partial class SqlClientCommandListener
     {
         [LoggerMessage(Level = LogLevel.Warning, Message = "NetApiFlow: SqlClient event processing failed for {DiagnosticEvent}")]
         public static partial void EventProcessingFailed(ILogger logger, string diagnosticEvent, Exception exception);
+
+        [LoggerMessage(
+            Level = LogLevel.Information,
+            Message = "NetApiFlow: ExternalActivitySource.SqlClient is enabled, but this Microsoft.Data.SqlClient build reports its command events as {PayloadType}, which NetApiFlow cannot read. No Database span will be recorded for SqlClient commands. Upgrade Microsoft.Data.SqlClient to 6.0 or later to enable it.")]
+        public static partial void PayloadNotReadable(ILogger logger, string payloadType);
     }
 }
