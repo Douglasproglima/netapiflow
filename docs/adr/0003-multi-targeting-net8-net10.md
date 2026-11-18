@@ -1,7 +1,9 @@
 # ADR-0003: Multi-targeting `net8.0` e `net10.0` em todos os pacotes
 
 ## Status
-Aceito
+Aceito. A cláusula de sucessão ("trocar `net8.0` por `net12.0` quando sair de suporte") foi
+substituída pelo ADR-0023: entra `net11.0` como terceiro TFM, não uma troca, enquanto `net12.0`
+não lança. O resto desta decisão continua valendo.
 
 ## Discussion
 [#175](https://github.com/Douglasproglima/netapiflow/discussions/175)

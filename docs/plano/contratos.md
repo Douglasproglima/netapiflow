@@ -165,10 +165,13 @@ public enum ExternalActivitySource
     /// own span for the same command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.</summary>
     Npgsql = 2,
 
-    /// <summary>SQL commands from Microsoft.Data.SqlClient's own <c>ActivitySource</c> (same
-    /// mechanism as <see cref="Npgsql"/>, applied to SQL Server, Fase 37), mapped to a
+    /// <summary>SQL commands from Microsoft.Data.SqlClient's own <see cref="System.Diagnostics.DiagnosticListener"/>
+    /// (the driver never exposes an <c>ActivitySource</c>, unlike Npgsql; confirmed by the Fase 37
+    /// investigation, correcting this contract's original text), mapped to a
     /// <see cref="ComponentType.Database"/> span. Deduplicated the same way against
-    /// <c>NetApiFlow.EntityFrameworkCore</c>'s own span for the same command.</summary>
+    /// <c>NetApiFlow.EntityFrameworkCore</c>'s own span for the same command. The driver's event
+    /// payload is only strongly typed from version 6.0 on; on an older pinned version the listener
+    /// recognizes the gap and records nothing, rather than failing.</summary>
     SqlClient = 4,
 }
 

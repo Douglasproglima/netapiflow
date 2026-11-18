@@ -35,3 +35,4 @@ Discussion é o lugar certo pra uma conversa permanente.
 | [ADR-0020](0020-visibilidade-cancelamento.md) | `FlowStatus` ganha `Cancelled` e `Timeout`, separados de `Error` | Aceito | [#203](https://github.com/Douglasproglima/netapiflow/discussions/203) |
 | [ADR-0021](0021-sem-configureawait-em-codigo-de-aspnet-core.md) | `src/` não usa `ConfigureAwait(false)` | Aceito | A criar na PR do hotfix `0.4.1` |
 | [ADR-0022](0022-pacote-netapiflow-testing-sem-dependencia.md) | Pacote `NetApiFlow.Testing`, asserção de trace sem dependência de framework | Aceito | [#253](https://github.com/Douglasproglima/netapiflow/discussions/253) |
+| [ADR-0023](0023-tres-tfms-net11-fecha-furo-adr-0003.md) | Três TFMs (`net8.0;net10.0;net11.0`), fechando o furo de sucessão do ADR-0003 | Aceito | [#270](https://github.com/Douglasproglima/netapiflow/discussions/270) |
