@@ -139,6 +139,20 @@
   }
 }
 
+// flex: 1 1 auto + min-height: 0 lets this area shrink past its children's natural height when
+// .flow-workspace__center is shorter than the toolbar, header, banner and canvas floor combined.
+// .flow-workspace__replay sits outside this box on purpose: a flex: none sibling always gets its
+// full height from the column before this shrinkable area does, so the replay bar, including its
+// play button, never gets clipped by the overflow: hidden below, no matter how little height
+// .flow-workspace__center has to offer.
+.flow-workspace__graph-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .flow-workspace__graph-header {
   flex: none;
   min-width: 0;
