@@ -118,8 +118,8 @@ export class ApiService {
   }
 
   /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */
-  loadOpenApiDocument(url: string): Observable<OpenApiDocument> {
-    return this.http.get<OpenApiDocument>(url);
+  loadOpenApiDocument(url: string, headers?: HttpHeaders): Observable<OpenApiDocument> {
+    return this.http.get<OpenApiDocument>(url, { headers });
   }
 
   /**

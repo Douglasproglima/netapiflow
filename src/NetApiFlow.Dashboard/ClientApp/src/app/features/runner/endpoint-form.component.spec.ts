@@ -279,6 +279,55 @@ describe('EndpointFormComponent', () => {
     expect(credentials.authValue('Bearer')).toBe('still-valid-token');
   });
 
+  describe('retrying the OpenAPI document with a remembered bearer value', () => {
+    it('shows the error directly on 401 when nothing was ever sent from this panel', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      // pt-BR is the default language.
+      expect(fixture.nativeElement.textContent).toContain(
+        'Não foi possível carregar o documento OpenAPI.',
+      );
+    });
+
+    it('retries once with the remembered value and loads the document', async () => {
+      TestBed.inject(RunnerCredentialsService).recordBearerUsage('abcdef82a');
+      const fixture = await createComponentWithConfig();
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      const retry = httpMock.expectOne('/openapi/v1.json');
+      expect(retry.request.headers.get('Authorization')).toBe('Bearer abcdef82a');
+      retry.flush(DOC);
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.endpoints()).toHaveLength(1);
+      expect(fixture.componentInstance.loadError()).toBeNull();
+    });
+
+    it('gives up after one retry, without looping', async () => {
+      TestBed.inject(RunnerCredentialsService).recordBearerUsage('abcdef82a');
+      const fixture = await createComponentWithConfig();
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      httpMock
+        .expectOne('/openapi/v1.json')
+        .flush('nope', { status: 401, statusText: 'Unauthorized' });
+      await fixture.whenStable();
+
+      httpMock.expectNone('/openapi/v1.json');
+      expect(fixture.componentInstance.loadError()).toBe('action.openApiError.title');
+    });
+  });
+
   describe('Authorize section', () => {
     it('does not render when the document declares no security scheme', async () => {
       const fixture = await createComponentWithConfig();
