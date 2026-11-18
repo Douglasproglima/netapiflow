@@ -87,3 +87,30 @@ Three warnings are expected, and no fewer. Silence means an annotation was dropp
 This one uses a `ProjectReference` instead of the local feed. The analyzer reads the attributes
 straight from the IL, so a project and a `.nupkg` give the same answer, and this way the check runs
 without packing anything first.
+
+## Native AOT core verification
+
+The opposite claim to the one above: a host that marks steps the recommended way has to publish
+clean. `AotCoreVerification` calls only `AddNetApiFlow()` and `NetApiFlow.Step(...)`, no proxy
+form, no EF Core.
+
+```bash
+cd tests/manual-verification/AotCoreVerification
+dotnet publish -c Release
+```
+
+**Zero AOT or trimming warnings are expected.** Any warning here means the core stopped being
+AOT-clean, which is what `EnableConfigurationBindingGenerator` in `NetApiFlow.csproj` is there to
+prevent: without it, binding `NetApiFlowOptions` goes through reflection and reports six warnings
+(`IL2026`/`IL3050` on three `ConfigurationBinder` call sites), whether or not the host uses a
+configuration file at all.
+
+On Windows the ILC step shells out to the MSVC linker through `vswhere.exe`. If the publish ends
+in `MSB3073` naming `link.exe`, add the installer directory to `PATH` (typically
+`C:\Program Files (x86)\Microsoft Visual Studio\Installer`) and run it again. That failure is a
+local toolchain gap, not a result.
+
+The EF Core interceptor is deliberately not covered by a "publishes clean" check, because it
+cannot: EF Core states it is not fully compatible with Native AOT, and a host using it reports
+`IL2026`/`IL3050` on the `DbContext` constructor plus `IL2104`/`IL3053` on the EF Core assemblies.
+None of those originate in `NetApiFlow.EntityFrameworkCore`.

@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow</PackageId>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
   </PropertyGroup>
 
   <ItemGroup>
