@@ -169,9 +169,54 @@ O ícone fica num bloco de 28 × 28, raio 8, com fundo no tint do estado e traç
 └──────┴──────────────────────────────────┴───────────────────────────────────────┘
 ```
 
-- Linha do meio: `grid-template-columns: 300px minmax(0, 1fr) 360px`, altura `clamp(560px, calc(100vh - 56px - 88px - 300px - 64px), 760px)`. Os três painéis têm a mesma altura e rolam por dentro. A página nunca empurra o grafo para fora.
-- Linha de baixo: altura fixa de 300 px, cada painel com rolagem interna.
+- Linha do meio: `grid-template-columns: 300px minmax(0, 1fr) 360px`. Os três painéis têm a mesma altura.
+- Linha de baixo: cada painel com rolagem interna.
 - Padding da área de conteúdo: 16 px.
+
+**Corrige a altura descrita acima, nunca implementada como `clamp`/300 px fixo.** A altura real
+da linha do meio sempre foi `flex: 1 1 auto; min-height: 0` (sem piso), e a linha de baixo sempre
+foi `flex: 0 0 220px` (não 300 px). Essa divergência só foi notada na Fase 43, ao investigar um
+achado real: em `1366×728`, o card central chegava a 70 px de altura e o grafo desaparecia da
+tela, porque nada nessa cadeia garantia um mínimo.
+
+Especificação normativa a partir da Fase 43 (fecha R-24):
+
+- `.flow-workspace__center` ganha piso real de **360 px** (`min-height`). Esse é o menor espaço
+  em que o grafo ainda é útil; abaixo disso, outra coisa cede primeiro.
+- O rodapé (`.flow-workspace__footer`, hoje `flex: 0 0 220px` fixo sempre) passa a ceder quando
+  falta altura: ver seção 6.9.
+- Se, mesmo com o rodapé no mínimo, a soma de topbar (56) + métricas (88) + piso do grafo (360) +
+  rodapé mínimo ainda for maior que a viewport, **a página rola de ponta a ponta.** A cadeia
+  `html`/`body`/`app-root` troca `height: 100vh` fixo por `min-height: 100vh`, deixando de clipar
+  conteúdo que não cabe. Isso não desfaz o R-27 (D-114): `.flow-workspace` continua com
+  `height: 100%` (não `min-height: 100%`), porque a correção do R-27 resolve um problema diferente
+  (dar altura real de verdade para os filhos calcularem porcentagem contra), e a página por baixo
+  passar a poder crescer não muda esse contrato.
+- Em `2560×1080` (sobra espaço, resolução alta e rasa), nós do grafo saem cortados embaixo apesar
+  da folga. Investigar o cálculo de auto-fit do `viewBox` (seção 8, achado da Fase 25) contra essa
+  proporção específica antes de qualquer ajuste: é bug de excesso de espaço, não de falta, direção
+  de causa raiz ainda não confirmada.
+
+**Dois limiares de altura de viewport (D-161), derivados da soma dos custos fixos, não
+escolhidos de cabeça.** Com padding (32: 16 em cima, 16 embaixo), topbar (56), um `gap` (16),
+métricas (88), outro `gap` (16) e o piso do grafo (360): **804 px** é o que o layout completo
+(rodapé lado a lado, 220 px) precisa. Com o rodapé já em uma aba só (~140 px, seção 6.9): **724
+px** é o mínimo antes de precisar rolar a página de verdade.
+
+- **Abaixo de 800 px** de `window.innerHeight`: o rodapé troca para abas únicas (seção 6.9).
+- **Abaixo de 720 px**: mesmo com o rodapé em aba única, a página rola de verdade (acima).
+- Números arredondados da conta, não medidos pixel a pixel contra o DOM renderizado de verdade. A
+  Executora confirma contra a renderização real antes de travar os dois valores finais no código,
+  documentando se divergiu e por quê.
+
+**Validação por faixa contínua, não só pontos isolados (D-161, pedido explícito do usuário: "o
+layout tem que ser responsivo igual ao Bootstrap", usabilidade real em qualquer resolução, não só
+nas que expuseram bug).** O modelo de breakpoints discretos da seção 5.2 já está certo em
+espírito; o gap era testar só os pontos onde um bug específico apareceu. A partir da Fase 43,
+todo critério de aceite que envolva largura ou altura de viewport varre pontos representativos de
+cada faixa (próximo das duas bordas e do meio, não só um valor), e inclui redimensionar a janela
+continuamente através de cada faixa (arrastar, não só pular entre valores fixos), confirmando que
+nada quebra nos valores intermediários não testados individualmente.
 
 Por que um rail de 76 px e não uma sidebar de 232 px: a 1366 px (largura da captura do usuário), uma sidebar larga mais os painéis laterais deixam menos de 500 px para o grafo. O rail mantém ícone e rótulo (ADR-0010 pede "ícone + rótulo"), só empilhados, e devolve 156 px ao grafo.
 
@@ -225,6 +270,23 @@ Valores de tempo usam o formatador existente (`shared/duration-format.ts`): `98.
 
 Fonte dos dados: `GET /metrics` (`totalTraces`, `errorCount` de D-30, `averageDurationMicros`, `maxDurationMicros`). Sucesso = `totalTraces - errorCount`. Passos executados: manter a fonte usada hoje pela 7.0b.
 
+**Valor nunca cortado (D-160, achado real da Fase 43):** `.metric-cards__value` tem
+`overflow: hidden; text-overflow: ellipsis` desde a Fase 25 (D-107), mas um valor formatado longo
+("346.9…", "511.1…") ainda estoura a largura do cartão e a reticência engole a própria unidade,
+não só um excesso de dígito. Fonte responsiva (`clamp`) não resolve sozinha porque o problema é o
+formato, não só o tamanho da letra: a correção entra no formatador (`shared/duration-format.ts`),
+não na fonte. Nenhum valor numérico desta tela pode depender de reticência para caber.
+
+**Sparkline de p95, substitui a posição da seção 8 (D-160, achado real da Fase 43):** a seção 8
+reservava o sparkline como "sétimo cartão da faixa de métricas, ocupando 2 colunas". A Fase 25
+implementou como linha própria de largura total (`grid-column: 1 / -1`) em vez disso, e essa forma
+tem um defeito real com poucos pontos: dois pontos de dado esticados por um SVG de ~1800 px viram
+uma única linha diagonal, sem comunicar nada. Direção nova, crítica do Impeccable: a minilinha
+entra **dentro do próprio cartão "p95 latency"**, atrás ou abaixo do valor numérico, sem linha
+extra nem cartão próprio, mantendo os seis cartões e a altura de 88 px. Abaixo de um número mínimo
+de amostras (a Executora decide o piso exato, documentando o motivo), a minilinha não aparece: uma
+linha reta ou quase reta entre poucos pontos não é sinal, é ruído visual.
+
 ### 6.3 Painel de ação: "Try an endpoint" (D1, D2, D3)
 
 Reaproveita o formulário extraído do Runner (ADR-0010). Só a apresentação muda.
@@ -236,7 +298,15 @@ Reaproveita o formulário extraído do Runner (ADR-0010). Só a apresentação m
 - **Filtrar as rotas do próprio dashboard**: esconder toda rota cujo caminho começa no caminho base do dashboard (ex.: `/flow/api/...`). Elas são infraestrutura do NetApiFlow, não endpoints do usuário, e `DELETE /flow/api/traces` apaga o histórico. Abaixo da lista, nota muted 11 com ícone: "3 dashboard routes (/flow/api/*) hidden". Decisão de comportamento: **confirmar com a Planejadora antes** (ver seção 9).
 - Formulário do endpoint selecionado, abaixo da lista, separado por divisória: cabeçalho com badge + rota, campos com `<label>` visível (Inter 500 12) seguido do tipo em mono 11 muted (`path · int`, `application/json`), input altura 36, corpo JSON em `<textarea>` mono 12 com altura 96. Botão "Send request" largura total, altura 40, fundo `--naf-flow-button`, texto branco, raio 8, ícone de play.
 - Estados: carregando (skeleton de 6 linhas), erro de OpenAPI (caixa danger-tint com "Could not load the OpenAPI document." e a dica "Check that the host calls MapOpenApi()."), lista vazia ("No endpoints found").
-- Proporção: a lista ocupa até 55% da altura do card e rola. O formulário ocupa o resto e rola por dentro.
+- Proporção: a lista ocupa até 55% da altura do card e rola.
+
+**Uma área de rolagem só (D-160, fecha R-28, achado real da Fase 43):** lista e formulário
+rolando cada um por conta própria (como descrito antes desta nota) produz duas barras de rolagem
+empilhadas e deixa o botão "Send request" cortado fora da área visível em tela comum
+(`1920×1080` sem trace, achado real). A partir da Fase 43, o card inteiro (lista mais formulário)
+é **uma área de rolagem única**; o botão "Send request" fica fixo, sempre visível, sem precisar
+rolar o formulário para alcançá-lo. O teto de 55% da lista (R-28, Fase 30) deixa de ser o
+mecanismo que evita o transbordo: com rolagem única, o card inteiro é que define o limite.
 
 ### 6.4 Card central: fluxo da requisição (D4, D5)
 
@@ -250,7 +320,15 @@ Faixa de erro, logo abaixo do cabeçalho, só quando o trace tem erro: `<button>
 Grafo:
 
 - Fundo do canvas: `--naf-bg` com grade de pontos `radial-gradient(rgba(148,163,184,.12) 1px, transparent 1px)` de 20 px. É o mesmo padrão do hero do guia de marca.
-- Layout dagre com `rankdir: 'LR'` (esquerda para direita), `nodesep: 16`, `ranksep: 44`, `marginx/marginy: 24`. Trocar `TB` por `LR` é o que tira o grafo da coluna única (D4). Só muda parâmetro do layout, não a lógica do `graph-builder`.
+- Layout dagre com `rankdir: 'LR'` (esquerda para direita) como padrão, `nodesep: 16`, `ranksep: 44`, `marginx/marginy: 24`. Trocar `TB` por `LR` é o que tira o grafo da coluna única (D4). Só muda parâmetro do layout, não a lógica do `graph-builder`.
+- **Orientação automática pela proporção do canvas (D-160, Fase 44):** quando o canvas (não a
+  viewport inteira, o espaço real que o grafo tem para desenhar) for mais alto do que largo,
+  `rankdir` vira `'TB'`; nos demais casos continua `'LR'`. Decisão medida pelo
+  `ResizeObserver` do próprio canvas, nunca por breakpoint de largura de página (o canvas muda de
+  proporção por motivos que não são só a largura da tela, como o painel de ação virar drawer).
+  Sem controle manual nesta fase: a proporção certa depende do espaço disponível, não de
+  preferência pessoal estável, então o sistema decide sozinho. Só criar um controle manual se o
+  uso real mostrar a troca automática atrapalhando em algum caso concreto.
 - Ao montar ou trocar de trace: ajustar à tela (fit) com zoom entre 0,7 e 1. Nunca ampliar acima de 100% (trace de duas etapas não vira nó gigante) e nunca reduzir abaixo de 70% (texto deixa de ser legível). Se o grafo não couber a 70%, ele começa alinhado à esquerda, com a raiz visível, e o resto fica acessível por pan.
 
 Nó (SVG, 184 × 60, raio 10):
@@ -323,6 +401,28 @@ Consome o `SseService` existente. Cabeçalho: "Live events" e chip de conexão (
 - Cores do tipo: `TraceStarted` e `SpanStarted` em `--naf-flow-text`. `SpanCompleted`, `TraceCompleted` em `--naf-success`. `SpanFailed` em `--naf-danger`. `TracePersisted` em `--naf-text-muted`. Eventos `ping` nunca aparecem (D-20).
 - Estado vazio: ícone de antena + "Waiting for events. Send a request from Try an endpoint or call your API."
 
+### 6.9 Rodapé: recolhimento por altura (D-160)
+
+Os dois cartões acima (6.7, 6.8) dividem um rodapé de altura fixa (220 px) o tempo todo, mesmo
+quando o grafo precisa de mais espaço numa tela curta. Cada um já tinha uma seta de recolher
+(chevron que gira), mas colapsar um cartão nunca devolvia altura ao grafo, porque o pai continuava
+fixo em 220 px: achado real da Fase 43, bug à parte do R-24.
+
+Direção (crítica do Impeccable, D-160): o mecanismo automático, por altura, é o principal; a seta
+manual continua existindo, mas como ajuste adicional por cima dele, não a única saída.
+
+- **Abaixo de 800 px de `window.innerHeight`** (derivado na seção 5.1), o rodapé troca de "dois
+  cartões lado a lado" para **abas únicas**: "Execuções recentes" | "Eventos ao vivo", uma de cada
+  vez, só a aba ativa ocupando altura. Acima do limiar, os dois continuam lado a lado como hoje,
+  porque em tela alta os dois painéis são úteis ao mesmo tempo.
+- A seta de recolher de cada cartão passa a efetivamente devolver altura ao grafo quando usada
+  (hoje não devolve, por causa do `flex: 0 0 220px` fixo do pai): vira um ajuste manual que o
+  usuário aciona por cima do comportamento automático, por exemplo para ganhar mais espaço num
+  caso específico mesmo em tela alta.
+- Lembrar a escolha do usuário (aba ativa, cartão recolhido) não é obrigatório nesta fase; se a
+  Executora implementar sem memória entre sessões, documentar como decisão consciente, não
+  esquecimento.
+
 ---
 
 ## 7. Acessibilidade e movimento
@@ -365,6 +465,13 @@ reservar uma margem de segurança nos dois cantos inferiores, do tamanho real de
 Executora mede o tamanho real renderizado, não assume um valor fixo), pra nenhum nó real
 renderizar atrás deles. Achado via Impeccable (`text-occlusion`) na própria Fase 25, confirmado
 por medição real de geometria, não suposição.
+
+**Achado real da Fase 43, corrige a linha do sparkline na tabela acima:** a posição implementada
+na Fase 25 não foi "sétimo cartão em 2 colunas", foi uma linha própria de largura total
+(`grid-column: 1 / -1`). As duas formas tinham o mesmo defeito com poucos pontos de dado (linha
+esticada sem informação). A posição nova, decidida na Fase 43, é a minilinha dentro do próprio
+cartão de p95 (seção 6.2): essa linha da tabela para de valer como especificação normativa a
+partir da Fase 43, sem outra posição reservada no lugar dela.
 
 ---
 
