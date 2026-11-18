@@ -4,8 +4,7 @@
 Aceito
 
 ## Discussion
-A criar na PR que mergear este ADR (categoria "Architecture Decisions"), junto do resto do hotfix
-`0.4.1`.
+[#282](https://github.com/Douglasproglima/netapiflow/discussions/282)
 
 ## Contexto
 
