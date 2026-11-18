@@ -1,0 +1,32 @@
+[
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/parallel",
+    "displayName": "SampleApi.Controllers.Controllers.OrdersController.GetParallel (SampleApi.Controllers)"
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/sequential",
+    "displayName": "SampleApi.Controllers.Controllers.OrdersController.GetSequential (SampleApi.Controllers)"
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id:int}",
+    "displayName": "SampleApi.Controllers.Controllers.OrdersController.Get (SampleApi.Controllers)"
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id:int}/confirm",
+    "displayName": "SampleApi.Controllers.Controllers.OrdersController.Confirm (SampleApi.Controllers)"
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id:int}/shipping-status",
+    "displayName": "SampleApi.Controllers.Controllers.OrdersController.GetShippingStatus (SampleApi.Controllers)"
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id:int}/slow",
+    "displayName": "SampleApi.Controllers.Controllers.OrdersController.GetSlowly (SampleApi.Controllers)"
+  }
+]

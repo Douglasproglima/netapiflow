@@ -16,6 +16,7 @@ import { LanguageService } from './core/i18n/language.service';
 import { TranslatePipe } from './core/i18n/translate.pipe';
 import { SupportedLanguage, TranslationKey } from './core/i18n/translations';
 import { ThemeService } from './core/theme.service';
+import { environment } from '../environments/environment';
 
 const NARROW_BREAKPOINT = '(max-width: 1023px)';
 
@@ -49,6 +50,7 @@ export class App implements OnInit, OnDestroy {
   private readonly theme = inject(ThemeService);
   readonly actionDrawer = inject(ActionDrawerService);
 
+  readonly isDemoMode = environment.isDemoMode;
   readonly version = signal<string | null>(null);
   readonly connectionState = this.sse.state;
   readonly activeLanguage = this.language.language;

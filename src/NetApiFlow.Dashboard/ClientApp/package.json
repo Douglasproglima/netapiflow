@@ -11,7 +11,8 @@
     "lint": "ng lint",
     "generate:design-md": "node scripts/generate-design-md.js",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build:demo": "ng build --configuration demo"
   },
   "private": true,
   "packageManager": "npm@11.19.0",

@@ -57,6 +57,8 @@ const en = {
   'action.field.kind.path': 'path',
   'action.field.kind.query': 'query',
   'action.field.kind.body': 'body',
+  'demo.banner':
+    'Demonstration mode: this data was recorded from a real run, it is not live. Nothing here updates on its own.',
   'action.endpointRequiresAuth': 'Requires authentication',
   'action.authorize.title': 'Authorize',
   'action.authorize.schemeLabel.plain': '{name} ({type})',
@@ -377,6 +379,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.field.kind.path': 'caminho',
   'action.field.kind.query': 'consulta',
   'action.field.kind.body': 'corpo',
+  'demo.banner':
+    'Modo demonstração: estes dados foram gravados de uma execução real, não são ao vivo. Nada aqui se atualiza sozinho.',
   'action.endpointRequiresAuth': 'Requer autenticação',
   'action.authorize.title': 'Autorizar',
   'action.authorize.schemeLabel.plain': '{name} ({type})',

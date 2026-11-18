@@ -1,0 +1,50 @@
+{
+  "traceId": "3ff3c98d4da2ebc1e93da0fa32050669",
+  "method": "GET",
+  "routeTemplate": "/api/orders/parallel",
+  "httpStatus": 200,
+  "status": "Success",
+  "startedAt": "2026-11-18T11:20:03.513145Z",
+  "endedAt": "2026-11-18T11:20:03.782326Z",
+  "durationMicros": 269181,
+  "spanCount": 2,
+  "truncated": false,
+  "errorMessage": null,
+  "tags": {},
+  "spans": [
+    {
+      "spanId": "da99ab6809f8bfd6",
+      "parentSpanId": null,
+      "sequence": 1,
+      "component": "OrdersController",
+      "operation": "GetParallel",
+      "type": "Controller",
+      "startedAt": "2026-11-18T11:20:03.780591Z",
+      "endedAt": "2026-11-18T11:20:03.781860Z",
+      "durationMicros": 1268,
+      "status": "Success",
+      "errorType": null,
+      "errorMessage": null,
+      "isErrorOrigin": false,
+      "tags": {},
+      "logs": []
+    },
+    {
+      "spanId": "37735168460725d6",
+      "parentSpanId": "da99ab6809f8bfd6",
+      "sequence": 2,
+      "component": "OrderService",
+      "operation": "GetManyInParallelAsync",
+      "type": "Service",
+      "startedAt": "2026-11-18T11:20:03.780962Z",
+      "endedAt": "2026-11-18T11:20:03.781796Z",
+      "durationMicros": 834,
+      "status": "Success",
+      "errorType": null,
+      "errorMessage": null,
+      "isErrorOrigin": false,
+      "tags": {},
+      "logs": []
+    }
+  ]
+}

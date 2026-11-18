@@ -1,0 +1,26 @@
+{
+  "totalExecutions": 6,
+  "nodes": [
+    {
+      "component": "OrdersController",
+      "operation": "GetParallel",
+      "type": "Controller",
+      "executionCount": 6
+    },
+    {
+      "component": "OrderService",
+      "operation": "GetManyInParallelAsync",
+      "type": "Service",
+      "executionCount": 6
+    }
+  ],
+  "edges": [
+    {
+      "fromComponent": "OrdersController",
+      "fromOperation": "GetParallel",
+      "toComponent": "OrderService",
+      "toOperation": "GetManyInParallelAsync",
+      "callCount": 6
+    }
+  ]
+}

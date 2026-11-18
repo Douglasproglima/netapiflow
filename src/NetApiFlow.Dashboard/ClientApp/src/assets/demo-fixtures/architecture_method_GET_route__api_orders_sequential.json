@@ -1,0 +1,39 @@
+{
+  "totalExecutions": 6,
+  "nodes": [
+    {
+      "component": "OrdersController",
+      "operation": "GetSequential",
+      "type": "Controller",
+      "executionCount": 6
+    },
+    {
+      "component": "OrderService",
+      "operation": "GetManySequentiallyAsync",
+      "type": "Service",
+      "executionCount": 6
+    },
+    {
+      "component": "OrderRepository",
+      "operation": "FindManyAsync",
+      "type": "Repository",
+      "executionCount": 6
+    }
+  ],
+  "edges": [
+    {
+      "fromComponent": "OrdersController",
+      "fromOperation": "GetSequential",
+      "toComponent": "OrderService",
+      "toOperation": "GetManySequentiallyAsync",
+      "callCount": 6
+    },
+    {
+      "fromComponent": "OrderService",
+      "fromOperation": "GetManySequentiallyAsync",
+      "toComponent": "OrderRepository",
+      "toOperation": "FindManyAsync",
+      "callCount": 6
+    }
+  ]
+}
