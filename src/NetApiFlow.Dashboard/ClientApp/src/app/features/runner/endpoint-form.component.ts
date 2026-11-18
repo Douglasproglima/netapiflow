@@ -19,6 +19,7 @@ import {
   hasSecurityDeclaration,
   listOpenApiEndpoints,
   listSecuritySchemes,
+  OpenApiEndpoint,
   partitionDashboardRoutes,
   previewAuthApplication,
   SecuritySchemeEntry,
@@ -84,6 +85,20 @@ export class EndpointFormComponent {
       ? visible.filter((endpoint) => endpoint.path.toLowerCase().includes(filter))
       : visible;
   });
+
+  /**
+   * Deliberately not `hasSecurityDeclaration`, which is true for an operation declaring
+   * `security: []` as well. OpenAPI defines that empty array as "explicitly public", so a lock
+   * there would claim the opposite of what the document says.
+   */
+  requiresAuth(endpoint: OpenApiEndpoint): boolean {
+    const doc = this.openApiDocument();
+    return !!doc && effectiveSecurity(doc, endpoint.method, endpoint.path).length > 0;
+  }
+
+  readonly anyEndpointRequiresAuth = computed(() =>
+    this.endpointsPartition().visible.some((endpoint) => this.requiresAuth(endpoint)),
+  );
 
   readonly selected = signal<{ method: string; path: string } | null>(null);
   readonly form = computed(() => {

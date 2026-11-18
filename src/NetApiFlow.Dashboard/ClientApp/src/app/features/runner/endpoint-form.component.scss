@@ -136,6 +136,18 @@
   }
 }
 
+// The lock slot is reserved for every row in the list, not just the protected ones, so the paths
+// still line up under each other. Lists with nothing protected keep the two-column grid.
+.endpoint-form__endpoints--with-lock-column .endpoint-form__endpoint {
+  grid-template-columns: 56px 16px minmax(0, 1fr);
+}
+
+.endpoint-form__endpoint-lock {
+  display: inline-grid;
+  place-items: center;
+  color: var(--naf-text-muted);
+}
+
 .endpoint-form__endpoint--selected {
   background: var(--naf-flow-tint);
   border-color: rgba(139, 92, 246, 0.45);
