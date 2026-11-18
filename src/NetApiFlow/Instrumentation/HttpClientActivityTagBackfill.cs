@@ -12,6 +12,7 @@ internal sealed partial class HttpClientActivityTagBackfill
     private readonly ILogger<HttpClientActivityTagBackfill> _logger;
     private readonly IDisposable _allListenersSubscription;
     private IDisposable? _httpDiagnosticsSubscription;
+    private volatile bool _disposed;
 
     public HttpClientActivityTagBackfill(IOptions<NetApiFlowOptions> options, ILogger<HttpClientActivityTagBackfill> logger)
     {
@@ -22,6 +23,7 @@ internal sealed partial class HttpClientActivityTagBackfill
 
     public void Dispose()
     {
+        _disposed = true;
         _httpDiagnosticsSubscription?.Dispose();
         _allListenersSubscription.Dispose();
     }
@@ -36,7 +38,9 @@ internal sealed partial class HttpClientActivityTagBackfill
 
     public void OnNext(KeyValuePair<string, object?> value)
     {
-        if (!_options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient))
+        // Disposing the subscription does not synchronously stop delivery, and a tag written here
+        // after disposal lands on whatever activity happens to be current by then.
+        if (_disposed || !_options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient))
         {
             return;
         }

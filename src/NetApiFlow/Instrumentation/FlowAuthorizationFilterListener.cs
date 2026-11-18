@@ -22,6 +22,7 @@ internal sealed partial class FlowAuthorizationFilterListener
     private readonly ILogger<FlowAuthorizationFilterListener> _logger;
     private readonly IDisposable _allListenersSubscription;
     private IDisposable? _listenerSubscription;
+    private volatile bool _disposed;
 
     public FlowAuthorizationFilterListener(ILogger<FlowAuthorizationFilterListener> logger)
     {
@@ -31,6 +32,7 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     public void Dispose()
     {
+        _disposed = true;
         _listenerSubscription?.Dispose();
         _allListenersSubscription.Dispose();
     }
@@ -74,6 +76,13 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     public void OnNext(KeyValuePair<string, object?> value)
     {
+        // Disposing the subscription does not synchronously stop delivery, and a step opened here
+        // after disposal would never be closed by anything.
+        if (_disposed)
+        {
+            return;
+        }
+
         try
         {
             switch (value.Key)

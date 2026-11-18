@@ -97,35 +97,43 @@ This one uses a `ProjectReference` instead of the local feed. The analyzer reads
 straight from the IL, so a project and a `.nupkg` give the same answer, and this way the check runs
 without packing anything first.
 
+## Native AOT core verification
+
+The opposite claim to the one above: a host that marks steps the recommended way has to publish
+clean. `AotCoreVerification` calls only `AddNetApiFlow()` and `NetApiFlow.Step(...)`, no proxy
+form, no EF Core.
+
+```bash
+cd tests/manual-verification/AotCoreVerification
+dotnet publish -c Release
+```
+
+**Zero AOT or trimming warnings are expected.** `EnableConfigurationBindingGenerator` in
+`NetApiFlow.csproj` is what makes this true: without it, binding `NetApiFlowOptions` goes through
+reflection and reports six warnings (`IL2026`/`IL3050` on three `ConfigurationBinder` call sites),
+whether or not the host uses a configuration file at all. Before this generator, every Native AOT
+host calling `AddNetApiFlow()` alone got those six, no matter what else it did.
+
 ## Native AOT manual-path verification
 
-The sibling check above proves the two proxy-based forms warn. This one checks the other half of
-the same sentence: the README recommends `NetApiFlow.Step(...)` and the
-`NetApiFlow.EntityFrameworkCore` interceptor as the forms that stay safe under Native AOT.
-`AotManualPathVerification` uses only those two, never `AddFlowTracked`/`DecorateFlowTracked`.
+The sibling check above proves `NetApiFlow.Step(...)` alone publishes clean. This one checks the
+other half of the same README sentence: it also recommends the `NetApiFlow.EntityFrameworkCore`
+interceptor as a form that stays safe under Native AOT. `AotManualPathVerification` adds that
+interceptor on top of `AddNetApiFlow()` and `NetApiFlow.Step(...)`, never
+`AddFlowTracked`/`DecorateFlowTracked`.
 
 ```bash
 cd tests/manual-verification/AotManualPathVerification
 dotnet publish -c Release
 ```
 
-On Windows the ILC step shells out to the MSVC linker through `vswhere.exe`. If the publish ends
-in `MSB3073` naming `link.exe`, add the installer directory to `PATH` (typically
-`C:\Program Files (x86)\Microsoft Visual Studio\Installer`) and run it again. That failure is a
-local toolchain gap, not a result.
+**The core half of this check is clean now; the EF Core half never will be.** EF Core states it is
+not fully compatible with Native AOT, and a host using the interceptor reports `IL2026`/`IL3050`
+on the `DbContext` constructor plus `IL2104`/`IL3053` on the EF Core assemblies, four `IL3002`
+besides. None of those originate in `NetApiFlow.EntityFrameworkCore`; the interceptor cannot be
+used without EF Core, so they cannot be removed from this check either.
 
-**The target is zero AOT or trimming warnings, and it is not met today.** The warnings are the
-point of the check, so none of them are suppressed here. Current state:
-
-- Three call sites in `src/NetApiFlow/Configuration/NetApiFlowOptionsSetup.cs` (lines 14, 16 and
-  22) each report both `IL2026` and `IL3050`, six warnings in total. They come from
-  `ConfigurationBinder.Bind` and `ConfigurationBinder.Get<string[]>`, which bind
-  `NetApiFlowOptions` from the `NetApiFlow` configuration section. `AddNetApiFlow()` registers that
-  binder unconditionally, so every Native AOT host gets these six whether or not it uses a
-  configuration file. Reproduced with nothing but `AddNetApiFlow()` and `Step(...)` in the host,
-  no EF Core referenced at all.
-- `NetApiFlow.Step(...)` itself contributes no warning.
-- The EF Core half brings `IL2026`/`IL3050` on the `DbContext` constructor, `IL2104`/`IL3053` on
-  `Microsoft.EntityFrameworkCore`, `.Relational` and `.Sqlite`, and four `IL3002`. None originate
-  in `NetApiFlow.EntityFrameworkCore`, but the interceptor cannot be used without EF Core, which
-  documents itself as not fully compatible with Native AOT.
+On Windows the ILC step behind both `dotnet publish` commands above shells out to the MSVC linker
+through `vswhere.exe`. If the publish ends in `MSB3073` naming `link.exe`, add the installer
+directory to `PATH` (typically `C:\Program Files (x86)\Microsoft Visual Studio\Installer`) and run
+it again. That failure is a local toolchain gap, not a result.

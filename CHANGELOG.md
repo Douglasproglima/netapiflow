@@ -7,6 +7,31 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-18
+
+### Fixed
+
+- `NetApiFlow`: `AddNetApiFlow()` on its own reported six Native AOT and trimming warnings
+  (`IL2026`/`IL3050`), from the reflection-based `ConfigurationBinder` calls that read
+  `NetApiFlowOptions` from the `NetApiFlow` configuration section. Every Native AOT host got them,
+  whether or not it used a configuration file. The core now builds with
+  `EnableConfigurationBindingGenerator`, so that binding is generated at compile time: a host
+  calling only `AddNetApiFlow()` and `NetApiFlow.Step(...)` publishes with zero warnings. The
+  values read, and the configuration keys they come from, are unchanged.
+- `NetApiFlow`: a disposed `FlowAuthorizationFilterListener` could still open a step, and a
+  disposed `HttpClientActivityTagBackfill` could still write a tag. Disposing a
+  `DiagnosticListener` subscription does not synchronously stop delivery, so an event already in
+  flight reached the observer after `Dispose()` returned. A step opened that late was never closed
+  by anything. Both now ignore events once disposed.
+
+### Documentation
+
+- README.md/README.pt-BR.md and the `[RequiresDynamicCode]` messages on
+  `AddFlowTracked`/`DecorateFlowTracked` no longer present the `NetApiFlow.EntityFrameworkCore`
+  interceptor as a Native AOT safe alternative. `NetApiFlow.Step(...)` is, and is now proven by a
+  check in the repository. Any path through EF Core inherits EF Core's own documented Native AOT
+  limitation, which NetApiFlow cannot remove.
+
 ## [0.4.2] - 2026-11-17
 
 ### Fixed
