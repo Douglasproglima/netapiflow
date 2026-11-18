@@ -35,6 +35,24 @@
   local, para não quebrar o PathMap em debug local; ver comentário equivalente em
   `Directory.Build.props` do RajaDocs, que serviu de referência).
 
+## `dotnet pack` de verificação nunca usa o número de versão real (D-153)
+
+`tests/manual-verification/` empacota localmente pra provar algo contra o `.nupkg` de verdade,
+não contra `ProjectReference`. Empacotar com o mesmo número de versão que será (ou já foi)
+publicado contamina o cache global do NuGet (`~/.nuget/packages/<id>/<versão>/`): qualquer
+`dotnet add package`/restore seguinte, nesta máquina, para essa combinação de id e versão, resolve
+o build local, não o pacote real do nuget.org, **mesmo depois da publicação real acontecer**.
+Sem suspeitar de nada, isso dá dois resultados errados possíveis: uma verificação acusando bug que
+o pacote publicado não tem (falso vermelho), ou pior, confirmando limpo um pacote publicado que na
+verdade está quebrado (falso verde, porque validou o build local sem perceber).
+
+Aconteceu pelo menos duas vezes: na checagem do `0.4.0` e, de novo, na verificação do hotfix
+`0.4.2` (D-153), mesma causa as duas vezes. **Todo `dotnet pack` de verificação usa
+`-p:VersionSuffix=verify` (ou equivalente, tipo `0.4.2-verify`) no comando, nunca o número puro.**
+Sem exceção, mesmo quando a intenção é só "confirmar que empacota". Se encontrar o cache
+contaminado numa pasta `<id>/<versão real>/`, apagar a pasta inteira antes de confiar em qualquer
+checagem feita contra ela.
+
 ## Release (ver também `docs/gitflow.md`)
 
 - Os pacotes (6 originais mais `NetApiFlow.Mcp`, D-72) são versionados e publicados juntos, na
