@@ -9,6 +9,7 @@ export const FALLBACK_CONFIG: DashboardConfig = {
   tailSamplingEnabled: false,
   successSampleRate: 0,
   openApiDocumentPath: '/openapi/v1.json',
+  hostPathBase: '',
 };
 
 /**

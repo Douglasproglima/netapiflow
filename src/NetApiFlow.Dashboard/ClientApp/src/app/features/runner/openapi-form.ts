@@ -55,6 +55,21 @@ export function partitionDashboardRoutes(
   return { visible, hiddenCount: endpoints.length - visible.length };
 }
 
+/**
+ * Resolves a path the host declares (its OpenAPI document, one of its endpoints) against the
+ * host's own root. Both are root-relative to the host, never to wherever the dashboard happens to
+ * be mounted, so the dashboard's `<base href>` is the wrong prefix: it already carries the
+ * dashboard's own mount path.
+ */
+export function resolveAgainstHostRoot(hostPathBase: string, path: string): string {
+  const base = hostPathBase.replace(/\/+$/, '');
+  if (base === '') {
+    return path;
+  }
+
+  return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+}
+
 export type FormFieldKind = 'path' | 'query' | 'body';
 
 export interface FormField {

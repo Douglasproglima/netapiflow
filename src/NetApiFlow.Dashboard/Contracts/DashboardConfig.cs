@@ -12,4 +12,9 @@ internal sealed record DashboardConfig
     public required double SuccessSampleRate { get; init; }
 
     public required string OpenApiDocumentPath { get; init; }
+
+    /// <summary>The host's own <c>PathBase</c>, empty when it uses none. Separate from the
+    /// dashboard's <c>&lt;base href&gt;</c>, which already combines it with the dashboard's own
+    /// mount path.</summary>
+    public required string HostPathBase { get; init; }
 }

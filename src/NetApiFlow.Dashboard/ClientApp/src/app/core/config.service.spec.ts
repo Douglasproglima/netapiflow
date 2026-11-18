@@ -11,6 +11,7 @@ const CONFIG: DashboardConfig = {
   tailSamplingEnabled: true,
   successSampleRate: 0.2,
   openApiDocumentPath: '/openapi/v2.json',
+  hostPathBase: '',
 };
 
 describe('ConfigService', () => {

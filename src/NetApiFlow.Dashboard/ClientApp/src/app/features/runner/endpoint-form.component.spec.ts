@@ -11,6 +11,7 @@ const CONFIG: DashboardConfig = {
   tailSamplingEnabled: false,
   successSampleRate: 0.1,
   openApiDocumentPath: '/openapi/v1.json',
+  hostPathBase: '',
 };
 
 const DOC: OpenApiDocument = {
@@ -294,6 +295,40 @@ describe('EndpointFormComponent', () => {
     await fixture.whenStable();
 
     expect(credentials.authValue('Bearer')).toBe('still-valid-token');
+  });
+
+  describe('resolving the host URL from hostPathBase', () => {
+    it('sends to the path as declared when the host uses no PathBase', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.setFieldValue('body', '{}');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+
+      httpMock
+        .expectOne('/api/orders/5')
+        .flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+    });
+
+    it('prefixes the host PathBase, never the dashboard mount path', async () => {
+      const fixture = await createComponentWithConfig({ hostPathBase: '/app' });
+      httpMock.expectOne('/app/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.setFieldValue('body', '{}');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+
+      httpMock
+        .expectOne('/app/api/orders/5')
+        .flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+    });
   });
 
   describe('Authorize section', () => {

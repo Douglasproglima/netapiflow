@@ -24,7 +24,7 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class DashboardApiTests
 {
-    private static IHost CreateHost(string? environmentName = null, Action<NetApiFlowOptions>? configure = null)
+    private static IHost CreateHost(string? environmentName = null, Action<NetApiFlowOptions>? configure = null, string? pathBase = null)
     {
         environmentName ??= Environments.Development;
 
@@ -41,6 +41,11 @@ public class DashboardApiTests
                 });
                 webBuilder.Configure(app =>
                 {
+                    if (pathBase is not null)
+                    {
+                        app.UsePathBase(pathBase);
+                    }
+
                     app.UseRouting();
                     app.UseEndpoints(endpoints => endpoints.MapNetApiFlowDashboardApi());
                 });
@@ -480,6 +485,32 @@ public class DashboardApiTests
         doc.RootElement.GetProperty("tailSamplingEnabled").GetBoolean().ShouldBeFalse();
         doc.RootElement.GetProperty("successSampleRate").GetDouble().ShouldBe(0.1);
         doc.RootElement.GetProperty("openApiDocumentPath").GetString().ShouldBe("/openapi/v1.json");
+    }
+
+    [Fact]
+    public async Task GetConfig_WithoutPathBase_ReturnsAnEmptyHostPathBase()
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("hostPathBase").GetString().ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public async Task GetConfig_WithPathBaseConfigured_ReturnsItWithoutTheDashboardMountPath()
+    {
+        using var host = CreateHost(pathBase: "/app");
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/app/flow/api/config");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        doc.RootElement.GetProperty("hostPathBase").GetString().ShouldBe("/app");
     }
 
     [Fact]

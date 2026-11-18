@@ -127,6 +127,7 @@ export interface DashboardConfig {
   tailSamplingEnabled: boolean;
   successSampleRate: number;
   openApiDocumentPath: string;
+  hostPathBase: string;
 }
 
 /** GET /metrics/components list item. */

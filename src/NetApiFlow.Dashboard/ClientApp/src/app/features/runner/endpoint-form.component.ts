@@ -19,6 +19,7 @@ import {
   listSecuritySchemes,
   partitionDashboardRoutes,
   previewAuthApplication,
+  resolveAgainstHostRoot,
   SecuritySchemeEntry,
 } from './openapi-form';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
@@ -162,8 +163,15 @@ export class EndpointFormComponent {
   readonly invalidFieldName = signal<string | null>(null);
   readonly lastTraceId = signal<string | null>(null);
 
+  private readonly hostPathBase = signal('');
+
   constructor() {
-    this.config.config$.subscribe((config) => this.loadOpenApiDocument(config.openApiDocumentPath));
+    this.config.config$.subscribe((config) => {
+      this.hostPathBase.set(config.hostPathBase ?? '');
+      this.loadOpenApiDocument(
+        resolveAgainstHostRoot(this.hostPathBase(), config.openApiDocumentPath),
+      );
+    });
   }
 
   private loadOpenApiDocument(path: string): void {
@@ -337,7 +345,8 @@ export class EndpointFormComponent {
       }
     }
 
-    const fullPath = queryParts.length > 0 ? `${path}?${queryParts.join('&')}` : path;
+    const hostPath = resolveAgainstHostRoot(this.hostPathBase(), path);
+    const fullPath = queryParts.length > 0 ? `${hostPath}?${queryParts.join('&')}` : hostPath;
 
     // A manual header always wins over the automatic one: .set() replaces rather than adds, so
     // the same header name never goes out twice.
