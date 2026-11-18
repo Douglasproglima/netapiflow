@@ -234,7 +234,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
         await using var totalCommand = new SqlCommand($"""
             SELECT COUNT(*) FROM {_tracesTable}
-            WHERE method = @method AND route_template = @route
+            WHERE UPPER(method) = UPPER(@method) AND route_template = @route
               AND (@from IS NULL OR started_at >= @from) AND (@to IS NULL OR started_at <= @to)
             """, connection);
         totalCommand.Parameters.AddWithValue("method", method);
@@ -248,7 +248,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
             FROM {_spansTable} s
             JOIN {_tracesTable} t ON s.trace_id = t.trace_id
             LEFT JOIN {_spansTable} p ON s.parent_span_id = p.span_id AND s.trace_id = p.trace_id
-            WHERE t.method = @method AND t.route_template = @route
+            WHERE UPPER(t.method) = UPPER(@method) AND t.route_template = @route
               AND (@from IS NULL OR t.started_at >= @from) AND (@to IS NULL OR t.started_at <= @to)
             """, connection);
         command.Parameters.AddWithValue("method", method);
@@ -281,7 +281,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         await using var command = new SqlCommand($"""
             SELECT TOP (1) trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE method = @method AND route_template = @route AND status = 'Success'
+            WHERE UPPER(method) = UPPER(@method) AND route_template = @route AND status = 'Success'
             ORDER BY started_at DESC
             """, connection);
         command.Parameters.AddWithValue("method", method);
@@ -337,7 +337,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
         if (query.Method is not null)
         {
-            conditions.Add("method = @method");
+            conditions.Add("UPPER(method) = UPPER(@method)");
             command.Parameters.AddWithValue("method", query.Method);
         }
 

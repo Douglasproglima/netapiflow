@@ -257,6 +257,26 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task EveryQueryFilteringByMethod_MatchesRegardlessOfTheStoredCasing()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(
+            MakeTrace("case-1", method: "get", route: "/api/orders/{id}"),
+            [MakeSpan("case-1", "s1", null, 0)],
+            CancellationToken.None);
+
+        var queried = await store.QueryAsync(new TraceQuery { Method = "GET" }, CancellationToken.None);
+        queried.Items.ShouldHaveSingleItem().TraceId.ShouldBe("case-1");
+
+        var lastSuccessful = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", CancellationToken.None);
+        lastSuccessful.ShouldNotBeNull().Trace.TraceId.ShouldBe("case-1");
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+        map.TotalExecutions.ShouldBe(1);
+        map.Nodes.ShouldNotBeEmpty();
+    }
+
+    [Fact]
     public async Task GetRouteStatsAsync_FiltersByFromAndTo()
     {
         var store = CreateStore();
