@@ -15,6 +15,7 @@ paths:
 | `NetApiFlow.MediatR` | `NetApiFlow`, MediatR | EF Core, driver de banco |
 | `NetApiFlow.Storage.PostgreSql` | `NetApiFlow`, Npgsql | EF Core, Dapper (ADR-0004) |
 | `NetApiFlow.Storage.SqlServer` | `NetApiFlow`, Microsoft.Data.SqlClient | EF Core, Dapper (ADR-0004) |
+| `NetApiFlow.Testing` | `NetApiFlow` | Qualquer framework de asserção de terceiro (Shouldly incluído, ADR-0022) |
 
 Violação desta tabela é bloqueante: não "ajustar depois". Teste de arquitetura na Fase 1
 (tarefa 1.1) prova isso para o núcleo.

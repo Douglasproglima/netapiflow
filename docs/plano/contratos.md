@@ -276,6 +276,40 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
 }
 ```
 
+### `NetApiFlow.Testing`: superfície pública
+
+Congelada pelo ADR-0022, implementada na Fase 39. Sem dependência de terceiro: só referencia
+`NetApiFlow` (núcleo), de propósito, para não impor Shouldly (ou qualquer outro framework de
+asserção) ao projeto do usuário.
+
+```csharp
+namespace NetApiFlow.Testing;
+
+public static class FlowTraceAssertions
+{
+    public static FlowTraceDetail ShouldHaveStatus(this FlowTraceDetail trace, FlowStatus status);
+    public static FlowTraceDetail ShouldHaveNoErrors(this FlowTraceDetail trace);
+    public static FlowTraceDetail ShouldCallAtMost(this FlowTraceDetail trace, ComponentType type, int maxCount);
+    public static FlowTraceDetail ShouldNeverCall(this FlowTraceDetail trace, string component, string? operation = null);
+    public static FlowTraceDetail ShouldHaveCalled(this FlowTraceDetail trace, string component, string? operation = null);
+}
+
+/// <summary>Thrown by <see cref="FlowTraceAssertions"/> and <see cref="FlowTestingHttpResponseExtensions"/>
+/// on assertion failure. Left uncaught, any test framework reports it as a failed test.</summary>
+public sealed class FlowAssertionException : Exception
+{
+    public FlowAssertionException(string message);
+}
+
+public static class FlowTestingHttpResponseExtensions
+{
+    /// <summary>Reads <c>X-NetApiFlow-TraceId</c> off the response and calls
+    /// <see cref="NetApiFlow.GetRecentTrace"/>, throwing <see cref="FlowAssertionException"/>
+    /// instead of returning <see langword="null"/> when the trace is not found.</summary>
+    public static FlowTraceDetail GetFlowTrace(this HttpResponseMessage response, IServiceProvider services);
+}
+```
+
 `UseNetApiFlowMcp` monta o servidor MCP (transporte HTTP, `ModelContextProtocol.AspNetCore`) sob
 `basePath`. Mesma régua da Dashboard (ADR-0006/ADR-0013), com o filtro compartilhado do núcleo
 (ADR-0015): fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization(...)` nem
