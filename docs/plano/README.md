@@ -78,6 +78,17 @@ partir de uma auditoria real do frontend, a Fase 31 (`fase-31-correcoes-auditori
 (`fase-32-correcoes-auditoria-frontend-baixa.md`, 12 tarefas, achados Baixa, hotfix `0.3.2`
 depois da 0.3.1).
 
+D-159/D-160 abrem três fases novas, depois do hotfix `0.4.4` (PR #285, recorte do botão de play da
+barra de replay em viewport curto): Fase 43 (`fase-43-layout-flow-base-e-desktop.md`, base
+estrutural do layout de `/flow` mais desktop, fecha R-24 e R-28), Fase 44
+(`fase-44-layout-flow-mobile-modo-consulta.md`, mobile em modo consulta, depende da 43 pronta) e
+Fase 45 (`fase-45-normalizacao-restricoes-rota.md`, complemento do achado A5 da Fase 31,
+normalização de restrição de parâmetro de rota, sem relação com layout). D-161 estende a mesma
+régua de responsividade para o dashboard inteiro, acrescentando a Fase 46
+(`fase-46-responsividade-history-components-runner.md`, varredura de `/history`, `/components` e
+`/runner`, depende da Fase 43 pronta, começa investigando por não ter achado prévio). Nenhuma das
+quatro começou a ser implementada.
+
 ## Regra de avanço
 
 A Executora só avança de fase quando todos os critérios de aceite da fase atual passarem
