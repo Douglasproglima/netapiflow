@@ -416,6 +416,14 @@ driver's `Activity` is the only record of the call and is ingested normally. The
 only reaches the span when `CaptureSqlText` is enabled, the same rule the EF Core interceptor
 follows.
 
+`SqlClient` does the same for SQL Server, so a Dapper query or a raw `SqlCommand` still shows up
+as a `Database` span instead of leaving a gap in the flow. It is deduplicated against
+`NetApiFlow.EntityFrameworkCore` exactly like the Npgsql one, and obeys the same `CaptureSqlText`
+rule. One difference worth knowing: unlike Npgsql, `Microsoft.Data.SqlClient` publishes no
+`ActivitySource` of its own, so NetApiFlow reads the driver's diagnostic events instead. Those
+events only carry a readable payload from `Microsoft.Data.SqlClient` 6.0 on; on an older driver
+the flag is accepted and simply records nothing.
+
 Mounting the dashboard at a path other than the default, and protecting it:
 
 ```csharp
