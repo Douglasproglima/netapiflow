@@ -30,8 +30,13 @@ dotnet run
 Then visit `http://localhost:<port>/flow` and `http://localhost:<port>/qualquer/caminho`.
 
 `local-nuget-feed/` is resolved via `nuget.config` in this folder (`*.nupkg` is already
-git-ignored repo-wide) — delete and re-pack it after any change to a package project, since
+git-ignored repo-wide). Delete and re-pack it after any change to a package project, since
 nothing here rebuilds it automatically.
+
+The same `nuget.config` points `globalPackagesFolder` at `local-packages/`, so these projects
+extract packages into this folder instead of the machine-wide one. Re-packing without bumping the
+version would otherwise restore the previously extracted content for that id and version, and the
+check would keep passing against the build before the change.
 
 ### Testing from an external project
 
@@ -43,6 +48,21 @@ resolves its argument as a literal path or URI, never as a name registered with
 ```bash
 dotnet add package NetApiFlow --version <version> --source "<absolute-path-to>/local-nuget-feed"
 dotnet add package NetApiFlow.Dashboard --version <version> --source "<absolute-path-to>/local-nuget-feed"
+```
+
+## MediatR package verification
+
+`MediatR` 12.5.0 added an optional `CancellationToken` parameter to `RequestHandlerDelegate<T>`.
+That compiles against either version, but an assembly built against the older signature cannot
+find the method at run time, so `FlowTrackingBehavior` threw `MissingMethodException` on the first
+request through the pipeline. A `ProjectReference` recompiles and never sees it;
+`MediatRPackageVerification.Tests` installs the packed `NetApiFlow.MediatR` from the local feed and
+pins `MediatR` above the version it was compiled against, which is what a consumer's restore does.
+
+```bash
+dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed
+cd tests/manual-verification
+dotnet test MediatRPackageVerification.Tests
 ```
 
 ## Native AOT annotation verification
