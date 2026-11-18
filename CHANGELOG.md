@@ -7,6 +7,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-17
+
+### Fixed
+
+- `NetApiFlow.MediatR`: a host resolving `MediatR` 12.5.0 or newer threw
+  `System.MissingMethodException` inside `FlowTrackingBehavior.Handle` on the first request through
+  the pipeline. `MediatR` 12.5.0 added an optional `CancellationToken` parameter to
+  `RequestHandlerDelegate<TResponse>`, which compiles against either version but changes the method
+  the compiled assembly looks for at run time. The package now builds against `12.5.0` and passes
+  the request's `CancellationToken` to the next delegate explicitly, so the token also reaches the
+  rest of the pipeline instead of being dropped.
+
+`MediatR` stays on `12.5.0`, the last Apache-2.0 release. From `13.0.0` it is dual-licensed under
+RPL-1.5 plus a commercial license, which does not fit the MIT-compatible rule this project applies
+to every dependency.
+
 ## [0.4.1] - 2026-11-16
 
 ### Fixed
