@@ -633,9 +633,16 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   `DecorateFlowTracked` build their proxy with `DispatchProxy`, which emits a type at run time, and
   `DecorateFlowTracked` also matches implementation types by reflection. Both carry
   `[RequiresDynamicCode]` (and `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so you get
-  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking forms
-  that stay safe under Native AOT and trimming are `NetApiFlow.Step(...)` and the
-  `NetApiFlow.EntityFrameworkCore` interceptor. Neither generates code at run time.
+  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
+  stays safe under Native AOT and trimming is `NetApiFlow.Step(...)`: a host calling only
+  `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or trimming warnings, and there is a
+  check in the repository that proves it.
+- The `NetApiFlow.EntityFrameworkCore` interceptor is a separate question from the one above. The
+  interceptor itself emits no warning, but EF Core states it is not fully compatible with Native
+  AOT, and a published host using it reports that: `IL2026`/`IL3050` on the `DbContext`
+  constructor and `IL2104`/`IL3053` on the EF Core assemblies. That limitation belongs to EF Core,
+  not to NetApiFlow, and no change here can remove it. Under Native AOT, mark database work with
+  `NetApiFlow.Step(...)` if you want a warning-free publish.
 - The live view is per process, not per cluster. `GET /traces/live` reads the in-memory recorder of
   whichever replica answered that call, so behind a load balancer without sticky sessions `/flow`
   shows only the traffic that one replica handled, and the browser can land on a different replica
