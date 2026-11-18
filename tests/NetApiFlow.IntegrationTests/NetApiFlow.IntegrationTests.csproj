@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\NetApiFlow.Dashboard\NetApiFlow.Dashboard.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.MediatR\NetApiFlow.MediatR.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.Testing\NetApiFlow.Testing.csproj" />
     <ProjectReference Include="..\..\samples\SampleApi.Controllers\SampleApi.Controllers.csproj" />
     <ProjectReference Include="..\..\samples\SampleApi.MinimalMediatR\SampleApi.MinimalMediatR.csproj" />
   </ItemGroup>

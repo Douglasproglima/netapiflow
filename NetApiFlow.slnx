@@ -11,6 +11,7 @@
     <Project Path="src/NetApiFlow.OpenTelemetry/NetApiFlow.OpenTelemetry.csproj" />
     <Project Path="src/NetApiFlow.Storage.PostgreSql/NetApiFlow.Storage.PostgreSql.csproj" />
     <Project Path="src/NetApiFlow.Storage.SqlServer/NetApiFlow.Storage.SqlServer.csproj" />
+    <Project Path="src/NetApiFlow.Testing/NetApiFlow.Testing.csproj" />
     <Project Path="src/NetApiFlow/NetApiFlow.csproj" />
   </Folder>
   <Folder Name="/tests/">
