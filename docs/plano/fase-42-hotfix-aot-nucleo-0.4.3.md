@@ -1,8 +1,8 @@
 # Fase 42: hotfix 0.4.3, núcleo não é AOT-limpo e `SqlClient` pinado numa versão que nunca funciona
 
-Dois achados reproduzidos de verdade durante a rodada autônoma que implementou a Fase 36
-(Tarefa 36.10) e a Fase 37 (Tarefa 37.1), registrados em D-147/D-148. Os dois têm remédio
-concreto, PATCH, sem mudança de API pública.
+Quatro achados reproduzidos de verdade durante a rodada autônoma que implementou as Fases 36
+(Tarefa 36.10), 37 (Tarefa 37.1) e 41 (Tarefa 41.1), mais a revisão da Planejadora sobre elas,
+registrados em D-147/D-148/D-151. Todos têm remédio concreto, PATCH, sem mudança de API pública.
 
 ## Tarefa 42.1: `AddNetApiFlow()` sozinho não é AOT-limpo
 
@@ -10,15 +10,21 @@ concreto, PATCH, sem mudança de API pública.
 nenhuma marcação) acusa 6 avisos (`IL2026`/`IL3050`) vindos de
 `src/NetApiFlow/Configuration/NetApiFlowOptionsSetup.cs`: `section.Bind(options)` (linha 14) e dois
 `section.GetSection(...).Get<string[]>()` (linhas 16 e 22), todos baseados em reflexão genérica do
-`ConfigurationBinder`. `NetApiFlowOptions` é um POCO com forma fechada e conhecida: trocar o
-binding genérico por leitura manual, propriedade por propriedade, elimina a reflexão sem mudar
-nenhum comportamento observável (mesmos valores, mesma fonte de configuração).
+`ConfigurationBinder`. `NetApiFlowOptions` é um POCO com forma fechada e conhecida.
+
+Dois caminhos possíveis, nesta ordem de preferência: primeiro tentar `EnableConfigurationBindingGenerator`
+(MSBuild, disponível desde o .NET 8, gera em tempo de compilação o código de binding que hoje vem
+de reflexão, trocando `Bind`/`Get<T>` por uma implementação AOT-safe sem mudar a sintaxe de
+chamada). Se o gerador não cobrir a forma exata de `NetApiFlowOptions` (ex. `IncludePatterns`/`ExcludePatterns`
+como `IReadOnlyList<string>` em vez de propriedade gravável), cair pra leitura manual,
+propriedade por propriedade, direto do `IConfigurationSection`. Qualquer um dos dois elimina a
+reflexão sem mudar nenhum comportamento observável (mesmos valores, mesma fonte de configuração).
 
 **Pronto quando:** o projeto `AotAnnotationVerification` (ou um projeto irmão dedicado a este
 caso: só `AddNetApiFlow()`, sem `Step`/interceptor/marcação nenhuma) publica com `PublishAot=true`
-e zero aviso. Teste de regressão prova que a leitura manual lê `IncludePaths`/`ExcludePaths`/resto
-da seção `"NetApiFlow"` de um `IConfiguration` real exatamente como `Bind` lia antes (mesmo valor,
-mesmas propriedades).
+e zero aviso. Teste de regressão prova que a leitura (gerada ou manual) lê
+`IncludePaths`/`ExcludePaths`/resto da seção `"NetApiFlow"` de um `IConfiguration` real exatamente
+como `Bind` lia antes (mesmo valor, mesmas propriedades).
 
 ## Tarefa 42.2: corrigir a frase do README sobre a alternativa "AOT-safe"
 
@@ -53,6 +59,36 @@ nenhuma outra mudança de comportamento. Subir a versão fixada pra `7.1.2`.
 **Pronto quando:** o mesmo teste que a Fase 37 já escreveu pra confirmar o payload tipado em `6.1.1`
 passa contra a versão `7.1.2` de verdade fixada no projeto (não só testada à parte). Suíte inteira
 verde com a versão nova.
+
+Mesmo depois da subida de versão, acrescentar um log informativo (uma vez só, não por comando)
+quando `ExternalActivitySource.SqlClient` está ligado e o payload de um evento não casa com o tipo
+esperado: defesa em profundidade pra quem pina uma versão mais antiga do driver por outro motivo
+não ficar sem span nenhum e sem nenhuma pista do porquê.
+
+## Tarefa 42.4: as outras duas classes que escutam `DiagnosticListener.AllListeners` têm o mesmo bug sem guarda
+
+A Tarefa 37.1 achou e corrigiu um bug real: descartar a assinatura de `DiagnosticListener` não
+garante parada síncrona de entrega, então um listener descartado continuava abrindo steps.
+Corrigido com uma guarda `_disposed` em `SqlClientCommandListener`. A Planejadora confirmou, por
+dois caminhos independentes, que o mesmo risco existe nas outras duas classes com a estrutura
+idêntica (`AllListeners.Subscribe(this)` no construtor, `Dispose()` que só descarta a assinatura,
+`OnNext(KeyValuePair<string, object?>)` sem nenhuma checagem antes de agir): `grep -c _disposed`
+devolve zero nas duas (`FlowAuthorizationFilterListener.cs`, `HttpClientActivityTagBackfill.cs`,
+contra três ocorrências em `SqlClientCommandListener.cs`); e uma reprodução isolada, fora do
+repositório, confirmou que `DiagnosticListener`/`IObserver<T>` do próprio .NET não garante essa
+parada síncrona sob escrita concorrente (entrega observada depois do `Dispose()` já ter retornado,
+em 1 de 6 execuções de um harness sintético, sem nenhum código do NetApiFlow envolvido).
+
+`FlowAuthorizationFilterListener` é o caso mais sério: abre e fecha `FlowStep`, em produção desde
+a Fase 23 (`0.3.0`), mesmo sintoma que a 37.1 descreveu. `HttpClientActivityTagBackfill` só grava
+tag numa `Activity` existente (`#if NET8_0`, D-69), consequência menor, mas mesma guarda ausente.
+
+Acrescentar a mesma guarda `_disposed` (igual à de `SqlClientCommandListener`) nas duas classes.
+
+**Pronto quando:** teste de regressão por classe prova que, depois de `Dispose()`, nenhum evento
+subsequente abre `FlowStep` novo (`FlowAuthorizationFilterListener`) nem grava tag nova
+(`HttpClientActivityTagBackfill`), mesmo sob entrega tardia simulada (força o evento a chegar
+depois do `Dispose()`, não só espera que aconteça por sorte de agendamento de thread).
 
 ## Fora de escopo
 
