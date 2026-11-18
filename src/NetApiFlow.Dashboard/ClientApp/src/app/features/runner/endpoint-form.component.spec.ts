@@ -279,6 +279,34 @@ describe('EndpointFormComponent', () => {
     expect(credentials.authValue('Bearer')).toBe('still-valid-token');
   });
 
+  describe('route list lock icon', () => {
+    function lockLabels(fixture: ComponentFixture<EndpointFormComponent>): string[] {
+      const nativeElement: HTMLElement = fixture.nativeElement;
+      return Array.from(nativeElement.querySelectorAll('.endpoint-form__endpoint')).map(
+        (row) => row.querySelector('svg[role="img"]')?.getAttribute('aria-label') ?? '',
+      );
+    }
+
+    it('marks the routes that declare security, and leaves the others unmarked', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC_WITH_SECURITY);
+      await fixture.whenStable();
+
+      // GET declares security, DELETE declares `security: []` (public), POST declares nothing.
+      // pt-BR is the default language.
+      expect(lockLabels(fixture)).toEqual(['Requer autenticação', '', '']);
+    });
+
+    it('renders no lock at all when no route declares security', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      expect(lockLabels(fixture)).toEqual(['']);
+      expect(fixture.componentInstance.anyEndpointRequiresAuth()).toBe(false);
+    });
+  });
+
   describe('Authorize section', () => {
     it('does not render when the document declares no security scheme', async () => {
       const fixture = await createComponentWithConfig();
