@@ -269,10 +269,10 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   // `.flow-graph__node-operation` is 10.5px monospace, so every character has the same advance
   // width — no need for canvas-based text measurement to decide where it would overlap the
   // duration label that shares its baseline.
-  private static readonly MONO_CHAR_WIDTH_PX = 6.3;
+  private static readonly MONO_CHAR_WIDTH_PX = 6.6;
   private static readonly NODE_LEFT_INSET_PX = 48;
   private static readonly NODE_RIGHT_MARGIN_PX = 10;
-  private static readonly DURATION_GAP_PX = 8;
+  private static readonly DURATION_GAP_PX = 12;
 
   nodeOperationLabel(node: GraphNode): string {
     const duration = this.nodeDuration(node);
