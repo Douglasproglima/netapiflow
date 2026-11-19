@@ -51,7 +51,8 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   private readonly zoomControlsRef = viewChild.required<ElementRef<HTMLDivElement>>('zoomControls');
 
   private readonly containerSize = signal<ContainerSize>({ width: 0, height: 0 });
-  private readonly overlayPanelHeights = signal<readonly number[]>([]);
+  private readonly bottomOverlayHeights = signal<readonly number[]>([]);
+  private readonly topOverlayHeights = signal<readonly number[]>([]);
   private overlayResizeObserver: ResizeObserver | null = null;
 
   readonly legendCompact = computed(() => isLegendCompact(this.containerSize().height));
@@ -68,7 +69,8 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
       contentWidth,
       contentHeight,
       this.containerSize(),
-      this.overlayPanelHeights(),
+      this.bottomOverlayHeights(),
+      this.topOverlayHeights(),
     );
   });
 
@@ -154,7 +156,14 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
 
     const measure = (): void => {
       this.containerSize.set({ width: hostElement.clientWidth, height: hostElement.clientHeight });
-      this.overlayPanelHeights.set([legendElement.clientHeight, zoomControlsElement.clientHeight]);
+      const canvasMiddleY = hostElement.getBoundingClientRect().top + hostElement.clientHeight / 2;
+      const panels = [legendElement, zoomControlsElement];
+      const isInTopHalf = (panel: HTMLElement): boolean =>
+        panel.getBoundingClientRect().top < canvasMiddleY;
+      this.topOverlayHeights.set(panels.filter(isInTopHalf).map((panel) => panel.clientHeight));
+      this.bottomOverlayHeights.set(
+        panels.filter((panel) => !isInTopHalf(panel)).map((panel) => panel.clientHeight),
+      );
     };
 
     this.overlayResizeObserver = new ResizeObserver(measure);
