@@ -208,6 +208,22 @@ confirmando `getBoundingClientRect()` do texto de duração não mais sobreposto
 zoom, sem introduzir achado novo de `low-contrast`/`undersized-ui-text` nem regredir a correção
 da Tarefa 44.1.
 
+**Entregue (PR #302), com a pergunta em aberto respondida por uma auditoria independente**: é
+regressão desta mesma rodada, não achado antigo. `git log`/`git blame` confirmam que a regra de
+CSS que move os controles de zoom pro topo abaixo de 768px nasceu no commit `952ad4d` (PR #296,
+esta própria Fase 44), nunca publicada em nenhuma tag. Consequência prática, já aplicada
+corretamente antes mesmo desta confirmação: nenhuma linha em `### Fixed` no `CHANGELOG.md` pra
+isto, porque não há comportamento publicado pra corrigir, só o comportamento final (correto) da
+Fase 44 inteira. `computeGraphViewBox` ganhou suporte a overlay de topo (`topOverlayHeightsPx`),
+classificação por posição medida (`getBoundingClientRect().top` contra o meio do canvas), teto de
+50% dividido entre as duas bordas. Sobreposição medida (duas rodadas independentes, dois traces
+diferentes): 0% em `390×844`, `1280×720` e `1920×1080`, sem regressão da legenda (Tarefa 44.1).
+Verificado que a divisão proporcional da margem entre as duas bordas é exata algebricamente, não
+aproximada. Pendência pequena, não bloqueante, registrada para quando fizer sentido: os 4 testes
+novos cobrem só o regime limitado por largura; o regime limitado por altura (grafo `TB` alto num
+canvas estreito, o caso real do achado original) tem a mesma matemática exata, mas sem teste
+unitário próprio ainda, só a cobertura ao vivo do `visual-quality` no CI.
+
 ## Fora de escopo
 
 - Qualquer mecanismo novo de layout que não exista já na Fase 43: esta fase estende a base, não
