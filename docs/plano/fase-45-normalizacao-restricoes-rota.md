@@ -23,45 +23,65 @@ ou ausência de restrição de parâmetro: hoje as duas formas nunca são reconh
 rota pelas mesmas comparações que o A5 original corrigiu (mapa de Arquitetura, blueprint, filtro
 de rota do Histórico, Insights).
 
-## Tarefa 45.1: decisão de normalização de restrições
+## Tarefa 45.1: função pura de comparação
 
-Restrições de parâmetro (`:int`, `:guid`, `:min(1)`, `?` opcional, catch-all `{*path}`) precisam
-de uma decisão de forma canônica antes de qualquer código:
+**Entregue (PR #291):** `RouteTemplateNormalizer.NormalizeForComparison`, estendendo o helper da
+tarefa 31.17 (não um segundo helper paralelo). Remove restrição (`:int`, `:guid`, `:min(1)`),
+`?` opcional e o `*` do catch-all, mantendo `Normalize` (com restrição) intacto para exibição.
+Testado isoladamente, sem tocar storage nem nenhum ponto de comparação real ainda.
 
-1. A restrição é preservada para exibição (o usuário vendo `/api/orders/{id:int}` no histórico
-   continua útil, mostra o tipo esperado) e removida só para comparação, ou guardada em campo
-   separado?
-2. Decisão travada nesta fase, registrada em `decisoes.md` antes da implementação: a forma
-   exibida ao usuário nunca perde a restrição; a chave de comparação remove toda restrição
-   (`{id:int}` e `{id}` comparam iguais), mesmo tratamento para `?` opcional e catch-all.
-3. Estender o helper interno da tarefa 31.17 (não criar um segundo helper paralelo): a mesma
-   função que já normaliza barra passa a normalizar restrição para a chave de comparação,
-   mantendo o texto original para exibição.
+## Tarefa 45.4: persistir a chave de comparação (D-164)
+
+Parada original da Tarefa 45.1 resolvida: D-164 trava coluna nova, não sobrescrever
+`route_template`. Sem isso, a restrição sumiria também da exibição, contradizendo o que a própria
+fase pede.
+
+1. Coluna `route_key` nos dois storages persistentes (`PostgreSqlTraceStore`/`SqlServerTraceStore`),
+   computada por `NormalizeForComparison` no mesmo lugar que `route_template` já é gravado
+   (`NetApiFlowMiddleware.cs`, antes de `UpdateRouteTemplate`). Índice próprio, espelhando o
+   `ix_..._method_route` que já existe em `(method, route_template)`.
+2. Migração dos dados já gravados: estender o `UPDATE` idempotente que
+   `PostgreSqlSchemaInitializer`/`SqlServerSchemaInitializer` já rodam na primeira execução
+   (D-124) para também preencher `route_key` de toda linha existente. `InMemoryTraceStore` não
+   precisa de coluna (mesma razão do D-124: não sobrevive a restart).
+3. `DashboardApiEndpoints.cs`: os dois pontos que hoje filtram por `route_template` com um valor
+   vindo do Runner (`GetLastSuccessfulAsync`/blueprint, `GetArchitectureMapAsync`/arquitetura)
+   passam a normalizar o `route` recebido por `NormalizeForComparison` e filtrar por `route_key`.
+   `route_template` continua sendo o valor de exibição em todo o resto (inclusive `GET /endpoints`,
+   que não muda).
+
+**Pronto quando:** teste com Testcontainers nos dois bancos insere um registro com `route_key`
+ausente (simulando dado anterior a esta fase), inicializa o store, confirma que `route_key` foi
+preenchido. Teste de integração com uma rota tipada (`{id:int}`) chamada pelo runner (envia
+`{id}`, sem restrição) encontrada pelo blueprint e pela arquitetura via `route_key`, sem precisar
+que o chamador normalize nada além do que `NormalizeForComparison` já faz.
 
 ## Tarefa 45.2: todos os pontos de comparação usam a mesma regra
 
-A tarefa 31.17 já listou os pontos de comparação de rota (gravação, `GET /endpoints`, qualquer
-rota recebida por query string e repassada a um `ITraceStore`). Esta tarefa confirma que a
-extensão da 45.1 cobre os mesmos pontos, sem nenhum novo ponto de comparação de rota ter aparecido
-desde a Fase 31:
+A tarefa 31.17 já listou os pontos de comparação de rota. Esta tarefa confirma, pra cada um,
+**se ele de fato cruza um valor vindo do Runner/OpenAPI contra um `route_template` gravado** (só
+esse caso precisa de `route_key`) ou se os dois lados de uma comparação específica sempre vêm do
+próprio `ITraceStore` (já nascem consistentes, não precisam de nada novo):
 
-- runner (OpenAPI) contra traces;
-- blueprint;
-- mapa de arquitetura;
-- filtro de rota do Histórico;
-- Insights.
+- runner (OpenAPI) contra traces: cruza, usa `route_key` (Tarefa 45.4).
+- blueprint: cruza, usa `route_key` (Tarefa 45.4).
+- mapa de arquitetura: cruza, usa `route_key` (Tarefa 45.4).
+- filtro de rota do Histórico: confirmar a origem do valor filtrado antes de decidir.
+- `GetRouteStatsAsync`/Insights: confirmar a origem do valor filtrado antes de decidir.
 
-**Pronto quando:** os cinco pontos usam a mesma chave de comparação (a função estendida da 45.1),
-nenhum deles com lógica de comparação própria e divergente.
+**Pronto quando:** os cinco pontos documentados com a conclusão (precisa de `route_key` ou não,
+com o motivo), nenhum com lógica de comparação própria e divergente dos outros que estão na mesma
+situação.
 
 ## Tarefa 45.3: testes
 
 1. Teste unitário do helper cobrindo as variações: `api/orders/{id}` vs `/api/orders/{id:int}`,
    `{id:guid}` vs `{id}`, `{id:min(1)}` vs `{id}`, `{id?}` vs `{id}`, `{*path}` vs `{path}`.
+   **Entregue (PR #291)**.
 2. Teste de integração com uma rota de parâmetro tipado (ex. `{id:int}`), executada pelo runner
    (chamando via OpenAPI, que não tem a restrição) e encontrada pelo blueprint e pela arquitetura
-   (que comparam contra o `RawText`, que tem a restrição). Mesmo padrão de prova da tarefa 31.17:
-   nenhuma rota real aparece como morta por divergência de formato.
+   (que comparam contra `route_key`, Tarefa 45.4). Mesmo padrão de prova da tarefa 31.17: nenhuma
+   rota real aparece como morta por divergência de formato.
 
 **Pronto quando:** os dois testes acima passam, e a suíte completa (dois TFMs, dois storages via
 Testcontainers) continua verde.

@@ -179,35 +179,43 @@ foi `flex: 0 0 220px` (não 300 px). Essa divergência só foi notada na Fase 43
 achado real: em `1366×728`, o card central chegava a 70 px de altura e o grafo desaparecia da
 tela, porque nada nessa cadeia garantia um mínimo.
 
-Especificação normativa a partir da Fase 43 (fecha R-24):
+Especificação normativa, implementada e medida na Fase 43 (fecha R-24; números confirmados contra
+o DOM real, não só calculados, ver `tests/manual-verification/Fase43FlowLayoutVerification/README.md`):
 
 - `.flow-workspace__center` ganha piso real de **360 px** (`min-height`). Esse é o menor espaço
   em que o grafo ainda é útil; abaixo disso, outra coisa cede primeiro.
 - O rodapé (`.flow-workspace__footer`, hoje `flex: 0 0 220px` fixo sempre) passa a ceder quando
   falta altura: ver seção 6.9.
-- Se, mesmo com o rodapé no mínimo, a soma de topbar (56) + métricas (88) + piso do grafo (360) +
-  rodapé mínimo ainda for maior que a viewport, **a página rola de ponta a ponta.** A cadeia
-  `html`/`body`/`app-root` troca `height: 100vh` fixo por `min-height: 100vh`, deixando de clipar
-  conteúdo que não cabe. Isso não desfaz o R-27 (D-114): `.flow-workspace` continua com
-  `height: 100%` (não `min-height: 100%`), porque a correção do R-27 resolve um problema diferente
-  (dar altura real de verdade para os filhos calcularem porcentagem contra), e a página por baixo
-  passar a poder crescer não muda esse contrato.
-- Em `2560×1080` (sobra espaço, resolução alta e rasa), nós do grafo saem cortados embaixo apesar
-  da folga. Investigar o cálculo de auto-fit do `viewBox` (seção 8, achado da Fase 25) contra essa
-  proporção específica antes de qualquer ajuste: é bug de excesso de espaço, não de falta, direção
-  de causa raiz ainda não confirmada.
+- **Correção ao mecanismo abaixo, nunca implementado como `min-height: 100vh` na cadeia
+  `html`/`body`/`app-root`: esse `100vh` nunca existiu no código.** A cadeia real
+  (`html`/`body`/`:host` do shell/`.app-content`) já era `height: 100%` o tempo todo, resolvendo
+  contra a viewport sem nenhum `vh` explícito; trocar por `min-height: 100%` ali reabriria o R-27
+  (os descendentes do painel de ação precisam de uma altura *definida* para resolver `max-height`
+  contra ela). A correção certa entra um nível abaixo: `.flow-workspace` ganha
+  `height: max(100%, Npx)` (dois valores de `N`, um por media query, ver limiares abaixo). Quando
+  `100%` já é maior que o piso (caso comum), o valor computado continua exatamente `100%`, sem
+  tocar no contrato do R-27. Quando não é, `.app-content` (`mat-sidenav-content`, já
+  `overflow-y: auto` por padrão do Angular Material) rola de verdade, sem `html`/`body`
+  participarem de nada.
+- Em `2560×1080`, a investigação confirmou que não existe bug separado de auto-fit do `viewBox`:
+  era a mesma causa da falta de piso em `.flow-workspace__center`, resolvida como efeito colateral
+  do item acima.
 
-**Dois limiares de altura de viewport (D-161), derivados da soma dos custos fixos, não
-escolhidos de cabeça.** Com padding (32: 16 em cima, 16 embaixo), topbar (56), um `gap` (16),
-métricas (88), outro `gap` (16) e o piso do grafo (360): **804 px** é o que o layout completo
-(rodapé lado a lado, 220 px) precisa. Com o rodapé já em uma aba só (~140 px, seção 6.9): **724
-px** é o mínimo antes de precisar rolar a página de verdade.
+**Dois limiares de altura de viewport (D-161/D-165), medidos contra o DOM real, não só
+calculados.** A primeira conta (soma de padding, topbar, gaps e piso do grafo contra
+`window.innerHeight`) errou por contar a topbar duas vezes: a topbar é irmã de
+`.flow-workspace`, não filha dela, então o piso de `.flow-workspace` em si não inclui os 56 px da
+topbar. Valores finais, medidos por varredura fina (Playwright, não estimativa):
 
-- **Abaixo de 800 px** de `window.innerHeight`: o rodapé troca para abas únicas (seção 6.9).
-- **Abaixo de 720 px**: mesmo com o rodapé em aba única, a página rola de verdade (acima).
-- Números arredondados da conta, não medidos pixel a pixel contra o DOM renderizado de verdade. A
-  Executora confirma contra a renderização real antes de travar os dois valores finais no código,
-  documentando se divergiu e por quê.
+- **Abaixo de 800 px** de `window.innerHeight` (confirmado exato: 800 → dois cartões, 799 → aba
+  única): o rodapé troca para abas únicas (seção 6.9). `.flow-workspace` recebe
+  `height: max(100%, 652px)` nessa faixa (`@media (max-height: 799px)`).
+- **Abaixo de ~707 px** de `window.innerHeight` (707 → não rola, 706 → rola): mesmo com o rodapé
+  em aba única, a página rola de verdade. `.flow-workspace` recebe `height: max(100%, 732px)`
+  como padrão (fora da media query acima).
+- Guardar os dois valores de `N` (732 e 652) como constantes só nesses dois lugares: eles já
+  incluem o piso do grafo mais o rodapé no modo correspondente, sem precisar somar a topbar de
+  novo em lugar nenhum do código.
 
 **Validação por faixa contínua, não só pontos isolados (D-161, pedido explícito do usuário: "o
 layout tem que ser responsivo igual ao Bootstrap", usabilidade real em qualquer resolução, não só
