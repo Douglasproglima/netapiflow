@@ -92,7 +92,7 @@
                 </svg>
               </button>
             </span>
-            <span class="flow-workspace__graph-header-end">
+            <span class="flow-workspace__graph-header-end flow-workspace__graph-header-end--full">
               @if (isFollowingLiveRunning()) {
                 <button mat-stroked-button type="button" (click)="toggleLivePause()">
                   {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
@@ -110,6 +110,40 @@
                 {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
               </button>
             </span>
+            <!-- Below ~767px (Fase 44, Tarefa 44.3): the three actions above never fit next to
+                 the verb badge without pushing "Request path" out, so they move into this menu
+                 instead and cede the row to the title. -->
+            <button
+              mat-icon-button
+              type="button"
+              class="flow-workspace__graph-header-menu-trigger"
+              [attr.aria-label]="'graph.actionsAria' | t"
+              [matMenuTriggerFor]="graphHeaderMenu"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
+            <mat-menu #graphHeaderMenu="matMenu">
+              @if (isFollowingLiveRunning()) {
+                <button mat-menu-item type="button" (click)="toggleLivePause()">
+                  {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
+                </button>
+              }
+              <button mat-menu-item type="button" (click)="exportTrace()">
+                {{ 'export.button' | t }}
+              </button>
+              <button
+                mat-menu-item
+                type="button"
+                [disabled]="trace.status === 'Running'"
+                (click)="toggleReplay()"
+              >
+                {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
+              </button>
+            </mat-menu>
           </div>
 
           @if (errorOrigin(); as origin) {

@@ -27,6 +27,16 @@
   opacity: 0.8;
 }
 
+// Below 768px (Fase 44, Tarefa 44.2) the graph is the reason this link gets opened, not the
+// metrics strip above it: moving metrics after the body (and the footer, both stay at the
+// default order) means the canvas shows up without scrolling past six cards and a sparkline
+// first.
+.flow-workspace__metrics {
+  @media (max-width: 767px) {
+    order: 1;
+  }
+}
+
 .flow-workspace__body {
   flex: 1 1 auto;
   min-height: 0;
@@ -178,14 +188,12 @@
   padding: 0 1rem;
   border-bottom: 1px solid var(--naf-border);
 
+  // Fase 44, Tarefa 44.3: this title never disappears, however little room is left; the
+  // actions on the other end of this row cede space first (the menu trigger below), not this.
   h2 {
     margin: 0;
     flex: none;
     white-space: nowrap;
-
-    @media (max-width: 767px) {
-      display: none;
-    }
   }
 }
 
@@ -197,7 +205,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  // Guide seção 5.2: below 768px only the verb badge and the replay/back-to-live button stay.
+  // Below 768px only the title and the verb badge stay in this row.
   @media (max-width: 767px) {
     display: none;
   }
@@ -237,6 +245,22 @@
   flex: none;
   display: inline-flex;
   gap: 0.5rem;
+}
+
+.flow-workspace__graph-header-end--full {
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+.flow-workspace__graph-header-menu-trigger {
+  display: none;
+  margin-left: auto;
+  flex: none;
+
+  @media (max-width: 767px) {
+    display: inline-flex;
+  }
 }
 
 .flow-workspace__toolbar {
