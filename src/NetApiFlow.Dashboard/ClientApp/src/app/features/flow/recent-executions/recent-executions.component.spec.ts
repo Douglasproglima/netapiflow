@@ -2,25 +2,29 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
-import { Subject } from 'rxjs';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { RecentExecutionsComponent } from './recent-executions.component';
 import { FlowEvent, FlowTraceSummary, PagedResult } from '../../../core/models';
 import { SseService } from '../../../core/sse.service';
 
+function makeSummary(traceId: string, overrides: Partial<FlowTraceSummary> = {}): FlowTraceSummary {
+  return {
+    traceId,
+    method: 'GET',
+    routeTemplate: '/api/orders/{id}',
+    httpStatus: 200,
+    status: 'Success',
+    startedAt: '2026-01-01T00:00:00.000000Z',
+    durationMicros: 1_200,
+    truncated: false,
+    ...overrides,
+  };
+}
+
 const PAGE: PagedResult<FlowTraceSummary> = {
   totalCount: 1,
-  items: [
-    {
-      traceId: 't1',
-      method: 'GET',
-      routeTemplate: '/api/orders/{id}',
-      httpStatus: 200,
-      status: 'Success',
-      startedAt: '2026-01-01T00:00:00.000000Z',
-      durationMicros: 1_200,
-      truncated: false,
-    },
-  ],
+  items: [makeSummary('t1')],
 };
 
 function fakeSseService() {
@@ -28,21 +32,35 @@ function fakeSseService() {
   return { events$: events.asObservable(), emit: (event: FlowEvent) => events.next(event) };
 }
 
+function fakeBreakpointObserver(initiallyMobile: boolean) {
+  const subject = new BehaviorSubject({ matches: initiallyMobile, breakpoints: {} });
+  return {
+    fake: { observe: () => subject.asObservable() },
+    emitMobile: (matches: boolean) => subject.next({ matches, breakpoints: {} }),
+  };
+}
+
 describe('RecentExecutionsComponent', () => {
   let httpMock: HttpTestingController;
   let sse: ReturnType<typeof fakeSseService>;
 
-  beforeEach(() => {
+  function configure(isMobile = false) {
     sse = fakeSseService();
+    const { fake } = fakeBreakpointObserver(isMobile);
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: SseService, useValue: sse },
+        { provide: BreakpointObserver, useValue: fake },
       ],
     });
     httpMock = TestBed.inject(HttpTestingController);
+  }
+
+  beforeEach(() => {
+    configure(false);
   });
 
   afterEach(() => {
@@ -63,6 +81,47 @@ describe('RecentExecutionsComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.traces()).toEqual(PAGE.items);
+  });
+
+  it('shows every fetched trace above the mobile breakpoint', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    const eightTraces = Array.from({ length: 8 }, (_, i) => makeSummary(`t${i}`));
+    httpMock.expectOne(() => true).flush({ totalCount: 8, items: eightTraces });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.visibleTraces().length).toBe(8);
+  });
+
+  it('caps the list to 4 items below 767px, instead of its own nested scroll', async () => {
+    TestBed.resetTestingModule();
+    configure(true);
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    const eightTraces = Array.from({ length: 8 }, (_, i) => makeSummary(`t${i}`));
+    httpMock.expectOne(() => true).flush({ totalCount: 8, items: eightTraces });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.visibleTraces().length).toBe(4);
+    expect(fixture.componentInstance.visibleTraces().map((trace) => trace.traceId)).toEqual([
+      't0',
+      't1',
+      't2',
+      't3',
+    ]);
+  });
+
+  it('shows hours and days instead of counting minutes past 60', async () => {
+    const fixture = TestBed.createComponent(RecentExecutionsComponent);
+    await fixture.whenStable();
+    httpMock.expectOne(() => true).flush(PAGE);
+    await fixture.whenStable();
+
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const twoDaysAgo = new Date(Date.now() - 50 * 60 * 60 * 1000).toISOString();
+
+    expect(fixture.componentInstance.relativeTime(threeHoursAgo)).toBe('3 h');
+    expect(fixture.componentInstance.relativeTime(twoDaysAgo)).toBe('2 d');
   });
 
   it('emits traceSelected when a row is clicked', async () => {

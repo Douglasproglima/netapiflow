@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { auditTime, catchError, filter, map, merge, of, startWith, switchMap } from 'rxjs';
@@ -33,6 +34,7 @@ const NARROW_BREAKPOINT = '(max-width: 1023px)';
     RouterLinkActive,
     MatSidenavModule,
     MatButtonModule,
+    MatMenuModule,
     TranslatePipe,
   ],
   selector: 'app-root',

@@ -27,6 +27,16 @@
   opacity: 0.8;
 }
 
+// Below 768px the graph is the reason this screen gets opened, not the metrics strip above it:
+// moving metrics after the body means the canvas shows up without scrolling past six cards and a
+// sparkline first. The footer needs its own order below so it still lands after metrics instead
+// of also sharing the body's default order 0, which would otherwise put it ahead of metrics too.
+.flow-workspace__metrics {
+  @media (max-width: 767px) {
+    order: 1;
+  }
+}
+
 .flow-workspace__body {
   flex: 1 1 auto;
   min-height: 0;
@@ -178,14 +188,12 @@
   padding: 0 1rem;
   border-bottom: 1px solid var(--naf-border);
 
+  // This title never disappears, however little room is left; the actions on the other end of
+  // this row cede space first (into the menu trigger below), not this.
   h2 {
     margin: 0;
     flex: none;
     white-space: nowrap;
-
-    @media (max-width: 767px) {
-      display: none;
-    }
   }
 }
 
@@ -197,7 +205,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  // Guide seção 5.2: below 768px only the verb badge and the replay/back-to-live button stay.
+  // Below 768px only the title and the verb badge stay in this row.
   @media (max-width: 767px) {
     display: none;
   }
@@ -237,6 +245,22 @@
   flex: none;
   display: inline-flex;
   gap: 0.5rem;
+}
+
+.flow-workspace__graph-header-end--full {
+  @media (max-width: 767px) {
+    display: none;
+  }
+}
+
+.flow-workspace__graph-header-menu-trigger {
+  display: none;
+  margin-left: auto;
+  flex: none;
+
+  @media (max-width: 767px) {
+    display: inline-flex;
+  }
 }
 
 .flow-workspace__toolbar {
@@ -449,12 +473,18 @@
   min-width: 0;
   min-height: 0;
 
+  // A ceiling, not a fixed size: a trace with few steps should never carry the same empty space
+  // as one with many. Below the ceiling the block is exactly as tall as its own content; above
+  // it, this box becomes the scroll container instead of `.flow-details` inside it (that one
+  // only owns its own scroll when an ancestor's height is already definite, true on desktop's
+  // flex row but not here).
   @media (max-width: 1023px) {
     flex: 0 0 auto;
     max-width: none;
     width: 100%;
-    height: 640px;
-    overflow: hidden;
+    height: auto;
+    max-height: 640px;
+    overflow-y: auto;
   }
 }
 
@@ -481,6 +511,13 @@
   @media (max-width: 1023px) {
     flex: 0 0 auto;
     flex-direction: column;
+  }
+
+  // Keeps the footer after the metrics strip above, which takes order 1 at this width: without
+  // this, both would share the body's default order 0 and the footer's DOM position would put
+  // it ahead of metrics instead of behind them.
+  @media (max-width: 767px) {
+    order: 2;
   }
 
   // Below ~800px of window.innerHeight (guide seção 6.9), the footer is the first thing to give

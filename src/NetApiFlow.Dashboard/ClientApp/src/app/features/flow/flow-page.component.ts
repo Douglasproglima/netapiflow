@@ -14,6 +14,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Subject, auditTime, catchError, filter, map, merge, of, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
@@ -59,6 +60,7 @@ export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
     RecentExecutionsComponent,
     EndpointFormComponent,
     MatButtonModule,
+    MatMenuModule,
     TranslatePipe,
   ],
   providers: [LiveTracePlayerService, ReplayPlayerService],

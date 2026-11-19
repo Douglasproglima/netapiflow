@@ -1,9 +1,9 @@
 // `height` and `overflow` intentionally stay off :host: the parent (flow-page.component.scss)
 // sizes this host element directly via its own `.flow-workspace__details` rule (desktop flex
-// basis, or an explicit height at the mobile breakpoint). A `:host{height:100%}` here would
-// compete with that external rule for the same property on the same element — and lose in a way
-// that resolves to 0 whenever an ancestor's own height is indefinite, collapsing this panel
-// invisibly instead of just scrolling (D-34).
+// basis, or a content-driven height below 1024px). A `:host { height: 100% }` here would compete
+// with that external rule for the same property on the same element, and lose in a way that
+// resolves to 0 whenever an ancestor's own height is indefinite, collapsing this panel invisibly
+// instead of just scrolling.
 :host {
   display: block;
   background: var(--naf-surface);
@@ -15,8 +15,18 @@
 .flow-details {
   display: flex;
   flex-direction: column;
+
+  // Desktop's flex row gives this panel a definite height to fill, so this is the box that
+  // scrolls internally. Below 1024px the panel's own height is content-driven up to a ceiling
+  // instead (`.flow-workspace__details`), and that ancestor is the one that scrolls past it, not
+  // this box filling a height it no longer has.
   height: 100%;
   overflow-y: auto;
+
+  @media (max-width: 1023px) {
+    height: auto;
+    overflow-y: visible;
+  }
 }
 
 .flow-details__block {

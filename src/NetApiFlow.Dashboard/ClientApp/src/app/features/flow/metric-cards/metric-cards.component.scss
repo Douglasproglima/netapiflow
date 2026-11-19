@@ -21,12 +21,20 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
+  // 3 equal columns in this range used to leave each card too narrow for its own value and
+  // label: "Latência média" and "Latência máxima" both lost their only distinguishing word to
+  // the same ellipsis. 2 wider columns give both room to render in full.
   @media (max-width: 1199px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  // Below 768px the cards stack one per row instead of three rows of two: the graph renders
+  // above it on this width, so scrolling here is the page's own vertical scroll, not a second,
+  // nested horizontal one.
   @media (max-width: 767px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
   }
 }
 
@@ -40,6 +48,11 @@
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+
+  @media (max-width: 767px) {
+    flex: none;
+    width: 100%;
+  }
 }
 
 .metric-cards__card--highlight {

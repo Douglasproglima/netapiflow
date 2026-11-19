@@ -187,7 +187,11 @@ function rowStatusState(trace: FlowTraceSummary): NodeVisualState {
   if (trace.status === 'Timeout') {
     return 'timeout';
   }
-  return trace.httpStatus !== null && trace.httpStatus >= 400 ? 'error' : 'completed';
+  // The trace's own status, not the raw HTTP code: a controller returning 404 on purpose (a
+  // lookup that found nothing) is a successful execution, same rule recent-executions already
+  // follows via `statusTint`. Reading `httpStatus` here instead used to tint that same trace red
+  // in this table while it showed green everywhere else.
+  return trace.status === 'Error' ? 'error' : 'completed';
 }
 
 function rowStatusTint(state: NodeVisualState): 'flow' | 'danger' | 'success' | 'idle' {
