@@ -25,9 +25,8 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  // Below 768px (Fase 44, Tarefa 44.2) the strip scrolls horizontally instead of stacking three
-  // rows of two: the graph now renders above it on this width, so the metrics row only needs to
-  // stay short, not wide.
+  // Below 768px the strip scrolls horizontally instead of stacking three rows of two: the graph
+  // renders above it on this width, so the metrics row only needs to stay short, not wide.
   @media (max-width: 767px) {
     display: flex;
     overflow-x: auto;

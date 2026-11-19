@@ -78,9 +78,8 @@
     background: var(--naf-surface-2);
   }
 
-  // Icon only below ~480px (Fase 44, Tarefa 44.1): the label is the first thing to go when the
-  // topbar is this narrow, same width budget problem the preferences menu below solves for
-  // theme/language.
+  // Icon only below ~480px: the label is the first thing to go when the topbar is this narrow,
+  // same width budget problem the preferences menu below solves for theme/language.
   @media (max-width: 479px) {
     width: 32px;
     padding: 0;
@@ -147,8 +146,8 @@
   flex: none;
 }
 
-// Theme and language collapse into one menu below ~480px (Tarefa 44.1): there is no room left
-// next to the connection chip for a segmented control plus an icon button plus the chip itself.
+// Theme and language collapse into one menu below ~480px: there is no room left next to the
+// connection chip for a segmented control plus an icon button plus the chip itself.
 .app-topbar__lang--full,
 .app-topbar__theme--full {
   @media (max-width: 479px) {

@@ -1,9 +1,10 @@
-// Fase 44, Tarefa 44.5: same floor mechanism the flow workspace got in Fase 43. Without it, a
-// short viewport can squeeze .architecture__canvas's own min-height away entirely, same class of
-// bug Tarefa 43.1 closed for /flow, never tested here until this task. `max()` keeps the
-// percentage chain definite above the floor and lets `.app-content` scroll for real below it;
-// the exact floor value below is confirmed against real rendering, not estimated from the
-// controls/summary rows alone.
+// Same height-floor mechanism as the flow workspace. Without it, a short viewport can squeeze
+// .architecture__canvas's own min-height away entirely: with only a percentage height, this box
+// has no definite height of its own to resolve descendants against, and a bare 100% never gives
+// .app-content (Material's own mat-drawer-content, already overflow: auto) anything to scroll.
+// `max()` keeps the percentage chain definite above the floor and lets the page scroll for real
+// below it. The floor value below is confirmed against real rendering, not estimated from the
+// controls/summary rows alone: at 500px the canvas lands right above its own 360px min-height.
 .architecture {
   padding: 1rem;
   display: flex;
@@ -73,8 +74,8 @@
 
 .architecture__canvas {
   flex: 1 1 auto;
-  // Same 360px floor as the flow workspace's graph (Fase 43, Tarefa 43.1): below this, the graph
-  // stops being useful, so it's the last thing that gives up height.
+  // Same 360px floor as the flow workspace's graph: below this, the graph stops being useful,
+  // so it's the last thing that gives up height.
   min-height: 360px;
   border-top: 1px solid var(--naf-border);
   overflow: auto;

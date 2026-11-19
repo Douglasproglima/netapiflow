@@ -27,10 +27,9 @@
   opacity: 0.8;
 }
 
-// Below 768px (Fase 44, Tarefa 44.2) the graph is the reason this link gets opened, not the
-// metrics strip above it: moving metrics after the body (and the footer, both stay at the
-// default order) means the canvas shows up without scrolling past six cards and a sparkline
-// first.
+// Below 768px the graph is the reason this screen gets opened, not the metrics strip above it:
+// moving metrics after the body (and the footer, both stay at the default order) means the
+// canvas shows up without scrolling past six cards and a sparkline first.
 .flow-workspace__metrics {
   @media (max-width: 767px) {
     order: 1;
@@ -188,8 +187,8 @@
   padding: 0 1rem;
   border-bottom: 1px solid var(--naf-border);
 
-  // Fase 44, Tarefa 44.3: this title never disappears, however little room is left; the
-  // actions on the other end of this row cede space first (the menu trigger below), not this.
+  // This title never disappears, however little room is left; the actions on the other end of
+  // this row cede space first (into the menu trigger below), not this.
   h2 {
     margin: 0;
     flex: none;
