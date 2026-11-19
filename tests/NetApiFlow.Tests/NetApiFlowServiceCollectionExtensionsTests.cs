@@ -23,7 +23,7 @@ public class NetApiFlowServiceCollectionExtensionsTests
 
         using var provider = services.BuildServiceProvider();
 
-        provider.GetServices<IHostedService>().Count().ShouldBe(3);
+        provider.GetServices<IHostedService>().Count().ShouldBe(4);
         provider.GetServices<IStartupFilter>().Count().ShouldBe(1);
         provider.GetRequiredService<FlowRecorder>().ShouldNotBeNull();
     }

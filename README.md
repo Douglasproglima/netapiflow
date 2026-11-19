@@ -707,10 +707,15 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 - `net8.0` left Microsoft's official support window on 10 November 2026, and NetApiFlow still ships
   an asset for it. It stays for now because there is nowhere to move it to yet: the next LTS,
   `net12.0`, is only expected in November 2027, so dropping `net8.0` today would leave `net10.0` as
-  the single supported target. When to stop shipping `net8.0` is an open question here, still under
-  investigation, not a date already chosen. Keeping it does mean the package has a target framework
-  that no longer gets servicing updates from Microsoft, which is worth knowing if your own policy
-  forbids that.
+  the single supported target. `net8.0` only stops shipping once `net12.0` can replace it. Keeping
+  it does mean the package has a target framework that no longer gets servicing updates from
+  Microsoft, which is worth knowing if your own policy forbids that.
+- A `net11.0` app uses the `net10.0` asset today. That was tested against a real SQL Server with the
+  storage package and `Microsoft.Data.SqlClient` 7.1.2. An asset of its own for `net11.0` is
+  planned.
+- `LogCorrelation.Enabled` and `CapturePrePipelineSteps` only take effect when set in code, in the
+  lambda passed to `AddNetApiFlow`. The same keys in the `NetApiFlow` configuration section are
+  read, but they do not turn the feature on. A fix is planned, with no version promised.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

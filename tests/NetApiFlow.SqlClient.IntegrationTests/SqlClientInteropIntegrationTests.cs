@@ -109,6 +109,7 @@ public sealed class SqlClientInteropIntegrationTests(SqlServerContainerFixture f
         var recorder = new FlowRecorder(wrappedOptions);
         using var listener = new FlowActivityListener(recorder, wrappedOptions, NullLoggerFactory.Instance);
         using var sqlClientListener = new SqlClientCommandListener(wrappedOptions, NullLogger<SqlClientCommandListener>.Instance);
+        sqlClientListener.Start();
 
         var traceIds = await Task.WhenAll(Enumerable.Range(0, 16).Select(RunQueryUnderItsOwnTraceAsync));
 
@@ -169,6 +170,7 @@ public sealed class SqlClientInteropIntegrationTests(SqlServerContainerFixture f
         var recorder = new FlowRecorder(wrappedOptions);
         var listener = new FlowActivityListener(recorder, wrappedOptions, NullLoggerFactory.Instance);
         var sqlClientListener = new SqlClientCommandListener(wrappedOptions, NullLogger<SqlClientCommandListener>.Instance);
+        sqlClientListener.Start();
 
         var root = new Activity("SqlClientInteropRoot");
         root.Start();

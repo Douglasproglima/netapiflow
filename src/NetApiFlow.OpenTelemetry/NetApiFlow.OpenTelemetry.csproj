@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.OpenTelemetry</PackageId>
+    <Description>Exports NetApiFlow traces to any OTLP-compatible backend through the OpenTelemetry SDK.</Description>
+    <PackageTags>$(PackageTags);opentelemetry;otlp</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

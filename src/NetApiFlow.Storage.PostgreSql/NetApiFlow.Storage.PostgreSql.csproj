@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.Storage.PostgreSql</PackageId>
+    <Description>Stores NetApiFlow traces in PostgreSQL instead of memory and creates the schema automatically.</Description>
+    <PackageTags>$(PackageTags);postgresql;npgsql;storage</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

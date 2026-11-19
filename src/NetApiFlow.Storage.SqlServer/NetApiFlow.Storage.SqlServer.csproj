@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.Storage.SqlServer</PackageId>
+    <Description>Stores NetApiFlow traces in SQL Server instead of memory and creates the schema automatically.</Description>
+    <PackageTags>$(PackageTags);sqlserver;storage</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,8 +8,6 @@
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
 
-    <!-- No VersionOverride on purpose: this has to exercise the very version the packages pin,
-         because that is the one a consumer of NetApiFlow.Storage.SqlServer actually restores. -->
     <PackageReference Include="Microsoft.Data.SqlClient" />
   </ItemGroup>
 

@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.Testing</PackageId>
+    <Description>Assertions over the flow a request actually took, for integration tests, such as how many database calls an endpoint makes.</Description>
+    <PackageTags>$(PackageTags);testing;integration-testing</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
