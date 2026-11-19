@@ -91,6 +91,72 @@ verdade abaixo do piso (`contentScrollable: true` nas alturas mais curtas).
   assim é uma divergência real de comportamento entre as duas telas que a Planejadora precisa
   decidir se vale a pena fechar.
 
+## Tarefa 44.8: histerese de `rankdir` também em Architecture (D-166)
+
+Correção do achado registrado na Tarefa 44.7: o mecanismo (`ResizeObserver` do canvas, `effect()`
+de histerese, as duas constantes de proporção) saiu de `flow-page.component.ts` para
+`src/app/features/flow/graph/rankdir-hysteresis.ts`, uma função `rankdirHysteresis(canvasRef)`
+reutilizável. `flow-page.component.ts` e `architecture.component.ts` passam a chamar essa mesma
+função; nenhum dos dois duplica o `ResizeObserver` nem as constantes. A decisão pura (ratio atual
++ estado anterior → próximo `rankdir`) foi extraída à parte (`nextRankdir`), testada por tabela em
+`rankdir-hysteresis.spec.ts` sem precisar de `TestBed` nem mock de `ResizeObserver`.
+
+Confirmado ao vivo (Playwright, `samples/SampleApi.Controllers` com Postgres real), redimensionando
+só a largura da janela, com uma rota/trace real selecionada:
+
+### `/architecture`, rota `GET /api/orders/{id:int}` (4 nós, cadeia linear sem irmãos)
+
+| Largura×altura da janela | Proporção do canvas (altura/largura) | `rankdir` (pelo `viewBox`) | `viewBox` |
+|---|---|---|---|
+| 1600×900 | 0,48 | `LR` | `935,2 × 229,9` |
+| 900×900 | 0,82 | `LR` | `935,2 × 305,0` |
+| 700×900 | 0,97 (zona morta, chegando por baixo) | **continua `LR`** | `935,2 × 191,2` |
+| 550×900 | 1,25 | `TB` | `251,2 × 470,9` |
+| 700×900 (de novo) | 0,97 (zona morta, chegando por cima) | **continua `TB`** (não desceu do estado anterior) | `251,2 × 470,9` |
+| 900×900 (de novo) | 0,82 | `LR` | `935,2 × 305,0` |
+
+A mesma prova da Tarefa 43.5 (D-161), agora em Architecture: a linha da zona morta em 0,97
+aparece duas vezes com o mesmo valor de proporção e dois resultados diferentes (`LR` e `TB`),
+dependendo de que lado a transição veio. Isso é a histerese funcionando, não um bug.
+
+### `/flow?trace=<id>`, trace real de rota `GET /api/orders/{id:int}` (cadeia linear, sem regressão)
+
+| Largura×altura da janela | Proporção do canvas | `rankdir` | `viewBox` |
+|---|---|---|---|
+| 1600×900 | 0,44 | `LR` | `935,2 × 322,9` |
+| 320×852 | 1,47 | `TB` | `251,2 × 567,5` |
+| 393×852 (zona morta, chegando por cima) | 1,16 | **continua `TB`** | `251,2 × 529,3` |
+| 1600×900 (de novo) | 0,44 | `LR` | `935,2 × 322,9` |
+
+`/flow` continua passando no mesmo teste de antes (mesmos dois limiares, mesma zona morta),
+confirmando que a extração não mudou nada do comportamento já aceito na Fase 43.
+
+**Nota sobre o trace de 4 spans do sample (`/api/orders/sequential`)**: o mesmo achado incidental
+já registrado na Tarefa 43.5 (MINILINHA de irmãos empilhando no eixo que `rankdir` usa para
+ordenar irmãos) também aparece em `/flow` com esse trace: mesmo com `rankdir` corretamente trocado
+para `TB`, o `viewBox` ainda sai mais largo que alto, porque os 4 irmãos (chamadas repetidas ao
+repositório) se espalham no eixo X em vez do Y. Não é regressão desta tarefa nem desta fase: é a
+mesma limitação já conhecida e já atribuída ao roadmap, não ao mecanismo em si. A tabela acima usa
+uma rota de cadeia linear (sem irmãos) para isolar e confirmar o mecanismo sem esse ruído.
+
+**`npx impeccable detect` não rodou nesta tarefa**: o navegador headless embutido do Impeccable
+deu timeout de navegação contra o host local (`Error: Navigation timeout of 30000 ms exceeded`),
+mesmo com o host respondendo normalmente por `curl` e com o Playwright usado na tabela acima
+funcionando sem problema contra a mesma URL. Limitação do ambiente desta sessão, não um achado do
+código. A mudança desta tarefa é só reposicionamento de nó (lógica de layout), sem nenhum CSS, cor
+ou tipografia nova, então o risco de `low-contrast`/`undersized-ui-text` é baixo, mas a varredura
+não foi confirmada por ferramenta. Pendente: rodar o detector contra `/architecture` (`390×844`,
+tema claro e escuro) numa sessão com o Impeccable funcionando, e registrar aqui o resultado.
+
+**Pergunta em aberto para a Planejadora, não decidida aqui**: em `/architecture`, trocar de rota
+desmonta e remonta o `<div #graphHost>` (ao contrário de `/flow`, onde `<div #canvas>` nunca sai
+do DOM). Se a proporção da rota nova cair na zona morta (entre 0,9 e 1,2), o `rankdir` herda o
+estado da rota anterior em vez de nascer em `LR` para o novo grafo. Não reproduzido como falha
+(a troca de rota sempre testada nesta rodada caiu fora da zona morta), e o texto da Tarefa 44.8/
+D-166 não cobre esse cenário, só o redimensionamento contínuo da mesma rota. Decisão de produto
+(resetar `rankdir` a cada rota nova, ou manter o estado entre rotas como está hoje), não corrigida
+nesta tarefa.
+
 ## Achados ao vivo, fora das sete tarefas originais
 
 Reportados pelo dono do projeto durante a rodada (capturas de tela reais e, depois, uma
