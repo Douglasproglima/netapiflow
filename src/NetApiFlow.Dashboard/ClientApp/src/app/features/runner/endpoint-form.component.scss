@@ -35,11 +35,16 @@
   color: var(--naf-text-muted);
 }
 
+// The single scroll area for the whole card (D-160, fecha R-28): the list and the selected
+// endpoint's form used to scroll independently, each shrunk to fit the same fixed-height card,
+// which pushed "Send request" out of the visible area in a common desktop viewport. Letting this
+// box scroll its own overflow, with its children at their natural height instead of shrinking,
+// keeps that button reachable with a single scrollbar. `.endpoint-form__footer` below (outside
+// this box) is what actually keeps the button in view without scrolling at all.
 .endpoint-form__custom {
-  display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .endpoint-form__status {
@@ -102,12 +107,8 @@
 }
 
 .endpoint-form__list-wrapper {
-  flex: 1 1 auto;
-  // Three whole route rows (36px each, rounded to the 8px grid) before the list has to scroll.
-  // Without a floor, a short window shrinks it past a single readable row.
-  min-height: 112px;
-  max-height: 55%;
-  overflow-y: auto;
+  // No max-height/overflow of its own: `.endpoint-form__custom` above owns the one scroll area
+  // this card has, so the list just takes whatever height its own rows need.
 }
 
 .endpoint-form__endpoints {
@@ -174,9 +175,6 @@
 }
 
 .endpoint-form__form {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -189,6 +187,24 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+}
+
+.endpoint-form__back {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: none;
+  color: var(--naf-text-muted);
+  border-radius: var(--naf-radius-sm);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
 }
 
 .endpoint-form__form-path {
@@ -390,6 +406,16 @@
     color: var(--naf-text);
     background: var(--naf-surface-2);
   }
+}
+
+// Outside .endpoint-form__custom (the only thing that scrolls), so this never moves out of
+// view: the whole reason the list and the form share one scroll area above.
+.endpoint-form__footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 1rem;
 }
 
 .endpoint-form__send {

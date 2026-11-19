@@ -233,6 +233,16 @@ export class EndpointFormComponent {
     this.lastTraceId.set(null);
   }
 
+  /**
+   * The list and the selected endpoint's form share one scroll area (D-160, fecha R-28): with a
+   * real route count (248, D-116) the list alone can run past a thousand pixels, so showing both
+   * at once would bury the "Send request" button under the entire list first. Swapping the list
+   * out for the form instead keeps the button reachable regardless of how many routes exist.
+   */
+  backToList(): void {
+    this.selected.set(null);
+  }
+
   fieldValue(name: string): string {
     return this.fieldValues()[name] ?? '';
   }
