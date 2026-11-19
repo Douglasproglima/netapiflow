@@ -37,9 +37,9 @@ export class RecentExecutionsComponent implements OnDestroy {
   readonly error = signal<TranslationKey | null>(null);
   readonly traces = signal<FlowTraceSummary[]>([]);
   /**
-   * `model()`, not a plain internal signal: the parent workspace (D-160) needs to know when this
-   * card collapses so it can shrink the shared footer row and return the freed height to the
-   * graph, which a signal private to this component could never report upward.
+   * `model()`, not a plain internal signal: the parent workspace needs to know when this card
+   * collapses so it can shrink the shared footer row and return the freed height to the graph,
+   * which a signal private to this component could never report upward.
    */
   readonly collapsed = model(false);
 
