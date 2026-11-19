@@ -29,4 +29,17 @@
     text-align: left;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
+
+  // The component name is what a row is, even once the other seven columns have scrolled out of
+  // view: pinning it to the scroll container's left edge keeps every row legible while scrolling
+  // to the metric that matters, instead of losing track of which row is which.
+  @media (max-width: 767px) {
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      background: var(--naf-surface);
+      box-shadow: 1px 0 0 var(--naf-border);
+    }
+  }
 }
