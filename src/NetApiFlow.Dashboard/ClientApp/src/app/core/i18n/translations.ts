@@ -185,6 +185,8 @@ const en = {
   'recent.relativeTime.now': 'now',
   'recent.relativeTime.seconds': '{n} s',
   'recent.relativeTime.minutes': '{n} min',
+  'recent.relativeTime.hours': '{n} h',
+  'recent.relativeTime.days': '{n} d',
 
   'events.title': 'Live events',
   'events.chip.connected': 'Connected',
@@ -510,6 +512,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'recent.relativeTime.now': 'agora',
   'recent.relativeTime.seconds': '{n} s',
   'recent.relativeTime.minutes': '{n} min',
+  'recent.relativeTime.hours': '{n} h',
+  'recent.relativeTime.days': '{n} d',
 
   'events.title': 'Eventos ao vivo',
   'events.chip.connected': 'Conectado',

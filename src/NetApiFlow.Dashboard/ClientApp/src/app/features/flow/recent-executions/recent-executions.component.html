@@ -49,7 +49,7 @@
       <p class="recent-executions__status">{{ 'recent.empty' | t }}</p>
     } @else {
       <ul class="recent-executions__list">
-        @for (trace of traces(); track trace.traceId) {
+        @for (trace of visibleTraces(); track trace.traceId) {
           <li>
             <button
               type="button"
