@@ -100,10 +100,21 @@ responsividade para o dashboard inteiro, acrescentando a Fase 46. As quatro (`fa
 `fase-44-layout-mobile-paridade-completa.md`, `fase-45-normalizacao-restricoes-rota.md`,
 `fase-46-responsividade-history-components-runner.md`) estão aceitas e mergeadas em `develop`,
 nenhuma publicada ainda: capacidade nova de verdade (paridade mobile, comparação de rota sem
-restrição de parâmetro) parada sem release, candidata a `0.5.0` quando o dono do projeto decidir
-lançar. Só pendência real do lote: Tarefa 44.9 (D-168), achado de `text-occlusion` que o D-141 já
-qualifica como candidato a correção prioritária, separado do item 15 do roadmap (limpeza de
-comentário, sem urgência).
+restrição de parâmetro) parada sem release, candidata a `0.5.0`. Tarefa 44.9 (`text-occlusion`
+nos controles de zoom) fechada de verdade (PR #302), confirmada por auditoria independente como
+regressão desta mesma rodada (commit `952ad4d`), nunca publicada, sem linha no `CHANGELOG.md`.
+
+PR #305 ("0.5.0 release readiness") corrigiu, na preparação do release: o piso real de
+`Microsoft.Data.SqlClient` (D-172, substitui o mecanismo mais complexo de D-170/D-171, que tinha
+confundido o requisito do driver da aplicação com o do pacote de storage), metadados de pacote
+faltando desde sempre (D-174) e a demo sincronizada com a versão real. D-173 decide que `net11.0`
+fica pro `0.6.0` (item 16 do roadmap). D-175 achou um bug real publicado desde a primeira versão
+de duas opções (`LogCorrelation.Enabled`/`CapturePrePipelineSteps` ligadas só por configuração
+nunca ativam o recurso); decisão do dono: `0.5.0` sai com a limitação documentada, correção vira
+hotfix `0.5.1` depois (`fase-47-hotfix-opcoes-ativadas-so-por-config.md`, especificação completa,
+aguardando o `0.5.0` publicado antes de começar). D-176 trava duas regras novas contra a mesma
+classe de bug se repetir (`.claude/rules/testing.md`, passo de fumaça obrigatório na skill
+`/release`).
 
 ## Regra de avanço
 

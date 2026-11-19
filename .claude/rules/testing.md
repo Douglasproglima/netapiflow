@@ -106,6 +106,22 @@ _storeMock.GetAsync(traceId, Arg.Any<CancellationToken>())
 await _storeMock.Received(1).SaveAsync(Arg.Any<FlowTrace>(), Arg.Any<IReadOnlyList<FlowSpan>>(), Arg.Any<CancellationToken>());
 ```
 
+## Opção que liga um recurso: testar o efeito, nunca só o valor resolvido (D-176)
+
+Teste de uma opção que ativa um listener, filtro ou provider (`ExternalSources`,
+`LogCorrelation.Enabled`, `CapturePrePipelineSteps`, qualquer flag parecida) confere o efeito
+observável através de um host real (`WebApplicationFactory`/`Host.CreateDefaultBuilder` mais uma
+requisição de verdade: span gravado, log correlacionado, listener realmente assinado), nunca só
+`options.Value.X.ShouldBeTrue()`. Confirmar que a opção chegou com o valor certo não prova que o
+recurso correspondente foi de fato ligado.
+
+Essa lacuna específica escondeu dois achados reais: o recurso do `SqlClient`
+(`ExternalActivitySource.SqlClient`) passou pelas PRs #266 e #268 com teste verde sem funcionar no
+padrão de `Development` (D-148), e `LogCorrelation.Enabled`/`CapturePrePipelineSteps` ligados só
+pela configuração (sem lambda em `AddNetApiFlow`) nunca ativavam o recurso correspondente,
+publicado desde a primeira versão de cada um (D-175). Nos dois casos o teste existente conferia o
+valor da opção, nunca o comportamento que ela deveria acionar.
+
 ## Smoke tests de integração (`NetApiFlow.IntegrationTests`)
 
 Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o pipeline real

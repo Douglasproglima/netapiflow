@@ -15,7 +15,7 @@ is a runnable host calling `UseNetApiFlowDashboard` at `/flow` and at `/qualquer
 From the repo root:
 
 ```bash
-dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:VersionSuffix=verify
+dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:Version=<next-version>-verify.<n>
 cd tests/manual-verification
 dotnet test DashboardPackageVerification.Tests
 ```
@@ -33,14 +33,22 @@ Then visit `http://localhost:<port>/flow` and `http://localhost:<port>/qualquer/
 git-ignored repo-wide). Delete and re-pack it after any change to a package project, since
 nothing here rebuilds it automatically.
 
-`-p:VersionSuffix=verify` is never optional, on any `dotnet pack` under this folder. Packing with
-the real version number (the one that is about to be, or already was, published) occupies that
-exact slot in the machine-wide NuGet cache (`~/.nuget/packages/<id>/<versão>/`) with the local
-build. Every `dotnet add package`/restore afterward, on this machine, for that id and version,
-then resolves the local build instead of the real one on nuget.org, silently, even after the real
-one is published. Happened twice already (`0.4.0`, then the `0.4.2` hotfix verification), same
-cause both times. If a cache folder under the real version number turns up contaminated, delete it
-before trusting anything checked against it.
+A fake version number (never the real one) is never optional, on any `dotnet pack` under this
+folder. Packing with the real version number (the one that is about to be, or already was,
+published) occupies that exact slot in the machine-wide NuGet cache
+(`~/.nuget/packages/<id>/<versão>/`) with the local build. Every `dotnet add package`/restore
+afterward, on this machine, for that id and version, then resolves the local build instead of the
+real one on nuget.org, silently, even after the real one is published. Happened twice already
+(`0.4.0`, then the `0.4.2` hotfix verification), same cause both times. If a cache folder under
+the real version number turns up contaminated, delete it before trusting anything checked against
+it.
+
+**`-p:VersionSuffix=verify` does not do this here.** `Directory.Build.props` sets `<Version>`
+directly, and the SDK only composes `$(Version)` from `$(VersionPrefix)`/`$(VersionSuffix)` when
+`<Version>` is not already set, which is never the case in this repository. Every pack that used
+`-p:VersionSuffix=verify` produced the real version number anyway, silently. Use
+`-p:Version=<next-version>-verify.<n>` instead, which overrides `<Version>` for real; never reuse
+the same `<n>` while evaluating the same upcoming version.
 
 The same `nuget.config` points `globalPackagesFolder` at `local-packages/`, so these projects
 extract packages into this folder instead of the machine-wide one. Re-packing without bumping the
@@ -69,7 +77,7 @@ request through the pipeline. A `ProjectReference` recompiles and never sees it;
 pins `MediatR` above the version it was compiled against, which is what a consumer's restore does.
 
 ```bash
-dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:VersionSuffix=verify
+dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:Version=<next-version>-verify.<n>
 cd tests/manual-verification
 dotnet test MediatRPackageVerification.Tests
 ```
