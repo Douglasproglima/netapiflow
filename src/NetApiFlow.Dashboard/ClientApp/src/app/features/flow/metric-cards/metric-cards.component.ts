@@ -3,7 +3,7 @@ import { Subscription, auditTime, filter, merge, of, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/api.service';
 import { ConfigService } from '../../../core/config.service';
 import { SSE_REFRESH_AUDIT_MS, SseService } from '../../../core/sse.service';
-import { formatDurationMicros } from '../../../shared/duration-format';
+import { formatDurationMicrosCompact } from '../../../shared/duration-format';
 import { catchAsResult } from '../../../shared/observable-result';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../../core/i18n/translations';
@@ -73,7 +73,19 @@ export class MetricCardsComponent implements OnDestroy {
   private readonly slowThresholdMicros = signal(Infinity);
   private readonly sparklineDurations = signal<number[]>([]);
 
-  readonly p95Value = computed(() => splitDuration(formatDurationMicros(this.p95DurationMicros())));
+  readonly p95Value = computed(() =>
+    splitDuration(formatDurationMicrosCompact(this.p95DurationMicros())),
+  );
+
+  /**
+   * Below this many samples a sparkline is always a single straight segment between two points,
+   * which conveys a delta, not a shape — the minimum for a bend to appear at all is three.
+   */
+  private static readonly SPARKLINE_MIN_SAMPLES = 3;
+
+  readonly sparklineVisible = computed(
+    () => this.sparklineDurations().length >= MetricCardsComponent.SPARKLINE_MIN_SAMPLES,
+  );
 
   readonly sparklinePoints = computed(() => {
     const durations = this.sparklineDurations();
@@ -98,8 +110,8 @@ export class MetricCardsComponent implements OnDestroy {
 
   readonly cards = computed<MetricCard[]>(() => {
     const threshold = this.slowThresholdMicros();
-    const avg = splitDuration(formatDurationMicros(this.averageDurationMicros()));
-    const max = splitDuration(formatDurationMicros(this.maxDurationMicros()));
+    const avg = splitDuration(formatDurationMicrosCompact(this.averageDurationMicros()));
+    const max = splitDuration(formatDurationMicrosCompact(this.maxDurationMicros()));
 
     return [
       {

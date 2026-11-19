@@ -161,6 +161,19 @@ describe('EndpointFormComponent', () => {
     expect(fixture.componentInstance.endpoints()).toHaveLength(1);
   });
 
+  it('clears the selected endpoint and its form when backToList is called', async () => {
+    const fixture = await createComponentWithConfig();
+    httpMock.expectOne('/openapi/v1.json').flush(DOC);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+    expect(fixture.componentInstance.form()).not.toBeNull();
+
+    fixture.componentInstance.backToList();
+
+    expect(fixture.componentInstance.form()).toBeNull();
+  });
+
   it('filters the endpoint list by route', async () => {
     const fixture = await createComponentWithConfig();
     httpMock.expectOne('/openapi/v1.json').flush(DOC);

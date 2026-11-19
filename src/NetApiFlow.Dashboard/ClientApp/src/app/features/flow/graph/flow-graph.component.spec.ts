@@ -497,6 +497,18 @@ describe('FlowGraphComponent', () => {
   });
 
   describe('legend', () => {
+    it('is not compact before the canvas has been measured', async () => {
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', []);
+      fixture.componentRef.setInput('edges', []);
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.legendCompact()).toBe(false);
+      expect(fixture.nativeElement.querySelector('.flow-graph__legend').classList).not.toContain(
+        'flow-graph__legend--compact',
+      );
+    });
+
     it('renders exactly the states a node can actually have, never cancelled or timeout (M2)', async () => {
       const fixture = TestBed.createComponent(FlowGraphComponent);
       fixture.componentRef.setInput('nodes', []);

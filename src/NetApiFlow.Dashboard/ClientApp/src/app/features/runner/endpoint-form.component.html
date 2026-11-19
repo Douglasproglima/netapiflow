@@ -12,6 +12,187 @@
         <p>{{ loadError() | t }}</p>
         <p class="endpoint-form__status-hint">{{ 'action.openApiError.hint' | t }}</p>
       </div>
+    } @else if (form(); as form) {
+      <form
+        id="endpoint-form-send"
+        class="endpoint-form__form"
+        (submit)="$event.preventDefault(); send()"
+      >
+        <div class="endpoint-form__form-header">
+          <button
+            type="button"
+            class="endpoint-form__back"
+            [attr.aria-label]="'action.backToList' | t"
+            (click)="backToList()"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              width="16"
+              height="16"
+            >
+              <path d="M14.5 6 8 12l6.5 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <span class="naf-tag" [class]="methodTagClass(form.method)">{{ form.method }}</span>
+          <span class="endpoint-form__form-path">{{ form.path }}</span>
+        </div>
+
+        @for (field of form.fields; track field.name) {
+          <div
+            class="endpoint-form__field"
+            [class.endpoint-form__field--invalid]="invalidFieldName() === field.name"
+          >
+            <label [for]="'endpoint-form-field-' + field.name"
+              >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
+            >
+            @if (field.kind === 'body') {
+              <textarea
+                [id]="'endpoint-form-field-' + field.name"
+                [value]="fieldValue(field.name)"
+                (input)="onFieldInput(field.name, $event)"
+              ></textarea>
+            } @else {
+              <input
+                type="text"
+                [id]="'endpoint-form-field-' + field.name"
+                [value]="fieldValue(field.name)"
+                (input)="onFieldInput(field.name, $event)"
+              />
+            }
+          </div>
+        }
+
+        @if (authorizeSchemes().length > 0) {
+          <div class="endpoint-form__authorize">
+            <div class="endpoint-form__authorize-head">
+              <span>{{ 'action.authorize.title' | t }}</span>
+            </div>
+            @for (entry of authorizeSchemes(); track entry.name) {
+              <div class="endpoint-form__authorize-row">
+                <label [for]="'endpoint-form-auth-' + entry.name">{{
+                  schemeLabelKey(entry.scheme) | t: { name: entry.name, type: entry.scheme.type }
+                }}</label>
+                <div class="endpoint-form__authorize-field">
+                  <input
+                    [id]="'endpoint-form-auth-' + entry.name"
+                    [type]="isRevealed(entry.name) ? 'text' : 'password'"
+                    [attr.placeholder]="'action.authorize.valuePlaceholder' | t"
+                    [value]="credentialValue(entry.name)"
+                    (input)="onAuthValueInput(entry.name, $event)"
+                  />
+                  <button
+                    type="button"
+                    class="endpoint-form__authorize-reveal"
+                    [attr.aria-label]="
+                      (isRevealed(entry.name) ? 'action.authorize.hide' : 'action.authorize.reveal')
+                        | t
+                    "
+                    (click)="toggleReveal(entry.name)"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      width="16"
+                      height="16"
+                    >
+                      @if (isRevealed(entry.name)) {
+                        <path
+                          d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"
+                          stroke-linejoin="round"
+                        />
+                        <circle cx="12" cy="12" r="2.25" />
+                      } @else {
+                        <path
+                          d="M3.5 3.5l17 17M10.6 10.7a2.25 2.25 0 0 0 2.9 2.9M7.4 7.3C4.9 8.7 3 12 3 12s3.6 7 9 7c1.6 0 3-.4 4.2-1.1M16.8 16.9C19 15.4 21 12 21 12s-1.3-2.5-3.6-4.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      }
+                    </svg>
+                  </button>
+                </div>
+                @if (authPreview(entry); as preview) {
+                  <p class="endpoint-form__authorize-preview">
+                    {{ authPreviewKey(preview) | t: { name: preview.name, value: preview.value } }}
+                  </p>
+                }
+                @if (authExpiry(entry); as expiry) {
+                  <p
+                    class="endpoint-form__authorize-expiry"
+                    [class.endpoint-form__authorize-expiry--expired]="
+                      expiry.key === 'action.authorize.expired'
+                    "
+                  >
+                    {{ expiry.key | t: { minutes: expiry.minutes } }}
+                  </p>
+                }
+                @if (isQueryScheme(entry.scheme)) {
+                  <p class="endpoint-form__authorize-note">
+                    {{ 'action.authorize.queryWarning' | t }}
+                  </p>
+                }
+              </div>
+            }
+            @if (noAlternativeFilled()) {
+              <p class="endpoint-form__authorize-note" role="status">
+                {{ 'action.authorize.noAlternativeFilled' | t }}
+              </p>
+            }
+            @if (noSecurityDeclaredButFilled()) {
+              <p class="endpoint-form__authorize-note" role="status">
+                {{ 'action.authorize.notDeclaredNote' | t }}
+              </p>
+            }
+          </div>
+        }
+
+        <div class="endpoint-form__headers">
+          <div class="endpoint-form__headers-head">
+            <span>{{ 'action.headers.title' | t }}</span>
+            <button type="button" class="endpoint-form__headers-add" (click)="addHeader()">
+              {{ 'action.headers.add' | t }}
+            </button>
+          </div>
+          @for (header of credentials.customHeaders(); track $index) {
+            <div class="endpoint-form__header-row">
+              <input
+                type="text"
+                [attr.placeholder]="'action.headers.namePlaceholder' | t"
+                [value]="header.name"
+                (input)="onHeaderNameInput($index, $event)"
+              />
+              <input
+                type="text"
+                [attr.placeholder]="'action.headers.valuePlaceholder' | t"
+                [value]="header.value"
+                (input)="onHeaderValueInput($index, $event)"
+              />
+              <button
+                type="button"
+                class="endpoint-form__header-remove"
+                [attr.aria-label]="'action.headers.remove' | t"
+                (click)="removeHeader($index)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  width="14"
+                  height="14"
+                >
+                  <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+                </svg>
+              </button>
+            </div>
+          }
+        </div>
+      </form>
     } @else {
       <div class="endpoint-form__search">
         <svg
@@ -96,188 +277,32 @@
           }}
         </p>
       }
-
-      @if (form(); as form) {
-        <form class="endpoint-form__form" (submit)="$event.preventDefault(); send()">
-          <div class="endpoint-form__form-header">
-            <span class="naf-tag" [class]="methodTagClass(form.method)">{{ form.method }}</span>
-            <span class="endpoint-form__form-path">{{ form.path }}</span>
-          </div>
-
-          @for (field of form.fields; track field.name) {
-            <div
-              class="endpoint-form__field"
-              [class.endpoint-form__field--invalid]="invalidFieldName() === field.name"
-            >
-              <label [for]="'endpoint-form-field-' + field.name"
-                >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
-              >
-              @if (field.kind === 'body') {
-                <textarea
-                  [id]="'endpoint-form-field-' + field.name"
-                  [value]="fieldValue(field.name)"
-                  (input)="onFieldInput(field.name, $event)"
-                ></textarea>
-              } @else {
-                <input
-                  type="text"
-                  [id]="'endpoint-form-field-' + field.name"
-                  [value]="fieldValue(field.name)"
-                  (input)="onFieldInput(field.name, $event)"
-                />
-              }
-            </div>
-          }
-
-          @if (authorizeSchemes().length > 0) {
-            <div class="endpoint-form__authorize">
-              <div class="endpoint-form__authorize-head">
-                <span>{{ 'action.authorize.title' | t }}</span>
-              </div>
-              @for (entry of authorizeSchemes(); track entry.name) {
-                <div class="endpoint-form__authorize-row">
-                  <label [for]="'endpoint-form-auth-' + entry.name">{{
-                    schemeLabelKey(entry.scheme) | t: { name: entry.name, type: entry.scheme.type }
-                  }}</label>
-                  <div class="endpoint-form__authorize-field">
-                    <input
-                      [id]="'endpoint-form-auth-' + entry.name"
-                      [type]="isRevealed(entry.name) ? 'text' : 'password'"
-                      [attr.placeholder]="'action.authorize.valuePlaceholder' | t"
-                      [value]="credentialValue(entry.name)"
-                      (input)="onAuthValueInput(entry.name, $event)"
-                    />
-                    <button
-                      type="button"
-                      class="endpoint-form__authorize-reveal"
-                      [attr.aria-label]="
-                        (isRevealed(entry.name)
-                          ? 'action.authorize.hide'
-                          : 'action.authorize.reveal'
-                        ) | t
-                      "
-                      (click)="toggleReveal(entry.name)"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.75"
-                        width="16"
-                        height="16"
-                      >
-                        @if (isRevealed(entry.name)) {
-                          <path
-                            d="M3 12s3.6-7 9-7 9 7 9 7-3.6 7-9 7-9-7-9-7Z"
-                            stroke-linejoin="round"
-                          />
-                          <circle cx="12" cy="12" r="2.25" />
-                        } @else {
-                          <path
-                            d="M3.5 3.5l17 17M10.6 10.7a2.25 2.25 0 0 0 2.9 2.9M7.4 7.3C4.9 8.7 3 12 3 12s3.6 7 9 7c1.6 0 3-.4 4.2-1.1M16.8 16.9C19 15.4 21 12 21 12s-1.3-2.5-3.6-4.5"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        }
-                      </svg>
-                    </button>
-                  </div>
-                  @if (authPreview(entry); as preview) {
-                    <p class="endpoint-form__authorize-preview">
-                      {{
-                        authPreviewKey(preview) | t: { name: preview.name, value: preview.value }
-                      }}
-                    </p>
-                  }
-                  @if (authExpiry(entry); as expiry) {
-                    <p
-                      class="endpoint-form__authorize-expiry"
-                      [class.endpoint-form__authorize-expiry--expired]="
-                        expiry.key === 'action.authorize.expired'
-                      "
-                    >
-                      {{ expiry.key | t: { minutes: expiry.minutes } }}
-                    </p>
-                  }
-                  @if (isQueryScheme(entry.scheme)) {
-                    <p class="endpoint-form__authorize-note">
-                      {{ 'action.authorize.queryWarning' | t }}
-                    </p>
-                  }
-                </div>
-              }
-              @if (noAlternativeFilled()) {
-                <p class="endpoint-form__authorize-note" role="status">
-                  {{ 'action.authorize.noAlternativeFilled' | t }}
-                </p>
-              }
-              @if (noSecurityDeclaredButFilled()) {
-                <p class="endpoint-form__authorize-note" role="status">
-                  {{ 'action.authorize.notDeclaredNote' | t }}
-                </p>
-              }
-            </div>
-          }
-
-          <div class="endpoint-form__headers">
-            <div class="endpoint-form__headers-head">
-              <span>{{ 'action.headers.title' | t }}</span>
-              <button type="button" class="endpoint-form__headers-add" (click)="addHeader()">
-                {{ 'action.headers.add' | t }}
-              </button>
-            </div>
-            @for (header of credentials.customHeaders(); track $index) {
-              <div class="endpoint-form__header-row">
-                <input
-                  type="text"
-                  [attr.placeholder]="'action.headers.namePlaceholder' | t"
-                  [value]="header.name"
-                  (input)="onHeaderNameInput($index, $event)"
-                />
-                <input
-                  type="text"
-                  [attr.placeholder]="'action.headers.valuePlaceholder' | t"
-                  [value]="header.value"
-                  (input)="onHeaderValueInput($index, $event)"
-                />
-                <button
-                  type="button"
-                  class="endpoint-form__header-remove"
-                  [attr.aria-label]="'action.headers.remove' | t"
-                  (click)="removeHeader($index)"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    width="14"
-                    height="14"
-                  >
-                    <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
-                  </svg>
-                </button>
-              </div>
-            }
-          </div>
-
-          <button mat-flat-button type="submit" class="endpoint-form__send" [disabled]="sending()">
-            {{ 'action.send' | t }}
-          </button>
-
-          @if (sendError()) {
-            <p class="endpoint-form__status endpoint-form__status--error" role="alert">
-              {{ sendError() | t: { name: invalidFieldName() ?? '' } }}
-            </p>
-          }
-
-          @if (lastTraceId(); as traceId) {
-            <p class="endpoint-form__trace-id">
-              {{ 'action.traceConfirmation' | t: { traceId } }}
-            </p>
-          }
-        </form>
-      }
     }
   </div>
+
+  @if (form(); as form) {
+    <div class="endpoint-form__footer">
+      <button
+        mat-flat-button
+        type="submit"
+        form="endpoint-form-send"
+        class="endpoint-form__send"
+        [disabled]="sending()"
+      >
+        {{ 'action.send' | t }}
+      </button>
+
+      @if (sendError()) {
+        <p class="endpoint-form__status endpoint-form__status--error" role="alert">
+          {{ sendError() | t: { name: invalidFieldName() ?? '' } }}
+        </p>
+      }
+
+      @if (lastTraceId(); as traceId) {
+        <p class="endpoint-form__trace-id">
+          {{ 'action.traceConfirmation' | t: { traceId } }}
+        </p>
+      }
+    </div>
+  }
 </section>

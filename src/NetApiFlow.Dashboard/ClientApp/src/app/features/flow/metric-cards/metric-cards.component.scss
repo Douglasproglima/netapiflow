@@ -9,8 +9,17 @@
 
 .metric-cards {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  // The p95/sparkline card is a 7th grid item, same row, same 88px height as the other six
+  // (guide seção 6.2) — not a card of its own below them, which is what made a two-point trace's
+  // sparkline stretch into an ~1800px diagonal with nothing else on its line to constrain it.
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1rem;
+
+  // Below 1600px (guide seção 5.2) the sparkline card itself stops rendering, so the row goes
+  // back to the original six.
+  @media (max-width: 1599px) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 
   @media (max-width: 1199px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -115,7 +124,9 @@
 }
 
 .metric-cards__card--sparkline {
-  grid-column: 1 / -1;
+  @media (max-width: 1599px) {
+    display: none;
+  }
 }
 
 .metric-cards__sparkline {

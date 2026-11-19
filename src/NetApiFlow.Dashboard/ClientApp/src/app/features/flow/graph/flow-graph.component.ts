@@ -14,7 +14,7 @@ import {
 import { select, Selection } from 'd3-selection';
 import { zoom, zoomIdentity, D3ZoomEvent, ZoomBehavior } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
-import { ContainerSize, computeGraphViewBox } from './flow-graph-viewbox';
+import { ContainerSize, computeGraphViewBox, isLegendCompact } from './flow-graph-viewbox';
 import {
   GRAPH_NODE_VISUAL_STATES,
   NODE_STATE_PRESENTATION,
@@ -53,6 +53,8 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   private readonly containerSize = signal<ContainerSize>({ width: 0, height: 0 });
   private readonly overlayPanelHeights = signal<readonly number[]>([]);
   private overlayResizeObserver: ResizeObserver | null = null;
+
+  readonly legendCompact = computed(() => isLegendCompact(this.containerSize().height));
 
   readonly viewBox = computed(() => {
     const allNodes = this.nodes();

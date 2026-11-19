@@ -164,7 +164,7 @@
           }
         }
 
-        <div class="flow-workspace__canvas">
+        <div class="flow-workspace__canvas" #canvas>
           @if (trace(); as trace) {
             <app-flow-graph
               [nodes]="graph().nodes"
@@ -351,8 +351,39 @@
     }
   </div>
 
-  <div class="flow-workspace__footer">
-    <app-recent-executions class="flow-workspace__recent" (traceSelected)="openTrace($event)" />
-    <app-event-feed class="flow-workspace__feed" />
+  <div
+    class="flow-workspace__footer"
+    [attr.data-active-footer-tab]="activeFooterTab()"
+    [class.flow-workspace__footer--collapsed-recent]="recentCollapsed()"
+    [class.flow-workspace__footer--collapsed-events]="feedCollapsed()"
+  >
+    <div class="flow-workspace__footer-tabs" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeFooterTab() === 'recent'"
+        [class.flow-workspace__footer-tab--active]="activeFooterTab() === 'recent'"
+        class="flow-workspace__footer-tab"
+        (click)="activeFooterTab.set('recent')"
+      >
+        {{ 'recent.title' | t }}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeFooterTab() === 'events'"
+        [class.flow-workspace__footer-tab--active]="activeFooterTab() === 'events'"
+        class="flow-workspace__footer-tab"
+        (click)="activeFooterTab.set('events')"
+      >
+        {{ 'events.title' | t }}
+      </button>
+    </div>
+    <app-recent-executions
+      class="flow-workspace__recent"
+      [(collapsed)]="recentCollapsed"
+      (traceSelected)="openTrace($event)"
+    />
+    <app-event-feed class="flow-workspace__feed" [(collapsed)]="feedCollapsed" />
   </div>
 </section>

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject, output, signal } from '@angular/core';
+import { Component, OnDestroy, inject, model, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,7 +36,12 @@ export class RecentExecutionsComponent implements OnDestroy {
   readonly loading = signal(true);
   readonly error = signal<TranslationKey | null>(null);
   readonly traces = signal<FlowTraceSummary[]>([]);
-  readonly collapsed = signal(false);
+  /**
+   * `model()`, not a plain internal signal: the parent workspace (D-160) needs to know when this
+   * card collapses so it can shrink the shared footer row and return the freed height to the
+   * graph, which a signal private to this component could never report upward.
+   */
+  readonly collapsed = model(false);
 
   readonly traceSelected = output<string>();
 
