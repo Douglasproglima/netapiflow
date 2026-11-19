@@ -237,13 +237,24 @@
   text-align: right;
 }
 
+// Fase 44, Tarefa 44.4: never display: none below 1365px. Copying a trace id straight from the
+// list is an action that needs to stay reachable at every width, not just desktop. Between
+// 768px and 1365px (table mode, just a narrower one) the short id text gives up its column
+// width first, leaving just the copy button; below 768px (card mode) the whole cell becomes
+// another full-width grid item instead, same pattern the route and started-at cells already use.
 .history__col-trace {
   width: 120px;
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
 
-  @media (max-width: 1365px) {
+  @media (max-width: 1365px) and (min-width: 768px) {
+    width: 40px;
+  }
+}
+
+.history__trace-id-text {
+  @media (max-width: 1365px) and (min-width: 768px) {
     display: none;
   }
 }
@@ -593,6 +604,12 @@
     .history__col-started {
       grid-column: 1 / -1;
       order: 4;
+    }
+
+    .history__col-trace {
+      grid-column: 1 / -1;
+      order: 5;
+      width: auto;
     }
 
     .history__col-duration {
