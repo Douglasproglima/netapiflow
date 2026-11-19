@@ -1,4 +1,4 @@
-import { computeGraphViewBox } from './flow-graph-viewbox';
+import { computeGraphViewBox, isLegendCompact } from './flow-graph-viewbox';
 
 function parseViewBox(viewBox: string): { width: number; height: number } {
   const [, , width, height] = viewBox.split(' ').map(Number);
@@ -90,5 +90,21 @@ describe('computeGraphViewBox', () => {
     const viewBoxBothTall = computeGraphViewBox(400, 100, container, [60, 60]);
 
     expect(viewBoxOneTall).toBe(viewBoxBothTall);
+  });
+});
+
+describe('isLegendCompact', () => {
+  it('is compact on a canvas shorter than the legend column can clear (reproduced at 238px)', () => {
+    expect(isLegendCompact(238)).toBe(true);
+    expect(isLegendCompact(1)).toBe(true);
+  });
+
+  it('is not compact on a canvas tall enough for the full legend column', () => {
+    expect(isLegendCompact(280)).toBe(false);
+    expect(isLegendCompact(422)).toBe(false);
+  });
+
+  it('is not compact before the canvas has been measured (height 0)', () => {
+    expect(isLegendCompact(0)).toBe(false);
   });
 });

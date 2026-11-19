@@ -86,6 +86,42 @@ piso nenhum, então mesmo com folga na viewport inteira, a distribuição de fle
 menos altura do que o grafo precisava. Com o piso de 360px e o floor de `.flow-workspace`, isso
 não acontece mais.
 
+## Achado incidental: legenda do grafo sobrepondo um nó real em canvas curto
+
+Reportado ao vivo pelo dono do projeto, em monitor pequeno, durante esta rodada: a legenda de seis
+estados (`.flow-graph__legend`, canto inferior esquerdo do canvas) aparecia sobreposta ao nó
+"OrdersController", parecendo visualmente um dropdown aberto (os seis itens têm marcador circular
+e um deles, "Concluído", vem destacado). Não é um dropdown interativo
+(`pointer-events: none`), é a legenda estática mesmo.
+
+Reproduzido com o mesmo trace de 4 spans (`/api/orders/1/confirm`) em `1229×655` (DPR 0,9 deste
+ambiente, equivalente a uma janela real de ~1366×728): canvas de 238px de altura, legenda de
+158px, nó "OrdersController" sobrepondo a legenda em ~11px verticais. Causa raiz, confirmada
+lendo `flow-graph-viewbox.ts`: o próprio `bottomMarginForOverlay` já tem um limite deliberado
+(`MAX_RESERVED_BOTTOM_FRACTION = 0.5`, comentário da Fase 25: "past half the canvas, give up on
+full clearance and settle for a bounded, partial one instead"). Com a legenda (158px) mais perto
+do teto de metade do canvas (119px) do que da própria altura mais a margem (170px), o mecanismo
+aceita a sobreposição parcial de propósito, exatamente o cenário documentado.
+
+Como isso é um achado real, reproduzido, e o dono do projeto pediu para corrigir dentro desta
+fase (em vez de só registrar para decisão futura da Planejadora): abaixo de 280px de altura do
+canvas (`isLegendCompact`, `flow-graph-viewbox.ts`, função pura testada em
+`flow-graph-viewbox.spec.ts`), a legenda vira só ícones, numa linha que quebra (mesmo padrão já
+usado abaixo de 767px de largura), com o rótulo de texto movido para `.sr-only` em vez de
+desaparecer da árvore de acessibilidade. Repetindo a mesma medição depois da correção:
+
+```json
+{ "legendClass": "flow-graph__legend flow-graph__legend--compact", "legendHeight": 29, "overlapCount": 0 }
+```
+
+Confirmado também que um canvas alto (`1728×972`, 422px de altura) continua mostrando a legenda
+cheia, com rótulo visível (`legendClass: "flow-graph__legend"`, sem `--compact`): nenhuma
+regressão na forma normal.
+
+Threshold de 280px escolhido com folga sobre os 238px que reproduziram o achado (não é o valor
+exato da fronteira, é uma margem de segurança). Nenhum achado teórico aqui: número e
+comportamento medidos contra o DOM renderizado de verdade, nos dois lados do limiar.
+
 ## Tarefa 43.3: rodapé cede por altura
 
 Mecanismo automático (Tarefa 43.1, tabela acima) confirmado. Mecanismo manual (seta de recolher,
@@ -218,7 +254,9 @@ seção "Impeccable" do `.claude/rules/design-quality.md`), 0 depois. Nenhum ach
 ```bash
 cd src/NetApiFlow.Dashboard/ClientApp
 npm run build        # OK
-npm run test:ci      # 389 testes, 0 falhas (385 antes desta fase + 4 novos: rankdir TB no graph-builder, backToList do endpoint-form, piso e teto do sparkline)
+npm run test:ci      # 393 testes, 0 falhas (385 antes desta fase + 8 novos: rankdir TB no graph-builder,
+                      # backToList do endpoint-form, piso e teto do sparkline, isLegendCompact e o
+                      # estado padrão do componente)
 npm run lint         # OK
 npm run format:check # OK
 ```

@@ -1,10 +1,22 @@
 const BASE_MARGIN_PX = 40;
 const OVERLAY_EDGE_INSET_PX = 12;
 const MAX_RESERVED_BOTTOM_FRACTION = 0.5;
+const LEGEND_COMPACT_CANVAS_HEIGHT_PX = 280;
 
 export interface ContainerSize {
   readonly width: number;
   readonly height: number;
+}
+
+/**
+ * Below this canvas height, the six-item legend's own full column (guide seção 8) is taller than
+ * half the canvas, the point past which `computeGraphViewBox` gives up on fully clearing it and
+ * a real node can render behind it (reproduced live at a 238px canvas). Icons only, in a wrapped
+ * row (`FlowGraphComponent` applies the class), cut the legend's footprint enough that the
+ * auto-fit margin can clear it again.
+ */
+export function isLegendCompact(canvasHeightPx: number): boolean {
+  return canvasHeightPx > 0 && canvasHeightPx < LEGEND_COMPACT_CANVAS_HEIGHT_PX;
 }
 
 /**
