@@ -7,6 +7,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `NetApiFlow.Dashboard`: the dashboard now reaches the same depth on a narrow screen as it does
+  on desktop, across all six screens (Flow, History, Components, Runner, Architecture, Insights).
+  Nothing that used to require a wide window is hidden or unreachable on a phone anymore: the
+  History trace ID and its copy action, the graph legend, the metric cards, and the endpoint
+  runner's form all stay fully usable. The graph itself gains a proper height floor and automatic
+  top-to-bottom orientation on a tall, narrow canvas, with the same automatic orientation now also
+  applying to the Architecture screen's graph.
+- `NetApiFlow`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`: a route recorded
+  with a routing constraint (`/api/orders/{id:int}`) and the same route listed from an OpenAPI
+  document without one (`/api/orders/{id}`) are now recognized as the same route by the
+  architecture map and the blueprint lookup. Both already matched correctly once a parameter's
+  presence or absence lined up; the mismatch only showed up for a constrained parameter.
+
+### Changed
+
+- `ITraceStore.GetArchitectureMapAsync` and `GetLastSuccessfulAsync` take `routeKey`, not
+  `routeTemplate`: the value is compared ignoring a route parameter's constraint, not by exact
+  string equality anymore. The two official storage packages already do this. A custom
+  `ITraceStore` implementation needs the same comparison rule for these two methods specifically;
+  every other method keeps comparing the recorded route template as-is.
+
 ## [0.4.4] - 2026-11-18
 
 ### Fixed
