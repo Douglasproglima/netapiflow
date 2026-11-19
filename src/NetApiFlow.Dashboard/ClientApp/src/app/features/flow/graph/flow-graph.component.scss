@@ -326,6 +326,15 @@
   border-radius: var(--naf-radius-md);
   background: var(--naf-surface);
   border: 1px solid var(--naf-border);
+
+  // The legend wraps into a wide row at this width (nearly the full canvas, see above) and can
+  // reach this far corner; moving to the opposite corner keeps the two overlays from ever
+  // competing for the same row, regardless of how many legend rows a given trace's states wrap
+  // into.
+  @media (max-width: 767px) {
+    top: 12px;
+    bottom: auto;
+  }
 }
 
 .flow-graph__zoom-btn {
