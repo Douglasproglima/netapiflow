@@ -91,15 +91,26 @@ partir de uma auditoria real do frontend, a Fase 31 (`fase-31-correcoes-auditori
 depois da 0.3.1).
 
 D-159/D-160 abrem três fases novas, depois do hotfix `0.4.4` (PR #285, recorte do botão de play da
-barra de replay em viewport curto): Fase 43 (`fase-43-layout-flow-base-e-desktop.md`, base
-estrutural do layout de `/flow` mais desktop, fecha R-24 e R-28), Fase 44
-(`fase-44-layout-flow-mobile-modo-consulta.md`, mobile em modo consulta, depende da 43 pronta) e
+barra de replay em viewport curto): Fase 43, Fase 44 e Fase 45. D-161 estende a mesma régua de
+responsividade para o dashboard inteiro, acrescentando a Fase 46.
+
+Fase 43 (`fase-43-layout-flow-base-e-desktop.md`, base estrutural do layout de `/flow` mais
+desktop, fecha R-24 e R-28) entregue (PR #290), com uma pendência: quatro comentários de código
+citando D-160/R-27/R-28/D-116, violação da regra de ouro, a Executora ainda não corrigiu.
+Correções reais ao plano registradas em D-165 (o `100vh` que a Tarefa 43.1 citava nunca existiu no
+código; o limiar de scroll medido é ~707px, não 720px).
+
+Fase 44 rejeitou a proposta original de "mobile em modo consulta" (D-163, o usuário pediu
+paridade completa com desktop) e foi reescrita como `fase-44-layout-mobile-paridade-completa.md`,
+cobrindo as seis telas do dashboard, não só `/flow`. Ainda não implementada.
+
 Fase 45 (`fase-45-normalizacao-restricoes-rota.md`, complemento do achado A5 da Fase 31,
-normalização de restrição de parâmetro de rota, sem relação com layout). D-161 estende a mesma
-régua de responsividade para o dashboard inteiro, acrescentando a Fase 46
-(`fase-46-responsividade-history-components-runner.md`, varredura de `/history`, `/components` e
-`/runner`, depende da Fase 43 pronta, começa investigando por não ter achado prévio). Nenhuma das
-quatro começou a ser implementada.
+normalização de restrição de parâmetro de rota, sem relação com layout) parcial: a função pura de
+comparação saiu (PR #291), a persistência (coluna `route_key`, decidida em D-164) ainda não.
+
+Fase 46 (`fase-46-responsividade-history-components-runner.md`, varredura de `/history`,
+`/components` e `/runner`) entregue (PR #292): um achado real corrigido (tabela de `/components`
+vazando do próprio `mat-card`), o achado da topbar curta é dashboard-wide e ficou para a Fase 44.
 
 ## Regra de avanço
 
