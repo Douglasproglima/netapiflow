@@ -22,6 +22,14 @@ confirma que esse fix continua válido depois do piso novo de 360px, não o reim
 
 ## Tarefa 43.1: scroll de página de verdade abaixo de uma altura mínima (fecha R-24)
 
+**Entregue (PR #290), com duas correções confirmadas pela Executora antes de implementar, já
+levadas para o guia (seção 5.1, D-165): não existe `height: 100vh` em lugar nenhum do código (o
+item 2 abaixo partia de um diagnóstico errado); a correção real foi `.flow-workspace` ganhar
+`height: max(100%, Npx)` (`732px` padrão, `652px` abaixo de 799px de altura), não tocar a cadeia
+`html`/`body`/`app-root`. O limiar de scroll medido é ~707px, não 720px (o item 3 abaixo somava a
+topbar duas vezes: ela é irmã de `.flow-workspace`, não filha). O texto original abaixo fica como
+registro do que foi pedido; o guia e o código são a fonte de verdade do que foi implementado.**
+
 Achado real, confirmado por medição: em `1366×728`, o card central (`.flow-workspace__center`)
 chega a ~70px de altura e **o grafo não aparece**. Causa: nada na cadeia
 `html`/`body`/`app-root` → `.flow-workspace` → `.flow-workspace__body` → `.flow-workspace__center`
