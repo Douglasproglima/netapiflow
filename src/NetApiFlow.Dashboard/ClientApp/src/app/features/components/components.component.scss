@@ -1,6 +1,14 @@
 .components {
   padding: 1rem;
+}
+
+// The scroll container is the card itself, not .components: a wide table scrolling inside a
+// card without its own overflow handling (`.mat-mdc-card` defaults to `overflow-x: visible`)
+// leaves most of the table rendering past the card's own box, background and border included,
+// bare against the page once scrolled.
+.components__card {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .components__status {
