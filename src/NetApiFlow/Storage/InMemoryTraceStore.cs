@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using NetApiFlow.Domain;
+using NetApiFlow.Routing;
 
 namespace NetApiFlow.Storage;
 
@@ -89,11 +90,11 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult<IReadOnlyList<ComponentStat>>(stats);
     }
 
-    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
     {
         var entry = _entries.Values
             .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
-            .Where(e => e.Trace.RouteTemplate == routeTemplate)
+            .Where(e => RouteTemplateNormalizer.NormalizeForComparison(e.Trace.RouteTemplate) == routeKey)
             .Where(e => e.Trace.Status == FlowStatus.Success)
             .OrderByDescending(e => e.Trace.StartedAt)
             .FirstOrDefault();
@@ -157,11 +158,11 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult<IReadOnlyList<RouteStat>>(stats);
     }
 
-    public ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    public ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken)
     {
         var entries = _entries.Values
             .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
-            .Where(e => e.Trace.RouteTemplate == routeTemplate)
+            .Where(e => RouteTemplateNormalizer.NormalizeForComparison(e.Trace.RouteTemplate) == routeKey)
             .Where(e => query.From is null || e.Trace.StartedAt >= query.From)
             .Where(e => query.To is null || e.Trace.StartedAt <= query.To)
             .ToList();

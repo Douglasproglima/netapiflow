@@ -456,6 +456,34 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetLastSuccessfulAsync_RouteStoredWithAParameterConstraint_FoundByTheConstraintFreeKey()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("typed-1", route: "/api/orders/{id:int}"), [MakeSpan("typed-1", "s1", null, 0)], CancellationToken.None);
+
+        var blueprint = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", CancellationToken.None);
+
+        blueprint.ShouldNotBeNull();
+        blueprint.Trace.TraceId.ShouldBe("typed-1");
+        blueprint.Trace.RouteTemplate.ShouldBe("/api/orders/{id:int}");
+    }
+
+    [Fact]
+    public async Task GetArchitectureMapAsync_RouteStoredWithAParameterConstraint_FoundByTheConstraintFreeKey()
+    {
+        var store = CreateStore();
+        await store.SaveAsync(MakeTrace("typed-arch-1", route: "/api/orders/{id:int}"), new[]
+        {
+            MakeSpan("typed-arch-1", "root", null, 0, component: "OrdersController", operation: "GetOrder"),
+        }, CancellationToken.None);
+
+        var map = await store.GetArchitectureMapAsync("GET", "/api/orders/{id}", new StatsQuery(), CancellationToken.None);
+
+        map.TotalExecutions.ShouldBe(1);
+        map.Nodes.ShouldHaveSingleItem();
+    }
+
+    [Fact]
     public async Task ApplyRetentionAsync_RemovesOnlyTracesBeyondThePolicyAndTheirSpans()
     {
         var store = CreateStore();

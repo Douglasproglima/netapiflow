@@ -228,7 +228,7 @@ internal static class DashboardApiEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.Normalize(route), cancellationToken);
+        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.NormalizeForComparison(route), cancellationToken);
         return detail is null ? Results.NoContent() : Results.Json(TraceDetailDto.From(detail), DashboardJsonOptions.Rest);
     }
 
@@ -284,7 +284,7 @@ internal static class DashboardApiEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var map = await store.GetArchitectureMapAsync(method, RouteTemplateNormalizer.Normalize(route), new StatsQuery { From = from, To = to }, cancellationToken);
+        var map = await store.GetArchitectureMapAsync(method, RouteTemplateNormalizer.NormalizeForComparison(route), new StatsQuery { From = from, To = to }, cancellationToken);
         return Results.Json(map, DashboardJsonOptions.Rest);
     }
 
