@@ -45,15 +45,19 @@ function operationLabelFor(
  * `flow-graph.component` already renders (D-83: the renderer is reused unmodified). Unlike
  * `buildGraph`, there is no single trace: `sequence`, `durationMicros` and `nPlusOneCount` have no
  * equivalent in an aggregated map, so every node carries `null` for them and a uniform
- * `'completed'` state.
+ * `'completed'` state. `rankdir` is decided by the caller from the canvas's own measured aspect
+ * ratio, never by this pure function, same contract as `buildGraph`.
  */
-export function buildArchitectureGraph(map: ArchitectureMap): GraphResult {
+export function buildArchitectureGraph(
+  map: ArchitectureMap,
+  rankdir: 'LR' | 'TB' = 'LR',
+): GraphResult {
   if (map.nodes.length === 0) {
     return { nodes: [], edges: [] };
   }
 
   const layoutGraph = new dagre.graphlib.Graph();
-  layoutGraph.setGraph({ rankdir: 'LR', nodesep: 16, ranksep: 44, marginx: 24, marginy: 24 });
+  layoutGraph.setGraph({ rankdir, nodesep: 16, ranksep: 44, marginx: 24, marginy: 24 });
   layoutGraph.setDefaultEdgeLabel(() => ({}));
 
   const operationLabelById = new Map<string, string>();

@@ -96,4 +96,21 @@ describe('buildArchitectureGraph', () => {
       }),
     );
   });
+
+  it('lays out top-to-bottom instead of left-to-right when rankdir is TB', () => {
+    const resultTb = buildArchitectureGraph(CONDITIONAL_MAP, 'TB');
+    const resultLr = buildArchitectureGraph(CONDITIONAL_MAP, 'LR');
+
+    const byComponent = (result: typeof resultTb, component: string) =>
+      result.nodes.find((n) => n.component === component)!;
+
+    // Top-to-bottom: the next level sits strictly below, same as the default LR case sits
+    // strictly to the right — the opposite axis carries the rank order instead.
+    expect(byComponent(resultTb, 'OrderService').y).toBeGreaterThan(
+      byComponent(resultTb, 'OrdersController').y,
+    );
+    expect(byComponent(resultLr, 'OrderService').x).toBeGreaterThan(
+      byComponent(resultLr, 'OrdersController').x,
+    );
+  });
 });

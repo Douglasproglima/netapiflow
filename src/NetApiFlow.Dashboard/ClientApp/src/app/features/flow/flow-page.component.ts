@@ -1,14 +1,4 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  OnDestroy,
-  computed,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -24,6 +14,7 @@ import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
 import { buildGraph, GraphResult, isGhostNodeId } from './graph/graph-builder';
 import { FlowGraphComponent } from './graph/flow-graph.component';
+import { rankdirHysteresis } from './graph/rankdir-hysteresis';
 import { FlowDetailsPanelComponent } from './details/flow-details-panel.component';
 import { MetricCardsComponent } from './metric-cards/metric-cards.component';
 import { EventFeedComponent } from './event-feed/event-feed.component';
@@ -65,7 +56,7 @@ export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
   ],
   providers: [LiveTracePlayerService, ReplayPlayerService],
 })
-export class FlowPageComponent implements AfterViewInit, OnDestroy {
+export class FlowPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
@@ -85,20 +76,7 @@ export class FlowPageComponent implements AfterViewInit, OnDestroy {
   );
 
   private readonly canvasRef = viewChild<ElementRef<HTMLElement>>('canvas');
-  private readonly canvasAspectRatio = signal(1);
-  private canvasResizeObserver: ResizeObserver | null = null;
-
-  private static readonly RANKDIR_TB_ASPECT_RATIO = 1.2;
-  private static readonly RANKDIR_LR_ASPECT_RATIO = 0.9;
-
-  /**
-   * Dagre layout direction (guide seção 6.4), decided by the canvas's own measured
-   * height/width ratio, not by page width: a desktop canvas squeezed narrow by the side panels
-   * is just as much a tall canvas as a mobile one. Hysteresis (switch to `'TB'` above 1.2, back
-   * to `'LR'` below 0.9) keeps a canvas sitting near-square from flipping direction on every
-   * small resize.
-   */
-  readonly graphRankdir = signal<'LR' | 'TB'>('LR');
+  readonly graphRankdir = rankdirHysteresis(this.canvasRef);
 
   /**
    * Below ~800px of `window.innerHeight` (guide seção 6.9) the footer shows one card at a time
@@ -180,15 +158,6 @@ export class FlowPageComponent implements AfterViewInit, OnDestroy {
   private readonly liveTracesTrigger$ = new Subject<void>();
 
   constructor() {
-    effect(() => {
-      const ratio = this.canvasAspectRatio();
-      if (ratio >= FlowPageComponent.RANKDIR_TB_ASPECT_RATIO) {
-        this.graphRankdir.set('TB');
-      } else if (ratio <= FlowPageComponent.RANKDIR_LR_ASPECT_RATIO) {
-        this.graphRankdir.set('LR');
-      }
-    });
-
     this.config.config$.subscribe((config) =>
       this.slowThresholdMicros.set(config.slowThresholdMicros),
     );
@@ -290,25 +259,6 @@ export class FlowPageComponent implements AfterViewInit, OnDestroy {
   }
 
   private lastReplayLoadKey: string | null = null;
-
-  ngAfterViewInit(): void {
-    const canvasElement = this.canvasRef()?.nativeElement;
-    if (!canvasElement || typeof ResizeObserver === 'undefined') {
-      return;
-    }
-
-    this.canvasResizeObserver = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      if (width > 0) {
-        this.canvasAspectRatio.set(height / width);
-      }
-    });
-    this.canvasResizeObserver.observe(canvasElement);
-  }
-
-  ngOnDestroy(): void {
-    this.canvasResizeObserver?.disconnect();
-  }
 
   readonly replaySpeeds = REPLAY_SPEEDS;
 
