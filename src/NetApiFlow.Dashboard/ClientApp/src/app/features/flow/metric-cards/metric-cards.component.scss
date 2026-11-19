@@ -25,11 +25,12 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  // Below 768px the strip scrolls horizontally instead of stacking three rows of two: the graph
-  // renders above it on this width, so the metrics row only needs to stay short, not wide.
+  // Below 768px the cards stack one per row instead of three rows of two: the graph renders
+  // above it on this width, so scrolling here is the page's own vertical scroll, not a second,
+  // nested horizontal one.
   @media (max-width: 767px) {
     display: flex;
-    overflow-x: auto;
+    flex-direction: column;
     grid-template-columns: unset;
   }
 }
@@ -46,7 +47,8 @@
   min-width: 0;
 
   @media (max-width: 767px) {
-    flex: 0 0 160px;
+    flex: none;
+    width: 100%;
   }
 }
 
