@@ -178,7 +178,16 @@ alto que largo troca o grafo para `TB`, mesma prova por tabela da Tarefa 43.5 (i
 morta da histerese), com uma rota real selecionada. `/flow` continua passando no mesmo teste de
 antes, sem regressão.
 
-## Tarefa 44.9: duração de nó coberta pelos controles de zoom (D-167)
+## Tarefa 44.9: duração de nó coberta pelos controles de zoom (D-167/D-168)
+
+**Tratamento prioritário, não item de roadmap (D-168).** Critério do D-141 (falha reproduzida de
+verdade, sem mudança de API pública esperada) está satisfeito: isto não é teórico nem suposição de
+leitura de código, é uma anotação real do `visual-quality`, com posição e percentual de
+sobreposição medidos. Diferente de um hotfix clássico (branch a partir de `main`, tag, publicação
+no nuget.org), o código afetado nunca foi publicado, existe só em `develop`: a correção é direta
+em `develop`, com a mesma prioridade e o mesmo rigor de prova de um hotfix, sem a mecânica de
+tag/release que um hotfix exigiria para algo já em produção. Não entra no mesmo balde do item 15
+do roadmap (limpeza de comentário, zero risco técnico, pode esperar um levantamento completo).
 
 Achado real do `visual-quality` do CI (PR #299), primeira vez que o modo URL do Impeccable roda
 de verdade contra `/flow?trace=<id>` com grafo carregado (fases anteriores sempre travavam pela
