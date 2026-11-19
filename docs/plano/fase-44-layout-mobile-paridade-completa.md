@@ -178,6 +178,27 @@ alto que largo troca o grafo para `TB`, mesma prova por tabela da Tarefa 43.5 (i
 morta da histerese), com uma rota real selecionada. `/flow` continua passando no mesmo teste de
 antes, sem regressão.
 
+## Tarefa 44.9: duração de nó coberta pelos controles de zoom (D-167)
+
+Achado real do `visual-quality` do CI (PR #299), primeira vez que o modo URL do Impeccable roda
+de verdade contra `/flow?trace=<id>` com grafo carregado (fases anteriores sempre travavam pela
+conexão SSE persistente, só rodavam em modo arquivo estático): `text-occlusion`, o texto de
+duração de um nó (`110.5 ms`) com 50% coberto por `.flow-workspace__zoom-controls`. Diferente do
+achado "legenda sobre os controles de zoom" que a Tarefa 44.1/PR #296 já corrigiu: este é a
+duração de um nó, não a legenda.
+
+Não confirmado se é regressão desta rodada ou achado antigo nunca pego (nenhuma fase anterior
+tinha o modo URL rodando de verdade contra uma trace com o grafo carregado). Investigar antes de
+corrigir: reproduzir com Playwright contra o mesmo trace/viewport que o CI usou, confirmar a
+posição real do nó afetado e dos controles de zoom, então decidir se o ajuste é no cálculo de
+margem do `viewBox` (`computeGraphViewBox`, Fase 25/D-107, que já reserva margem para legenda e
+controles, mas pode não reservar o suficiente pra todo layout de nó possível) ou em outro lugar.
+
+**Pronto quando:** o trace e o viewport exatos do achado do CI reproduzidos localmente,
+confirmando `getBoundingClientRect()` do texto de duração não mais sobreposto aos controles de
+zoom, sem introduzir achado novo de `low-contrast`/`undersized-ui-text` nem regredir a correção
+da Tarefa 44.1.
+
 ## Fora de escopo
 
 - Qualquer mecanismo novo de layout que não exista já na Fase 43: esta fase estende a base, não

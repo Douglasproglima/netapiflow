@@ -66,8 +66,8 @@ public interface ITraceStore
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
-    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken);
-    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
+    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
@@ -431,8 +431,23 @@ public sealed record RouteStat
 restante do texto do `RoutePattern` como vem (incluindo parâmetro e restrição, ex.
 `/api/orders/{id:int}`). A normalização acontece na gravação (middleware) e em todo ponto de
 entrada que recebe um `route` de fora (`/traces`, `/blueprint`, `GET /endpoints`), usando o mesmo
-helper interno. Nenhum `ITraceStore` precisa normalizar por conta própria: ao chegar nele, o valor
-já está no formato canônico dos dois lados da comparação.
+helper interno. Nenhum `ITraceStore` precisa normalizar por conta própria pra essa parte: ao
+chegar nele, o valor já está no formato canônico (barra) dos dois lados da comparação.
+
+**`GetArchitectureMapAsync`/`GetLastSuccessfulAsync` recebem `routeKey`, não `routeTemplate`
+(D-164): o parâmetro mudou de nome porque a comparação ignora restrição de parâmetro, não é mais
+igualdade exata de string.** O valor que o chamador passa pode vir de um documento OpenAPI
+(Runner), que nunca carrega restrição (`:int`, `:guid`, `?`, catch-all); o valor gravado em
+`FlowTrace.RouteTemplate` sempre carrega, quando a rota declarou uma. Sem esse tratamento,
+`/api/orders/{id}` (Runner) nunca encontraria execuções gravadas como `/api/orders/{id:int}`.
+`NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer` resolvem isso com uma coluna
+interna adicional (`route_key`, nunca exposta em nenhum DTO público), computada pelo mesmo helper
+que normaliza a barra; o chamador (`NetApiFlow.Dashboard`) normaliza o valor recebido antes de
+repassar. **Um `ITraceStore` próprio** (fora dos dois pacotes oficiais) precisa replicar esse
+comportamento nesses dois métodos especificamente: comparar ignorando restrição de parâmetro, não
+assumir igualdade de string com `RouteTemplate`. Os outros métodos da interface (`QueryAsync`,
+`GetRouteStatsAsync`, etc.) continuam recebendo `routeTemplate` e comparando pelo valor gravado
+como está, sem essa segunda normalização.
 
 `GetArchitectureMapAsync` e `ArchitectureMap` foram acrescentados a `ITraceStore` na Fase 16
 (D-83): grafo estático da rota (`method`, `routeTemplate`), união de todas as execuções
