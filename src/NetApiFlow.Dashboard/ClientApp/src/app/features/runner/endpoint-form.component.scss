@@ -35,12 +35,12 @@
   color: var(--naf-text-muted);
 }
 
-// The single scroll area for the whole card (D-160, fecha R-28): the list and the selected
-// endpoint's form used to scroll independently, each shrunk to fit the same fixed-height card,
-// which pushed "Send request" out of the visible area in a common desktop viewport. Letting this
-// box scroll its own overflow, with its children at their natural height instead of shrinking,
-// keeps that button reachable with a single scrollbar. `.endpoint-form__footer` below (outside
-// this box) is what actually keeps the button in view without scrolling at all.
+// The single scroll area for the whole card: the list and the selected endpoint's form used to
+// scroll independently, each shrunk to fit the same fixed-height card, which pushed "Send
+// request" out of the visible area in a common desktop viewport. Letting this box scroll its own
+// overflow, with its children at their natural height instead of shrinking, keeps that button
+// reachable with a single scrollbar. `.endpoint-form__footer` below (outside this box) is what
+// actually keeps the button in view without scrolling at all.
 .endpoint-form__custom {
   flex: 1 1 auto;
   min-height: 0;

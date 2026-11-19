@@ -3,13 +3,13 @@
   // Has to resolve to a real, definite height (not min-height): every height: 100%/max-height: %
   // below this point (the action panel, its route list) resolves against this box. With only
   // min-height, this box has no definite height of its own, so those percentages silently
-  // resolve to none and the row grows as tall as the action panel's content demands (R-27).
+  // resolve to none and the row grows as tall as the action panel's content demands.
   //
   // `max()` instead of a bare 100%: below the floor, `.app-content` (Material's own
   // `mat-drawer-content`, already `overflow: auto`) scrolls this box's overflow for real,
   // instead of every child cramming into whatever's left of a fixed viewport. Above the floor
-  // (the common case), `max()` still resolves to exactly 100%, so R-27's percentage contract
-  // above is untouched.
+  // (the common case), `max()` still resolves to exactly 100%, so the percentage contract above
+  // stays intact.
   height: max(100%, 732px);
   box-sizing: border-box;
   display: flex;

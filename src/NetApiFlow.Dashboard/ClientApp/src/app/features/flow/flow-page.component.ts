@@ -106,7 +106,7 @@ export class FlowPageComponent implements AfterViewInit, OnDestroy {
    */
   readonly activeFooterTab = signal<'recent' | 'events'>('recent');
 
-  /** Lifted from each card's own `collapsed` model (D-160) so the shared footer row can shrink. */
+  /** Lifted from each card's own `collapsed` model so the shared footer row can shrink. */
   readonly recentCollapsed = signal(false);
   readonly feedCollapsed = signal(false);
 
