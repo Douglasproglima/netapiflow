@@ -57,11 +57,8 @@ public static class NetApiFlowServiceCollectionExtensions
             services.AddSingleton<ILoggerProvider, FlowLoggerProvider>();
         }
 
-        if (probedOptions.ExternalSources.HasFlag(ExternalActivitySource.SqlClient))
-        {
-            services.AddSingleton<SqlClientCommandListener>();
-            services.AddHostedService<SqlClientCommandListenerWarmupHostedService>();
-        }
+        services.AddSingleton<SqlClientCommandListener>();
+        services.AddHostedService<SqlClientCommandListenerWarmupHostedService>();
 
         if (probedOptions.CapturePrePipelineSteps)
         {

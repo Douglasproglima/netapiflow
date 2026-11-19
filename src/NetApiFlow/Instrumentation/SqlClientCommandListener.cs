@@ -24,14 +24,25 @@ internal sealed partial class SqlClientCommandListener
     private readonly ConcurrentDictionary<Guid, FlowStep> _pendingSteps = new();
     private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ILogger<SqlClientCommandListener> _logger;
-    private readonly IDisposable _allListenersSubscription;
+    private IDisposable? _allListenersSubscription;
     private IDisposable? _listenerSubscription;
     private volatile bool _disposed;
+
+    internal bool IsSubscribed => _allListenersSubscription is not null;
 
     public SqlClientCommandListener(IOptions<NetApiFlowOptions> options, ILogger<SqlClientCommandListener> logger)
     {
         _options = options;
         _logger = logger;
+    }
+
+    public void Start()
+    {
+        if (_disposed || _allListenersSubscription is not null)
+        {
+            return;
+        }
+
         _allListenersSubscription = DiagnosticListener.AllListeners.Subscribe(this);
     }
 
@@ -39,7 +50,7 @@ internal sealed partial class SqlClientCommandListener
     {
         _disposed = true;
         _listenerSubscription?.Dispose();
-        _allListenersSubscription.Dispose();
+        _allListenersSubscription?.Dispose();
     }
 
     public void OnNext(DiagnosticListener value)
