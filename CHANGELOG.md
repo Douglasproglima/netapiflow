@@ -15,7 +15,21 @@ adheres to [Semantic Versioning](https://semver.org/).
   History trace ID and its copy action, the graph legend, the metric cards, and the endpoint
   runner's form all stay fully usable. The graph itself gains a proper height floor and automatic
   top-to-bottom orientation on a tall, narrow canvas, with the same automatic orientation now also
-  applying to the Architecture screen's graph.
+  applying to the Architecture screen's graph. The same depth now holds on a short desktop window:
+  the graph legend shrinks to icons on a low canvas, the `/components` table scrolls inside its own
+  card, the metric cards show at most three digits of duration, and the Runner form fits in a
+  single scroll.
+- `NetApiFlow.Testing`: new package, published for the first time in this release.
+- `NetApiFlow`: SQL Server commands issued outside EF Core (Dapper, a plain `SqlCommand`) become
+  database spans through `ExternalActivitySource.SqlClient`. The application's own
+  `Microsoft.Data.SqlClient` has to be `6.0` or newer. Installing `NetApiFlow.Storage.SqlServer`
+  does not raise the application's driver (its floor stays `5.2.2`), so the feature does not turn
+  on by itself.
+- `NetApiFlow.Dashboard`: the Runner shows the time left on a pasted JWT in the Authorize panel,
+  marks the routes that require authentication, and retries the OpenAPI document with the
+  remembered bearer token when the first request returns 401. The Runner URL is now resolved
+  against the host's `PathBase` through `GET /config`, which closes the limitation documented in
+  0.3.2.
 - `NetApiFlow`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`: a route recorded
   with a routing constraint (`/api/orders/{id:int}`) and the same route listed from an OpenAPI
   document without one (`/api/orders/{id}`) are now recognized as the same route by the
@@ -24,11 +38,26 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow`: the native external sources (`HttpClient` and `Npgsql`) are on by default in the
+  Development environment, so an upgraded app shows new spans without any configuration change.
+  Set `ExternalSources = ExternalActivitySource.None` to turn them off. A value stated explicitly,
+  in code or in configuration, still wins over the default.
+
 - `ITraceStore.GetArchitectureMapAsync` and `GetLastSuccessfulAsync` take `routeKey`, not
   `routeTemplate`: the value is compared ignoring a route parameter's constraint, not by exact
   string equality anymore. The two official storage packages already do this. A custom
   `ITraceStore` implementation needs the same comparison rule for these two methods specifically;
   every other method keeps comparing the recorded route template as-is.
+
+### Fixed
+
+- `NetApiFlow.Storage.SqlServer`: the HTTP method is compared without regard to letter case,
+  whatever the database collation.
+- `NetApiFlow.Dashboard`: the in-flight request counter updates again after a failed live traces
+  call.
+- `NetApiFlow.Dashboard`: a warning appears when none of the OpenAPI document's authorization
+  alternatives applies.
+- `NetApiFlow.Dashboard`: the Runner route list keeps three rows visible in a short window.
 
 ## [0.4.4] - 2026-11-18
 
