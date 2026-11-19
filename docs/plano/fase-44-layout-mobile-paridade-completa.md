@@ -151,13 +151,32 @@ dentro dela:
 - Valores nunca truncados (Tarefa 43.7, `formatDurationMicrosCompact`): usado hoje só em
   `metric-cards`; confirmar se Insights/Architecture também formatam duração e, se sim, se sofrem
   do mesmo truncamento que motivou a correção original.
-- Orientação automática do grafo com histerese (Tarefa 43.5): como `app-flow-graph` é
-  compartilhado, Architecture já herda o mecanismo de graça. Confirmar isso de fato acontece
-  (canvas de Architecture também troca `rankdir` ao ficar mais alto que largo), não assumir
-  herança automática sem testar.
+- Orientação automática do grafo com histerese (Tarefa 43.5): **confirmado como falso (D-166)**.
+  A presunção original desta tarefa estava errada: a histerese vive em `flow-page.component.ts`,
+  não dentro do `app-flow-graph` compartilhado, então Architecture não herda nada de graça.
+  Ver Tarefa 44.8 para a correção.
 
-**Pronto quando:** os três pontos acima confirmados por geometria real em `360×800` e `393×852`,
-tema claro e escuro.
+**Pronto quando:** os dois primeiros pontos confirmados por geometria real em `360×800` e
+`393×852`, tema claro e escuro. O terceiro ponto não fecha aqui, fecha na Tarefa 44.8.
+
+## Tarefa 44.8: histerese de `rankdir` também em Architecture (D-166)
+
+A Tarefa 43.5 implementou a troca automática de `rankdir` (histerese, `TB` acima de 1,2 de
+proporção altura/largura do canvas, `LR` abaixo de 0,9) dentro de `flow-page.component.ts`, não
+dentro do `app-flow-graph` que os dois componentes compartilham. Architecture nunca troca de
+orientação: um canvas de Architecture estreito em mobile fica preso em `LR`, o mesmo sintoma que
+a Tarefa 43.5 existe para evitar em `/flow`.
+
+1. Extrair o mecanismo (o `ResizeObserver` do canvas, o `effect()` de histerese, as duas
+   constantes de proporção) para um lugar reutilizável: uma função/diretiva/serviço, não uma
+   cópia do código em `architecture.component.ts`.
+2. `flow-page.component.ts` e `architecture.component.ts` passam a usar o mesmo mecanismo
+   extraído. Nenhuma mudança de comportamento em `/flow`: mesmos dois limiares, mesma histerese.
+
+**Pronto quando:** redimensionar a largura da janela até o canvas de `/architecture` ficar mais
+alto que largo troca o grafo para `TB`, mesma prova por tabela da Tarefa 43.5 (incluindo a zona
+morta da histerese), com uma rota real selecionada. `/flow` continua passando no mesmo teste de
+antes, sem regressão.
 
 ## Fora de escopo
 
