@@ -29,6 +29,9 @@ internal static class PostgreSqlSchemaInitializer
             CREATE INDEX IF NOT EXISTS ix_{tracesTable}_method_route ON {tracesTable} (method, route_template);
             CREATE INDEX IF NOT EXISTS ix_{tracesTable}_duration_micros ON {tracesTable} (duration_micros);
 
+            ALTER TABLE {tracesTable} ADD COLUMN IF NOT EXISTS route_key text NOT NULL DEFAULT '';
+            CREATE INDEX IF NOT EXISTS ix_{tracesTable}_method_route_key ON {tracesTable} (method, route_key);
+
             CREATE TABLE IF NOT EXISTS {spansTable} (
                 trace_id varchar(64) NOT NULL REFERENCES {tracesTable} (trace_id) ON DELETE CASCADE,
                 span_id varchar(64) NOT NULL,
@@ -57,11 +60,11 @@ internal static class PostgreSqlSchemaInitializer
     }
 
     /// <summary>
-    /// Brings every already-stored <c>route_template</c> to <see cref="RouteTemplateNormalizer"/>'s
-    /// canonical shape, idempotent: once every row is canonical, the distinct set to check next
-    /// time is unaffected and nothing is rewritten.
+    /// Brings every already-stored row's <c>route_template</c> and <c>route_key</c> to
+    /// <see cref="RouteTemplateNormalizer"/>'s canonical shape, idempotent: once every row is
+    /// canonical, the distinct set to check next time is unaffected and nothing is rewritten.
     /// </summary>
-    public static async Task NormalizeRouteTemplatesAsync(NpgsqlConnection connection, string tracesTable, CancellationToken cancellationToken)
+    public static async Task NormalizeRoutesAsync(NpgsqlConnection connection, string tracesTable, CancellationToken cancellationToken)
     {
         var distinctRouteTemplates = new List<string>();
         await using (var selectCommand = new NpgsqlCommand($"SELECT DISTINCT route_template FROM {tracesTable}", connection))
@@ -76,17 +79,23 @@ internal static class PostgreSqlSchemaInitializer
         foreach (var routeTemplate in distinctRouteTemplates)
         {
             var normalized = RouteTemplateNormalizer.Normalize(routeTemplate);
-            if (normalized == routeTemplate)
+            if (normalized != routeTemplate)
             {
-                continue;
+                await using var updateTemplateCommand = new NpgsqlCommand(
+                    $"UPDATE {tracesTable} SET route_template = @normalized WHERE route_template = @original",
+                    connection);
+                updateTemplateCommand.Parameters.AddWithValue("normalized", normalized);
+                updateTemplateCommand.Parameters.AddWithValue("original", routeTemplate);
+                await updateTemplateCommand.ExecuteNonQueryAsync(cancellationToken);
             }
 
-            await using var updateCommand = new NpgsqlCommand(
-                $"UPDATE {tracesTable} SET route_template = @normalized WHERE route_template = @original",
+            var routeKey = RouteTemplateNormalizer.NormalizeForComparison(normalized);
+            await using var updateKeyCommand = new NpgsqlCommand(
+                $"UPDATE {tracesTable} SET route_key = @key WHERE route_template = @template AND route_key <> @key",
                 connection);
-            updateCommand.Parameters.AddWithValue("normalized", normalized);
-            updateCommand.Parameters.AddWithValue("original", routeTemplate);
-            await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+            updateKeyCommand.Parameters.AddWithValue("key", routeKey);
+            updateKeyCommand.Parameters.AddWithValue("template", normalized);
+            await updateKeyCommand.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 

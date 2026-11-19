@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NetApiFlow.Domain;
+using NetApiFlow.Routing;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -29,13 +30,14 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
         await using (var importer = await connection.BeginBinaryImportAsync(
-            $"COPY {_tracesTable} (trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags) FROM STDIN (FORMAT BINARY)",
+            $"COPY {_tracesTable} (trace_id, method, route_template, route_key, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags) FROM STDIN (FORMAT BINARY)",
             cancellationToken))
         {
             await importer.StartRowAsync(cancellationToken);
             await importer.WriteAsync(trace.TraceId, NpgsqlDbType.Varchar, cancellationToken);
             await importer.WriteAsync(trace.Method, NpgsqlDbType.Varchar, cancellationToken);
             await importer.WriteAsync(trace.RouteTemplate, NpgsqlDbType.Text, cancellationToken);
+            await importer.WriteAsync(RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate), NpgsqlDbType.Text, cancellationToken);
             await WriteNullableAsync(importer, trace.HttpStatus, NpgsqlDbType.Integer, cancellationToken);
             await importer.WriteAsync(trace.Status.ToString(), NpgsqlDbType.Varchar, cancellationToken);
             await importer.WriteAsync(trace.StartedAt, NpgsqlDbType.TimestampTz, cancellationToken);
@@ -266,17 +268,17 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             .ToList<RouteStat>();
     }
 
-    public async ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    public async ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var totalCommand = new NpgsqlCommand($"""
             SELECT COUNT(*) FROM {_tracesTable}
-            WHERE method ILIKE @method AND route_template = @route
+            WHERE method ILIKE @method AND route_key = @routeKey
               AND (@from::timestamptz IS NULL OR started_at >= @from) AND (@to::timestamptz IS NULL OR started_at <= @to)
             """, connection);
         totalCommand.Parameters.AddWithValue("method", method);
-        totalCommand.Parameters.AddWithValue("route", routeTemplate);
+        totalCommand.Parameters.AddWithValue("routeKey", routeKey);
         totalCommand.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
         totalCommand.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
         var totalExecutions = (int)(long)(await totalCommand.ExecuteScalarAsync(cancellationToken))!;
@@ -286,11 +288,11 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             FROM {_spansTable} s
             JOIN {_tracesTable} t ON s.trace_id = t.trace_id
             LEFT JOIN {_spansTable} p ON s.parent_span_id = p.span_id AND s.trace_id = p.trace_id
-            WHERE t.method ILIKE @method AND t.route_template = @route
+            WHERE t.method ILIKE @method AND t.route_key = @routeKey
               AND (@from::timestamptz IS NULL OR t.started_at >= @from) AND (@to::timestamptz IS NULL OR t.started_at <= @to)
             """, connection);
         command.Parameters.AddWithValue("method", method);
-        command.Parameters.AddWithValue("route", routeTemplate);
+        command.Parameters.AddWithValue("routeKey", routeKey);
         command.Parameters.AddWithValue("from", NpgsqlDbType.TimestampTz, (object?)query.From ?? DBNull.Value);
         command.Parameters.AddWithValue("to", NpgsqlDbType.TimestampTz, (object?)query.To ?? DBNull.Value);
 
@@ -312,19 +314,19 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         return BuildArchitectureMap(totalExecutions, rows);
     }
 
-    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
+    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var command = new NpgsqlCommand($"""
             SELECT trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE method ILIKE @method AND route_template = @route AND status = 'Success'
+            WHERE method ILIKE @method AND route_key = @routeKey AND status = 'Success'
             ORDER BY started_at DESC
             LIMIT 1
             """, connection);
         command.Parameters.AddWithValue("method", method);
-        command.Parameters.AddWithValue("route", routeTemplate);
+        command.Parameters.AddWithValue("routeKey", routeKey);
 
         FlowTrace? trace;
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -465,7 +467,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
             await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
-            await PostgreSqlSchemaInitializer.NormalizeRouteTemplatesAsync(connection, _tracesTable, cancellationToken);
+            await PostgreSqlSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
             _schemaReady = true;
         }
         finally
