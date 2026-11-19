@@ -410,6 +410,32 @@ describe('HistoryComponent', () => {
     ).toBeNull();
   });
 
+  it('tints a successful trace green even when it answered with a 404 (not the HTTP code)', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    const notFoundButSuccessful = makeSummary('t1', { status: 'Success', httpStatus: 404 });
+
+    expect(component.rowStatusTintClass(notFoundButSuccessful)).toBe(
+      'history__status-pill--success',
+    );
+    expect(component.rowStateLabelKey(notFoundButSuccessful)).toBe('node.state.completed');
+  });
+
+  it('still tints a thrown-exception trace red regardless of its HTTP code', async () => {
+    const component = await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+
+    const threwWith200 = makeSummary('t1', { status: 'Error', httpStatus: 200 });
+
+    expect(component.rowStatusTintClass(threwWith200)).toBe('history__status-pill--danger');
+    expect(component.rowStateLabelKey(threwWith200)).toBe('node.state.error');
+  });
+
   it('cannot compare with fewer than 2 executions selected', async () => {
     const component = await mount();
     flushConfig();
