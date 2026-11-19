@@ -717,10 +717,12 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
 - O `net8.0` saiu do ciclo de vida oficial da Microsoft em 10 de novembro de 2026, e o NetApiFlow
   continua publicando um artefato para ele. Ele fica por enquanto porque ainda não há para onde ir:
   a próxima LTS, o `net12.0`, só deve sair em novembro de 2027, então tirar o `net8.0` hoje
-  deixaria o `net10.0` como alvo único. Quando parar de publicar para `net8.0` é uma pergunta em
-  aberto aqui, ainda sob investigação, não uma data já escolhida. Manter significa que o pacote tem
-  um alvo que não recebe mais correção da Microsoft, o que vale saber se a sua própria política
-  proíbe isso.
+  deixaria o `net10.0` como alvo único. O `net8.0` só deixa de ser publicado quando o `net12.0`
+  puder substituí-lo. Manter significa que o pacote tem um alvo que não recebe mais correção da
+  Microsoft, o que vale saber se a sua própria política proíbe isso.
+- Um app `net11.0` usa hoje o artefato do `net10.0`. Isso foi testado contra um SQL Server real,
+  com o pacote de storage e o `Microsoft.Data.SqlClient` mais novo. Um artefato próprio para o
+  `net11.0` está planejado.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.
