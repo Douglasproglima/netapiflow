@@ -24,19 +24,27 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    `[Unreleased]` vazio para a próxima rodada.
 6. Atualize `<Version>` em `Directory.Build.props` para `<versao>`. Não é automático: sem este
    passo, `dotnet pack` continua gerando os pacotes com a versão anterior (achado real na
-   primeira vez que esta skill rodou até o fim, v0.2.0).
-7. Confira que os 8 pacotes NuGet compilam e empacotam na versão nova (`NetApiFlow`,
-   `NetApiFlow.Dashboard`, `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`,
-   `NetApiFlow.Mcp`, `NetApiFlow.OpenTelemetry`, `NetApiFlow.Storage.PostgreSql`,
-   `NetApiFlow.Storage.SqlServer`): `dotnet pack NetApiFlow.slnx -c Release`, conferindo o número
-   de versão no nome de cada `.nupkg`/`.snupkg` gerado.
+   primeira vez que esta skill rodou até o fim, v0.2.0). No mesmo commit, atualize `"version"` em
+   `src/NetApiFlow.Dashboard/ClientApp/src/assets/demo-fixtures/config.json` para o mesmo número:
+   o diálogo Sobre da demo pública lê esse valor, e o teste `DemoFixtureVersionTests` deixa o PR
+   vermelho se os dois divergirem.
+7. Confira que todos os pacotes NuGet compilam e empacotam na versão nova. O total é o número de
+   projetos de `src/` com `PackageId` (hoje 9: `NetApiFlow`, `NetApiFlow.Dashboard`,
+   `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.MediatR`, `NetApiFlow.Mcp`,
+   `NetApiFlow.OpenTelemetry`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`,
+   `NetApiFlow.Testing`): `dotnet pack NetApiFlow.slnx -c Release`, conferindo o número de versão
+   no nome de cada `.nupkg`/`.snupkg` gerado. Pacote novo em `src/` entra nessa conta e na
+   conferência do passo 9.
 8. Pare aqui e peça confirmação explícita antes de `git push` e `gh pr create --base main`. Push,
    PR e tag são ações públicas (ver `.claude/rules/git-workflow.md`).
 9. Depois do merge em `main` (squash): criar a tag `v<versao>` (**só com confirmação explícita**),
    que dispara `release.yml` (Trusted Publishing, sem API key guardada). Confirme antes de criar
    a tag que a política de Trusted Publishing já foi configurada no nuget.org (tarefa 7.7 em
    `docs/plano/fase-7-documentacao.md`); se for a primeira release, esse passo manual precisa ter
-   sido feito antes.
+   sido feito antes. Depois que o `release.yml` terminar, conte as linhas `Your package was
+   pushed` no log: são três por pacote (`.nupkg` e `.snupkg` no nuget.org, mais o espelho no
+   GitHub Packages), ou seja, 3 vezes o total do passo 7 (hoje 27). Menos que isso quer dizer que
+   algum pacote não subiu.
 10. `release.yml` só publica pacote, nunca cria a página de Release no GitHub. Sem este passo, a
     tag existe e o nuget.org recebe o pacote, mas `gh release list` continua mostrando a versão
     anterior como "Latest" (achado real, v0.2.0 e v0.3.0 ficaram sem Release por duas rodadas
