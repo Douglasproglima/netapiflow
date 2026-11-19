@@ -90,6 +90,48 @@ describe('buildGraph', () => {
     expect(byId['leaf'].sequence).toBe(2);
   });
 
+  it('lays out top-to-bottom instead of left-to-right when rankdir is TB', () => {
+    const spans: FlowSpan[] = [
+      span({
+        spanId: 'root',
+        parentSpanId: null,
+        sequence: 0,
+        component: 'OrdersController',
+        operation: 'Get',
+      }),
+      span({
+        spanId: 'mid',
+        parentSpanId: 'root',
+        sequence: 1,
+        component: 'OrderService',
+        operation: 'GetAsync',
+      }),
+      span({
+        spanId: 'leaf',
+        parentSpanId: 'mid',
+        sequence: 2,
+        component: 'OrderRepository',
+        operation: 'FindAsync',
+      }),
+    ];
+
+    const resultTb = buildGraph(input({ spans, rankdir: 'TB' }));
+    const resultLr = buildGraph(input({ spans, rankdir: 'LR' }));
+
+    const byIdTb = Object.fromEntries(resultTb.nodes.map((n) => [n.id, n]));
+    const byIdLr = Object.fromEntries(resultLr.nodes.map((n) => [n.id, n]));
+
+    // Top-to-bottom: each level strictly below the previous one, same as the LR case asserts
+    // strictly to the right (above) — the opposite axis carries the rank order instead.
+    expect(byIdTb['mid'].y).toBeGreaterThan(byIdTb['root'].y);
+    expect(byIdTb['leaf'].y).toBeGreaterThan(byIdTb['mid'].y);
+
+    // The default ('LR', asserted above) spreads ranks across x; swapping to 'TB' collapses that
+    // spread onto y instead, so the resulting layout is never identical to the default's.
+    expect(resultTb).not.toEqual(resultLr);
+    expect(byIdTb['leaf'].x).not.toBe(byIdLr['leaf'].x);
+  });
+
   it('finds the root even when its parentSpanId is a dangling, non-null ambient id (D-31)', () => {
     // Real data shape: the root span's parentSpanId points at ASP.NET Core's own Activity, which
     // is never one of NetApiFlow's own spans — not `null` as the earlier synthetic fixtures above
