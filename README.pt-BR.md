@@ -721,8 +721,11 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   puder substituí-lo. Manter significa que o pacote tem um alvo que não recebe mais correção da
   Microsoft, o que vale saber se a sua própria política proíbe isso.
 - Um app `net11.0` usa hoje o artefato do `net10.0`. Isso foi testado contra um SQL Server real,
-  com o pacote de storage e o `Microsoft.Data.SqlClient` mais novo. Um artefato próprio para o
+  com o pacote de storage e o `Microsoft.Data.SqlClient` 7.1.2. Um artefato próprio para o
   `net11.0` está planejado.
+- `LogCorrelation.Enabled` e `CapturePrePipelineSteps` só têm efeito quando definidos em código, na
+  lambda passada a `AddNetApiFlow`. As mesmas chaves na seção de configuração `NetApiFlow` são
+  lidas, mas não ligam o recurso. Há uma correção planejada, sem versão prometida.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.
