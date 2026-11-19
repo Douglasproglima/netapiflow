@@ -28,8 +28,9 @@
 }
 
 // Below 768px the graph is the reason this screen gets opened, not the metrics strip above it:
-// moving metrics after the body (and the footer, both stay at the default order) means the
-// canvas shows up without scrolling past six cards and a sparkline first.
+// moving metrics after the body means the canvas shows up without scrolling past six cards and a
+// sparkline first. The footer needs its own order below so it still lands after metrics instead
+// of also sharing the body's default order 0, which would otherwise put it ahead of metrics too.
 .flow-workspace__metrics {
   @media (max-width: 767px) {
     order: 1;
@@ -504,6 +505,13 @@
   @media (max-width: 1023px) {
     flex: 0 0 auto;
     flex-direction: column;
+  }
+
+  // Keeps the footer after the metrics strip above, which takes order 1 at this width: without
+  // this, both would share the body's default order 0 and the footer's DOM position would put
+  // it ahead of metrics instead of behind them.
+  @media (max-width: 767px) {
+    order: 2;
   }
 
   // Below ~800px of window.innerHeight (guide seção 6.9), the footer is the first thing to give
