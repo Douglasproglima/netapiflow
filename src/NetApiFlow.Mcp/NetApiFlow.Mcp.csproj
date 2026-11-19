@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.Mcp</PackageId>
+    <Description>A read-only MCP server that lets an AI agent query NetApiFlow traces through standard MCP tools.</Description>
+    <PackageTags>$(PackageTags);mcp;ai</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.MediatR</PackageId>
+    <Description>Records MediatR requests as NetApiFlow steps through a pipeline behavior.</Description>
+    <PackageTags>$(PackageTags);mediatr</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow</PackageId>
+    <Description>Shows, in real time, the path each HTTP request takes through an ASP.NET Core API: controller or endpoint, services, repositories and SQL, with the duration of each step.</Description>
     <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
   </PropertyGroup>
 

@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.Dashboard</PackageId>
+    <Description>REST and SSE API plus an embedded Angular UI that shows NetApiFlow traces live, with no separate frontend build.</Description>
+    <PackageTags>$(PackageTags);dashboard;sse;angular</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
