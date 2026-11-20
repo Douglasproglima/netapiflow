@@ -30,12 +30,15 @@ O CI precisa passar antes do merge.
 
 ## Release
 
-1. Criar `release/<versao>` a partir de `develop`.
-2. Atualizar o `CHANGELOG.md` (mover "Unreleased" para a versão, formato Keep a Changelog).
-3. Abrir PR de `release/<versao>` para `main`. Merge com **squash**.
-4. Criar a tag `v<versao>` no commit de `main`. A tag dispara `release.yml`: empacota os seis
-   pacotes e publica no nuget.org via Trusted Publishing (OIDC, sem API key guardada).
-5. Fazer merge de `main` de volta em `develop`.
+1. Fumaça com pacote empacotado de verdade em `tests/manual-verification/`, antes de abrir
+   qualquer branch (D-176): `AddNetApiFlow()` sem lambda, em `Development`, com storage real,
+   versão de verificação (`-p:Version=<próxima>-verify.<n>`, nunca o número real).
+2. Criar `release/<versao>` a partir de `develop`.
+3. Atualizar o `CHANGELOG.md` (mover "Unreleased" para a versão, formato Keep a Changelog).
+4. Abrir PR de `release/<versao>` para `main`. Merge com **squash**.
+5. Criar a tag `v<versao>` no commit de `main`. A tag dispara `release.yml`: empacota todos os
+   pacotes de `src/` e publica no nuget.org via Trusted Publishing (OIDC, sem API key guardada).
+6. Fazer merge de `main` de volta em `develop`.
 
 Metadados e regras de empacotamento NuGet em [.claude/rules/packaging.md](../.claude/rules/packaging.md).
 A skill `/release` do Claude Code guia esse processo.
@@ -44,16 +47,21 @@ A skill `/release` do Claude Code guia esse processo.
 
 1. Criar `hotfix/<versao>` a partir de `main`, com o `PATCH` incrementado.
 2. Corrigir, atualizar o `CHANGELOG.md`.
-3. PR para `main` (squash), tag `v<versao>`.
-4. `release.yml` só publica pacote, nunca cria a página de Release no GitHub (mesma lacuna que a
-   skill `/release` já documenta no passo 10, achada ali em `v0.2.0`/`v0.3.0`). Sem este passo
+3. Fumaça com pacote empacotado de verdade em `tests/manual-verification/`, antes da PR: mesma
+   regra do passo 4 da skill `/release` (D-176), `-p:Version=<próxima>-verify.<n>`,
+   `AddNetApiFlow()` sem lambda, em `Development`, com storage real e pelo menos uma requisição.
+   Os dois bugs que motivaram a regra (o `MissingMethodException` do `MediatR`, D-140, e as opções
+   ligadas só por configuração, D-175) foram achados assim, os dois em contexto de hotfix.
+4. PR para `main` (squash), tag `v<versao>`.
+5. `release.yml` só publica pacote, nunca cria a página de Release no GitHub (mesma lacuna que a
+   skill `/release` já documenta no passo 11, achada ali em `v0.2.0`/`v0.3.0`). Sem este passo
    manual, a tag existe e o nuget.org recebe o pacote, mas `gh release list` continua mostrando a
    versão anterior como "Latest": aconteceu de verdade com `v0.4.1` a `v0.4.4`, quatro hotfixes
-   seguidos sem Release nenhum, porque nenhum dos dois (`release.yml` e este resumo de 4 passos)
-   cobria o passo. Criar com
+   seguidos sem Release nenhum, porque nenhum dos dois (`release.yml` e o resumo curto que existia
+   aqui, sem este passo) cobria o passo. Criar com
    `gh release create v<versao> --title v<versao> --notes-file <corpo> --target main`, corpo
    sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
-5. Merge de `main` de volta em `develop`.
+6. Merge de `main` de volta em `develop`.
 
 ## Versionamento: SemVer (D-01)
 
