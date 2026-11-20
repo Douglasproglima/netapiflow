@@ -56,7 +56,6 @@ describe('demoFixtureInterceptor', () => {
     const result = firstValue(api.getConfig());
     flushManifest();
 
-    // The only request that leaves is the fixture read: the API URL itself is never requested.
     httpMock.expectNone('api/config');
     httpMock
       .expectOne('assets/demo-fixtures/config.json')
