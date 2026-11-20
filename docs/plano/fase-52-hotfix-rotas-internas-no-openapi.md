@@ -34,6 +34,13 @@ Os grupos `endpoints.MapGroup(basePath + "/api")` (`DashboardApiEndpoints.cs`) e
 `ApiExplorer`: `Microsoft.AspNetCore.OpenApi` e Swashbuckle. O stream SSE e o endpoint do
 `NetApiFlow.Mcp` também são rotas mapeadas pelo próprio NetApiFlow.
 
+## Errata (D-193)
+
+O plano supôs que o endpoint do MCP aparecia no documento. Não aparece com o SDK que o pacote usa
+(`ModelContextProtocol.AspNetCore` 2.3.1): o `/flow/mcp/` não tem `MethodInfo`, e o ApiExplorer o
+ignora. A marca no MCP fica como proteção contra um SDK mais novo, e só tem teste de marca, não de
+documento. O bump de versão do hotfix também leva o `demo-fixtures/config.json`.
+
 ## Tarefa 52.0: reproduzir de novo, antes de corrigir
 
 Teste de **host real** (`.claude/rules/testing.md`), visto falhando antes de qualquer mudança: um host
@@ -88,7 +95,9 @@ publicado da `0.5.1`
 - PR para `main` (squash), tag `v0.5.2`, página de Release no GitHub criada à mão
   (`gh release create v0.5.2 --title v0.5.2 --notes-file <corpo> --target main`), e merge de `main` de
   volta em `develop`.
-- O `release.yml` do `v0.5.2` roda a lista completa de testes (D-183).
+- O `release.yml` do `v0.5.2` roda a lista de 6 projetos do D-183, não a suíte inteira: `Mcp.Tests`,
+  `OpenTelemetry.Tests` e `PrePipelineInteropSpike` não rodam em nenhum workflow (D-193, corrigido na
+  Fase 50).
 - O README da `main` já traz o Quick start corrigido (PR #329), então este hotfix não toca nele.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor.
 - Ao terminar: abrir a PR contra `main` e parar. O merge, a tag e a página de Release exigem confirmação
