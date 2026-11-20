@@ -37,7 +37,7 @@ using (var driver = new HttpClient { BaseAddress = address })
 var store = app.Services.GetRequiredService<ITraceStore>();
 var expectations = new Expectation[]
 {
-    new("/calls-ok", $"GET {authority}/ping", FlowStatus.Success),
+    new("/calls-ok", $"GET {authority}/pong", FlowStatus.Success),
     new("/calls-missing", $"GET {authority}/does-not-exist", FlowStatus.Error),
     new("/calls-refused", "GET 127.0.0.1:1/refused", FlowStatus.Error),
 };
