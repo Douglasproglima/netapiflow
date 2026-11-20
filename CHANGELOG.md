@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-19
+
 ### Added
 
 - `NetApiFlow.Dashboard`: the dashboard now reaches the same depth on a narrow screen as it does
