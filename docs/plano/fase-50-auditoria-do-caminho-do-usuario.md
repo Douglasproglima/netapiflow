@@ -48,9 +48,10 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
    teste novo, então precisa de um CI que o prove (D-202).
 3. Tarefa 50.5, a demo funcional. A auditoria a pôs antes de continuar a Parte B (D-200). Quem estiver
    no meio de um passo termina o passo e vem para ela.
-4. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
-5. Parte B (50.6 e 50.7) e a tarefa 50.9.
-6. Fase 51.
+4. Fase 53, Tarefa 53.0: medir o `PathBase`, sem corrigir (D-205).
+5. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
+6. Parte B (50.6 e 50.7) e a tarefa 50.9.
+7. Fase 51, e depois a correção da Fase 53.
 
 Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
 50.10 precisa poder ser mergeada sozinha.

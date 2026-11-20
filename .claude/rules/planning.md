@@ -55,8 +55,22 @@ zero contra o pacote publicado de verdade, não aceito só pelo relato da audito
 
 Achado sem essa reprodução, por mais correto que pareça, vira item de `docs/plano/roadmap-valor.md`
 e espera o ciclo normal de fase. Não é questão de gravidade: um achado teórico grave ainda é
-roadmap; um achado reproduzido pequeno ainda é candidato a hotfix, se o resto dos critérios do
-hotfix (PATCH, sem mudança de API pública) também valer.
+roadmap.
+
+**Reproduzir é condição necessária para hotfix, não suficiente (D-205).** Hotfix só para uma de duas
+coisas: regressão nova, um comportamento que funcionava na versão anterior e quebrou; ou falha de
+severidade alta, que é perda de dado ou exposição grave. Defeito antigo, mesmo reproduzido contra o
+pacote publicado, vai na próxima minor. O motivo é que, desde a `0.4.0`, cada versão foi conferida
+só pelo próprio diff, e cada furo antigo achado depois virou hotfix. O resto dos critérios do
+hotfix (PATCH, sem mudança de API pública) continua valendo para os dois casos.
+
+## A `0.6.0` só sai depois da auditoria de base (D-205)
+
+A `AUDITORIA-16-11` fecha, antes da `0.6.0`, uma auditoria de base do sistema inteiro, feita por
+inventário e não por diff: o README frase a frase num app novo, o mapa de cobertura do CI, a matriz
+de autorização, a matriz de integrações, todas as telas e a demo. `PathBase` e proxy reverso entram
+no inventário. O inventário e o fechamento são da auditoria, e a Planejadora não fecha nenhum item no
+lugar dela. Se a regra vale também para as minors seguintes, é a auditoria quem diz.
 
 ## Quando um item do roadmap pode entrar num loop autônomo da Executora
 
