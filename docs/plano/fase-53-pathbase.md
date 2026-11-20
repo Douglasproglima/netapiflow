@@ -120,10 +120,84 @@ suposição:
 com evidência, e cada mecanismo avaliado contra os sete requisitos. A Executora **para e entrega o
 relatório.** Não corrige.
 
+## Resultado da 53.0, medido pela Executora (20/11/2026)
+
+Sonda descartável fora do repositório, `ProjectReference` para o núcleo, o painel e o MCP do `develop`,
+um processo por célula, Kestrel de verdade, requisições HTTP de verdade e o store lido por um endpoint de
+diagnóstico. Não usou `TestServer`. Os dados brutos ficam no scratchpad dela. Os testes entram com a
+correção.
+
+**Kestrel, 32 células** (`net8.0` e `net10.0`, Development e Production, sem e com `UsePathBase("/api")`):
+
+- Sem `UsePathBase`: 56 de 56 requisições corretas.
+- Com `UsePathBase("/api")`: 36 incorretas, idênticas nos quatro TFM e ambiente. `ExcludePaths` não
+  exclui, o arquivo estático vira trace `(unmatched)`, as rotas do painel (`config`, `traces`, `stream`) e
+  do MCP (`initialize` e `tools/call`) são rastreadas, e em Production elas respondem 404 e **mesmo assim**
+  geram trace e cabeçalho. O `OpenApiDocumentPath` é rastreado.
+- **Achado novo, o mais grave:** `IncludePaths("/orders")` com `UsePathBase` deixa a rota do **usuário** fora
+  do store (store vazio). O defeito também apaga dado legítimo, não só deixa passar o que devia sair.
+- O stream sob `PathBase`: um segundo cliente SSE vê `TraceStarted (unmatched) Running` durante a conexão
+  inteira, sem `TraceCompleted` até ela acabar. `Running` aparece no SSE, não na persistência.
+- O que cada ponto enxerga: antes e depois do middleware do NetApiFlow, `path=/api/orders` e `pathBase`
+  vazio. Só o código do usuário depois do `UsePathBase` vê `path=/orders` e `pathBase=/api`.
+
+**Hospedagem real:**
+
+| Hospedagem | Resultado |
+|---|---|
+| IIS in-process e out-of-process, `net8.0` e `net10.0`, aplicação virtual `/api` | 0 incorretas. O framework define o `PathBase` **antes** do NetApiFlow |
+| nginx que corta o prefixo, `X-Forwarded-Prefix: /api`, app sem código | 0 incorretas, `PathBase` vazio, o cabeçalho é só informativo |
+| O mesmo com `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` | 0 incorretas. A variável **não** aplica o prefixo |
+| O mesmo com `UseForwardedHeaders(All)` no código | 0 incorretas. O `PathBase=/api` só aparece **depois** do NetApiFlow |
+| nginx que não corta, app sem `UsePathBase` | `/api/orders` dá 404 e `/orders` direto dá 200, com e sem a variável |
+| nginx que não corta, `UsePathBase("/api")` no código | 7 incorretas, igual ao Kestrel direto |
+
+**Limites da medição de hospedagem.** O IIS foi medido no IIS Express com o ANCM v2 (o mesmo
+`aspnetcorev2.dll` do IIS completo), **não** no IIS completo, que exige administrador nesta máquina. O
+módulo que vem com o IIS Express não carregou (erro 8007007e). O YARP não foi medido.
+
+**As duas perguntas:**
+
+1. Quem define o `PathBase` antes do NetApiFlow? No IIS (os dois modelos), o framework, antes. No proxy,
+   ninguém: o app não aplica o prefixo sozinho, nem com a variável de ambiente. `UseForwardedHeaders` e
+   `UsePathBase` do código do usuário entram sempre **depois** do middleware do NetApiFlow.
+2. Logo, o defeito fica restrito ao `UsePathBase` explícito, no Kestrel direto ou atrás de um proxy que
+   não corta o prefixo. O IIS e o proxy que corta não sofrem. Como `UsePathBase` é a forma comum de rodar
+   sob prefixo fora do IIS, a classe de implantação afetada continua grande.
+
+**Mecanismos, com um spike descartável por mecanismo** (matriz de 4 grupos, com e sem `UsePathBase`,
+`net8.0` e `net10.0`):
+
+| Mecanismo | Resultado |
+|---|---|
+| **A** (adiar a abertura do trace até o `EndpointMatched`; decidir por metadado de identidade nos endpoints do NetApiFlow e pelo caminho relativo no resto) | 28 de 28 corretas sem `PathBase` e 28 de 28 com. Cumpre os requisitos 1 a 4. Falha o 5 (sem endpoint casado a decisão cai no caminho cheio). O 7 não foi medido |
+| **B** (começar tudo e filtrar no fim pelo template do endpoint casado) | Store correto, mas **falha o 3 e o 4**: o cabeçalho sai e `TraceStarted Running` é publicado para a rota excluída e para o stream do painel, sem `TraceCompleted` (fantasma `Running` no SSE). Sem `PathBase` também publica o que hoje é excluído (20 de 28 incorretas), então o caminho comum paga |
+| **C** | Não é um mecanismo à parte: o primeiro ponto em que o `PathBase` é conhecido é o `EndpointMatched`, então ele é o A |
+| **D** (middleware depois do `UsePathBase`) | Descartado com evidência: só o ponto do usuário vê o caminho certo, mas pede API pública nova e o trace teria de começar nele |
+| **E** (ler o `PathBase` de outra fonte antes do pipeline) | Não existe para o `UsePathBase` explícito. `ASPNETCORE_PATHBASE=/api` no Kestrel não muda nada |
+
+O custo do A, medido grosseiramente num loop de 4000 requisições com ruído alto, foi 91 e 98 µs de
+mediana contra 86 e 85 hoje. É um indício e **não** um benchmark.
+
+**Decisão (D-211): o mecanismo A.** É o único que cumpre os requisitos 1 a 4, e herda o R-32 (o evento é
+diagnóstico, não API formal), que funcionou nos dois TFMs. O ADR-0027 é escrito antes da correção.
+
+**O que a correção ainda tem de medir, antes de qualquer código:**
+
+- O efeito do A sobre `CapturePrePipelineSteps` e sobre o parentesco da `Activity` de entrada: com o A o
+  trace passa a abrir depois de alguns middlewares.
+- O requisito 7: a checagem da própria decisão logada e engolida (o spike não tem o `try/catch`).
+- O custo com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`, no lugar do loop grosseiro.
+- O requisito 5, o limite que vai ao README: sem endpoint casado (arquivo estático, 404) sob `PathBase`, o
+  `ExcludePaths` continua valendo só contra o caminho cheio.
+- O marcador de identidade é um tipo `internal`, e o MCP precisa de `InternalsVisibleTo` (o painel já tem).
+
 ## Depois da 53.0
 
-A Planejadora escreve a ADR e as tarefas de correção (53.1 em diante), com os testes de host real da
-matriz agora provando a correção e vistos falhando antes. O README e o XML doc do `OpenApiDocumentPath`,
+A Planejadora escreve o ADR-0027 e as tarefas de correção (53.1 em diante) **depois da Fase 51**, porque o
+mecanismo A vive no mesmo listener do `EndpointMatched` que a Fase 51 cria, e a Fase 57 (a rota da trace
+ao vivo) depende do mesmo ponto. Os testes de host real da matriz passam a provar a correção e são vistos
+falhando antes. O README e o XML doc do `OpenApiDocumentPath`,
 `ExcludePaths` e `IncludePaths` passam a dizer o que vale sob `PathBase`, nos dois idiomas.
 
 ## Veículo e ordem (D-205)
