@@ -35,7 +35,8 @@ da Planejadora e da auditoria, não da Executora.
 
 Teste de **host real**, visto falhando antes de qualquer mudança, partindo dos comandos da auditoria: as requisições
 com `Origin` e `Host` de um domínio qualquer ao painel (`GET` e `DELETE`) e ao MCP (`initialize` e `tools/list`), e a
-leitura dos cabeçalhos de `GET /flow/`. O relatório diz o que foi reproduzido e o que não.
+leitura dos cabeçalhos de `GET /flow/`. **Mais um caso, o que o rebinding produz de verdade (auditoria):** um `GET` com `Host: evil.example` e **sem
+`Origin`**. Hoje passa. Depois da 56.1 tem de dar 403. O relatório diz o que foi reproduzido e o que não.
 
 ## Tarefa 56.1: validar `Origin` e `Host` (S6)
 
@@ -45,16 +46,25 @@ roda **depois** do pipeline do usuário, quando o `Request.Host` já é o que o 
 antes do proxy. A checagem fica **num lugar só**, usada pelos dois portões, e roda antes da decisão de autorização
 (é barata e não depende de estado).
 
+**O `Host` é a defesa principal, e a `Origin` a secundária (a auditoria mudou a regra).** Depois do rebinding, a
+página do atacante e o painel são a **mesma origem** para o navegador, e num `GET` de mesma origem o navegador
+pode não mandar `Origin` nenhuma. Então "`Origin` ausente passa" sozinho deixaria o `GET /flow/api/traces` aberto
+ao rebinding. Só o `Host` barra, porque ele chega como `evil.example`.
+
 **A regra, a confirmar medindo:**
 
 | Situação | Esperado |
 |---|---|
-| `Origin` ausente (um cliente que não é navegador: `curl`, o `McpClient` do SDK) | Passa, e segue para a decisão de autorização |
+| Em Development, `Host` de loopback (`localhost`, `127.0.0.1`, `[::1]`) ou **declarado explicitamente** | Segue para a checagem de `Origin` |
+| Em Development, qualquer outro `Host` | **403**, com uma mensagem que diz como declarar o host. `"AllowedHosts": "*"`, o padrão do `appsettings.json` do `dotnet new`, **não** conta como declarado |
+| `Origin` ausente (um cliente que não é navegador, ou um `GET` de mesma origem) | Passa, desde que o `Host` já tenha passado |
 | `Origin` presente e igual à origem da própria requisição (esquema mais `Host`) | Passa |
-| Em Development, `Origin` presente cujo host é de loopback (`localhost`, `127.0.0.1`, `[::1]`), em qualquer porta | Passa. É o caso de uma ferramenta local em outra porta, por exemplo o servidor de desenvolvimento do painel, **se** ele fala com a API desse jeito (a confirmar, ver abaixo) |
-| `Origin` presente de qualquer outro host | **403**, com uma mensagem que diz a causa e como corrigir |
-| Em Development, `Host` que não é de loopback, sem a aplicação ter declarado o host em `AllowedHosts` | **403** |
+| Em Development, `Origin` presente cujo host é de loopback, em qualquer porta | Passa. É o caso de uma ferramenta local em outra porta, por exemplo o servidor de desenvolvimento do painel, **se** ele fala com a API desse jeito (a confirmar, ver abaixo) |
+| `Origin` presente de qualquer outro host | **403**, com a causa na mensagem |
 | Fora de Development | A mesma regra de `Origin`. O `Host` segue o que o `AllowedHosts` e o `UseForwardedHeaders` do usuário já decidem |
+
+"Declarado explicitamente" é uma entrada que nomeia o host no `AllowedHosts` da configuração, e o curinga `*` não
+conta. Isso é configuração que o app já tem, não API nova.
 
 O **mesmo `403`** vale para o painel (API REST, stream SSE e arquivos estáticos) e para o MCP, e para todo método. A
 especificação do MCP diz "all incoming connections".
@@ -67,6 +77,9 @@ especificação do MCP diz "all incoming connections".
 - O MCP Inspector e um cliente MCP real por HTTP: mandam `Origin`?
 - Um proxy reverso, com os contêineres de `nginx` que a medição da Fase 53 já montou: `Host` preservado, `Host`
   reescrito, e `X-Forwarded-Host`. Um `403` falso atrás de um proxy é o risco maior do lado de Production.
+- **Os usos legítimos de Development em que o `Host` fica fora do loopback** (auditoria): acessar o painel pelo
+  IP da rede local, para testar no celular; `host.docker.internal`; e o WSL. Cada um tem o seu caminho
+  documentado, que é declarar o host, e **nenhum fica mudo**: o `403` diz o que fazer.
 
 **API pública:** nenhuma nova, se for possível. Se a investigação provar que é preciso uma lista de origens
 permitidas, **volta à Planejadora antes de qualquer código**, porque é opção pública nova (`contratos.md`).
@@ -118,13 +131,76 @@ para quem tocar o portão de novo.
 - `CHANGELOG.md`, `### Security`, em inglês: o painel e o MCP recusam `Origin` e `Host` que não são da própria
   aplicação, e respondem com os cabeçalhos de segurança.
 
-## Pergunta em aberto, para a auditoria e o dono
+## O advisory (D-226)
 
-O S6 (qualquer página da web fala com o painel e com o MCP abertos) e o S7 (o painel num iframe) merecem um **GitHub
-Security Advisory**, como os dois que já existem? Pela classe, seriam CWE-346 (validação de origem) e CWE-1021
-(restrição imprópria da camada visual). É decisão de comunicação pública, do dono, e a Planejadora não a toma. A
-diferença para os outros dois: aqui só afeta quem roda com o painel aberto, em Development, e o dado exposto são traces
-de quem está desenvolvendo.
+O dono decidiu publicar **um** GitHub Security Advisory cobrindo o DNS rebinding e o iframe (CWE-346 e CWE-1021),
+junto do `0.6.0`, o terceiro, com os dois da Fase 54 e da 50.10. Quem publica é a auditoria. Esta seção é só o
+rascunho, em inglês e sem dado de app real.
+
+**O que foi verificado para escrever o texto, e o que não foi:**
+
+- Procurei nos fontes de `NetApiFlow.Dashboard` e `NetApiFlow.Mcp`, em `v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`,
+  `v0.5.0` e `v0.5.2`, qualquer código de `Origin`, `Content-Security-Policy`, `X-Frame-Options`,
+  `X-Content-Type-Options` ou `frame-ancestors`: **zero arquivos em todas**. O nuget.org tem o
+  `NetApiFlow.Dashboard` de `0.1.0` a `0.5.2` e o `NetApiFlow.Mcp` de `0.2.0` a `0.5.2`.
+- **Reproduzido de verdade só no `0.5.2`**, pela auditoria. Eu não reproduzi.
+- **Raciocínio meu, não testado:** um app que protege o painel e o MCP com autorização fica de fora da parte do
+  rebinding, porque uma requisição ao nome do atacante não leva a credencial emitida para o nome do app. A parte
+  do iframe vale em qualquer modo.
+
+**A conta do CVSS 3.1, feita por script, e ela não dá Baixa com o texto verdadeiro.** O dono escolheu a opção
+"severidade baixa", e a regra que a auditoria deu é "se o texto verdadeiro não der Baixa, vale o texto
+verdadeiro":
+
+| Vetor | Nota | O que conta |
+|---|---|---|
+| `AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N` | **4,2, Média** | Ler os traces (`C:L`) e **apagar todos** (`I:L`) |
+| `AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N` | 3,1, Baixa | Só a leitura, ignorando o `DELETE` |
+
+O `DELETE /flow/api/traces` conta como integridade, a mesma lógica que deixou o primeiro advisory em Média. O
+rascunho segue o texto verdadeiro, **Média 4,2**, e a auditoria leva ao dono que o número saiu diferente da
+opção escolhida. `AC:H`, porque o desenvolvedor precisa estar com o app aberto e visitar uma página maliciosa
+montada para o rebinding; `UI:R`, porque ele precisa visitar a página; `PR:N`, porque o painel aberto não pede
+credencial.
+
+**Texto (campos do formulário de advisory do GitHub):**
+
+> **Title:** The dashboard and the MCP endpoint accept requests from any web page when they are open, and the
+> dashboard can be framed
+>
+> **Ecosystem and packages:** NuGet. `NetApiFlow.Dashboard`, affected `>= 0.1.0, <= 0.5.2`. `NetApiFlow.Mcp`,
+> affected `>= 0.2.0, <= 0.5.2`. Patched version: `0.6.0` for both.
+>
+> **CWE:** CWE-346, Origin Validation Error. CWE-1021, Improper Restriction of Rendered UI Layers or Frames.
+>
+> **Severity:** Moderate. CVSS 3.1 base score 4.2, `CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N`.
+>
+> **Description:** When the dashboard or the MCP endpoint is open, which is the default in the Development
+> environment, it answered requests regardless of their `Host` and `Origin` headers. It also sent no
+> `X-Frame-Options`, `Content-Security-Policy` or `X-Content-Type-Options` header. A web page controlled by an
+> attacker can use DNS rebinding so that the browser treats the page and the local dashboard as the same origin,
+> and then read the traces, delete all of them, and call the MCP tools. The MCP transport specification requires
+> servers to validate the `Origin` header on all incoming connections to prevent exactly this. Separately, a
+> page can embed the dashboard in an iframe and lead the developer to click its delete button (clickjacking).
+>
+> **Trigger:** The dashboard or the MCP endpoint is reachable without access protection, and the developer
+> visits a malicious web page while the application is running.
+>
+> **Impact:** Reading and deleting the stored traces, calling the read-only MCP tools, and clickjacking of the
+> delete button. NetApiFlow never records request bodies, headers, query strings, method arguments or SQL
+> parameter values, so none of those are exposed.
+>
+> **Not affected:** Applications that protect the dashboard and the MCP endpoint with authorization are not
+> exposed to the rebinding part, because a request to the attacker's host name carries no credential issued for
+> the application's host name. The framing part applies in every mode.
+>
+> **Patches:** From `0.6.0`, the dashboard and the MCP endpoint reject requests whose `Host` is not a loopback
+> name or explicitly declared, and requests whose `Origin` is not their own origin or a loopback origin, and
+> they send security headers that forbid framing.
+>
+> **Workarounds:** Do not leave a development application running while browsing untrusted sites, or protect the
+> dashboard and the MCP endpoint with an `IFlowAccessFilter`, which is enforced in Development too. Upgrade to
+> `0.6.0`.
 
 ## Fora de escopo
 
