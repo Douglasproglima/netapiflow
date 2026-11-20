@@ -31,6 +31,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   answered. A route now counts as protected only when it requires authorization and does not allow
   anonymous access. If you relied on the two chained calls to open the dashboard, it now answers 404:
   register an `IFlowAccessFilter` instead.
+- `NetApiFlow`: the error message of a failed step is now sanitized and truncated to 300 characters
+  before it is written on the `Activity`, so it reaches OpenTelemetry (OTLP) clean. It used to be
+  exported as thrown, with no sanitization and no length limit, while the dashboard showed the
+  sanitized version.
+- `NetApiFlow`: the error message sanitizer now sanitizes first and truncates after, so a secret cut
+  by the 300 character limit leaves no piece behind, and it covers the forms it missed:
+  `Authorization: Bearer ...` and `Basic ...` (the whole value, not only the scheme), `access_token=`,
+  `client_secret=`, `DB_PASSWORD=`, `api_key=` and `apikey=`, `Pwd=` and `passwd=` pairs, values in
+  quotes or with spaces, `"password":"..."` in JSON, and a bare `Bearer <token>`. The key is matched
+  by containing a sensitive word, so a harmless `key: value` message such as `Unexpected token: '}'`
+  now loses its value too.
 
 ## [0.5.2] - 2026-11-20
 
