@@ -6,10 +6,10 @@
 
   <ItemGroup>
     <!-- Testing -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="Testcontainers" Version="4.16.0" />
@@ -17,7 +17,7 @@
 
   <!-- Microsoft.AspNetCore.Mvc.Testing ships one version per ASP.NET Core major release. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.33" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.34" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
@@ -35,8 +35,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
 
     <!-- NetApiFlow.EntityFrameworkCore -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
@@ -82,7 +82,7 @@
 
 
     <!-- SourceLink (every src/ package) -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.404" />
 
     <!-- tests/NetApiFlow.Benchmarks (Fase 7, medição de overhead) -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
