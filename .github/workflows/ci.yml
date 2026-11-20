@@ -127,6 +127,9 @@ jobs:
           dotnet test tests/NetApiFlow.Tests -c Release --no-build --collect:"XPlat Code Coverage"
           dotnet test tests/NetApiFlow.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
           dotnet test tests/NetApiFlow.EntityFrameworkCore.Ef8Tests -c Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/NetApiFlow.Mcp.Tests -c Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/NetApiFlow.OpenTelemetry.Tests -c Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test tests/NetApiFlow.PrePipelineInteropSpike -c Release --no-build --collect:"XPlat Code Coverage"
           # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners (tarefa 6.5).
           if [ "${{ runner.os }}" != "Windows" ]; then
             dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build --collect:"XPlat Code Coverage"

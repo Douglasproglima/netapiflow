@@ -7,6 +7,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-20
+
+### Fixed
+
+- `NetApiFlow.Dashboard`: the routes the dashboard maps itself (`/flow/api/*`, its static route and
+  the live stream) no longer show up in the app's OpenAPI document. An app that published the
+  document listed 14 dashboard paths, which in Production answer 404 unless the dashboard is
+  authorized, so an SDK generated from it got endpoints that do not exist.
+- `NetApiFlow.Mcp`: the MCP endpoint is now marked as excluded from the document too. It was not
+  listed with the MCP SDK this package ships against, and the mark keeps it out if a newer SDK
+  exposes it to the API explorer.
+
 ## [0.5.1] - 2026-11-20
 
 ### Fixed
