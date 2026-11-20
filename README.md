@@ -541,6 +541,23 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
 > `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
 
+### The trace id header
+
+NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request, in every
+environment. It carries the trace id, the same value the W3C `traceparent` header already carries,
+and it is how `NetApiFlow.Testing` finds the trace of a response. Knowing a trace id does not open
+the dashboard: its routes stay behind the rules above.
+
+To keep the trace id out of your responses, turn the header off:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+```
+
+Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. Requests are still
+traced. `GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is
+off.
+
 ## MCP server
 
 ```bash
