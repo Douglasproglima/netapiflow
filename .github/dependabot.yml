@@ -13,11 +13,13 @@ updates:
           - "patch"
           - "minor"
     ignore:
-      # MediatR 15 changed the pipeline behavior delegate signature (requires forwarding
-      # cancellationToken) and dropped net8.0 (D-139). A major bump needs a source change in
-      # FlowTrackingBehavior.cs first, not an automated PR.
       - dependency-name: "MediatR"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Data.SqlClient"
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+      - dependency-name: "Microsoft.Extensions.FileProviders.Embedded"
+      - dependency-name: "ModelContextProtocol*"
+      - dependency-name: "Npgsql*"
+      - dependency-name: "OpenTelemetry*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
