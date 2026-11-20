@@ -715,9 +715,6 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 - A `net11.0` app uses the `net10.0` asset today. That was tested against a real SQL Server with the
   storage package and `Microsoft.Data.SqlClient` 7.1.2. An asset of its own for `net11.0` is
   planned.
-- `LogCorrelation.Enabled` and `CapturePrePipelineSteps` only take effect when set in code, in the
-  lambda passed to `AddNetApiFlow`. The same keys in the `NetApiFlow` configuration section are
-  read, but they do not turn the feature on. A fix is planned, with no version promised.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

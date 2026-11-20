@@ -59,6 +59,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow.Dashboard`: a warning appears when none of the OpenAPI document's authorization
   alternatives applies.
 - `NetApiFlow.Dashboard`: the Runner route list keeps three rows visible in a short window.
+- `NetApiFlow`: `LogCorrelation.Enabled` and `CapturePrePipelineSteps` set only in the `NetApiFlow`
+  section of the configuration changed the option's value but did not turn the feature on. They
+  now do, the same as when set in the lambda passed to `AddNetApiFlow`. Left off, both cost
+  nothing per request.
 - All packages: the nuget.org page and the Visual Studio package manager showed the SDK's
   placeholder description ("Package Description") and no tags. Every package now has a one-line
   description, tags and a project URL, and `dotnet pack` fails when one is missing.
