@@ -14,6 +14,8 @@ Veja, ao vivo, o caminho que cada requisição HTTP percorre dentro da sua próp
 > O GIF acima foi gravado a partir de `samples/SampleApi.Controllers` com o dashboard montado.
 > Veja [Início rápido](#início-rápido) para reproduzir você mesmo.
 
+[Site](https://douglasproglima.github.io/netapiflow-site/) · [Demo ao vivo](https://douglasproglima.github.io/netapiflow-site/demo/)
+
 ## O que é, e o que não é
 
 O NetApiFlow instrumenta o caminho de chamadas interno da sua própria API, não latência externa,

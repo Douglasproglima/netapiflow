@@ -14,6 +14,8 @@ See, live, the path every HTTP request takes through your own ASP.NET Core API: 
 > The GIF above is recorded from `samples/SampleApi.Controllers` with the dashboard mounted.
 > See [Quick start](#quick-start) to reproduce it yourself.
 
+[Website](https://douglasproglima.github.io/netapiflow-site/en/) · [Live demo](https://douglasproglima.github.io/netapiflow-site/demo/)
+
 ## What it is, and what it isn't
 
 NetApiFlow instruments your own API's internal call path, not external latency, not
