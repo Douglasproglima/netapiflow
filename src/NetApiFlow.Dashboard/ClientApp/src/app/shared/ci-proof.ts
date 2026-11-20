@@ -1,1 +1,1 @@
-export const ciProof = {a:1,b:2}
+export const ciProof: any = { a: 1, b: 2 };
