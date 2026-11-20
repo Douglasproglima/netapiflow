@@ -21,12 +21,12 @@ teste de integração e pelos quatro/dez cenários que cada fase exige.
 4. Limites e descarte (seção 6.7 do prompt).
 
 **Não fazer:**
-- Banco de dados real em teste unitário. Só `NetApiFlow.Storage.Tests` e
-  `NetApiFlow.Npgsql.IntegrationTests` usam banco real, via Testcontainers. O segundo existe
-  porque `NetApiFlow.IntegrationTests` continua documentado como só `InMemoryTraceStore` (seção
-  abaixo) e porque validar a interop com o driver Npgsql real (ADR-0018) não é teste de
-  `ITraceStore`: fica no próprio projeto que antes era o spike descartável da Fase 19.1, já
-  isolado do runner Windows por falta de Docker.
+- Banco de dados real em teste unitário. Só `NetApiFlow.Storage.Tests`,
+  `NetApiFlow.Npgsql.IntegrationTests` e `NetApiFlow.SqlClient.IntegrationTests` usam banco real,
+  via Testcontainers. Os dois últimos existem porque `NetApiFlow.IntegrationTests` continua
+  documentado como só `InMemoryTraceStore` (seção abaixo) e porque validar a interop com o driver
+  real (Npgsql no ADR-0018, `Microsoft.Data.SqlClient` na Fase 37) não é teste de `ITraceStore`:
+  cada um fica no seu projeto, isolado do runner Windows por falta de Docker.
 - Testar implementação em vez de comportamento (ex.: verificar que um método privado foi chamado
   em vez de verificar o efeito observável).
 - Mock excessivo que torna o teste frágil a refactor que não muda comportamento.
@@ -39,7 +39,8 @@ teste de integração e pelos quatro/dez cenários que cada fase exige.
   `result.Status.ShouldBe(FlowStatus.Success)`.
 - **Microsoft.AspNetCore.Mvc.Testing** (`WebApplicationFactory<Program>`) para
   `NetApiFlow.IntegrationTests`.
-- **Testcontainers** só em `NetApiFlow.Storage.Tests` (PostgreSQL e SQL Server).
+- **Testcontainers** só em `NetApiFlow.Storage.Tests` (PostgreSQL e SQL Server) e nos dois projetos
+  de interop com driver (`NetApiFlow.Npgsql.IntegrationTests`, `NetApiFlow.SqlClient.IntegrationTests`).
 - **BenchmarkDotNet** só em `tests/NetApiFlow.Benchmarks` (Fase 7, medição de overhead).
 
 ## Nomenclatura de métodos de teste
@@ -122,6 +123,19 @@ pela configuração (sem lambda em `AddNetApiFlow`) nunca ativavam o recurso cor
 publicado desde a primeira versão de cada um (D-175). Nos dois casos o teste existente conferia o
 valor da opção, nunca o comportamento que ela deveria acionar.
 
+## Interop com driver: o comando roda dentro de um step real (D-180)
+
+Teste de interop com um driver de banco (Npgsql, `Microsoft.Data.SqlClient`) roda o comando com a
+forma do uso real: um host de verdade, uma requisição de verdade que passa por um step do NetApiFlow
+(uma action de um controller MVC, no mínimo), e o trace lido do `FlowRecorder` do host. Montar o
+trace com uma `Activity` raiz solta e rodar o comando embaixo dela deixa a regra de descarte de
+comando SQL sem nada em volta, que é o único caso em que ela nunca decide nada.
+
+Foi assim que o descarte largo demais do ADR-0018 ficou escondido nos dois drivers (D-179): todo
+teste de interop passava, e todo SQL direto dentro de um controller sumia do trace. O mesmo vale para
+a forma de rodar: os dois projetos de interop precisam executar no CI (`ci.yml`, fora do Windows).
+Teste que existe e não roda não prova nada, e o do SqlClient nunca rodou no CI desde que existe.
+
 ## Smoke tests de integração (`NetApiFlow.IntegrationTests`)
 
 Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o pipeline real
@@ -141,5 +155,6 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   não só o valor de retorno.
 - Teste de glob (`IncludePaths`/`ExcludePaths`) e de sanitização usa `[Theory]` com `[InlineData]`
   ou `[MemberData]`, nunca um `[Fact]` por combinação.
-- Nunca usar banco real fora de `NetApiFlow.Storage.Tests`/`NetApiFlow.Npgsql.IntegrationTests`.
+- Nunca usar banco real fora de `NetApiFlow.Storage.Tests`, `NetApiFlow.Npgsql.IntegrationTests` e
+  `NetApiFlow.SqlClient.IntegrationTests`.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
