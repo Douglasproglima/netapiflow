@@ -14,12 +14,12 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    foram concluídas desde a última tag (`git tag --sort=-v:refname | head -1`).
 3. Calcule a versão SemVer seguinte (`docs/gitflow.md`, seção "Versionamento"). Confirme com quem
    pediu antes de prosseguir se houver ambiguidade entre `minor` e `patch`.
-4. **Fumaça obrigatória em `tests/manual-verification/`, antes de abrir a branch (D-176).** Pacote
+4. **Teste obrigatório com o pacote real em `tests/manual-verification/`, antes de abrir a branch (D-176).** Pacote
    empacotado de verdade (nunca `ProjectReference`), com `-p:Version=<próxima>-verify.<n>`
    (`.claude/rules/packaging.md`, D-174; nunca `-p:VersionSuffix=verify`, que não funciona neste
    repositório). Rodar `AddNetApiFlow()` **sem nenhuma lambda**, em `Development`, com storage
    real configurado (Postgres ou SQL Server via Testcontainers/instância local), fazendo pelo
-   menos uma requisição real. Foi a fumaça com pacote real, não a suíte automatizada, que achou
+   menos uma requisição real. Foi o teste com o pacote real, não a suíte automatizada, que achou
    tanto o `MissingMethodException` do `MediatR` (D-140) quanto o bug de opção ligada só por
    configuração (D-175): os dois passavam limpo em `dotnet test NetApiFlow.slnx`, que roda contra
    `ProjectReference`/`InMemoryTraceStore`, não contra o pacote publicado com a configuração mais

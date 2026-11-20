@@ -30,7 +30,7 @@ O CI precisa passar antes do merge.
 
 ## Release
 
-1. Fumaça com pacote empacotado de verdade em `tests/manual-verification/`, antes de abrir
+1. Teste com o pacote real (empacotado de verdade) em `tests/manual-verification/`, antes de abrir
    qualquer branch (D-176): `AddNetApiFlow()` sem lambda, em `Development`, com storage real,
    versão de verificação (`-p:Version=<próxima>-verify.<n>`, nunca o número real).
 2. Criar `release/<versao>` a partir de `develop`.
@@ -47,7 +47,7 @@ A skill `/release` do Claude Code guia esse processo.
 
 1. Criar `hotfix/<versao>` a partir de `main`, com o `PATCH` incrementado.
 2. Corrigir, atualizar o `CHANGELOG.md`.
-3. Fumaça com pacote empacotado de verdade em `tests/manual-verification/`, antes da PR: mesma
+3. Teste com o pacote real (empacotado de verdade) em `tests/manual-verification/`, antes da PR: mesma
    regra do passo 4 da skill `/release` (D-176), `-p:Version=<próxima>-verify.<n>`,
    `AddNetApiFlow()` sem lambda, em `Development`, com storage real e pelo menos uma requisição.
    Os dois bugs que motivaram a regra (o `MissingMethodException` do `MediatR`, D-140, e as opções
