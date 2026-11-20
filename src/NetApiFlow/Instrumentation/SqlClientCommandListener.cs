@@ -122,7 +122,7 @@ internal sealed partial class SqlClientCommandListener
 
     private void OnCommandBefore(IReadOnlyList<KeyValuePair<string, object>> payload)
     {
-        if (!_options.Value.ExternalSources.HasFlag(ExternalActivitySource.SqlClient) || IsAlreadyCoveredByAStep())
+        if (!_options.Value.ExternalSources.HasFlag(ExternalActivitySource.SqlClient) || ExistingDatabaseStep.Covers(Activity.Current))
         {
             return;
         }
@@ -173,9 +173,6 @@ internal sealed partial class SqlClientCommandListener
     /// Npgsql path applies, checked here against the ambient step because the driver creates no
     /// activity of its own to compare parents with.
     /// </summary>
-    private static bool IsAlreadyCoveredByAStep() =>
-        Activity.Current?.Source.Name == FlowActivitySource.Name;
-
     private static object? Find(IReadOnlyList<KeyValuePair<string, object>> payload, string key)
     {
         for (var i = 0; i < payload.Count; i++)

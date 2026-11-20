@@ -57,7 +57,7 @@ internal sealed class FlowActivityListener : IDisposable
 
     private ActivitySamplingResult Sample(ref ActivityCreationOptions<ActivityContext> options)
     {
-        if (!_options.Value.Enabled || IsCommandAlreadyCoveredByAStep(options.Source.Name, Activity.Current))
+        if (!_options.Value.Enabled || IsDriverCommandAlreadyRecorded(options.Source.Name, Activity.Current))
         {
             return ActivitySamplingResult.None;
         }
@@ -68,21 +68,15 @@ internal sealed class FlowActivityListener : IDisposable
             : ActivitySamplingResult.AllDataAndRecorded;
     }
 
-    /// <summary>
-    /// A NetApiFlow step wrapping the SQL command already represents it as a span, typically the
-    /// one <c>FlowDbCommandInterceptor</c> opens, so the driver's own activity is a duplicate.
-    /// Checked while sampling, where dropping it is cheapest, and again once started: any other
-    /// <see cref="ActivityListener"/> in the process that samples the same source as recorded
-    /// (an OpenTelemetry exporter, for instance) is enough for the activity to be created and
-    /// reported to every listener, whatever this one answered while sampling.
-    /// </summary>
-    private static bool IsCommandAlreadyCoveredByAStep(string sourceName, Activity? step) =>
-        sourceName == NpgsqlActivityTagNames.SourceName &&
-        step?.Source.Name == FlowActivitySource.Name;
+    // Runs while sampling, where dropping is cheapest, and again once started: any other
+    // ActivityListener in the process that samples this source as recorded is enough for the
+    // activity to exist and reach every listener, whatever this one answered while sampling.
+    private static bool IsDriverCommandAlreadyRecorded(string sourceName, Activity? enclosing) =>
+        sourceName == NpgsqlActivityTagNames.SourceName && ExistingDatabaseStep.Covers(enclosing);
 
     private void OnActivityStarted(Activity activity)
     {
-        if (IsCommandAlreadyCoveredByAStep(activity.Source.Name, activity.Parent))
+        if (IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent))
         {
             return;
         }
