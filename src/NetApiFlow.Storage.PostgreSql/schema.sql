@@ -1,6 +1,10 @@
 -- NetApiFlow.Storage.PostgreSql schema, for a prefix of "netapiflow_" (the default). If you
 -- configured a different TablePrefix, replace it in every table/index name below before running
--- this script. Running it is equivalent to what the package creates automatically on first use.
+-- this script. It is what the package runs on first use when AutoCreateSchema is true, so run it
+-- yourself when AutoCreateSchema is false.
+--
+-- Safe to run again, and safe to run on tables written by an earlier version: it creates what is
+-- missing, adds route_key when it is absent, and fills route_key only on rows that do not have one.
 
 CREATE TABLE IF NOT EXISTS netapiflow_traces (
     trace_id varchar(64) PRIMARY KEY,
@@ -14,13 +18,17 @@ CREATE TABLE IF NOT EXISTS netapiflow_traces (
     span_count int NOT NULL,
     truncated boolean NOT NULL,
     error_message text NULL,
-    tags jsonb NOT NULL
+    tags jsonb NOT NULL,
+    route_key text NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_started_at ON netapiflow_traces (started_at);
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_status ON netapiflow_traces (status);
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_method_route ON netapiflow_traces (method, route_template);
 CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_duration_micros ON netapiflow_traces (duration_micros);
+
+ALTER TABLE netapiflow_traces ADD COLUMN IF NOT EXISTS route_key text NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS ix_netapiflow_traces_method_route_key ON netapiflow_traces (method, route_key);
 
 CREATE TABLE IF NOT EXISTS netapiflow_spans (
     trace_id varchar(64) NOT NULL REFERENCES netapiflow_traces (trace_id) ON DELETE CASCADE,
@@ -51,3 +59,17 @@ CREATE TABLE IF NOT EXISTS netapiflow_deploy_annotations (
 );
 
 CREATE INDEX IF NOT EXISTS ix_netapiflow_deploy_annotations_timestamp ON netapiflow_deploy_annotations (timestamp);
+
+UPDATE netapiflow_traces AS trace
+SET route_key = regexp_replace(canonical.route, '\{\*?([^{}:?]*)[^{}]*\}', '{\1}', 'g')
+FROM (
+    SELECT trace_id,
+           CASE WHEN length(slashed) > 1 AND right(slashed, 1) = '/' THEN left(slashed, -1) ELSE slashed END AS route
+    FROM (
+        SELECT trace_id,
+               CASE WHEN left(route_template, 1) = '/' THEN route_template ELSE '/' || route_template END AS slashed
+        FROM netapiflow_traces
+        WHERE route_key = ''
+    ) AS prefixed
+) AS canonical
+WHERE trace.trace_id = canonical.trace_id;
