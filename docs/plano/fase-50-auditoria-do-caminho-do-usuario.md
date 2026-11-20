@@ -265,6 +265,71 @@ junto dos testes de portão que já existem (`DashboardAuthorizationTests`, `Net
 antes, o README nos dois idiomas, o XML doc e o `CHANGELOG.md` dizem a regra nova, e a PR é própria,
 separada da 50.5, para a auditoria conseguir ler e mergear a correção de segurança sozinha.
 
+#### Rascunho do GitHub Security Advisory (D-203)
+
+O dono decidiu publicar um advisory de severidade baixa para as versões afetadas, junto do `0.6.0`. Quem
+publica é a auditoria, com o Release. Esta seção é só o texto, em inglês, sem dado de app real. A
+Executora não publica nada.
+
+**O que foi verificado para escrever o texto, e o que não foi:**
+
+- A linha com defeito é idêntica no `v0.1.0` do `NetApiFlow.Dashboard` e no `v0.2.0` do
+  `NetApiFlow.Mcp`, e `git log -S"IAuthorizeData"` acha um único commit em cada arquivo, o que o
+  introduziu. Nenhum commit posterior a tocou.
+- O nuget.org tem o Dashboard de `0.1.0` a `0.5.2` e o `NetApiFlow.Mcp` de `0.2.0` a `0.5.2`, então o
+  intervalo afetado é toda a vida publicada de cada pacote.
+- **Reproduzido de verdade só no `0.5.2`.** As versões anteriores são afirmadas pela leitura do código
+  idêntico. Se a auditoria quiser dizer "reproduzido em todas", precisa rodar o `0.1.0` e o `0.2.0`.
+- No MCP, `tools/list` devolveu `get_component_stats`, `get_trace` e `list_recent_traces`, e
+  `get_component_stats` devolveu dados reais do store. As três ferramentas são de leitura, e o MCP não
+  tem nenhuma que apague. A rota que apaga é a do Dashboard, `DELETE /flow/api/traces`.
+
+**Severidade, para a auditoria decidir ao publicar.** O dono escolheu "baixa". Pelo CVSS 3.1, com o
+disparo exigindo configuração do dono do app (`AC:H`), o vetor `AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N`
+dá 4,8, que é **Média**, porque o `DELETE` conta como integridade. Para o resultado ser Baixa (3,7) o
+vetor precisa de `I:N`, o que esconde o `DELETE`. Publicar "baixa" e ao mesmo tempo dizer no texto que
+qualquer um apaga todos os traces é uma inconsistência que um leitor atento nota, então a escolha entre
+as duas coisas é consciente: ou "Média" com o `DELETE` no texto, ou "Baixa" com o texto dizendo que a
+exposição é de leitura. A Planejadora recomenda a primeira, porque o texto verdadeiro é o que sustenta a
+transparência que o dono quis.
+
+**Texto (campos do formulário de advisory do GitHub):**
+
+> **Title:** Dashboard and MCP routes are served to anonymous callers when `RequireAuthorization()` and
+> `AllowAnonymous()` are chained
+>
+> **Ecosystem and packages:** NuGet. `NetApiFlow.Dashboard`, affected `>= 0.1.0, <= 0.5.2`.
+> `NetApiFlow.Mcp`, affected `>= 0.2.0, <= 0.5.2`. Patched version: `0.6.0` for both.
+>
+> **CWE:** CWE-863, Incorrect Authorization.
+>
+> **Description:** Outside the Development environment, the access gate of the NetApiFlow dashboard and
+> of the NetApiFlow MCP endpoint is meant to answer 404 unless the application protected the routes. It
+> decided that by checking only that the endpoint carries authorization metadata. ASP.NET Core ignores
+> that authorization when the endpoint also carries `IAllowAnonymous`. An application that chained
+> `RequireAuthorization(...)` and `AllowAnonymous()` on the NetApiFlow endpoints, outside Development
+> and without registering an `IFlowAccessFilter`, therefore served every dashboard and MCP route to
+> anonymous callers, while the configuration looked protected.
+>
+> **Impact:** An anonymous caller can read trace metadata: route templates, step names, durations,
+> statuses, truncated and sanitized error messages, SQL command text when `CaptureSqlText` is enabled,
+> and any step tags the application set. Through the dashboard, the caller can also delete every stored
+> trace (`DELETE /flow/api/traces`). NetApiFlow never records request or response bodies, headers, query
+> strings, method arguments or SQL parameter values, so none of those are exposed.
+>
+> **Not affected:** applications that chain only `RequireAuthorization(...)` (the policy is enforced),
+> only `AllowAnonymous()` (the routes answer 404), or that register an `IFlowAccessFilter` (the filter
+> decides every request). The Development environment is open by design.
+>
+> **Patches:** From `0.6.0`, outside Development and without an `IFlowAccessFilter`, a route is served
+> only when it carries authorization metadata and no `AllowAnonymous` metadata. Otherwise it answers 404.
+> An application that relied on chaining both to open the dashboard now gets 404 and should register an
+> `IFlowAccessFilter`.
+>
+> **Workarounds:** Do not chain `AllowAnonymous()` and `RequireAuthorization()` on the NetApiFlow
+> endpoints. Chain `RequireAuthorization("YourPolicy")` alone, or chain `AllowAnonymous()` and register
+> an `IFlowAccessFilter`. Upgrade to `0.6.0`.
+
 ### Tarefa 50.11: o CI roda os testes, o lint e o formato do Angular
 
 Achado do `merge-auditor` na revisão da Parte A, **conferido pela Planejadora nos workflows**: `ci.yml`
