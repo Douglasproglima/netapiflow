@@ -120,6 +120,11 @@ public sealed class NetApiFlowOptions
     /// <see langword="true"/>. Set it to <see langword="false"/> to keep the trace id out of
     /// responses.</summary>
     public bool EmitTraceIdHeader { get; set; } = true;
+
+    /// <summary>Opens an <see cref="ComponentType.Endpoint"/> step for every Minimal API endpoint,
+    /// without <c>WithNetApiFlowTracking()</c>. Default: <see langword="true"/>. An endpoint that is
+    /// already marked keeps a single step, and an MVC action keeps only the controller step.</summary>
+    public bool CaptureMinimalApiEndpoints { get; set; } = true;
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
@@ -223,6 +228,26 @@ public static class FlowTrackedServiceCollectionExtensions
     public static IServiceCollection DecorateFlowTracked(
         this IServiceCollection services, Func<Type, bool> predicate,
         ComponentType componentType = ComponentType.Service);
+
+    /// <summary>Tracks the application's own services, repositories and handlers by name:
+    /// <c>*Service</c> as <see cref="ComponentType.Service"/>, <c>*Repository</c> as
+    /// <see cref="ComponentType.Repository"/>, <c>*Handler</c> as <see cref="ComponentType.UseCase"/>.
+    /// Only types of the entry assembly, or of the assemblies and namespaces named in
+    /// <paramref name="configure"/>, are ever decorated, never a framework, third-party or NetApiFlow
+    /// type. Call it after your own registrations: a registration made later is not decorated, and
+    /// the host logs a warning naming it. A registration made by factory cannot be decorated, and the
+    /// host logs a warning naming it too.</summary>
+    public static IServiceCollection TrackFlowByConvention(
+        this IServiceCollection services, Action<FlowConventionOptions>? configure = null);
+}
+
+public sealed class FlowConventionOptions
+{
+    /// <summary>Adds an assembly to the scope. Any call replaces the default scope, the entry assembly.</summary>
+    public FlowConventionOptions IncludeAssembly(Assembly assembly);
+
+    /// <summary>Adds a namespace prefix to the scope. Any call replaces the default scope, the entry assembly.</summary>
+    public FlowConventionOptions IncludeNamespacePrefix(string prefix);
 }
 
 public static class NetApiFlowEndpointFilterExtensions
