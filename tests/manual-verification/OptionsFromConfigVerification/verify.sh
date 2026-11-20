@@ -49,6 +49,8 @@ show_trace() {
 import json,sys
 d=json.load(sys.stdin)
 print('$label spans:', sorted({(s['component'], s['type']) for s in d['spans']}))
+for s in d['spans']:
+    print('$label   ', s['component'], s['type'], 'spanId=' + s['spanId'], 'parentSpanId=' + str(s['parentSpanId']))
 print('$label logs on spans:', [l['message'] for s in d['spans'] for l in s['logs']])"
 }
 
