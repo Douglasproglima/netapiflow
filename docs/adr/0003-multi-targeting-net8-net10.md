@@ -2,8 +2,9 @@
 
 ## Status
 Aceito. A cláusula de sucessão ("trocar `net8.0` por `net12.0` quando sair de suporte") foi
-substituída pelo ADR-0023: entra `net11.0` como terceiro TFM, não uma troca, enquanto `net12.0`
-não lança. O resto desta decisão continua valendo.
+substituída pelo ADR-0023 (terceiro TFM `net11.0`) e, depois, pelo ADR-0025: `net8.0` e `net10.0`
+continuam, `net8.0` sai numa data anunciada, e `net11.0` só vira alvo próprio com uma API exclusiva
+do 11. O resto desta decisão continua valendo.
 
 ## Discussion
 [#175](https://github.com/Douglasproglima/netapiflow/discussions/175)
