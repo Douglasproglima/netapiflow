@@ -107,6 +107,21 @@ jobs:
           npm ci
           npm run build
 
+      - name: Lint dashboard UI
+        if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run lint
+
+      - name: Check dashboard UI formatting
+        if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run format:check
+
+      - name: Test dashboard UI
+        if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run test:ci
+
       - name: Restore
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet restore NetApiFlow.slnx

@@ -48,9 +48,10 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
    teste novo, então precisa de um CI que o prove (D-202).
 3. Tarefa 50.5, a demo funcional. A auditoria a pôs antes de continuar a Parte B (D-200). Quem estiver
    no meio de um passo termina o passo e vem para ela.
-4. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
-5. Parte B (50.6 e 50.7) e a tarefa 50.9.
-6. Fase 51.
+4. Fase 53, Tarefa 53.0: medir o `PathBase`, sem corrigir (D-205).
+5. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
+6. Parte B (50.6 e 50.7) e a tarefa 50.9.
+7. Fase 51, e depois a correção da Fase 53.
 
 Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
 50.10 precisa poder ser mergeada sozinha.
@@ -267,7 +268,8 @@ separada da 50.5, para a auditoria conseguir ler e mergear a correção de segur
 
 #### Rascunho do GitHub Security Advisory (D-203)
 
-O dono decidiu publicar um advisory de severidade baixa para as versões afetadas, junto do `0.6.0`. Quem
+O dono decidiu publicar um advisory de severidade **média** para as versões afetadas, junto do `0.6.0`
+(D-203 e D-206). Quem
 publica é a auditoria, com o Release. Esta seção é só o texto, em inglês, sem dado de app real. A
 Executora não publica nada.
 
@@ -284,14 +286,12 @@ Executora não publica nada.
   `get_component_stats` devolveu dados reais do store. As três ferramentas são de leitura, e o MCP não
   tem nenhuma que apague. A rota que apaga é a do Dashboard, `DELETE /flow/api/traces`.
 
-**Severidade, para a auditoria decidir ao publicar.** O dono escolheu "baixa". Pelo CVSS 3.1, com o
-disparo exigindo configuração do dono do app (`AC:H`), o vetor `AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N`
-dá 4,8, que é **Média**, porque o `DELETE` conta como integridade. Para o resultado ser Baixa (3,7) o
-vetor precisa de `I:N`, o que esconde o `DELETE`. Publicar "baixa" e ao mesmo tempo dizer no texto que
-qualquer um apaga todos os traces é uma inconsistência que um leitor atento nota, então a escolha entre
-as duas coisas é consciente: ou "Média" com o `DELETE` no texto, ou "Baixa" com o texto dizendo que a
-exposição é de leitura. A Planejadora recomenda a primeira, porque o texto verdadeiro é o que sustenta a
-transparência que o dono quis.
+**Severidade: Média, CVSS 3.1 de 4,8 (D-206).** Vetor
+`CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N`. O `AC:H` vem de o disparo exigir configuração do dono
+do app, e o `I:L` vem de o `DELETE /flow/api/traces` apagar todos os traces. O dono escolheu essa
+severidade com o texto completo, que diz a leitura dos traces e o `DELETE`, depois de a auditoria
+mostrar a conta. A escolha anterior, "baixa", tinha sido feita sobre uma pergunta que não mostrava o
+CVSS. Baixa (3,7) só sairia com `I:N`, o que esconderia o `DELETE`.
 
 **Texto (campos do formulário de advisory do GitHub):**
 
@@ -302,6 +302,9 @@ transparência que o dono quis.
 > `NetApiFlow.Mcp`, affected `>= 0.2.0, <= 0.5.2`. Patched version: `0.6.0` for both.
 >
 > **CWE:** CWE-863, Incorrect Authorization.
+>
+> **Severity:** Moderate. CVSS 3.1 base score 4.8,
+> `CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N`.
 >
 > **Description:** Outside the Development environment, the access gate of the NetApiFlow dashboard and
 > of the NetApiFlow MCP endpoint is meant to answer 404 unless the application protected the routes. It

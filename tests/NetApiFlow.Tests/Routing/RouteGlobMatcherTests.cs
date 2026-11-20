@@ -60,4 +60,28 @@ public class RouteGlobMatcherTests
 
         policy.ShouldTrace("/diagnostics/api/traces").ShouldBeFalse();
     }
+
+    [Theory]
+    [InlineData("/openapi/v1.json")]
+    [InlineData("/OpenApi/V1.json")]
+    public void ShouldTrace_ForOpenApiDocumentPath_IsAlwaysFalseEvenWhenIncludePathsMatchesIt(string path)
+    {
+        var options = new NetApiFlowOptions();
+        options.IncludePaths("/**");
+
+        var policy = new TracingRoutePolicy(options);
+
+        policy.ShouldTrace(path).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ShouldTrace_ForOpenApiDocumentPathConfiguredElsewhere_FollowsTheConfiguredPath()
+    {
+        var options = new NetApiFlowOptions { OpenApiDocumentPath = "/swagger/v1/swagger.json" };
+
+        var policy = new TracingRoutePolicy(options);
+
+        policy.ShouldTrace("/swagger/v1/swagger.json").ShouldBeFalse();
+        policy.ShouldTrace("/openapi/v1.json").ShouldBeTrue();
+    }
 }

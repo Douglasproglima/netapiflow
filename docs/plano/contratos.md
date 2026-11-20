@@ -266,6 +266,13 @@ porque o EF Core não tem registro global de interceptor). Formalizado na revis�
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
 
+**Nome da etapa `Endpoint` de um Minimal API (Tarefa 51.9).** O par `(component, operation)` sai de
+metadados do endpoint, nunca do `DisplayName`, e é o mesmo para a etapa de `WithNetApiFlowTracking()` e
+para a etapa sem marcação. Método com nome, sem marca de compilador: `Tipo.Método`. Lambda ou função
+local: `component = "Minimal API"` e `operation` com o nome de `WithName` ou, sem ele, os verbos e a
+rota normalizada (`GET /hello`). Controller de MVC e Razor Pages mantêm `Controller.Action`. A regra e as
+medições estão em `docs/plano/fase-51-sem-marcacao.md`, Tarefa 51.9.
+
 ### `NetApiFlow.Dashboard`: superfície pública
 
 ```csharp

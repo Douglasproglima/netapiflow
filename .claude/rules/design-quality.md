@@ -18,6 +18,39 @@ contra as quatro telas (`/flow?trace=<id>`, `/history`, `/components`, `/runner`
 mudança afeta algo compartilhado entre elas (tema, tipografia, espaçamento); só a tela afetada
 quando a mudança é local.
 
+## Detector contra um host vivo no Windows
+
+Medido pela Executora em 20/11/2026, no Windows 10, com o `impeccable` da versão fixada no
+`package.json`. É a receita que funcionou, não regra de produto.
+
+- `npx impeccable detect --viewport 390x844 "http://localhost:<porta>/flow?trace=<id>"` contra o host
+  vivo estoura com `Error: Navigation timeout of 30000 ms exceeded`, também sem `--viewport`, com
+  `127.0.0.1` e em `/flow/history`. Contra a demo estática, `npx impeccable detect
+  "http://127.0.0.1:<porta>/"` termina com exit 0, e o mesmo comando funciona no CI do ubuntu. A causa
+  provável é o stream SSE, mas **isso não foi provado**: o que se mediu foi só "host vivo estoura,
+  estático não".
+- O que funcionou foi abrir o Edge sem janela e apontar o detector para a porta de depuração:
+
+  ```text
+  "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --remote-debugging-port=9333 --user-data-dir=<pasta temporária> --window-size=1280,800 --blink-settings=preferredColorScheme=1 --no-first-run --disable-extensions "http://localhost:<porta>/flow?trace=<id>"
+  ```
+
+  Esperar a porta responder (`curl http://127.0.0.1:9333/json/version`, cerca de 4 segundos) e depois,
+  em `src/NetApiFlow.Dashboard/ClientApp`: `npx impeccable detect --cdp 9333 --target <porta>`.
+- `preferredColorScheme=1` é o tema escuro e `0` o claro. `--window-size=390,844` dá o viewport
+  mobile. Saída vazia é zero achados, e `--json` imprime `[]`. Para encerrar o Edge:
+  `taskkill //F //T //PID <pid>`.
+
+## Conferir qual build o navegador está mostrando
+
+Servir `dist/demo/browser` com `python -I -m http.server <porta> --bind 127.0.0.1` não manda
+`Cache-Control`, e o navegador pode continuar mostrando o build antigo depois de reconstruir. Medido: o
+navegador listou `main-Z6W4SS2D.js` enquanto `ls dist/demo/browser` e o `curl` do `index.html` davam
+`main-NGI2J5HA.js`. Antes de olhar qualquer captura, comparar, no navegador,
+`[...document.scripts].map((s) => s.src.split('/').pop()).filter(Boolean)` com
+`ls dist/demo/browser | grep '^main-'`. Se diferirem, abrir por outra origem (`localhost` no lugar de
+`127.0.0.1`) e conferir de novo.
+
 ## O guia manda, o detector verifica (D-76)
 
 `docs/brand/tokens.md` e `docs/design/*/guide.md` são a fonte de verdade de cor, tipografia e

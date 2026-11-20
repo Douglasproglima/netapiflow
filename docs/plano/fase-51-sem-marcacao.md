@@ -91,6 +91,91 @@ Teste de **host real** (`.claude/rules/testing.md`), visto falhando antes de qua
 `AddNetApiFlow()`, um endpoint de Minimal API **sem** marcação, uma requisição, e o trace lido do
 `FlowRecorder` do host esperando uma etapa `Endpoint`. Hoje o trace tem 0 etapas.
 
+### Tarefa 51.9: o nome da etapa de um endpoint de Minimal API (executa depois da 51.0 e antes da 51.1)
+
+**O achado** (`AUDITORIA-16-11`, 20/11/2026, com o pacote `0.6.0-audit.1` num app novo, e conferido pela
+Planejadora no código): a etapa do endpoint `/hello` aparece como `HTTP: GET /hello./hello` no painel de
+detalhes, na cascata e no "falhou em". A API do trace entrega `component = "HTTP: GET /hello"` e
+`operation = "/hello"`, e a tela as une com um ponto. Na tela de Componentes cada endpoint vira um
+componente chamado `HTTP: GET ...`. Um controller de MVC sai limpo (`OrdersController.GetById`). A origem
+são as linhas 12 e 13 do `FlowEndpointFilter`: `component = endpoint.DisplayName` e
+`operation = RoutePattern.RawText`.
+
+**O sintoma foi visto renderizado pela auditoria** (Playwright headless, pacote `0.6.0-audit.1` do
+`f1d2f11`, `net10.0`): na tela `/flow?trace=<id>` de um `GET /hello` marcado, a lista de etapas mostra
+`HTTP: GET /hello./hello | 86 µs`, e o nó do grafo mostra `Concluído · Endpoint | /hello`.
+
+O defeito é anterior à Fase 51, mas o degrau 1 gravaria esse mesmo rótulo, sozinho, para **todo**
+endpoint de Minimal API. Por isso a regra do nome se define antes dele. Vai no `0.6.0` (D-205).
+
+**O que o ASP.NET Core entrega, medido pela Planejadora em `net10.0`** (a Executora repete em `net8.0`
+antes de fixar a regra):
+
+| Forma do handler | `DisplayName` | Nome (`IEndpointNameMetadata`) | `MethodInfo` do handler |
+|---|---|---|---|
+| lambda | `HTTP: GET /lambda` | nenhum | tipo `<>c`, método `<<Main>$>b__0_1` (gerados) |
+| método com nome, estático ou de instância | `HTTP: GET /static-method => StaticGet` | nenhum | `Handlers`, `StaticGet` |
+| função local | `HTTP: GET /local-function => LocalFunction` | nenhum | `Program`, `<<Main>$>g__LocalFunction\|0_0` (gerado) |
+| `.WithName("GetNamed")` | `HTTP: GET /named` (não muda) | `GetNamed` | gerado |
+| `.WithDisplayName("My display")` | `My display` | nenhum | gerado |
+| dentro de `MapGroup("/api/v1")` | rota completa, com o prefixo do grupo | nenhum | conforme a forma |
+| `MapMethods` com vários verbos | `HTTP: GET, PUT /multi` | nenhum | gerado |
+
+O `DisplayName` não serve de componente. O prefixo `HTTP:` e o sufixo ` => Método` são o formato do
+framework, que não é contrato (mesma classe do R-32), e o nome do tipo de uma lambda é gerado pelo
+compilador. Com método com nome o rótulo de hoje fica ainda pior:
+`HTTP: GET /orders/{id:int} => StaticGet./orders/{id:int}`.
+
+**A regra, montada a partir de metadados e nunca do `DisplayName`** (a Planejadora decide, a Executora
+valida na tela):
+
+| Handler | `component` | `operation` | Aparece como |
+|---|---|---|---|
+| método com nome, sem marca de compilador | nome simples do tipo declarante | nome do método | `Handlers.StaticGet` |
+| lambda ou função local, com `WithName` | `Minimal API` | o nome | `Minimal API.GetNamed` |
+| lambda ou função local, sem nome | `Minimal API` | verbos e rota: `GET /hello` | `Minimal API.GET /hello` |
+
+- "Sem marca de compilador": o nome do tipo e o do método não contêm `<` nem `>`.
+- A rota é a do trace: `RouteTemplateNormalizer.Normalize` do `RawText`, com o prefixo do `MapGroup`. O
+  teste compara com o `RouteTemplate` que o trace grava, para as duas nunca divergirem.
+- Os verbos vêm de `IHttpMethodMetadata`, unidos por `, `. Sem metadado de verbo (`MapFallback`), só a
+  rota.
+- Endpoint que não é um `RouteEndpoint`: `component = "Minimal API"` e `operation` com o `DisplayName`,
+  ou `Endpoint` se ele for nulo.
+- `WithDisplayName` **não** é usado. Saber que o usuário o definiu exigiria reconhecer o formato do
+  `DisplayName` padrão, e isso é o que a regra acima evita. Se alguém pedir, vira item de roadmap.
+- Controller de MVC e Razor Pages: sem mudança.
+
+**Um lugar só.** Uma função interna calcula o par `(component, operation)`, e o `FlowEndpointFilter` e o
+listener do degrau 1 (Tarefa 51.2) chamam a mesma. Nenhuma cópia por caminho.
+
+**Testes de host real**, em `net8.0` e `net10.0`, nos dois caminhos (o filtro de `.WithNetApiFlowTracking()` e
+a etapa sem marcação), vistos falhando antes (hoje o componente é `HTTP: ...`): lambda sem nome, lambda
+com `WithName`, método estático, método de instância, função local, rota com restrição (`{id:int}`),
+dentro de `MapGroup` e `MapMethods` com dois verbos. E um teste que, para o mesmo conjunto de endpoints,
+prova que os dois caminhos gravam o **mesmo** par.
+
+**As telas.** A Executora monta dois apps. O primeiro tem um endpoint de cada forma. O segundo, por
+exigência da auditoria, tem **pelo menos 6 endpoints de lambda em dois `MapGroup` diferentes**, para ver
+como o componente `Minimal API` se comporta num app com volume. Ela captura as quatro telas de cada um: o
+painel de detalhes e a cascata do trace, Componentes, Arquitetura e o Diff.
+
+A regra junta todas as lambdas de um app num só componente, e o MVC separa por controller. Se no segundo
+app as telas ficarem num bloco único sem sentido, a alternativa autorizada é o componente pelo prefixo
+do `MapGroup`, quando houver grupo. Antes de propô-la, a Executora **mede o que o ASP.NET Core expõe**
+para recuperar o grupo de um endpoint, porque o `RawText` traz o prefixo mas não diz onde o grupo
+termina, e diz o que achou. Se alguma tela ler mal, ela propõe o ajuste e a Planejadora decide **com as
+telas na mão**, antes de seguir. A auditoria põe o nome de cada tipo de etapa no inventário dela.
+
+**Compatibilidade, para o `CHANGELOG.md`** (`### Changed`, em inglês): o nome da etapa de um endpoint de
+Minimal API mudou. O histórico guardado no PostgreSQL ou no SQL Server mantém os nomes antigos, então o
+mapa de Arquitetura e o Diff mostram dois nós para o mesmo endpoint até o histórico antigo sair. Quem usa
+o nome da etapa em asserção do `NetApiFlow.Testing` ou nas ferramentas do MCP precisa trocá-lo. `contratos.md`
+passa a descrever a regra.
+
+**Pronto quando:** a regra numa função só, os testes dos dois caminhos passando e vistos falhando antes,
+as quatro capturas anexadas ao resumo, e o `CHANGELOG.md` dizendo a mudança.
+
 ### Tarefa 51.1: a opção
 
 `NetApiFlowOptions.CaptureMinimalApiEndpoints`, padrão **`true`** (texto em `contratos.md`).
@@ -119,9 +204,9 @@ O listener, ao receber o evento com o `HttpContext`:
   `Enabled = false` nunca ganha etapa (D-192);
 - só age num `RouteEndpoint` que não seja de MVC nem de Razor Pages, isto é, sem `ActionDescriptor` nos
   metadados, e com `MethodInfo`, que é o que um Minimal API traz;
-- abre a etapa `Endpoint` com o **mesmo** componente e a mesma operação que o `FlowEndpointFilter` grava
-  (`endpoint.DisplayName ?? "Endpoint"` e `RoutePattern.RawText ?? componente`), extraídos para um só
-  lugar, para os dois nunca divergirem;
+- abre a etapa `Endpoint` com o componente e a operação da regra da Tarefa 51.9, calculados pela mesma
+  função que o `FlowEndpointFilter` passa a usar, para os dois nunca divergirem. Não copiar o
+  `endpoint.DisplayName`, que dá `HTTP: GET /hello./hello` na tela;
 - guarda a etapa em `HttpContext.Items`, sob uma chave interna.
 
 O `NetApiFlowMiddleware` fecha essa etapa no `finally` da requisição, antes de fechar o trace.
@@ -158,7 +243,7 @@ marcada. Colar os números no resumo. Se o custo por requisição passar do dobr
 
 | # | Cenário | Esperado |
 |---|---|---|
-| T1 | Endpoint de Minimal API sem marcação | Uma etapa `Endpoint`, com o componente e a operação do filtro |
+| T1 | Endpoint de Minimal API sem marcação | Uma etapa `Endpoint`, com o componente e a operação da regra da 51.9, iguais aos do filtro |
 | T2 | O mesmo endpoint com `.WithNetApiFlowTracking()` | Continua com uma só |
 | T3 | Ação de MVC | Só a etapa do controller, nenhuma `Endpoint` |
 | T4 | Opção em `false`, no código e só na configuração | Sem marcação, 0 etapas. Com marcação, 1 |
