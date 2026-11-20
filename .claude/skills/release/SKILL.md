@@ -27,6 +27,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    A receita pronta está em `tests/manual-verification/README.md`, na seção "Options set only in
    configuration" (app `OptionsFromConfigVerification`). Rodar os comandos de lá com um
    `-verify.<n>` novo, nos dois alvos e nos dois modos, sem reescrever nada.
+   **E o caminho do usuário (D-186).** Criar um app novo com `dotnet new webapi` e seguir o README ao
+   pé da letra, sem completar nada de cabeça. Conferir o documento OpenAPI do app: nenhuma rota do
+   NetApiFlow nele. Usar cada tela do dashboard e da demo num navegador de verdade (Playwright), não só
+   conferir status HTTP: a auditoria que achou sete problemas (D-185) passou pelas rodadas anteriores
+   porque elas conferiam só diffs, CI e status.
 5. Crie a branch:
    ```bash
    git switch develop

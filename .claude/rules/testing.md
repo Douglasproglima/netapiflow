@@ -136,6 +136,20 @@ teste de interop passava, e todo SQL direto dentro de um controller sumia do tra
 a forma de rodar: os dois projetos de interop precisam executar no CI (`ci.yml`, fora do Windows).
 Teste que existe e não roda não prova nada, e o do SqlClient nunca rodou no CI desde que existe.
 
+## O teste com o pacote real inclui o caminho do usuário (D-186)
+
+Antes de publicar, o teste com o pacote real não termina no registro das opções. Ele segue o caminho de
+quem chega ao produto pela primeira vez:
+
+- um app novo de `dotnet new webapi`, com os pacotes de `local-nuget-feed` (nunca `ProjectReference`);
+- o README seguido ao pé da letra, linha por linha, sem completar o que faltar com o que a gente sabe;
+- o documento OpenAPI do app conferido: nenhuma rota do NetApiFlow nele;
+- cada tela do dashboard e da demo usada num navegador de verdade (Playwright), nos dois idiomas e nos
+  dois temas, não só status HTTP. Um grafo em branco responde 200.
+
+A auditoria do dono achou sete problemas (D-185) que as rodadas anteriores deixaram passar por conferir
+só diff, CI e status HTTP.
+
 ## Smoke tests de integração (`NetApiFlow.IntegrationTests`)
 
 Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o pipeline real
