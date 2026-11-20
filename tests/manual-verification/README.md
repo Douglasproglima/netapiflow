@@ -145,3 +145,47 @@ On Windows the ILC step behind both `dotnet publish` commands above shells out t
 through `vswhere.exe`. If the publish ends in `MSB3073` naming `link.exe`, add the installer
 directory to `PATH` (typically `C:\Program Files (x86)\Microsoft Visual Studio\Installer`) and run
 it again. That failure is a local toolchain gap, not a result.
+
+## Options set only in configuration
+
+Proves, with real packages, that `LogCorrelation.Enabled` and `CapturePrePipelineSteps` set only in
+the `NetApiFlow` section of `appsettings.json` turn their features on, and that nothing runs when
+they are absent. It is also the release smoke: `AddNetApiFlow()` with no lambda, in `Development`,
+with SQL Server storage and `Microsoft.Data.SqlClient` 7.1.2 referenced by the app.
+`OptionsFromConfigVerification` has a controller (pre-pipeline steps only exist in MVC), an
+authorization filter, and two endpoints: `/api/smoke` writes a warning inside a
+`NetApiFlow.Step(...)` and runs a `SqlCommand`, and `/mini/plain` runs a `SqlCommand` from a Minimal
+API endpoint outside any step.
+
+From the repo root, with `<n>` a number not used before for that version (never the real version
+number, and never `-p:VersionSuffix`, which this repository ignores):
+
+```bash
+dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:Version=0.5.0-verify.<n>
+docker run -d --name smoke-sql -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD='Smoke050!Pass' -p 14330:1433 mcr.microsoft.com/mssql/server:2022-latest
+MSYS_NO_PATHCONV=1 docker exec smoke-sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'Smoke050!Pass' -Q "CREATE DATABASE smoke"
+cd tests/manual-verification/OptionsFromConfigVerification
+bash verify.sh net11.0 on 0.5.0-verify.<n>
+bash verify.sh net11.0 control 0.5.0-verify.<n>
+bash verify.sh net8.0 on 0.5.0-verify.<n>
+bash verify.sh net8.0 control 0.5.0-verify.<n>
+```
+
+`net11.0` resolves the `lib/net10.0` assets and `net8.0` the `lib/net8.0` ones. The script prints the
+resolved asset per package, so that is checked from `project.assets.json`, not assumed. Leave
+`DOCKER_HOST` unset for the Docker CLI. Then remove the container and the `verify` packages from
+`local-nuget-feed` and from `local-packages`, and commit none of them.
+
+**Expected, `on`:** the controller trace has `AuthorizationFilters` and `ResourceFilters` spans, the
+warning shows up on the step's span, the Minimal API trace has a `SqlClient` span, the trace is
+still listed after restarting the app, the dashboard answers 200, and `--vulnerable` finds nothing.
+
+**Expected, `control`:** the same app with the two keys absent. No `AuthorizationFilters` or
+`ResourceFilters` span and no correlated log.
+
+**Known failure, not a regression:** inside the controller, the `SqlCommand` of `/api/smoke` produces
+no `SqlClient` span, in `on` and in `control`. A command issued while a NetApiFlow step is the
+current activity is dropped on purpose, so the EF Core interceptor does not record the same command
+twice, and in an MVC action the controller step is always current. The same thing happens inside a
+`NetApiFlow.Step(...)` in a Minimal API endpoint. A later phase changes that rule. Until then, the
+check that the `SqlCommand` becomes a span uses `/mini/plain`.
