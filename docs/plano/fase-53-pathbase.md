@@ -98,14 +98,21 @@ Matriz, com e sem `UsePathBase("/api")`, em Development e em Production:
 | MCP, `initialize` e uma chamada de ferramenta | idem |
 | `OpenApiDocumentPath` | idem |
 | arquivo estático excluído por `ExcludePaths` | idem |
+| IIS in-process (ANCM), como aplicação virtual sob `/api` | idem, e de onde vem o `PathBase` |
+| IIS out-of-process | idem |
+| Proxy reverso (nginx ou YARP) com `X-Forwarded-Prefix` | idem, e se o app aplica o prefixo sozinho ou só quando o código chama `UsePathBase` |
 
-Duas perguntas que mudam o tamanho do problema, e que a Executora responde com o código do framework e
-com um teste, não por suposição:
+**As três últimas linhas são medidas em host real** (decisão da auditoria, D-205), não lidas no
+código. Se a máquina não tiver o IIS ou o Hosting Bundle, a Executora diz que não mediu e por quê, e a
+Planejadora leva o assunto à auditoria. Nada entra no relatório como medido por leitura.
 
-- **Quem define o `PathBase` em produção, e em que ordem?** Aplicativo em IIS (aplicação virtual) e atrás
-  de proxy reverso: o `PathBase` chega por um `IStartupFilter` do próprio framework **antes** do
-  middleware do NetApiFlow, ou só quando o usuário chama `UsePathBase`? Se o framework o define antes, boa
-  parte das implantações reais não sofre, e o problema fica restrito ao `UsePathBase` explícito.
+Duas perguntas que mudam o tamanho do problema, e que a Executora responde com a medição acima, não por
+suposição:
+
+- **Quem define o `PathBase` em produção, e em que ordem?** Nas três hospedagens: o `PathBase` chega por
+  um `IStartupFilter` do próprio framework **antes** do middleware do NetApiFlow, ou só quando o usuário
+  chama `UsePathBase`? Se o framework o define antes, boa parte das implantações reais não sofre, e o
+  problema fica restrito ao `UsePathBase` explícito.
 - **Cada mecanismo acima**, com um spike descartável: o que ele consegue cumprir dos sete requisitos, e o
   que ele quebra. Com a medição, não com opinião.
 
@@ -119,16 +126,17 @@ A Planejadora escreve a ADR e as tarefas de correção (53.1 em diante), com os 
 matriz agora provando a correção e vistos falhando antes. O README e o XML doc do `OpenApiDocumentPath`,
 `ExcludePaths` e `IncludePaths` passam a dizer o que vale sob `PathBase`, nos dois idiomas.
 
-## Veículo
+## Veículo e ordem (D-205)
 
-A auditoria decide. A Planejadora recomenda decidir **depois da 53.0**:
+A auditoria decidiu, sem esperar a 53.0: **`0.6.0`**. O defeito é anterior, não é regressão, e não
+expõe dado nem apaga nada, então pela regra nova de hotfix não é hotfix. O `0.6.0` não sai com ele
+aberto: o README e o XML doc dizem "nunca rastreada", e a frase é o contrato.
 
-- Se a correção couber numa mudança interna pequena, sem API pública, a falha reproduzida contra o pacote
-  publicado cabe em hotfix pelo critério de `.claude/rules/planning.md` ("Quando um achado de auditoria
-  vira hotfix, não roadmap").
-- Se depender do `EndpointMatched` da Fase 51 (R-32), vai no `0.6.0` junto com ela.
-- O `0.6.0` não sai com o README e o XML doc dizendo "nunca rastreada" e este defeito aberto. A frase é o
-  contrato.
+Ordem da Executora: 50.11, 50.5, **53.0**, 50.10, Parte B e 50.9, Fase 51, e a correção da 53. Se a
+53.0 concluir que a correção depende do `EndpointMatched` da Fase 51 (R-32), a correção entra junto
+com a 51.
+
+`PathBase` e proxy reverso entram também no inventário da auditoria de base que precede o `0.6.0`.
 
 ## Fora de escopo
 
