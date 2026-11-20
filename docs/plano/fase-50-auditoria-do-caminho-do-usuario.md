@@ -9,7 +9,7 @@ código.
 A fase tem duas partes, separadas pelo impacto de SemVer:
 
 - **Parte A, sem API pública nova**: (a), (b) aviso no grafo, (c), (d) e (e), mais a 50.9 (aviso do 401
-  mudo) e a 50.10 (os portões e o `AllowAnonymous`).
+  mudo) a 50.10 (os portões e o `AllowAnonymous`), a 50.11 e a 50.12 (CI).
 - **Parte B, com opção pública nova** (MINOR): (f) e (g).
 
 **Veículo (D-188, decisão do dono).** O achado (a) sai antes, sozinho, como hotfix `0.5.2`: é a
@@ -50,8 +50,9 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
    no meio de um passo termina o passo e vem para ela.
 4. Fase 53, Tarefa 53.0: medir o `PathBase`, sem corrigir (D-205).
 5. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
-6. Parte B (50.6 e 50.7) e a tarefa 50.9.
-7. Fase 51, e depois a correção da Fase 53.
+6. Tarefa 50.12, o CI publica o núcleo em AOT (D-209).
+7. Parte B (50.6 e 50.7) e a tarefa 50.9.
+8. Fase 51, e depois a correção da Fase 53.
 
 Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
 50.10 precisa poder ser mergeada sozinha.
@@ -358,6 +359,49 @@ a regra nem tirar o passo.
 de falha vistos vermelhos no CI, e a PR de volta ao verde com o `ClientApp` limpo. Branch
 `chore/ci-angular-testes-lint-formato`. Esta tarefa vem antes da 50.5 (D-202).
 
+### Tarefa 50.12: o CI publica o núcleo em AOT e falha com qualquer aviso (D-209)
+
+Achado da auditoria de base (mapa de cobertura do CI, `develop` em `35bcf2d`), conferido pela Planejadora
+nos arquivos: **nenhum workflow roda** `tests/manual-verification/AotCoreVerification`. O README promete,
+em `README.md:739`, que "a host calling only `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or
+trimming warnings". É uma promessa pública protegida só por checagem manual: uma regressão no núcleo a
+quebra e ninguém vê. Mesma classe do D-176 e da 50.11.
+
+O projeto é `net10.0` com `PublishAot` e `ProjectReference` para `src/NetApiFlow`, então o job não precisa
+empacotar nada antes. Duas particularidades que a Planejadora leu nos arquivos e a Executora confirma
+rodando:
+
+- O `Directory.Build.props` de `tests/manual-verification/` é `<Project />`, então o
+  `TreatWarningsAsErrors` da raiz **não vale** ali. Um aviso de IL não falha o `publish` por si só, e o
+  gate tem de ser explícito.
+- O `nuget.config` da pasta lista a fonte `./local-nuget-feed` e a pasta de pacotes `./local-packages`.
+  Num checkout limpo elas não existem, e o restore falhou numa verificação anterior da Planejadora. O job
+  cria as pastas, ou restaura só do nuget.org.
+
+**Passos:**
+
+1. **Antes de mexer em qualquer workflow** (regra da Tarefa 48.4), rodar o publish AOT localmente e colar
+   a saída no resumo, com a contagem de avisos. Zero é o esperado. Se houver aviso, parar e relatar.
+2. Acrescentar o `dotnet publish` do projeto (`-c Release`, `-r linux-x64`) ao `ci.yml`, no job do ubuntu,
+   que tem o `clang` segundo a auditoria, e ao `release.yml`. Falha com qualquer `IL2xxx`, `IL3xxx` ou
+   aviso. Como o gate falha (`-p:TreatWarningsAsErrors=true`, ou ler a saída) é escolha da Executora, e a
+   execução de prova do passo 4 é o que decide se a escolha funciona.
+3. **Medir o tempo.** Se o publish nativo passar de uns três minutos no CI, a Executora traz as opções em
+   vez de decidir (por exemplo, rodar só quando `src/NetApiFlow/**` mudou, e sempre no `release.yml`).
+4. **Execução de prova vermelha no CI de verdade**, o mesmo rito da 50.11: uma regressão de propósito num
+   commit de prova (por exemplo, uma chamada a `Type.GetType(string)` no caminho do `AddNetApiFlow`), o
+   passo fica vermelho, o commit é desfeito antes do merge, e o relatório traz o link. Um gate que nunca
+   viu vermelho pode estar apontando para o lugar errado.
+5. **Medir o `net8.0`, sem exigir.** O núcleo tem os dois alvos, o README não diz qual deles a promessa
+   cobre, e o projeto é só `net10.0`. A Executora publica o mesmo host com `-f net8.0` (um projeto irmão
+   ou multi-alvo, o que der menos trabalho) e diz o resultado. Se o `net8.0` publicar limpo, entra no CI.
+   Se não, é achado novo: ela relata **sem corrigir**, e a decisão, qualificar a promessa por alvo ou
+   corrigir o núcleo, é da auditoria.
+
+**Pronto quando:** a saída local colada, o passo no `ci.yml` (ubuntu) e no `release.yml`, a execução de
+prova vista vermelha e desfeita, o tempo medido, e o `net8.0` medido e relatado. Branch
+`chore/ci-aot-core`. Vem logo depois da 50.10.
+
 ## Parte B
 
 ### Tarefa 50.6 (f): o cabeçalho `X-NetApiFlow-TraceId`
@@ -427,8 +471,8 @@ schema que o código não aceita.
 - Tudo desta fase, menos a Tarefa 50.1, vai no `0.6.0` (D-188). A Parte A não muda API pública, e a
   Parte B traz duas opções públicas novas. Branch `bugfix/50-caminho-do-usuario` a partir de
   `develop` para as tarefas 50.2 a 50.4, `bugfix/50e-demo-funcional` para a 50.5,
-  `bugfix/50-portoes-allow-anonymous` para a 50.10, `chore/ci-angular-testes-lint-formato` para a 50.11
-  e `feature/50b-opcoes-cabecalho-e-schema` para a Parte B. O achado (a) é a Fase 52, em hotfix a partir de `main`.
+  `bugfix/50-portoes-allow-anonymous` para a 50.10, `chore/ci-angular-testes-lint-formato` para a 50.11,
+  `chore/ci-aot-core` para a 50.12 e `feature/50b-opcoes-cabecalho-e-schema` para a Parte B. O achado (a) é a Fase 52, em hotfix a partir de `main`.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor.
 - Ao terminar cada parte: abrir a PR e parar. Tem código, então o merge exige confirmação do dono.
 
