@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `NetApiFlow.Dashboard`: an application with an authorization `FallbackPolicy` that mounts the
+  dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
+  it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
+  how to fix it.
+
 ### Fixed
 
 - `NetApiFlow`: the request that fetches your OpenAPI document (`OpenApiDocumentPath`, `/openapi/v1.json`

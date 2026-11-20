@@ -540,6 +540,10 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > chain `.AllowAnonymous()` and register an `IFlowAccessFilter`, which then decides every request.
 > Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
 > `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
+>
+> When the application starts with a `FallbackPolicy` and a dashboard that has neither
+> `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the 401
+> and the way out, so it does not stay unexplained.
 
 ## MCP server
 
