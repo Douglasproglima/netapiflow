@@ -168,16 +168,86 @@ Visto falhando antes onde falha hoje (o OTLP), e passando depois.
   de chegar ao OpenTelemetry, e o sanitizador cobre `access_token`, `client_secret`, `DB_PASSWORD`, `api_key` e
   `Authorization: Bearer ...`.
 
-**Dependência de teste nova.** O `OpenTelemetry.Exporter.InMemory` só entra em projeto de teste. A Executora
-confere a licença (Apache 2.0, compatível), a manutenção e o `dotnet list package --vulnerable`, e registra o
-pacote no resumo com o motivo (`.claude/rules/dependencies.md`). Ele não entra no `.nuspec`.
+**Dependência de teste.** O `OpenTelemetry.Exporter.InMemory` já era do `NetApiFlow.OpenTelemetry.Tests`
+(`1.20.1`, em `Directory.Packages.props`), então não há pacote de exportação novo. A Executora acrescentou
+`Microsoft.AspNetCore.Mvc.Testing` a esse projeto, na versão central que os outros projetos de teste já
+usam, e registra isso no resumo. Nada disso entra no `.nuspec`.
 
-## Pergunta em aberto, para a auditoria e o dono
+## O advisory (D-221)
 
-O S1 faz uma promessa pública ("never captures") deixar de valer para quem exporta pelo OTLP. Isto também merece
-um **GitHub Security Advisory**, como o do D-203, ou só a entrada de `### Security`? É decisão de comunicação
-pública, do dono, e a Planejadora não a toma. A recomendação, para ele decidir: o advisory só se existir um
-caminho real em que um segredo chegue à mensagem de uma exceção do usuário, o que o próprio teste da 54.0 mostra.
+O dono decidiu publicar um **segundo GitHub Security Advisory**, de severidade baixa, para este achado,
+junto do `0.6.0` e do primeiro (D-203, D-206). Quem publica é a auditoria. Esta seção é só o rascunho, em
+inglês, sem dado de app real. A Executora não publica nada.
+
+**O que foi verificado para escrever o texto, e o que não foi:**
+
+- A tag crua `netapiflow.error.message` aparece em `FlowStep.cs` já no `v0.1.0` (commit `1f9d7f8`) e segue lá no
+  `v0.5.2`. O `NetApiFlow` publicado vai de `0.1.0` a `0.5.2`.
+- A regex de chaves do sanitizador é a mesma no `v0.1.0` e no `v0.5.2` (nasceu na Fase 1, commit `9eb10b2`).
+- O `NetApiFlow.OpenTelemetry` foi publicado de `0.2.0` a `0.5.2`. O `AddNetApiFlowOtlpExport` registra a fonte
+  `NetApiFlow` no SDK e esse pacote não sanitiza nada (li o código).
+- Como a tag está na própria `Activity` desde o `0.1.0`, qualquer `ActivityListener` do host que escute a fonte
+  `NetApiFlow` a recebe crua, **mesmo sem** o pacote `NetApiFlow.OpenTelemetry`.
+- **Reproduzido de verdade só no `0.5.2`**, pela auditoria, com um coletor real: o OTLP vaza nos 13 casos, e o
+  painel em 10 das 12 formas de segredo. As versões anteriores são afirmadas pela leitura do mesmo código.
+  Eu não reproduzi de novo.
+
+**A conta do CVSS 3.1, feita por script** (a pedido da auditoria, com a regra "se não der Baixa com o texto
+verdadeiro, vale o texto verdadeiro"):
+
+| Vetor | Nota | Quando se aplica |
+|---|---|---|
+| `AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N` | **3,1, Baixa** | A confidencialidade perdida é limitada ao que a aplicação pôs numa mensagem de exceção |
+| `AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N` | 5,3, Média | O segredo vazado costuma ser uma credencial de alto valor |
+
+**A Planejadora recomenda a Baixa**, com este raciocínio: `AC:H`, porque o disparo (um segredo dentro de uma
+mensagem de exceção) não é controlado por quem lê; `PR:L`, porque ler o backend de telemetria ou o painel exige
+uma conta (em Production o painel responde 404 sem proteção); `C:L`, porque o que vaza é só o que a aplicação
+escolheu pôr na mensagem, e não dados que o NetApiFlow colete. A Média só vale se a auditoria e o dono entendem
+que a credencial vazada costuma ser de alto valor. O texto abaixo diz que a gravidade **depende do que a
+aplicação põe nas mensagens**, que é a parte verdadeira nos dois casos.
+
+**Texto (campos do formulário de advisory do GitHub):**
+
+> **Title:** Secrets in exception messages are exported to OpenTelemetry unredacted, and only partly
+> redacted in the dashboard
+>
+> **Ecosystem and packages:** NuGet. `NetApiFlow`, affected `>= 0.1.0, <= 0.5.2`.
+> `NetApiFlow.OpenTelemetry`, affected `>= 0.2.0, <= 0.5.2`. Patched version: `0.6.0` for both.
+>
+> **CWE:** CWE-532, Insertion of Sensitive Information into Log File.
+>
+> **Severity:** Low. CVSS 3.1 base score 3.1, `CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N`.
+>
+> **Description:** NetApiFlow documents that it never captures request or response bodies, headers, query
+> strings, method arguments or SQL parameter values, and that error messages are truncated to 300 characters and
+> sanitized. Two defects broke that promise for the error message of a step. First, `FlowStep.MarkError` wrote the
+> raw exception message to an activity tag, so anything that listens to the `NetApiFlow` activity source,
+> including the OpenTelemetry export, received it without redaction and without truncation. Second, the
+> sanitizer redacted only a short list of forms: a key spelled exactly as `password`, `token`, `authorization`,
+> `api-key` or `secret`, followed by `:` or `=`. Common forms such as access tokens, client secrets,
+> connection-string passwords, JSON keys and an `Authorization` header with a scheme were left unredacted in the
+> dashboard, the REST API, the event stream, the MCP tools, the correlated logs and the storage. The message was
+> also truncated before it was sanitized.
+>
+> **Trigger:** An application records an exception on a step, for example a traced endpoint or service that
+> throws, and the message of that exception contains a secret.
+>
+> **Impact:** The secret reaches the OTLP backend without any filtering and at any length, and it is shown in the
+> dashboard in most common secret shapes (10 of the 12 tested). The severity depends on what the application puts
+> in exception messages. NetApiFlow does not add secrets itself.
+>
+> **Not affected:** Applications whose exception messages contain no secret. Step tags set explicitly by the
+> application are documented as stored without sanitization and are not part of this issue.
+>
+> **Patches:** From `0.6.0`, the message is sanitized and truncated before it is written to the activity, so
+> every consumer receives the clean value. The sanitizer matches any key that contains a sensitive word,
+> redacts the whole value (quoted values and `Authorization` schemes included), and the final message never
+> exceeds 300 characters.
+>
+> **Workarounds:** Do not put secrets in exception messages. Drop the `netapiflow.error.message` attribute in the
+> OpenTelemetry Collector, for example with the `attributes` processor and the `delete` action, or disable the
+> OTLP export. Restrict access to the dashboard. Upgrade to `0.6.0`.
 
 ## Fora de escopo
 
