@@ -48,7 +48,7 @@ flowchart TD
 - **`NetApiFlow.EntityFrameworkCore`**: `FlowDbCommandInterceptor`, a `DbCommandInterceptor` that
   opens a `Database` step with component `EntityFrameworkCore` for each command. EF Core has no
   global interceptor registration, so it is attached to each `DbContext` by the application. The
-  package requires EF Core 9 or later, on `net8.0` as well.
+  package requires EF Core 8.0.10 or later, on `net8.0` and `net10.0`.
 - **`NetApiFlow.MediatR`**: `FlowTrackingBehavior<TRequest, TResponse>`, an `IPipelineBehavior`
   that opens a `UseCase` step named after the request type, with operation `Handle`.
 - **Native SQL sources** (`ExternalSources`): `Npgsql` is read from its own `ActivitySource` by
