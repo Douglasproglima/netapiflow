@@ -270,7 +270,9 @@ do prompt já descrevesse essa forma de configuração em código).
 metadados do endpoint, nunca do `DisplayName`, e é o mesmo para a etapa de `WithNetApiFlowTracking()` e
 para a etapa sem marcação. Método com nome, sem marca de compilador: `Tipo.Método`. Lambda ou função
 local: `component = "Minimal API"` e `operation` com o nome de `WithName` ou, sem ele, os verbos e a
-rota normalizada (`GET /hello`). Controller de MVC e Razor Pages mantêm `Controller.Action`. A regra e as
+rota normalizada (`GET /hello`). Os verbos se juntam com `, ` (`GET, PUT /rota`), e um endpoint sem metadado de verbo traz só a rota. Um
+endpoint que não é `RouteEndpoint` grava `component = "Minimal API"` e `operation` com o `DisplayName`, ou
+`Endpoint` se ele for nulo. Controller de MVC e Razor Pages mantêm `Controller.Action`. A regra e as
 medições estão em `docs/plano/fase-51-sem-marcacao.md`, Tarefa 51.9.
 
 ### `NetApiFlow.Dashboard`: superfície pública

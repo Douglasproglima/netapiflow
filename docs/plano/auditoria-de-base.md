@@ -89,6 +89,10 @@ Fase 60, se couber. O que não couber vira item de roadmap, um registro por item
 - **Texto e rótulos:** `aria-label="Request summary"` fixo em inglês em
   `flow-details-panel.component.html`, mesmo em português. O OpenAPI lista `/api/orders/{id}` e o histórico
   mostra `/api/orders/{id:int}`.
+- **Rotas cortadas sem tooltip:** a rota do cabeçalho do Fluxo (`flow-workspace__route`) e a do painel de
+  detalhes (`flow-details__route`) também são cortadas pela elipse sem `title`. A Tarefa 51.10 cobre só o nó do
+  grafo e o rótulo da cascata, e o `title` da cascata vai sempre, não só quando o rótulo é cortado, porque o CSS
+  não dá para saber no template.
 - **Acessibilidade:** no celular, o botão ▷ do cabeçalho do Fluxo, que abre o Runner, tem `aria-label`
   vazio. Medido pela auditoria: os botões do cabeçalho são `["Abrir navegação", "", "PT", "EN", ...]`, e
   um leitor de tela anuncia só "botão".
