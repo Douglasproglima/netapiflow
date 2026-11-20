@@ -526,6 +526,24 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 >
 > Não existe padrão "parcialmente aberto". Sem nenhum dos dois configurados, produção sempre
 > devolve 404.
+>
+> **Uma aplicação com `FallbackPolicy` que exige usuário autenticado** (comum em API com JWT)
+> recebe **401** no dashboard, em qualquer ambiente: o middleware de autorização responde antes
+> da checagem do próprio dashboard, e o navegador não manda o token bearer ao navegar para
+> `/flow`. Em Development, deixe o dashboard passar:
+>
+> ```csharp
+> var dashboard = app.UseNetApiFlowDashboard();
+> if (app.Environment.IsDevelopment())
+> {
+>     dashboard.AllowAnonymous();
+> }
+> ```
+>
+> Fora de Development, encadeie só `.RequireAuthorization("SuaPolicy")`, ou encadeie
+> `.AllowAnonymous()` e registre um `IFlowAccessFilter`, que passa a decidir toda requisição.
+> **Nunca encadeie `.AllowAnonymous()` e `.RequireAuthorization()` juntos.** O `AllowAnonymous`
+> vence, a autorização é ignorada, e o dashboard fica aberto para todo mundo.
 
 ## Servidor MCP
 
@@ -639,10 +657,20 @@ Desligado por padrão. Ligado, toda chamada de `ILogger` feita no nível de `Min
 enquanto um `FlowStep` está ativo, é correlacionada ao `Logs` daquele span. Fica ao lado do erro
 do span, sem precisar abrir uma segunda ferramenta para ver o que a aplicação logou durante
 aquela etapa. O mecanismo é um segundo `ILoggerProvider`, registrado ao lado dos provedores que a
-sua aplicação já tem (Console, Serilog, Application Insights etc). Ele nunca substitui nem filtra
-esses provedores. O log continua indo para o destino de sempre, sem mudança. Uma chamada de log
-fora de uma etapa rastreada (startup, um job de background não instrumentado) nunca é observada
-por este provider.
+sua aplicação já tem (Console, Application Insights etc). Ele nunca substitui nem filtra esses
+provedores. O log continua indo para o destino de sempre, sem mudança. Uma chamada de log fora de
+uma etapa rastreada (startup, um job de background não instrumentado) nunca é observada por este
+provider.
+
+**Com Serilog, passe `writeToProviders: true`.** O `builder.Host.UseSerilog(...)` troca a fábrica
+de logs e, por padrão, não repassa os eventos aos outros provedores registrados, então o trace
+fica sem logs mesmo com o console ainda imprimindo:
+
+```csharp
+builder.Host.UseSerilog(
+    (context, configuration) => configuration.WriteTo.Console(),
+    writeToProviders: true);
+```
 
 > **A sanitização aqui é o mesmo regex melhor esforço já usado em `FlowStep.MarkError`, não uma
 > garantia nova ou mais forte.** Mensagem de log é texto livre escrito pelo seu próprio código, e
