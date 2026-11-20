@@ -376,7 +376,7 @@ rodando:
   gate tem de ser explícito.
 - O `nuget.config` da pasta lista a fonte `./local-nuget-feed` e a pasta de pacotes `./local-packages`.
   Num checkout limpo elas não existem, e o restore falhou numa verificação anterior da Planejadora. O job
-  cria as pastas, ou restaura só do nuget.org.
+  restaura só do nuget.org, que é o que a auditoria prefere, porque o projeto usa `ProjectReference`.
 
 **Passos:**
 
@@ -392,14 +392,19 @@ rodando:
    commit de prova (por exemplo, uma chamada a `Type.GetType(string)` no caminho do `AddNetApiFlow`), o
    passo fica vermelho, o commit é desfeito antes do merge, e o relatório traz o link. Um gate que nunca
    viu vermelho pode estar apontando para o lugar errado.
-5. **Medir o `net8.0`, sem exigir.** O núcleo tem os dois alvos, o README não diz qual deles a promessa
-   cobre, e o projeto é só `net10.0`. A Executora publica o mesmo host com `-f net8.0` (um projeto irmão
-   ou multi-alvo, o que der menos trabalho) e diz o resultado. Se o `net8.0` publicar limpo, entra no CI.
-   Se não, é achado novo: ela relata **sem corrigir**, e a decisão, qualificar a promessa por alvo ou
-   corrigir o núcleo, é da auditoria.
+5. **Medir o `net8.0`.** O núcleo tem os dois alvos, o README não diz qual deles a promessa cobre, e o
+   projeto é só `net10.0`. A Executora publica o mesmo host com `-f net8.0` (um projeto irmão ou
+   multi-alvo, o que der menos trabalho) e diz o resultado. **A decisão da auditoria, já tomada:**
+   - Se publicar limpo, os dois alvos entram no CI e o README diz "on net8.0 and net10.0".
+   - Se não publicar limpo, o README qualifica a promessa pelo alvo que publica limpo, a medição do
+     `net8.0` vai para o relatório, e a correção do núcleo vira item de roadmap.
+   - Exceção: se o aviso do `net8.0` for uma mudança pequena e local no núcleo, a Executora a corrige,
+     com o mesmo rito de prova.
+   - Em qualquer caso, a frase final do README só diz o que o CI prova.
 
 **Pronto quando:** a saída local colada, o passo no `ci.yml` (ubuntu) e no `release.yml`, a execução de
-prova vista vermelha e desfeita, o tempo medido, e o `net8.0` medido e relatado. Branch
+prova vista vermelha e desfeita, o tempo medido, o `net8.0` medido, e a frase do README dizendo só o
+que o CI prova. Branch
 `chore/ci-aot-core`. Vem logo depois da 50.10.
 
 ## Parte B
