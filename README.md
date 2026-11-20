@@ -58,7 +58,7 @@ app.MapGet("/hello", () => "Hello")
 app.Run();
 ```
 
-MVC controllers become a step on their own. A Minimal API endpoint only does with
+MVC controllers become a step on their own. A Minimal API endpoint only becomes one with
 `.WithNetApiFlowTracking()`, on the endpoint or on a whole group
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). The default `dotnet new webapi` template uses
 Minimal API, so add the call to its `MapGet`. Without it the request is still recorded and listed,
