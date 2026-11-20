@@ -8,6 +8,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import { FlowPageComponent } from './flow-page.component';
+import { LanguageService } from '../../core/i18n/language.service';
 import { SseService, SseConnectionState } from '../../core/sse.service';
 import { FlowEvent, FlowTrace, FlowTraceDetail, FlowTraceSummary } from '../../core/models';
 
@@ -237,6 +238,90 @@ describe('FlowPageComponent', () => {
     // pt-BR is the default language; must not show the generic empty-list state instead.
     expect(fixture.nativeElement.textContent).toContain('Trace não encontrada.');
     expect(fixture.nativeElement.textContent).not.toContain('Nenhuma requisição em andamento');
+  });
+
+  async function openTraceWithoutSteps(
+    traceId: string,
+    overrides: Partial<FlowTraceDetail> = {},
+    language: 'pt-BR' | 'en' = 'pt-BR',
+  ): Promise<ComponentFixture<FlowPageComponent>> {
+    configure(traceId);
+    if (language === 'en') {
+      TestBed.inject(LanguageService).setLanguage('en');
+    }
+
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock
+      .expectOne(`api/traces/${traceId}`)
+      .flush({ ...makeTrace(traceId), spanCount: 0, spans: [], ...overrides });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+    return fixture;
+  }
+
+  it('explains how to mark a step when a finished trace has none, instead of leaving the canvas blank', async () => {
+    const fixture = await openTraceWithoutSteps('plain');
+
+    const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.flow-workspace__empty--no-steps',
+    );
+    expect(emptyState).not.toBeNull();
+    expect(emptyState?.textContent).toContain(
+      'A requisição foi gravada, mas nenhuma etapa foi marcada.',
+    );
+    expect(emptyState?.textContent).toContain('.WithNetApiFlowTracking()');
+    expect(emptyState?.textContent).toContain('NetApiFlow.Step(...)');
+    expect(emptyState?.textContent).toContain('AddFlowTracked');
+    expect(emptyState?.querySelector('svg')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).toBeNull();
+  });
+
+  it('explains the same in English', async () => {
+    try {
+      const fixture = await openTraceWithoutSteps('plain', {}, 'en');
+
+      const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+        '.flow-workspace__empty--no-steps',
+      );
+      expect(emptyState?.textContent).toContain(
+        'The request was recorded, but no step was marked.',
+      );
+      expect(emptyState?.textContent).toContain('A Minimal API endpoint needs');
+      expect(emptyState?.textContent).toContain('.WithNetApiFlowTracking()');
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it('does not say a trace has no steps while it is still running and its steps have not arrived', async () => {
+    const fixture = await openTraceWithoutSteps('running', {
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+
+    expect(fixture.nativeElement.querySelector('.flow-workspace__empty--no-steps')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).not.toBeNull();
+  });
+
+  it('keeps drawing the graph for a trace that has steps', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    expect(fixture.nativeElement.querySelector('.flow-workspace__empty--no-steps')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).not.toBeNull();
   });
 
   it('lists in-progress traces when no ?trace= param is present', async () => {
