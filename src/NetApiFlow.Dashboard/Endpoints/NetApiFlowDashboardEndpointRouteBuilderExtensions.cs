@@ -28,6 +28,7 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
 
         var staticGroup = endpoints.MapGroup(basePath);
         staticGroup.AddEndpointFilter(DashboardAccessGate.EnforceAsync);
+        staticGroup.ExcludeFromDescription();
         staticGroup.MapGet(
             "/{**path}",
             (HttpContext context, string? path) =>
