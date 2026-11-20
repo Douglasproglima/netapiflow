@@ -81,7 +81,7 @@ internal sealed partial class HttpClientActivityTagBackfill
     [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = PayloadPropertiesArePreserved)]
     private static void BackfillRequestTags(object? payload)
     {
-        if (payload?.GetType().GetProperty("Request")?.GetValue(payload) is not HttpRequestMessage request)
+        if (payload?.GetType().GetProperty("RequestRenamedForProof")?.GetValue(payload) is not HttpRequestMessage request)
         {
             return;
         }
