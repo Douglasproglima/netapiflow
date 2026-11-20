@@ -79,7 +79,14 @@ Fase 60, se couber. O que não couber vira item de roadmap, um registro por item
 - **Textos do painel:** "Etapa mais lenta" aponta a raiz e não a folha. "Origem do erro" mostra a duração da
   trace, não a da etapa. "0% do tempo (812 µs de 402,3 ms)" lê contraditório. "Status Success" sem tradução.
 - **Runner:** sem o status HTTP e sem o corpo da resposta; "Trace: <id>" não é link; rótulos colados
-  ("idcaminho", "bodycorpo"); POST sem exemplo de corpo; mensagem genérica no 500.
+  ("idcaminho", "bodycorpo"); POST sem exemplo de corpo; mensagem genérica no 500. Achados pela Executora
+  na demo, sem correção: uma corrida no formulário (o campo de rota preenchido poucas dezenas de
+  milissegundos depois de escolher o endpoint volta vazio e o envio diz "Preencha o parâmetro de rota":
+  1 em 25 tentativas no `develop` e 3 em 25 num branch, causa não determinada); e o `/runner` sozinho
+  mostra `Trace: <id>` sem grafo, embora o subtítulo diga "O grafo acompanha em tempo real".
+- **Texto e rótulos:** `aria-label="Request summary"` fixo em inglês em
+  `flow-details-panel.component.html`, mesmo em português. O OpenAPI lista `/api/orders/{id}` e o histórico
+  mostra `/api/orders/{id:int}`.
 - A lista "ETAPAS" não é clicável. O chip "Ao vivo" fica aceso numa trace importada.
 - **Arquitetura:** legenda com estados que não existem num mapa estático; N+1 sem contagem; SVG exportado
   quebra fora do painel (`_ngcontent` sem CSS).
@@ -169,6 +176,13 @@ etapa. A Executora mede antes o que distingue um `CONNECT` de um comando no Npgs
 atividade e as tags) e propõe o critério, porque classificar pelo nome ou pela falta da tag de texto são as
 duas formas frágeis, e a Planejadora decide com a medição. Um teste prova que várias conexões não disparam
 o selo de N+1.
+
+**F3, o que a Fase 58 exige além do cabeçalho.** O Runner lê o trace id do cabeçalho `X-NetApiFlow-TraceId`
+(`endpoint-form.component.ts`, `onDispatched`). Sem o cabeçalho, numa resposta de sucesso, ele fica mudo: não
+navega e não diz nada. Isso vale para o 500 do F3 e para `EmitTraceIdHeader = false`, a opção da Parte B,
+que a Executora derivou do código e **não mediu no navegador**. A Fase 58 faz o Runner dizer por que não
+achou o trace, nomeando as causas possíveis (a opção desligada, a rota fora do rastreamento), e o teste
+mede isso no navegador. A Parte B (f) não ganha esse escopo: ela só liga a opção.
 
 ## Ordem aprovada, e por quê
 
