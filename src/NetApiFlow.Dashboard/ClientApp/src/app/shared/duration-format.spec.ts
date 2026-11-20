@@ -6,7 +6,7 @@ describe('formatDurationMicros', () => {
   });
 
   it('renders microseconds under 1000', () => {
-    expect(formatDurationMicros(432)).toBe('433 µs');
+    expect(formatDurationMicros(432)).toBe('432 µs');
   });
 
   it('renders milliseconds with one decimal under 1 second, dropping a trailing .0', () => {
