@@ -24,6 +24,9 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    configuração (D-175): os dois passavam limpo em `dotnet test NetApiFlow.slnx`, que roda contra
    `ProjectReference`/`InMemoryTraceStore`, não contra o pacote publicado com a configuração mais
    simples que um usuário real usaria. Achado real aqui vira achado antes do release, não depois.
+   A receita pronta está em `tests/manual-verification/README.md`, na seção "Options set only in
+   configuration" (app `OptionsFromConfigVerification`). Rodar os comandos de lá com um
+   `-verify.<n>` novo, nos dois alvos e nos dois modos, sem reescrever nada.
 5. Crie a branch:
    ```bash
    git switch develop
