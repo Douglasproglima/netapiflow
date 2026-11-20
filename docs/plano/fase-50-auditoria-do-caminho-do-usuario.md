@@ -44,15 +44,19 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
 
 1. Os ajustes da PR da Parte A (50.2, 50.3 e 50.4) que a Planejadora devolveu na revisão. São baratos e
    a PR está parada por eles.
-2. Tarefa 50.5, a demo funcional. A auditoria a pôs antes de continuar a Parte B (D-200). Quem estiver
+2. Tarefa 50.11, o CI do Angular. Pequena, só passos de workflow, e a 50.5 é trabalho de Angular com
+   teste novo, então precisa de um CI que o prove (D-202).
+3. Tarefa 50.5, a demo funcional. A auditoria a pôs antes de continuar a Parte B (D-200). Quem estiver
    no meio de um passo termina o passo e vem para ela.
-3. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
-4. Tarefa 50.11, o CI do Angular. Pequena, e quanto antes ela entrar, mais PR passa por ela.
+4. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
 5. Parte B (50.6 e 50.7) e a tarefa 50.9.
 6. Fase 51.
 
 Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
 50.10 precisa poder ser mergeada sozinha.
+
+**Até a 50.11 entrar**, toda PR que mexe em `ClientApp/` roda `npm run test:ci`, `npm run lint` e
+`npm run format:check` localmente e cola a saída no resumo, porque o CI ainda não os roda.
 
 ## Parte A
 
@@ -127,7 +131,8 @@ documento por outro caminho (Swagger UI, por exemplo) já pode usar `ExcludePath
 
 O dono pediu por escrito uma "demo funcional (mesmo mockado)". O critério de pronto abaixo é da
 `AUDITORIA-16-11` (D-200) e vale acima do texto anterior desta tarefa. A dependência do (a) acabou: o
-hotfix `0.5.2` está em `develop` (#340). Esta tarefa passa à frente da Parte B.
+hotfix `0.5.2` está em `develop` (#340). Esta tarefa passa à frente da Parte B, e vem **depois da 50.11**:
+o teste Vitest novo dela precisa de um CI que o rode (D-202).
 
 **O que o dono vê hoje na demo publicada** (relato da auditoria, a Executora reproduz no navegador antes
 de mexer): a versão `v0.5.0`; o Runner lista `GET /api/orders/{id}` e, com `id` 1, o "Enviar requisição"
@@ -273,12 +278,17 @@ existem na palavra de quem implementa, e o resumo de cada fase, até hoje, os ci
 (D-183). Rodam depois do `npm ci`. A primeira execução pode mostrar violação que se acumulou fora do CI: corrigir o código na mesma PR, nunca relaxar
 a regra nem tirar o passo.
 
-**Visto falhando antes:** num commit de teste na própria PR, um spec que falha e um arquivo mal
-formatado, o CI fica vermelho nos dois passos. O commit é desfeito antes do merge, e o relatório traz o
-link das duas execuções.
+1. **Antes de mudar qualquer workflow** (mesma regra da Tarefa 48.4), rodar os três comandos
+   localmente e colar a saída no resumo. Se algum falhar sem relação com esta tarefa, parar e relatar.
+2. Acrescentar os passos a `ci.yml` e `release.yml`.
+3. **Visto falhando no CI de verdade:** numa execução de prova na própria PR, um teste quebrado de
+   propósito (e, em outra, um arquivo mal formatado) deixa o CI vermelho no passo certo. O commit de prova
+   é desfeito antes do merge, e o relatório traz o link das execuções vermelhas. Sem isso o passo não está
+   provado: um passo que nunca viu vermelho pode estar apontando para o lugar errado.
 
-**Pronto quando:** os três passos rodam em `ci.yml` e `release.yml`, os dois tipos de falha foram vistos
-vermelhos, e a PR volta ao verde com o `ClientApp` limpo. Branch `chore/ci-angular-testes-lint-formato`.
+**Pronto quando:** a saída local colada, os três passos rodando em `ci.yml` e `release.yml`, os dois tipos
+de falha vistos vermelhos no CI, e a PR de volta ao verde com o `ClientApp` limpo. Branch
+`chore/ci-angular-testes-lint-formato`. Esta tarefa vem antes da 50.5 (D-202).
 
 ## Parte B
 

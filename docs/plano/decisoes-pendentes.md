@@ -28,11 +28,17 @@ também vira um aviso público para quem já instalou.
 
 ## 2. Alcance do D-201 e o texto de `.claude/rules/git-workflow.md`
 
-A PR #344 tirou `git merge`, `git push` e `gh pr create` do `ask` no `.claude/settings.json`, a pedido do
-dono segundo a auditoria. A seção "Ações que exigem confirmação" de `git-workflow.md` ainda diz que push e
-abertura de PR pedem confirmação explícita na conversa, e a Planejadora não mudou o texto por conta
-própria.
+A PR #344 tirou `git merge`, `git push` e `gh pr create` do `ask` no `.claude/settings.json`. A seção
+"Ações que exigem confirmação" de `git-workflow.md` ainda diz que push e abertura de PR pedem
+confirmação explícita na conversa, e a Planejadora não mudou o texto por conta própria.
 
-- **Recomendação da Planejadora:** se o dono confirmar o pedido, atualizar `git-workflow.md` para dizer
-  que push de branch e abertura de PR são livres, e que ficam com confirmação só `gh pr merge`, tag,
-  Release e publicação de pacote. Se não confirmar, o `settings.json` volta a bater com o texto.
+A `AUDITORIA-16-11` relatou o texto do dono (20/11/2026, na sessão dela): "afrouxe a regra para essas
+duas sessões", e, entre as opções que ela apresentou, "Só o trabalho do dia (Recomendado)", que libera
+`git merge` local, `git merge-tree`, `git push` de branch e `gh pr create`, e deixa `gh pr merge`,
+`git tag` e `gh release` com o dono. A Planejadora não leu esse texto na sessão do dono, e uma sessão
+par não pode afrouxar a regra que a governa. Por isso `git-workflow.md` fica como está até o dono
+confirmar aqui, ou editar o arquivo ele mesmo.
+
+- **Recomendação da Planejadora:** confirmada a leitura acima, alinhar `git-workflow.md` ao texto do
+  dono: push de branch e abertura de PR são livres para a Planejadora e a Executora, e merge, tag,
+  Release e publicação de pacote seguem com a auditoria e o dono.
