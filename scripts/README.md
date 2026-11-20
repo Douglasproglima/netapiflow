@@ -18,6 +18,17 @@ node scripts/generate-demo-fixtures.mjs --base-url http://localhost:60803
 It exercises the demo scenarios a few times, waits for the persistence queue to report them,
 then captures every route `ApiService` calls plus the host's own OpenAPI document.
 
+It also sends one `GET` to every route of the sample listed in that OpenAPI document and records
+the answer (status, content type, body) together with the `X-NetApiFlow-TraceId` the host
+returned. That is what the Runner receives in the static demo, and why each recorded trace
+belongs to a response the Runner can follow. The recorder stops with an error when a route
+answers without that header, so a sample started with `EmitTraceIdHeader` off never produces a
+demo that cannot open a graph.
+
+The recorder formats the JSON it writes with the Prettier of the dashboard, so run `npm ci` in
+`src/NetApiFlow.Dashboard/ClientApp` once before running it. Start the sample fresh each time:
+traces live in memory, and a sample that already served requests puts them into the history.
+
 `--dashboard` defaults to `/flow` and rarely needs passing. On Git Bash for Windows, a leading
 slash in an argument is rewritten into a Windows path (`/flow` becomes `C:/Program Files/Git/flow`),
 so pass it as `--dashboard flow` if you ever need to.
