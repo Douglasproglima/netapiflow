@@ -66,8 +66,8 @@ public interface ITraceStore
     ValueTask<IReadOnlyList<ComponentStat>> GetComponentStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<TraceStats> GetTraceStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
-    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken);
-    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
+    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken);
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
@@ -161,9 +161,21 @@ public enum ExternalActivitySource
     HttpClient = 1,
 
     /// <summary>SQL commands from Npgsql's own <c>ActivitySource</c> (ADR-0018), mapped to a
-    /// <see cref="ComponentType.Database"/> span. Deduplicated against <c>NetApiFlow.EntityFrameworkCore</c>'s
-    /// own span for the same command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.</summary>
+    /// <see cref="ComponentType.Database"/> span, recorded as a child of the step that issued the
+    /// command. Dropped only when a <see cref="ComponentType.Database"/> step already wraps the call
+    /// (the one <c>NetApiFlow.EntityFrameworkCore</c> opens), checked through
+    /// <see cref="System.Diagnostics.Activity.Parent"/>, so a command is never recorded twice.</summary>
     Npgsql = 2,
+
+    /// <summary>SQL commands from Microsoft.Data.SqlClient's own <see cref="System.Diagnostics.DiagnosticListener"/>
+    /// (the driver never exposes an <c>ActivitySource</c>, unlike Npgsql; confirmed by the Fase 37
+    /// investigation, correcting this contract's original text), mapped to a
+    /// <see cref="ComponentType.Database"/> span, recorded as a child of the step that issued the
+    /// command and dropped under the same rule as <see cref="Npgsql"/>: only when a
+    /// <see cref="ComponentType.Database"/> step already wraps it. The driver's event
+    /// payload is only strongly typed from version 6.0 on; on an older pinned version the listener
+    /// recognizes the gap and records nothing, rather than failing.</summary>
+    SqlClient = 4,
 }
 
 public sealed class RetentionOptions
@@ -267,6 +279,40 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
 {
     public static IEndpointConventionBuilder UseNetApiFlowMcp(
         this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp");
+}
+```
+
+### `NetApiFlow.Testing`: superfície pública
+
+Congelada pelo ADR-0022, implementada na Fase 39. Sem dependência de terceiro: só referencia
+`NetApiFlow` (núcleo), de propósito, para não impor Shouldly (ou qualquer outro framework de
+asserção) ao projeto do usuário.
+
+```csharp
+namespace NetApiFlow.Testing;
+
+public static class FlowTraceAssertions
+{
+    public static FlowTraceDetail ShouldHaveStatus(this FlowTraceDetail trace, FlowStatus status);
+    public static FlowTraceDetail ShouldHaveNoErrors(this FlowTraceDetail trace);
+    public static FlowTraceDetail ShouldCallAtMost(this FlowTraceDetail trace, ComponentType type, int maxCount);
+    public static FlowTraceDetail ShouldNeverCall(this FlowTraceDetail trace, string component, string? operation = null);
+    public static FlowTraceDetail ShouldHaveCalled(this FlowTraceDetail trace, string component, string? operation = null);
+}
+
+/// <summary>Thrown by <see cref="FlowTraceAssertions"/> and <see cref="FlowTestingHttpResponseExtensions"/>
+/// on assertion failure. Left uncaught, any test framework reports it as a failed test.</summary>
+public sealed class FlowAssertionException : Exception
+{
+    public FlowAssertionException(string message);
+}
+
+public static class FlowTestingHttpResponseExtensions
+{
+    /// <summary>Reads <c>X-NetApiFlow-TraceId</c> off the response and calls
+    /// <see cref="NetApiFlow.GetRecentTrace"/>, throwing <see cref="FlowAssertionException"/>
+    /// instead of returning <see langword="null"/> when the trace is not found.</summary>
+    public static FlowTraceDetail GetFlowTrace(this HttpResponseMessage response, IServiceProvider services);
 }
 ```
 
@@ -388,8 +434,23 @@ public sealed record RouteStat
 restante do texto do `RoutePattern` como vem (incluindo parâmetro e restrição, ex.
 `/api/orders/{id:int}`). A normalização acontece na gravação (middleware) e em todo ponto de
 entrada que recebe um `route` de fora (`/traces`, `/blueprint`, `GET /endpoints`), usando o mesmo
-helper interno. Nenhum `ITraceStore` precisa normalizar por conta própria: ao chegar nele, o valor
-já está no formato canônico dos dois lados da comparação.
+helper interno. Nenhum `ITraceStore` precisa normalizar por conta própria pra essa parte: ao
+chegar nele, o valor já está no formato canônico (barra) dos dois lados da comparação.
+
+**`GetArchitectureMapAsync`/`GetLastSuccessfulAsync` recebem `routeKey`, não `routeTemplate`
+(D-164): o parâmetro mudou de nome porque a comparação ignora restrição de parâmetro, não é mais
+igualdade exata de string.** O valor que o chamador passa pode vir de um documento OpenAPI
+(Runner), que nunca carrega restrição (`:int`, `:guid`, `?`, catch-all); o valor gravado em
+`FlowTrace.RouteTemplate` sempre carrega, quando a rota declarou uma. Sem esse tratamento,
+`/api/orders/{id}` (Runner) nunca encontraria execuções gravadas como `/api/orders/{id:int}`.
+`NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer` resolvem isso com uma coluna
+interna adicional (`route_key`, nunca exposta em nenhum DTO público), computada pelo mesmo helper
+que normaliza a barra; o chamador (`NetApiFlow.Dashboard`) normaliza o valor recebido antes de
+repassar. **Um `ITraceStore` próprio** (fora dos dois pacotes oficiais) precisa replicar esse
+comportamento nesses dois métodos especificamente: comparar ignorando restrição de parâmetro, não
+assumir igualdade de string com `RouteTemplate`. Os outros métodos da interface (`QueryAsync`,
+`GetRouteStatsAsync`, etc.) continuam recebendo `routeTemplate` e comparando pelo valor gravado
+como está, sem essa segunda normalização.
 
 `GetArchitectureMapAsync` e `ArchitectureMap` foram acrescentados a `ITraceStore` na Fase 16
 (D-83): grafo estático da rota (`method`, `routeTemplate`), união de todas as execuções
@@ -856,7 +917,8 @@ apresentação, hoje só `SlowThreshold`. Sem query string, sem corpo.
   "version": "0.1.0",
   "tailSamplingEnabled": false,
   "successSampleRate": 0.1,
-  "openApiDocumentPath": "/openapi/v1.json"
+  "openApiDocumentPath": "/openapi/v1.json",
+  "hostPathBase": ""
 }
 ```
 
@@ -872,6 +934,14 @@ mesmo valor de `<Version>` em `Directory.Build.props`. Usado pela sidebar do das
 `/openapi/v1.json`), o caminho raiz-relativo de onde o host serve o próprio documento OpenAPI.
 O painel "Testar um endpoint" lê daqui em vez de assumir o caminho padrão do `MapOpenApi()`,
 porque a maioria dos projetos .NET existentes serve OpenAPI por Swashbuckle, em outro caminho.
+
+`hostPathBase` (Fase 37, item 1 do roadmap de valor) é `HttpContext.Request.PathBase` lido no
+momento da própria chamada a `/config`, string vazia quando o host não usa `PathBase` nenhum.
+Existe porque `<base href>` do dashboard combina `{PathBase}{DashboardPath}`, e o painel "Testar
+um endpoint" monta a URL do endpoint do usuário a partir da raiz real do host
+(`{origin}{PathBase}{caminho do OpenAPI}`), nunca a partir do `<base href>` combinado, porque o
+caminho do OpenAPI do usuário já é relativo à raiz do próprio host, não ao caminho onde o
+dashboard foi montado.
 
 ### POST `/deploys`
 

@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { FLOW_EVENT_TYPES, FlowEvent } from './models';
+import { environment } from '../../environments/environment';
 
 export type SseConnectionState = 'connecting' | 'open' | 'closed';
 
@@ -50,6 +51,12 @@ export class SseService {
   readonly state = this.stateSignal.asReadonly();
 
   connect(): void {
+    // The static demo build has no server to stream from, so the chip stays closed rather than
+    // retrying a connection that can never open.
+    if (environment.isDemoMode) {
+      return;
+    }
+
     this.openCount++;
     if (this.openCount > 1) {
       return;

@@ -32,6 +32,16 @@ internal static class SqlServerSchemaInitializer
                 CREATE INDEX ix_{SafeIndexName(tracesTable)}_duration_micros ON {tracesTable} (duration_micros);
             END;
 
+            IF COL_LENGTH('{tracesTable}', 'route_key') IS NULL
+            BEGIN
+                ALTER TABLE {tracesTable} ADD route_key nvarchar(400) NOT NULL DEFAULT '';
+            END;
+
+            IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_{SafeIndexName(tracesTable)}_method_route_key' AND object_id = OBJECT_ID('{tracesTable}'))
+            BEGIN
+                CREATE INDEX ix_{SafeIndexName(tracesTable)}_method_route_key ON {tracesTable} (method, route_key);
+            END;
+
             IF OBJECT_ID('{spansTable}', 'U') IS NULL
             BEGIN
                 CREATE TABLE {spansTable} (
@@ -65,11 +75,11 @@ internal static class SqlServerSchemaInitializer
     }
 
     /// <summary>
-    /// Brings every already-stored <c>route_template</c> to <see cref="RouteTemplateNormalizer"/>'s
-    /// canonical shape, idempotent: once every row is canonical, the distinct set to check next
-    /// time is unaffected and nothing is rewritten.
+    /// Brings every already-stored row's <c>route_template</c> and <c>route_key</c> to
+    /// <see cref="RouteTemplateNormalizer"/>'s canonical shape, idempotent: once every row is
+    /// canonical, the distinct set to check next time is unaffected and nothing is rewritten.
     /// </summary>
-    public static async Task NormalizeRouteTemplatesAsync(SqlConnection connection, string tracesTable, CancellationToken cancellationToken)
+    public static async Task NormalizeRoutesAsync(SqlConnection connection, string tracesTable, CancellationToken cancellationToken)
     {
         var distinctRouteTemplates = new List<string>();
         await using (var selectCommand = new SqlCommand($"SELECT DISTINCT route_template FROM {tracesTable}", connection))
@@ -84,17 +94,23 @@ internal static class SqlServerSchemaInitializer
         foreach (var routeTemplate in distinctRouteTemplates)
         {
             var normalized = RouteTemplateNormalizer.Normalize(routeTemplate);
-            if (normalized == routeTemplate)
+            if (normalized != routeTemplate)
             {
-                continue;
+                await using var updateTemplateCommand = new SqlCommand(
+                    $"UPDATE {tracesTable} SET route_template = @normalized WHERE route_template = @original",
+                    connection);
+                updateTemplateCommand.Parameters.AddWithValue("normalized", normalized);
+                updateTemplateCommand.Parameters.AddWithValue("original", routeTemplate);
+                await updateTemplateCommand.ExecuteNonQueryAsync(cancellationToken);
             }
 
-            await using var updateCommand = new SqlCommand(
-                $"UPDATE {tracesTable} SET route_template = @normalized WHERE route_template = @original",
+            var routeKey = RouteTemplateNormalizer.NormalizeForComparison(normalized);
+            await using var updateKeyCommand = new SqlCommand(
+                $"UPDATE {tracesTable} SET route_key = @key WHERE route_template = @template AND route_key <> @key",
                 connection);
-            updateCommand.Parameters.AddWithValue("normalized", normalized);
-            updateCommand.Parameters.AddWithValue("original", routeTemplate);
-            await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+            updateKeyCommand.Parameters.AddWithValue("key", routeKey);
+            updateKeyCommand.Parameters.AddWithValue("template", normalized);
+            await updateKeyCommand.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 

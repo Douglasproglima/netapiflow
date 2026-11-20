@@ -14,6 +14,8 @@ Veja, ao vivo, o caminho que cada requisição HTTP percorre dentro da sua próp
 > O GIF acima foi gravado a partir de `samples/SampleApi.Controllers` com o dashboard montado.
 > Veja [Início rápido](#início-rápido) para reproduzir você mesmo.
 
+[Site](https://douglasproglima.github.io/netapiflow-site/) · [Demo ao vivo](https://douglasproglima.github.io/netapiflow-site/demo/)
+
 ## O que é, e o que não é
 
 O NetApiFlow instrumenta o caminho de chamadas interno da sua própria API, não latência externa,
@@ -130,6 +132,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 ```
 
+O pacote exige EF Core 9 ou superior, também no `net8.0`. Um app em EF Core 8 com um provedor do EF 8
+falha com `TypeLoadException` ao instalar o pacote.
+
 ### Tags numa etapa
 
 Uma etapa aberta com `NetApiFlow.Step(...)` aceita tags livres, chave e valor, gravadas naquele
@@ -197,6 +202,45 @@ qualquer regra ("no máximo N consultas de banco", "esta rota nunca chama aquele
 completadas entre a chamada e a asserção) ou quando o NetApiFlow nunca foi registrado. Nunca
 devolve `null` só porque a chamada HTTP falhou.
 
+### `NetApiFlow.Testing`
+
+O mesmo teste, escrito com o pacote opcional `NetApiFlow.Testing`, que dispensa a leitura do
+header e a checagem de nulo, e nomeia a regra em vez de escrever o LINQ:
+
+```csharp
+using NetApiFlow;
+using NetApiFlow.Testing;
+
+public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task GetOrder_DoesNotTriggerMoreThanOneDatabaseQuery()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.GetFlowTrace(factory.Services)
+            .ShouldHaveNoErrors()
+            .ShouldCallAtMost(ComponentType.Database, 1)
+            .ShouldHaveCalled("OrderRepository", "FindAsync")
+            .ShouldNeverCall("PaymentGateway");
+    }
+}
+```
+
+São cinco asserções, todas encadeáveis: `ShouldHaveStatus`, `ShouldHaveNoErrors`,
+`ShouldCallAtMost`, `ShouldHaveCalled` e `ShouldNeverCall`. `ShouldHaveCalled`/`ShouldNeverCall`
+casam só pelo componente quando a operação é omitida, ou pelo par exato quando ela é informada.
+
+O pacote não referencia nada além do próprio `NetApiFlow`, então não impõe biblioteca de asserção
+nenhuma ao seu projeto de teste. Uma asserção que falha lança `FlowAssertionException` com
+mensagem dizendo o que esperava e o que achou, por exemplo
+`Expected at most 1 Database calls, found 5.`. Qualquer framework de teste reporta isso como
+falha. O `GetFlowTrace` lança a mesma exceção, em vez de devolver `null`, quando a resposta não
+traz o header `X-NetApiFlow-TraceId` ou a trace já saiu do buffer.
+
 ## Pacotes opcionais
 
 | Pacote | Acrescenta |
@@ -208,6 +252,7 @@ devolve `null` só porque a chamada HTTP falhou.
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persiste traces no SQL Server em vez de memória |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | Um servidor MCP só leitura para um agente de IA consultar traces direto |
 | [`NetApiFlow.OpenTelemetry`](https://www.nuget.org/packages/NetApiFlow.OpenTelemetry) | Exporta traces para qualquer backend OTLP (Jaeger, Tempo, Aspire Dashboard, Honeycomb, um coletor) |
+| [`NetApiFlow.Testing`](https://www.nuget.org/packages/NetApiFlow.Testing) | Asserções sobre o fluxo gravado, para teste de integração |
 
 O núcleo (`NetApiFlow`) não tem nenhuma dependência além do shared framework do ASP.NET Core.
 Cada item acima é opcional.
@@ -403,8 +448,13 @@ tempo foi para a autorização ou para um resource filter, como output caching. 
 padrão e não muda nada para quem não ligou. Rota de Minimal API não tem estágio de filtro do MVC,
 então não ganha etapa nova de nenhum jeito.
 
-`ExternalSources` ingere a `Activity` que o runtime .NET e o driver do Npgsql já produzem, sem
-nenhuma mudança de código nos seus serviços.
+`ExternalSources` ingere a `Activity` que o runtime .NET e os drivers de banco mais comuns já
+produzem, sem nenhuma mudança de código nos seus serviços.
+
+Em `Development` as três vêm ligadas por padrão, então uma instalação nova já mostra HTTP de saída
+e SQL sem configurar nada. Em qualquer outro ambiente o padrão continua `None`. O que você
+declarar explicitamente sempre vence, por configuração ou por código, inclusive voltar o valor
+para `ExternalActivitySource.None` em desenvolvimento.
 
 `HttpClient` cobre chamada de saída (ADR-0012). A URL de saída é reduzida a
 `scheme://host[:porta]/path` antes de ser gravada. Query string e fragment nunca são capturados, a
@@ -413,11 +463,24 @@ mesma garantia de qualquer outro span.
 `Npgsql` cobre comando SQL (ADR-0018), gravado como span `Database` nomeado pelo tipo do comando e
 pela tabela principal, por exemplo `SELECT Users`. Quando você também usa
 `NetApiFlow.EntityFrameworkCore`, os dois nunca gravam o mesmo comando duas vezes: a `Activity` do
-próprio driver é descartada sempre que um step do NetApiFlow já envolve a chamada, que é
-exatamente o que o `FlowDbCommandInterceptor` faz. Sem esse pacote (Npgsql puro, ou Dapper sobre
-Npgsql), a `Activity` do driver é o único registro da chamada e é ingerida normalmente. O texto
+próprio driver é descartada só quando um step `Database` já envolve a chamada, que é exatamente
+o que o `FlowDbCommandInterceptor` abre. Dentro de um controller, um serviço, um repositório ou
+qualquer outro step, o comando é gravado como filho desse step. Um step `Database` manual em volta
+de SQL direto engole os comandos do driver que ficam dentro dele. Sem esse pacote (Npgsql puro, ou
+Dapper sobre Npgsql), a `Activity` do driver é o único registro da chamada e é ingerida
+normalmente. O texto
 completo do SQL só chega ao span com `CaptureSqlText` ligado, mesma regra do interceptor do EF
 Core.
+
+`SqlClient` faz o mesmo para SQL Server, então uma consulta Dapper ou um `SqlCommand` cru aparece
+como span `Database` em vez de deixar um buraco no fluxo. Contra o `NetApiFlow.EntityFrameworkCore`
+vale a mesma regra do Npgsql (descartado só quando um step `Database` já envolve o comando), e a
+regra do `CaptureSqlText` vale do mesmo jeito. Uma diferença que vale saber: diferente do Npgsql, o `Microsoft.Data.SqlClient` não publica
+`ActivitySource` própria, então o NetApiFlow lê os eventos de diagnóstico do driver. Esses eventos
+só trazem um payload legível a partir do `Microsoft.Data.SqlClient` 6.0. Se a sua aplicação fixa
+um driver mais antigo, a flag é aceita mas não grava nada, e o NetApiFlow registra isso uma vez,
+em nível `Information`, dizendo qual versão é necessária. Melhor que te deixar com a feature
+ligada e o fluxo vazio.
 
 Montando o dashboard num caminho diferente do padrão, e protegendo-o:
 
@@ -662,10 +725,12 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
 - O `net8.0` saiu do ciclo de vida oficial da Microsoft em 10 de novembro de 2026, e o NetApiFlow
   continua publicando um artefato para ele. Ele fica por enquanto porque ainda não há para onde ir:
   a próxima LTS, o `net12.0`, só deve sair em novembro de 2027, então tirar o `net8.0` hoje
-  deixaria o `net10.0` como alvo único. Quando parar de publicar para `net8.0` é uma pergunta em
-  aberto aqui, ainda sob investigação, não uma data já escolhida. Manter significa que o pacote tem
-  um alvo que não recebe mais correção da Microsoft, o que vale saber se a sua própria política
-  proíbe isso.
+  deixaria o `net10.0` como alvo único. O `net8.0` só deixa de ser publicado quando o `net12.0`
+  puder substituí-lo. Manter significa que o pacote tem um alvo que não recebe mais correção da
+  Microsoft, o que vale saber se a sua própria política proíbe isso.
+- Um app `net11.0` usa hoje o artefato do `net10.0`. Isso foi testado contra um SQL Server real,
+  com o pacote de storage e o `Microsoft.Data.SqlClient` 7.1.2. Um artefato próprio para o
+  `net11.0` está planejado.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.

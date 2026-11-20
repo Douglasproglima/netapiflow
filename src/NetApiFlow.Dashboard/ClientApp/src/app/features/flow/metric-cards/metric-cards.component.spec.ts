@@ -346,4 +346,31 @@ describe('MetricCardsComponent', () => {
 
     expect(fixture.componentInstance.sparklinePoints().split(' ')).toHaveLength(1);
   });
+
+  it('hides the sparkline below 3 samples: two points are always one straight segment, not a shape', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline({
+      totalCount: 2,
+      items: [trace({ traceId: 't2', durationMicros: 2_000 }), trace({ traceId: 't1' })],
+    });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.sparklineVisible()).toBe(false);
+  });
+
+  it('shows the sparkline from 3 samples onward', async () => {
+    const fixture = TestBed.createComponent(MetricCardsComponent);
+    await fixture.whenStable();
+    flushConfig();
+    httpMock.expectOne('api/metrics').flush(SUMMARY);
+    httpMock.expectOne('api/metrics/components').flush(COMPONENT_STATS);
+    flushSparkline();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.sparklineVisible()).toBe(true);
+  });
 });

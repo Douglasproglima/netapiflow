@@ -1,0 +1,32 @@
+[
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/{id:int}",
+    "executionCount": 16,
+    "errorCount": 0,
+    "medianDurationMicros": 55934,
+    "averageDurationMicros": 144413,
+    "p95DurationMicros": 422118,
+    "maxDurationMicros": 422118
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/parallel",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 239111,
+    "averageDurationMicros": 171431,
+    "p95DurationMicros": 269181,
+    "maxDurationMicros": 269181
+  },
+  {
+    "method": "GET",
+    "routeTemplate": "/api/orders/sequential",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 253225,
+    "averageDurationMicros": 172598,
+    "p95DurationMicros": 266132,
+    "maxDurationMicros": 266132
+  }
+]

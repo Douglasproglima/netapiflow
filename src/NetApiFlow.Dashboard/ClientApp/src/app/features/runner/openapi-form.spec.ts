@@ -1,12 +1,14 @@
 import {
   buildAuthApplication,
   buildEndpointForm,
+  decodeJwtExpiry,
   effectiveSecurity,
   hasSecurityDeclaration,
   listOpenApiEndpoints,
   listSecuritySchemes,
   partitionDashboardRoutes,
   previewAuthApplication,
+  resolveAgainstHostRoot,
 } from './openapi-form';
 import { OpenApiDocument, OpenApiSecurityScheme } from '../../core/models';
 
@@ -315,5 +317,64 @@ describe('previewAuthApplication', () => {
 
   it('returns null when there is nothing to preview', () => {
     expect(previewAuthApplication({ type: 'http', scheme: 'bearer' }, '')).toBeNull();
+  });
+});
+
+describe('decodeJwtExpiry', () => {
+  function jwtWithExp(exp: number): string {
+    const payload = btoa(JSON.stringify({ sub: 'user', exp }))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    return `header.${payload}.signature`;
+  }
+
+  it('reads a future exp claim', () => {
+    const inTenMinutes = Math.floor(Date.now() / 1000) + 600;
+
+    expect(decodeJwtExpiry(jwtWithExp(inTenMinutes))?.getTime()).toBe(inTenMinutes * 1000);
+  });
+
+  it('reads a past exp claim, without treating it as absent', () => {
+    const threeMinutesAgo = Math.floor(Date.now() / 1000) - 180;
+
+    expect(decodeJwtExpiry(jwtWithExp(threeMinutesAgo))?.getTime()).toBe(threeMinutesAgo * 1000);
+  });
+
+  it('returns null for an opaque token that is not a JWT', () => {
+    expect(decodeJwtExpiry('d7f3a9c1e5b2')).toBeNull();
+  });
+
+  it('returns null for a JWT carrying no exp claim', () => {
+    const payload = btoa(JSON.stringify({ sub: 'user' })).replace(/=+$/, '');
+
+    expect(decodeJwtExpiry(`header.${payload}.signature`)).toBeNull();
+  });
+
+  it('returns null when the payload segment is not valid base64url JSON', () => {
+    expect(decodeJwtExpiry('header.!!!not-base64!!!.signature')).toBeNull();
+  });
+
+  it('returns null for an empty value', () => {
+    expect(decodeJwtExpiry('')).toBeNull();
+  });
+});
+
+describe('resolveAgainstHostRoot', () => {
+  it('leaves the path untouched when the host uses no PathBase', () => {
+    expect(resolveAgainstHostRoot('', '/api/orders/5')).toBe('/api/orders/5');
+  });
+
+  it('prefixes the host PathBase, never the dashboard mount path', () => {
+    expect(resolveAgainstHostRoot('/app', '/api/orders/5')).toBe('/app/api/orders/5');
+    expect(resolveAgainstHostRoot('/app', '/openapi/v1.json')).toBe('/app/openapi/v1.json');
+  });
+
+  it('does not double the separator when the PathBase carries a trailing slash', () => {
+    expect(resolveAgainstHostRoot('/app/', '/api/orders/5')).toBe('/app/api/orders/5');
+  });
+
+  it('inserts the separator for a path declared without a leading slash', () => {
+    expect(resolveAgainstHostRoot('/app', 'api/orders/5')).toBe('/app/api/orders/5');
   });
 });

@@ -55,6 +55,21 @@ export function partitionDashboardRoutes(
   return { visible, hiddenCount: endpoints.length - visible.length };
 }
 
+/**
+ * Resolves a path the host declares (its OpenAPI document, one of its endpoints) against the
+ * host's own root. Both are root-relative to the host, never to wherever the dashboard happens to
+ * be mounted, so the dashboard's `<base href>` is the wrong prefix: it already carries the
+ * dashboard's own mount path.
+ */
+export function resolveAgainstHostRoot(hostPathBase: string, path: string): string {
+  const base = hostPathBase.replace(/\/+$/, '');
+  if (base === '') {
+    return path;
+  }
+
+  return path.startsWith('/') ? `${base}${path}` : `${base}/${path}`;
+}
+
 export type FormFieldKind = 'path' | 'query' | 'body';
 
 export interface FormField {
@@ -183,11 +198,16 @@ function isSupportedAuthScheme(scheme: OpenApiSecurityScheme): boolean {
  */
 function sanitizePastedAuthValue(scheme: OpenApiSecurityScheme, rawValue: string): string {
   const trimmed = rawValue.trim();
-  const isBearerLike =
+  return isTokenBearingScheme(scheme) ? trimmed.replace(/^bearer\s+/i, '') : trimmed;
+}
+
+/** The schemes whose pasted value is an access token, so `Authorization: Bearer <value>`. */
+export function isTokenBearingScheme(scheme: OpenApiSecurityScheme): boolean {
+  return (
     (scheme.type === 'http' && (scheme.scheme ?? '').toLowerCase() === 'bearer') ||
     scheme.type === 'oauth2' ||
-    scheme.type === 'openIdConnect';
-  return isBearerLike ? trimmed.replace(/^bearer\s+/i, '') : trimmed;
+    scheme.type === 'openIdConnect'
+  );
 }
 
 export interface AuthApplication {
@@ -223,6 +243,42 @@ export function buildAuthApplication(
   }
 
   return { target: 'header', name: 'Authorization', value: `Bearer ${value}` };
+}
+
+/**
+ * The `exp` claim of a pasted JWT, read without verifying the signature: the panel only reports
+ * how long the token has left, the server is still the one that decides. `null` for anything that
+ * is not a decodable JWT carrying a numeric `exp`, which covers an opaque token or an API key.
+ */
+export function decodeJwtExpiry(token: string): Date | null {
+  const payload = token.trim().split('.')[1];
+  if (!payload) {
+    return null;
+  }
+
+  let claims: unknown;
+  try {
+    claims = JSON.parse(decodeBase64Url(payload));
+  } catch {
+    return null;
+  }
+
+  if (typeof claims !== 'object' || claims === null) {
+    return null;
+  }
+
+  const exp = (claims as Record<string, unknown>)['exp'];
+  if (typeof exp !== 'number' || !Number.isFinite(exp)) {
+    return null;
+  }
+
+  return new Date(exp * 1000);
+}
+
+function decodeBase64Url(segment: string): string {
+  const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return atob(padded);
 }
 
 function maskAuthValue(value: string): string {

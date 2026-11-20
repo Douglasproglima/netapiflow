@@ -1,4 +1,4 @@
-import { computeGraphViewBox } from './flow-graph-viewbox';
+import { computeGraphViewBox, isLegendCompact } from './flow-graph-viewbox';
 
 function parseViewBox(viewBox: string): { width: number; height: number } {
   const [, , width, height] = viewBox.split(' ').map(Number);
@@ -90,5 +90,64 @@ describe('computeGraphViewBox', () => {
     const viewBoxBothTall = computeGraphViewBox(400, 100, container, [60, 60]);
 
     expect(viewBoxOneTall).toBe(viewBoxBothTall);
+  });
+});
+
+describe('isLegendCompact', () => {
+  it('is compact on a canvas shorter than the legend column can clear (reproduced at 238px)', () => {
+    expect(isLegendCompact(238)).toBe(true);
+    expect(isLegendCompact(1)).toBe(true);
+  });
+
+  it('is not compact on a canvas tall enough for the full legend column', () => {
+    expect(isLegendCompact(280)).toBe(false);
+    expect(isLegendCompact(422)).toBe(false);
+  });
+
+  it('is not compact before the canvas has been measured (height 0)', () => {
+    expect(isLegendCompact(0)).toBe(false);
+  });
+});
+
+describe('computeGraphViewBox with an overlay on the top edge', () => {
+  function parseFull(viewBox: string): { minY: number; width: number; height: number } {
+    const [, minY, width, height] = viewBox.split(' ').map(Number);
+    return { minY, width, height };
+  }
+
+  it('shifts the origin up by the top overlay footprint so content starts below it', () => {
+    const container = { width: 1000, height: 2000 };
+    const { minY, width, height } = parseFull(computeGraphViewBox(400, 100, container, [], [36]));
+
+    const scale = Math.min(container.width / width, container.height / height);
+    expect(scale).toBeCloseTo(container.width / width, 10);
+    expect(-minY * scale).toBeCloseTo(36 + 12, 6);
+  });
+
+  it('keeps the bottom margin at the base when only the top edge has an overlay', () => {
+    const { minY, height } = parseFull(
+      computeGraphViewBox(400, 100, { width: 1000, height: 2000 }, [], [36]),
+    );
+
+    expect(height + minY).toBeCloseTo(100 + 40, 6);
+  });
+
+  it('reserves both edges independently when each has an overlay', () => {
+    const container = { width: 1000, height: 2000 };
+    const { minY, width, height } = parseFull(computeGraphViewBox(400, 100, container, [60], [36]));
+
+    const scale = Math.min(container.width / width, container.height / height);
+    expect(-minY * scale).toBeCloseTo(48, 6);
+    expect((height + minY - 100 - 40) * scale).toBeCloseTo(72, 6);
+  });
+
+  it('caps the combined reservation at half the canvas', () => {
+    const container = { width: 1000, height: 200 };
+    const { minY, width, height } = parseFull(
+      computeGraphViewBox(400, 60, container, [200], [100]),
+    );
+
+    const scale = Math.min(container.width / width, container.height / height);
+    expect((-minY + (height + minY - 60 - 40)) * scale).toBeLessThanOrEqual(100.0001);
   });
 });

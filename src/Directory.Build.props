@@ -6,4 +6,13 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
+  <Target Name="VerifyPackageMetadata" BeforeTargets="Pack">
+    <Error
+      Condition="'$(Description)' == '' Or '$(Description)' == 'Package Description' Or '$(PackageDescription)' == 'Package Description'"
+      Text="$(MSBuildProjectName): the package has no description. Set &lt;Description&gt; in the .csproj, because it is the text nuget.org and the Visual Studio package manager show." />
+    <Error
+      Condition="'$(PackageTags)' == ''"
+      Text="$(MSBuildProjectName): the package has no tags. Set &lt;PackageTags&gt;, because nuget.org search relies on them." />
+  </Target>
+
 </Project>

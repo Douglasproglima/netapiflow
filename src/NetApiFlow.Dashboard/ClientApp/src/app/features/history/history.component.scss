@@ -237,13 +237,24 @@
   text-align: right;
 }
 
+// Never display: none below 1365px. Copying a trace id straight from the list is an action that
+// needs to stay reachable at every width, not just desktop. Between 768px and 1365px (table
+// mode, just a narrower one) the short id text gives up its column width first, leaving just the
+// copy button; below 768px (card mode) the whole cell becomes another full-width grid item
+// instead, same pattern the route and started-at cells already use.
 .history__col-trace {
   width: 120px;
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
 
-  @media (max-width: 1365px) {
+  @media (max-width: 1365px) and (min-width: 768px) {
+    width: 40px;
+  }
+}
+
+.history__trace-id-text {
+  @media (max-width: 1365px) and (min-width: 768px) {
     display: none;
   }
 }
@@ -566,10 +577,20 @@
       display: none;
     }
 
+    // Route, status, method and duration all used to be one field per full-width row: the route
+    // (the one thing this card exists to show) ended up competing for the same line as a
+    // checkbox, a status pill and a method tag, with nothing left over but a "/…" sliver. Two
+    // rows of named areas instead: route gets the top row to itself (next to the two small
+    // fields that don't need much room), everything else that used to get its own row shares a
+    // second row of four roughly-equal columns.
     tbody tr {
       display: grid;
-      grid-template-columns: auto auto 1fr;
-      gap: 0.25rem 0.625rem;
+      grid-template-columns: auto 1fr 1fr auto;
+      grid-template-areas:
+        'select route route trace'
+        'status method duration started';
+      column-gap: 0.625rem;
+      row-gap: 0.375rem;
       padding: 0.625rem 1rem;
       align-items: center;
     }
@@ -585,18 +606,52 @@
       white-space: normal;
     }
 
-    .history__col-route {
-      grid-column: 1 / -1;
-      order: 3;
+    // Every one of these columns carries its own fixed desktop `width` (set outside this media
+    // query, sized for a one-row-per-field table layout). Left as-is, that pixel width still
+    // wins inside a grid cell too, and a grid track sized `auto`/`1fr` grows to fit whatever
+    // fixed width its widest occupant demands — `started`, sharing a column with the much
+    // narrower `trace`, was the one that actually forced that column past the card's own width.
+    .history__col-select,
+    .history__col-route,
+    .history__col-trace,
+    .history__col-status,
+    .history__col-method,
+    .history__col-duration,
+    .history__col-started {
+      width: auto;
+      min-width: 0;
     }
 
-    .history__col-started {
-      grid-column: 1 / -1;
-      order: 4;
+    .history__col-select {
+      grid-area: select;
+    }
+
+    .history__col-route {
+      grid-area: route;
+    }
+
+    .history__col-trace {
+      grid-area: trace;
+    }
+
+    .history__col-status {
+      grid-area: status;
+    }
+
+    .history__col-method {
+      grid-area: method;
     }
 
     .history__col-duration {
-      text-align: right;
+      grid-area: duration;
+      text-align: left;
+    }
+
+    .history__col-started {
+      grid-area: started;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 }

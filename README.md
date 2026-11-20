@@ -14,6 +14,8 @@ See, live, the path every HTTP request takes through your own ASP.NET Core API: 
 > The GIF above is recorded from `samples/SampleApi.Controllers` with the dashboard mounted.
 > See [Quick start](#quick-start) to reproduce it yourself.
 
+[Website](https://douglasproglima.github.io/netapiflow-site/en/) · [Live demo](https://douglasproglima.github.io/netapiflow-site/demo/)
+
 ## What it is, and what it isn't
 
 NetApiFlow instruments your own API's internal call path, not external latency, not
@@ -129,6 +131,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 ```
 
+The package requires EF Core 9 or later, on `net8.0` as well. An app on EF Core 8 with an EF 8
+provider fails with a `TypeLoadException` when the package is installed.
+
 ### Tagging a step
 
 A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
@@ -195,6 +200,45 @@ It returns `null` when the trace already aged out of the in-memory buffer (500 t
 between the call and the assertion) or when NetApiFlow was never registered, never when the HTTP
 call itself failed.
 
+### `NetApiFlow.Testing`
+
+The same test, written with the optional `NetApiFlow.Testing` package, which skips the header
+read and the null check and names the rule instead of spelling out the LINQ:
+
+```csharp
+using NetApiFlow;
+using NetApiFlow.Testing;
+
+public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task GetOrder_DoesNotTriggerMoreThanOneDatabaseQuery()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.GetFlowTrace(factory.Services)
+            .ShouldHaveNoErrors()
+            .ShouldCallAtMost(ComponentType.Database, 1)
+            .ShouldHaveCalled("OrderRepository", "FindAsync")
+            .ShouldNeverCall("PaymentGateway");
+    }
+}
+```
+
+Five assertions, all chainable: `ShouldHaveStatus`, `ShouldHaveNoErrors`, `ShouldCallAtMost`,
+`ShouldHaveCalled` and `ShouldNeverCall`. `ShouldHaveCalled`/`ShouldNeverCall` match on the
+component alone when the operation is left out, or on the exact pair when it is given.
+
+The package references nothing but `NetApiFlow` itself, so it imposes no assertion library on
+your test project. A failed assertion throws `FlowAssertionException` with a message saying what
+was expected and what was found, for example
+`Expected at most 1 Database calls, found 5.`; every test framework reports that as a failure.
+`GetFlowTrace` throws the same exception instead of returning `null` when the response carries no
+`X-NetApiFlow-TraceId` header or the trace already left the buffer.
+
 ## Optional packages
 
 | Package | Adds |
@@ -206,6 +250,7 @@ call itself failed.
 | [`NetApiFlow.Storage.SqlServer`](https://www.nuget.org/packages/NetApiFlow.Storage.SqlServer) | Persists traces to SQL Server instead of memory |
 | [`NetApiFlow.Mcp`](https://www.nuget.org/packages/NetApiFlow.Mcp) | A read-only MCP server so an AI agent can query traces directly |
 | [`NetApiFlow.OpenTelemetry`](https://www.nuget.org/packages/NetApiFlow.OpenTelemetry) | Exports traces to any OTLP backend (Jaeger, Tempo, Aspire Dashboard, Honeycomb, a collector) |
+| [`NetApiFlow.Testing`](https://www.nuget.org/packages/NetApiFlow.Testing) | Assertions over the recorded flow, for integration tests |
 
 The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework. Every
 one of the above is opt-in.
@@ -400,8 +445,13 @@ duplicating. That's the answer to "the request took 400 ms but my controller onl
 output caching. It is off by default and changes nothing for anyone who hasn't turned it on.
 Minimal API routes have no MVC filter stage, so they see no new step either way.
 
-`ExternalSources` ingests the `Activity` instances the .NET runtime and the Npgsql driver already
-produce, with no code change in your services.
+`ExternalSources` ingests the `Activity` instances the .NET runtime and the common database
+drivers already produce, with no code change in your services.
+
+In `Development` all three are on by default, so a new install shows outbound HTTP and SQL without
+configuring anything. Everywhere else the default stays `None`. Whatever you state explicitly
+wins, from configuration or from code, including setting it back to
+`ExternalActivitySource.None` while developing.
 
 `HttpClient` covers outbound calls (ADR-0012). The outbound URL is reduced to
 `scheme://host[:port]/path` before it is ever recorded: query string and fragment are never
@@ -410,11 +460,23 @@ captured, same guarantee as every other span.
 `Npgsql` covers SQL commands (ADR-0018), recorded as a `Database` span named after the command
 type and the main table it touches, for example `SELECT Users`. When you also use
 `NetApiFlow.EntityFrameworkCore`, the two never record the same command twice: the driver's own
-`Activity` is dropped whenever a NetApiFlow step already wraps the call, which is exactly what
-`FlowDbCommandInterceptor` does. Without that package (plain Npgsql, or Dapper over Npgsql), the
-driver's `Activity` is the only record of the call and is ingested normally. The full SQL text
+`Activity` is dropped only when a `Database` step already wraps the call, which is exactly what
+`FlowDbCommandInterceptor` opens. Inside a controller, a service, a repository or any other step,
+the command is recorded as a child of that step. A manual `Database` step around direct SQL swallows
+the driver's commands that run inside it. Without that package (plain Npgsql, or Dapper over
+Npgsql), the driver's `Activity` is the only record of the call and is ingested normally. The full SQL text
 only reaches the span when `CaptureSqlText` is enabled, the same rule the EF Core interceptor
 follows.
+
+`SqlClient` does the same for SQL Server, so a Dapper query or a raw `SqlCommand` still shows up
+as a `Database` span instead of leaving a gap in the flow. It follows the same rule as the Npgsql
+one against `NetApiFlow.EntityFrameworkCore` (dropped only when a `Database` step already wraps the
+command), and obeys the same `CaptureSqlText` rule. One difference worth knowing: unlike Npgsql, `Microsoft.Data.SqlClient` publishes no
+`ActivitySource` of its own, so NetApiFlow reads the driver's diagnostic events instead. Those
+events only carry a readable payload from `Microsoft.Data.SqlClient` 6.0 on. If your application
+pins an older driver, the flag is accepted but records nothing, and NetApiFlow logs that once at
+`Information` level naming the version requirement, rather than leaving you with an enabled
+feature and an empty flow.
 
 Mounting the dashboard at a path other than the default, and protecting it:
 
@@ -652,10 +714,12 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 - `net8.0` left Microsoft's official support window on 10 November 2026, and NetApiFlow still ships
   an asset for it. It stays for now because there is nowhere to move it to yet: the next LTS,
   `net12.0`, is only expected in November 2027, so dropping `net8.0` today would leave `net10.0` as
-  the single supported target. When to stop shipping `net8.0` is an open question here, still under
-  investigation, not a date already chosen. Keeping it does mean the package has a target framework
-  that no longer gets servicing updates from Microsoft, which is worth knowing if your own policy
-  forbids that.
+  the single supported target. `net8.0` only stops shipping once `net12.0` can replace it. Keeping
+  it does mean the package has a target framework that no longer gets servicing updates from
+  Microsoft, which is worth knowing if your own policy forbids that.
+- A `net11.0` app uses the `net10.0` asset today. That was tested against a real SQL Server with the
+  storage package and `Microsoft.Data.SqlClient` 7.1.2. An asset of its own for `net11.0` is
+  planned.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

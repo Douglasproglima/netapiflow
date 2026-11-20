@@ -85,15 +85,17 @@
         </div>
         <div class="metric-cards__label">{{ 'metrics.p95Latency' | t }}</div>
       </div>
-      <svg
-        class="metric-cards__sparkline"
-        viewBox="0 0 120 32"
-        preserveAspectRatio="none"
-        role="img"
-        [attr.aria-label]="'metrics.sparklineAria' | t: { n: sparklineSampleSize }"
-      >
-        <polyline [attr.points]="sparklinePoints()" />
-      </svg>
+      @if (sparklineVisible()) {
+        <svg
+          class="metric-cards__sparkline"
+          viewBox="0 0 120 32"
+          preserveAspectRatio="none"
+          role="img"
+          [attr.aria-label]="'metrics.sparklineAria' | t: { n: sparklineSampleSize }"
+        >
+          <polyline [attr.points]="sparklinePoints()" />
+        </svg>
+      }
     </div>
   </div>
 }

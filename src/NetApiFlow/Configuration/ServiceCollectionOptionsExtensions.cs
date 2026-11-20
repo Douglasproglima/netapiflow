@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace NetApiFlow.Configuration;
@@ -8,6 +9,8 @@ internal static class ServiceCollectionOptionsExtensions
 {
     public static IServiceCollection AddNetApiFlowOptions(this IServiceCollection services)
     {
+        services.AddSingleton<IConfigureOptions<NetApiFlowOptions>>(
+            serviceProvider => new NetApiFlowDevelopmentDefaults(serviceProvider.GetService<IHostEnvironment>()));
         services.AddSingleton<IConfigureOptions<NetApiFlowOptions>, NetApiFlowOptionsSetup>();
         services.AddSingleton<IValidateOptions<NetApiFlowOptions>, NetApiFlowOptionsValidator>();
         services.AddOptions<NetApiFlowOptions>().ValidateOnStart();

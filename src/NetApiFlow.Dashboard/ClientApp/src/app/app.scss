@@ -26,7 +26,15 @@
 }
 
 .app-topbar__title {
-  flex: none;
+  // Shrinkable, not fixed: at the widest point the content size is all it ever claims (same
+  // result as `flex: none`), but once `.app-topbar__sub` next to it has already given up its own
+  // space (its own min-width: 0) and the row is still tighter than both titles combined, this is
+  // the next thing to give, with an ellipsis, instead of pushing the topbar's right edge past the
+  // viewport.
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin: 0;
   font-family: var(--naf-font-display);
   font-weight: 700;
@@ -76,6 +84,20 @@
 
   &:hover {
     background: var(--naf-surface-2);
+  }
+
+  // Icon only below ~480px: the label is the first thing to go when the topbar is this narrow,
+  // same width budget problem the preferences menu below solves for theme/language.
+  @media (max-width: 480px) {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+.app-topbar__try-endpoint-label {
+  @media (max-width: 480px) {
+    display: none;
   }
 }
 
@@ -130,6 +152,42 @@
 
 .app-topbar__theme {
   flex: none;
+}
+
+// Theme and language collapse into one menu below ~480px: there is no room left next to the
+// connection chip for a segmented control plus an icon button plus the chip itself.
+.app-topbar__lang--full,
+.app-topbar__theme--full {
+  @media (max-width: 480px) {
+    display: none;
+  }
+}
+
+.app-topbar__prefs-trigger {
+  display: none;
+  flex: none;
+
+  @media (max-width: 480px) {
+    display: inline-flex;
+  }
+}
+
+.app-topbar__prefs-lang {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+
+  button[role='radio'] {
+    font-family: var(--naf-font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+
+    &[aria-checked='true'] {
+      color: var(--naf-flow-text);
+    }
+  }
 }
 
 .app-shell {
@@ -301,4 +359,17 @@
 .app-content {
   height: 100%;
   overflow-x: hidden;
+}
+
+// Demo build only. Permanent and always visible: the data behind these screens was recorded, and
+// a banner that fades out would let someone read a stale number as live.
+.app-demo-banner {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: var(--naf-warning-tint);
+  color: var(--naf-warning-on-tint);
+  border-bottom: 1px solid var(--naf-border);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  text-align: center;
 }

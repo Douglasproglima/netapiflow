@@ -1,6 +1,14 @@
 .components {
   padding: 1rem;
+}
+
+// The scroll container is the card itself, not .components: a wide table scrolling inside a
+// card without its own overflow handling (`.mat-mdc-card` defaults to `overflow-x: visible`)
+// leaves most of the table rendering past the card's own box, background and border included,
+// bare against the page once scrolled.
+.components__card {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .components__status {
@@ -20,5 +28,18 @@
     padding: 0.4rem 0.6rem;
     text-align: left;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  // The component name is what a row is, even once the other seven columns have scrolled out of
+  // view: pinning it to the scroll container's left edge keeps every row legible while scrolling
+  // to the metric that matters, instead of losing track of which row is which.
+  @media (max-width: 767px) {
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      background: var(--naf-surface);
+      box-shadow: 1px 0 0 var(--naf-border);
+    }
   }
 }

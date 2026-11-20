@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NetApiFlow.EntityFrameworkCore</PackageId>
+    <Description>Records Entity Framework Core database commands as NetApiFlow steps through a DbCommandInterceptor.</Description>
+    <PackageTags>$(PackageTags);efcore;entity-framework-core;sql</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

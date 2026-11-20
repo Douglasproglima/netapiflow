@@ -14,7 +14,7 @@ import {
 import { select, Selection } from 'd3-selection';
 import { zoom, zoomIdentity, D3ZoomEvent, ZoomBehavior } from 'd3-zoom';
 import { GraphEdge, GraphNode } from './graph-builder';
-import { ContainerSize, computeGraphViewBox } from './flow-graph-viewbox';
+import { ContainerSize, computeGraphViewBox, isLegendCompact } from './flow-graph-viewbox';
 import {
   GRAPH_NODE_VISUAL_STATES,
   NODE_STATE_PRESENTATION,
@@ -51,8 +51,11 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   private readonly zoomControlsRef = viewChild.required<ElementRef<HTMLDivElement>>('zoomControls');
 
   private readonly containerSize = signal<ContainerSize>({ width: 0, height: 0 });
-  private readonly overlayPanelHeights = signal<readonly number[]>([]);
+  private readonly bottomOverlayHeights = signal<readonly number[]>([]);
+  private readonly topOverlayHeights = signal<readonly number[]>([]);
   private overlayResizeObserver: ResizeObserver | null = null;
+
+  readonly legendCompact = computed(() => isLegendCompact(this.containerSize().height));
 
   readonly viewBox = computed(() => {
     const allNodes = this.nodes();
@@ -66,7 +69,8 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
       contentWidth,
       contentHeight,
       this.containerSize(),
-      this.overlayPanelHeights(),
+      this.bottomOverlayHeights(),
+      this.topOverlayHeights(),
     );
   });
 
@@ -152,7 +156,14 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
 
     const measure = (): void => {
       this.containerSize.set({ width: hostElement.clientWidth, height: hostElement.clientHeight });
-      this.overlayPanelHeights.set([legendElement.clientHeight, zoomControlsElement.clientHeight]);
+      const canvasMiddleY = hostElement.getBoundingClientRect().top + hostElement.clientHeight / 2;
+      const panels = [legendElement, zoomControlsElement];
+      const isInTopHalf = (panel: HTMLElement): boolean =>
+        panel.getBoundingClientRect().top < canvasMiddleY;
+      this.topOverlayHeights.set(panels.filter(isInTopHalf).map((panel) => panel.clientHeight));
+      this.bottomOverlayHeights.set(
+        panels.filter((panel) => !isInTopHalf(panel)).map((panel) => panel.clientHeight),
+      );
     };
 
     this.overlayResizeObserver = new ResizeObserver(measure);
@@ -267,10 +278,10 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   // `.flow-graph__node-operation` is 10.5px monospace, so every character has the same advance
   // width — no need for canvas-based text measurement to decide where it would overlap the
   // duration label that shares its baseline.
-  private static readonly MONO_CHAR_WIDTH_PX = 6.3;
+  private static readonly MONO_CHAR_WIDTH_PX = 6.6;
   private static readonly NODE_LEFT_INSET_PX = 48;
   private static readonly NODE_RIGHT_MARGIN_PX = 10;
-  private static readonly DURATION_GAP_PX = 8;
+  private static readonly DURATION_GAP_PX = 12;
 
   nodeOperationLabel(node: GraphNode): string {
     const duration = this.nodeDuration(node);

@@ -1,6 +1,7 @@
 const BASE_MARGIN_PX = 40;
 const OVERLAY_EDGE_INSET_PX = 12;
-const MAX_RESERVED_BOTTOM_FRACTION = 0.5;
+const MAX_RESERVED_FRACTION = 0.5;
+const LEGEND_COMPACT_CANVAS_HEIGHT_PX = 280;
 
 export interface ContainerSize {
   readonly width: number;
@@ -8,41 +9,61 @@ export interface ContainerSize {
 }
 
 /**
- * The legend and zoom controls are opaque overlays pinned to the bottom corners (guide seção 8:
- * "achado real da Fase 25"), outside the SVG's own layout. Reserving a bottom margin sized to the
- * taller of the two keeps every real node above that strip, regardless of which corner a node
- * would otherwise land in after auto-fit.
+ * Below this canvas height, the six-item legend's own full column (guide seção 8) is taller than
+ * half the canvas, the point past which `computeGraphViewBox` gives up on fully clearing it and
+ * a real node can render behind it (reproduced live at a 238px canvas). Icons only, in a wrapped
+ * row (`FlowGraphComponent` applies the class), cut the legend's footprint enough that the
+ * auto-fit margin can clear it again.
+ */
+export function isLegendCompact(canvasHeightPx: number): boolean {
+  return canvasHeightPx > 0 && canvasHeightPx < LEGEND_COMPACT_CANVAS_HEIGHT_PX;
+}
+
+/**
+ * The legend and zoom controls are opaque overlays pinned to the canvas corners, outside the
+ * SVG's own layout. Margins sized to the tallest overlay on each edge keep every real node clear
+ * of them, whichever corner a node would otherwise land in after auto-fit.
  */
 export function computeGraphViewBox(
   contentWidth: number,
   contentHeight: number,
   container: ContainerSize,
-  overlayPanelHeightsPx: readonly number[],
+  bottomOverlayHeightsPx: readonly number[],
+  topOverlayHeightsPx: readonly number[] = [],
 ): string {
   if (contentWidth === 0 && contentHeight === 0) {
     return '0 0 100 100';
   }
 
   const width = contentWidth + BASE_MARGIN_PX;
-  const tallestOverlayPx =
-    overlayPanelHeightsPx.length > 0 ? Math.max(...overlayPanelHeightsPx) : 0;
-  const uncappedReservedBottomPx =
-    tallestOverlayPx > 0 ? tallestOverlayPx + OVERLAY_EDGE_INSET_PX : 0;
+  const uncappedBottomPx = reservedPxFor(bottomOverlayHeightsPx);
+  const uncappedTopPx = reservedPxFor(topOverlayHeightsPx);
+  const uncappedTotalPx = uncappedBottomPx + uncappedTopPx;
 
-  // A canvas squeezed short enough (the replay bar eating vertical space, e.g.) can leave an
-  // overlay taller than the canvas itself: fully clearing it would shrink the graph to a sliver.
-  // Past half the canvas, give up on full clearance and settle for a bounded, partial one instead.
-  const reservedBottomPx = Math.min(
-    uncappedReservedBottomPx,
-    container.height * MAX_RESERVED_BOTTOM_FRACTION,
-  );
+  // A canvas squeezed short enough (the replay bar eating vertical space, e.g.) can leave the
+  // overlays taller than the canvas itself: fully clearing them would shrink the graph to a
+  // sliver. Past half the canvas, settle for a bounded, partial clearance instead.
+  const cappedTotalPx = Math.min(uncappedTotalPx, container.height * MAX_RESERVED_FRACTION);
+  const capFactor = uncappedTotalPx > 0 ? cappedTotalPx / uncappedTotalPx : 0;
+  const reservedBottomPx = uncappedBottomPx * capFactor;
+  const reservedTopPx = uncappedTopPx * capFactor;
+  const reservedPx = reservedBottomPx + reservedTopPx;
 
-  const bottomMargin =
-    reservedBottomPx > 0 && container.width > 0 && container.height > 0
-      ? bottomMarginForOverlay(width, contentHeight, container, reservedBottomPx)
-      : BASE_MARGIN_PX;
+  if (reservedPx <= 0 || container.width <= 0 || container.height <= 0) {
+    return `0 0 ${width} ${contentHeight + BASE_MARGIN_PX}`;
+  }
 
-  return `0 0 ${width} ${contentHeight + bottomMargin}`;
+  const extraMargin =
+    bottomMarginForOverlay(width, contentHeight, container, reservedPx) - BASE_MARGIN_PX;
+  const topMargin = (extraMargin * reservedTopPx) / reservedPx;
+  const bottomMargin = BASE_MARGIN_PX + (extraMargin * reservedBottomPx) / reservedPx;
+
+  return `0 ${-topMargin} ${width} ${contentHeight + bottomMargin + topMargin}`;
+}
+
+function reservedPxFor(overlayHeightsPx: readonly number[]): number {
+  const tallestPx = overlayHeightsPx.length > 0 ? Math.max(...overlayHeightsPx) : 0;
+  return tallestPx > 0 ? tallestPx + OVERLAY_EDGE_INSET_PX : 0;
 }
 
 /**

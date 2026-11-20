@@ -92,7 +92,7 @@
                 </svg>
               </button>
             </span>
-            <span class="flow-workspace__graph-header-end">
+            <span class="flow-workspace__graph-header-end flow-workspace__graph-header-end--full">
               @if (isFollowingLiveRunning()) {
                 <button mat-stroked-button type="button" (click)="toggleLivePause()">
                   {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
@@ -110,6 +110,40 @@
                 {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
               </button>
             </span>
+            <!-- Below ~767px, the three actions above never fit next to the verb badge without
+                 pushing "Request path" out, so they move into this menu instead and cede the row
+                 to the title. -->
+            <button
+              mat-icon-button
+              type="button"
+              class="flow-workspace__graph-header-menu-trigger"
+              [attr.aria-label]="'graph.actionsAria' | t"
+              [matMenuTriggerFor]="graphHeaderMenu"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
+            <mat-menu #graphHeaderMenu="matMenu">
+              @if (isFollowingLiveRunning()) {
+                <button mat-menu-item type="button" (click)="toggleLivePause()">
+                  {{ (livePlayer.paused() ? 'graph.resumeLive' : 'graph.pauseLive') | t }}
+                </button>
+              }
+              <button mat-menu-item type="button" (click)="exportTrace()">
+                {{ 'export.button' | t }}
+              </button>
+              <button
+                mat-menu-item
+                type="button"
+                [disabled]="trace.status === 'Running'"
+                (click)="toggleReplay()"
+              >
+                {{ (isReplaying() ? 'graph.backToLive' : 'graph.replay') | t }}
+              </button>
+            </mat-menu>
           </div>
 
           @if (errorOrigin(); as origin) {
@@ -164,7 +198,7 @@
           }
         }
 
-        <div class="flow-workspace__canvas">
+        <div class="flow-workspace__canvas" #canvas>
           @if (trace(); as trace) {
             <app-flow-graph
               [nodes]="graph().nodes"
@@ -351,8 +385,39 @@
     }
   </div>
 
-  <div class="flow-workspace__footer">
-    <app-recent-executions class="flow-workspace__recent" (traceSelected)="openTrace($event)" />
-    <app-event-feed class="flow-workspace__feed" />
+  <div
+    class="flow-workspace__footer"
+    [attr.data-active-footer-tab]="activeFooterTab()"
+    [class.flow-workspace__footer--collapsed-recent]="recentCollapsed()"
+    [class.flow-workspace__footer--collapsed-events]="feedCollapsed()"
+  >
+    <div class="flow-workspace__footer-tabs" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeFooterTab() === 'recent'"
+        [class.flow-workspace__footer-tab--active]="activeFooterTab() === 'recent'"
+        class="flow-workspace__footer-tab"
+        (click)="activeFooterTab.set('recent')"
+      >
+        {{ 'recent.title' | t }}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeFooterTab() === 'events'"
+        [class.flow-workspace__footer-tab--active]="activeFooterTab() === 'events'"
+        class="flow-workspace__footer-tab"
+        (click)="activeFooterTab.set('events')"
+      >
+        {{ 'events.title' | t }}
+      </button>
+    </div>
+    <app-recent-executions
+      class="flow-workspace__recent"
+      [(collapsed)]="recentCollapsed"
+      (traceSelected)="openTrace($event)"
+    />
+    <app-event-feed class="flow-workspace__feed" [(collapsed)]="feedCollapsed" />
   </div>
 </section>

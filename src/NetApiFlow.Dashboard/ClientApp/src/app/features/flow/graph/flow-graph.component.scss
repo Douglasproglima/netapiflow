@@ -290,6 +290,18 @@
   }
 }
 
+// Below a short canvas (flow-graph.component.ts decides the threshold from its own measured
+// height), the full column is taller than half the canvas, the point past which the auto-fit
+// margin gives up on fully clearing it and a real node can render behind it. Icons only, in a
+// wrapped row, cut the footprint enough to stay clear again; the label moves to .sr-only rather
+// than disappearing from assistive tech.
+.flow-graph__legend--compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.625rem;
+  max-width: calc(100% - 24px);
+}
+
 .flow-graph__legend-item {
   display: flex;
   align-items: center;
@@ -314,6 +326,15 @@
   border-radius: var(--naf-radius-md);
   background: var(--naf-surface);
   border: 1px solid var(--naf-border);
+
+  // The legend wraps into a wide row at this width (nearly the full canvas, see above) and can
+  // reach this far corner; moving to the opposite corner keeps the two overlays from ever
+  // competing for the same row, regardless of how many legend rows a given trace's states wrap
+  // into.
+  @media (max-width: 767px) {
+    top: 12px;
+    bottom: auto;
+  }
 }
 
 .flow-graph__zoom-btn {

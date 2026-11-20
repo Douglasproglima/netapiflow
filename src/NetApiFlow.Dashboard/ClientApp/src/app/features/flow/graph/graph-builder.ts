@@ -60,6 +60,13 @@ export interface GraphBuilderInput {
    * once it no longer does. Defaults to `traceStatus === 'Running'` (A4).
    */
   inProgress?: boolean;
+  /**
+   * Dagre layout direction (guide seção 6.4): `'LR'` fits a wide, short canvas; `'TB'` fits a
+   * canvas taller than it is wide (default mobile portrait, or a desktop canvas squeezed narrow
+   * by the action/details panels). Decided by the caller from the canvas's own measured aspect
+   * ratio, never by this pure function. Defaults to `'LR'`.
+   */
+  rankdir?: 'LR' | 'TB';
 }
 
 const NODE_WIDTH = 184;
@@ -148,7 +155,15 @@ export function buildGraph(input: GraphBuilderInput): GraphResult {
   const layoutGraph = new dagre.graphlib.Graph();
   // rankdir 'LR' (guide seção 6.4): a left-to-right flow instead of a single vertical column is
   // what turns a 10-step trace into a readable graph instead of one tall, scroll-only strip (D4).
-  layoutGraph.setGraph({ rankdir: 'LR', nodesep: 16, ranksep: 44, marginx: 24, marginy: 24 });
+  // 'TB' is the caller's override for a canvas taller than it is wide, where a left-to-right flow
+  // would instead force a few wide nodes into a narrow strip with most of the canvas empty.
+  layoutGraph.setGraph({
+    rankdir: input.rankdir ?? 'LR',
+    nodesep: 16,
+    ranksep: 44,
+    marginx: 24,
+    marginy: 24,
+  });
   layoutGraph.setDefaultEdgeLabel(() => ({}));
 
   const flatNodes: MergedNode[] = [];

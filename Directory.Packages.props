@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -71,7 +71,12 @@
     <PackageVersion Include="Npgsql" Version="8.0.5" />
 
     <!-- NetApiFlow.Storage.SqlServer -->
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" Condition="'$(MSBuildProjectName)' != 'NetApiFlow.SqlClient.IntegrationTests'" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.8" Condition="'$(MSBuildProjectName)' == 'NetApiFlow.SqlClient.IntegrationTests'" />
+
+    <!-- Test-only: the SqlClient interop test needs a real SQL Server provider for its dedup case. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.22" />
+
 
     <!-- SourceLink (every src/ package) -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />

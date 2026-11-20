@@ -35,11 +35,16 @@
   color: var(--naf-text-muted);
 }
 
+// The single scroll area for the whole card: the list and the selected endpoint's form used to
+// scroll independently, each shrunk to fit the same fixed-height card, which pushed "Send
+// request" out of the visible area in a common desktop viewport. Letting this box scroll its own
+// overflow, with its children at their natural height instead of shrinking, keeps that button
+// reachable with a single scrollbar. `.endpoint-form__footer` below (outside this box) is what
+// actually keeps the button in view without scrolling at all.
 .endpoint-form__custom {
-  display: flex;
-  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .endpoint-form__status {
@@ -102,10 +107,8 @@
 }
 
 .endpoint-form__list-wrapper {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 55%;
-  overflow-y: auto;
+  // No max-height/overflow of its own: `.endpoint-form__custom` above owns the one scroll area
+  // this card has, so the list just takes whatever height its own rows need.
 }
 
 .endpoint-form__endpoints {
@@ -134,6 +137,18 @@
   }
 }
 
+// The lock slot is reserved for every row in the list, not just the protected ones, so the paths
+// still line up under each other. Lists with nothing protected keep the two-column grid.
+.endpoint-form__endpoints--with-lock-column .endpoint-form__endpoint {
+  grid-template-columns: 56px 16px minmax(0, 1fr);
+}
+
+.endpoint-form__endpoint-lock {
+  display: inline-grid;
+  place-items: center;
+  color: var(--naf-text-muted);
+}
+
 .endpoint-form__endpoint--selected {
   background: var(--naf-flow-tint);
   border-color: rgba(139, 92, 246, 0.45);
@@ -160,9 +175,6 @@
 }
 
 .endpoint-form__form {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -175,6 +187,24 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+}
+
+.endpoint-form__back {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: none;
+  color: var(--naf-text-muted);
+  border-radius: var(--naf-radius-sm);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--naf-text);
+    background: var(--naf-surface-2);
+  }
 }
 
 .endpoint-form__form-path {
@@ -309,6 +339,16 @@
   color: var(--naf-text-muted);
 }
 
+.endpoint-form__authorize-expiry {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--naf-text-muted);
+
+  &--expired {
+    color: var(--naf-danger-on-tint);
+  }
+}
+
 .endpoint-form__headers {
   display: flex;
   flex-direction: column;
@@ -366,6 +406,16 @@
     color: var(--naf-text);
     background: var(--naf-surface-2);
   }
+}
+
+// Outside .endpoint-form__custom (the only thing that scrolls), so this never moves out of
+// view: the whole reason the list and the form share one scroll area above.
+.endpoint-form__footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 1rem;
 }
 
 .endpoint-form__send {

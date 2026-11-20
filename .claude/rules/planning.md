@@ -40,3 +40,43 @@ Risco marcado como `Planejado` (não `Mitigado`) em `docs/plano/riscos.md` não 
 a menos que o próprio arquivo de fase diga o contrário. Mas a tarefa que prova a mitigação
 precisa estar na fase indicada na coluna "Fase" daquele risco. Se chegar lá sem a prova, é
 critério de aceite não cumprido.
+
+## Quando um achado de auditoria vira hotfix, não roadmap
+
+Inspeção de código e leitura de documentação não têm fim: sempre dá pra olhar mais fundo e achar
+mais uma coisa. Rodada de auditoria externa atrás de rodada de auditoria externa, cada uma achando
+algo que a anterior não via, prova isso na prática (D-141).
+
+Critério travado: só vira hotfix um achado com **falha reproduzida de verdade**. Uma exceção real,
+um comando que qualquer um roda e vê quebrar, um cenário real que falha, não uma leitura de código
+ou de changelog que sugere que algo pode dar errado. O exemplo que fixou a régua foi o
+`MissingMethodException` do `NetApiFlow.MediatR` contra `MediatR` 12.5+ (D-140): reproduzido do
+zero contra o pacote publicado de verdade, não aceito só pelo relato da auditoria.
+
+Achado sem essa reprodução, por mais correto que pareça, vira item de `docs/plano/roadmap-valor.md`
+e espera o ciclo normal de fase. Não é questão de gravidade: um achado teórico grave ainda é
+roadmap; um achado reproduzido pequeno ainda é candidato a hotfix, se o resto dos critérios do
+hotfix (PATCH, sem mudança de API pública) também valer.
+
+## Quando um item do roadmap pode entrar num loop autônomo da Executora
+
+A Executora nunca cria ADR nem escreve `docs/plano/`/`docs/adr/` sozinha (ver acima). Um item do
+roadmap que ainda depende de uma decisão de arquitetura, de produto, ou de uma fase ainda não
+desenhada não pode entrar num loop sem supervisão: ou a Executora trava perguntando pro vazio, ou
+decide sozinha algo que devia passar pela Planejadora. Antes de liberar qualquer lote do roadmap
+para rodar sem supervisão, a Planejadora separa o que é mecânico (fase já escrita, sem decisão em
+aberto, precedente já estabelecido) do que exige decisão primeiro, e só o primeiro grupo vai para o
+loop (D-142).
+
+## Citar `roadmap-valor.md` dentro de `decisoes.md`
+
+`decisoes.md` é append-only; `roadmap-valor.md` é vivo, a Planejadora reordena e renumera a
+tabela sempre que um item é entregue ou a prioridade muda. Uma entrada de `decisoes.md` que cita
+só "item N do roadmap" aponta pra uma posição que pode já ter mudado quando alguém ler a decisão
+meses depois, e aí a referência leva pro item errado sem avisar.
+
+Toda entrada nova de `decisoes.md` que citar um item do `roadmap-valor.md` cita o número junto
+com um trecho curto do próprio texto do item (ex. "item 18 do roadmap, renomear `NetApiFlow`
+por causa do CA1724"), não só o número sozinho. O trecho sobrevive à renumeração, o número não.
+Entradas antigas que só têm o número (várias existem, de antes desta regra) não precisam de
+correção retroativa.

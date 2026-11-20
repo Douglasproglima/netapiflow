@@ -42,4 +42,26 @@
     text-align: left;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
+
+  // Method and route together are what a row is; pinning only one of the two would still lose
+  // the other to the scroll. A fixed width on the method column makes the route column's own
+  // sticky offset a known number instead of something that would otherwise need measuring.
+  @media (max-width: 767px) {
+    th:nth-child(1),
+    td:nth-child(1) {
+      position: sticky;
+      left: 0;
+      width: 64px;
+      min-width: 64px;
+      background: var(--naf-surface);
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+      position: sticky;
+      left: 64px;
+      background: var(--naf-surface);
+      box-shadow: 1px 0 0 var(--naf-border);
+    }
+  }
 }

@@ -1,9 +1,10 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Subject, auditTime, catchError, filter, map, merge, of, switchMap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
@@ -13,6 +14,7 @@ import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
 import { buildGraph, GraphResult, isGhostNodeId } from './graph/graph-builder';
 import { FlowGraphComponent } from './graph/flow-graph.component';
+import { rankdirHysteresis } from './graph/rankdir-hysteresis';
 import { FlowDetailsPanelComponent } from './details/flow-details-panel.component';
 import { MetricCardsComponent } from './metric-cards/metric-cards.component';
 import { EventFeedComponent } from './event-feed/event-feed.component';
@@ -49,6 +51,7 @@ export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
     RecentExecutionsComponent,
     EndpointFormComponent,
     MatButtonModule,
+    MatMenuModule,
     TranslatePipe,
   ],
   providers: [LiveTracePlayerService, ReplayPlayerService],
@@ -71,6 +74,21 @@ export class FlowPageComponent {
     this.breakpointObserver.observe('(max-width: 1599px)').pipe(map((state) => state.matches)),
     { initialValue: false },
   );
+
+  private readonly canvasRef = viewChild<ElementRef<HTMLElement>>('canvas');
+  readonly graphRankdir = rankdirHysteresis(this.canvasRef);
+
+  /**
+   * Below ~800px of `window.innerHeight` (guide seção 6.9) the footer shows one card at a time
+   * instead of two side by side; this picks which. Purely a display choice (CSS hides the
+   * inactive card inside that same media query), with no effect above the threshold, where both
+   * always show.
+   */
+  readonly activeFooterTab = signal<'recent' | 'events'>('recent');
+
+  /** Lifted from each card's own `collapsed` model so the shared footer row can shrink. */
+  readonly recentCollapsed = signal(false);
+  readonly feedCollapsed = signal(false);
 
   readonly traceId = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('trace'))), {
     initialValue: this.route.snapshot.queryParamMap.get('trace'),
@@ -113,6 +131,8 @@ export class FlowPageComponent {
       return { nodes: [], edges: [] };
     }
 
+    const rankdir = this.graphRankdir();
+
     if (this.isReplaying()) {
       return buildGraph({
         spans: this.replayPlayer.visibleSpans(),
@@ -120,6 +140,7 @@ export class FlowPageComponent {
         slowThresholdMicros,
         fullSpans: trace.spans,
         inProgress: this.replayPlayer.state() !== 'finished',
+        rankdir,
       });
     }
 
@@ -129,6 +150,7 @@ export class FlowPageComponent {
       slowThresholdMicros,
       blueprintSpans: this.liveBlueprintSpans() ?? undefined,
       inProgress: trace.status === 'Running',
+      rankdir,
     });
   });
 

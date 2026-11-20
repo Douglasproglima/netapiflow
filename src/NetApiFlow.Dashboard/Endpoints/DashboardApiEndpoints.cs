@@ -228,7 +228,7 @@ internal static class DashboardApiEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.Normalize(route), cancellationToken);
+        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.NormalizeForComparison(route), cancellationToken);
         return detail is null ? Results.NoContent() : Results.Json(TraceDetailDto.From(detail), DashboardJsonOptions.Rest);
     }
 
@@ -284,11 +284,11 @@ internal static class DashboardApiEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var map = await store.GetArchitectureMapAsync(method, RouteTemplateNormalizer.Normalize(route), new StatsQuery { From = from, To = to }, cancellationToken);
+        var map = await store.GetArchitectureMapAsync(method, RouteTemplateNormalizer.NormalizeForComparison(route), new StatsQuery { From = from, To = to }, cancellationToken);
         return Results.Json(map, DashboardJsonOptions.Rest);
     }
 
-    private static IResult GetConfig(IOptions<NetApiFlowOptions> options)
+    private static IResult GetConfig(IOptions<NetApiFlowOptions> options, HttpContext httpContext)
     {
         var config = new DashboardConfig
         {
@@ -297,6 +297,7 @@ internal static class DashboardApiEndpoints
             TailSamplingEnabled = options.Value.TailSampling.Enabled,
             SuccessSampleRate = options.Value.TailSampling.SuccessSampleRate,
             OpenApiDocumentPath = options.Value.OpenApiDocumentPath,
+            HostPathBase = httpContext.Request.PathBase.Value ?? string.Empty,
         };
 
         return Results.Json(config, DashboardJsonOptions.Rest);

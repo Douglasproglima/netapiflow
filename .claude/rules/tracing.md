@@ -52,6 +52,27 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
   depois.
 - As próprias rotas do NetApiFlow (dashboard, API REST, stream SSE) nunca são rastreadas.
 
+## Comando SQL do driver: quem cobre quem (ADR-0024)
+
+- `ExternalActivitySource.Npgsql` e `ExternalActivitySource.SqlClient` gravam o comando do driver
+  como span `Database`, filho do step que o chamou: controller, serviço, repositório, handler ou step
+  manual.
+- O comando só é descartado quando o step **imediatamente** em volta é do NetApiFlow e do tipo
+  `Database`, que é o que o interceptor do EF Core abre. Ali o step já representa a chamada, e gravar
+  o driver seria duplicar. Qualquer outro tipo de step é quem chamou o comando, nunca quem o
+  representa.
+- Um critério só, num lugar só, para os dois drivers. Não reintroduzir uma cópia da regra por driver.
+
+## Risco latente do `net11.0` (ADR-0023)
+
+A partir do ASP.NET Core 11, a `Activity` HTTP nativa (a mesma cujo `TraceId` o NetApiFlow reusa)
+passa a carregar doze tags de semantic convention do OpenTelemetry por padrão, incluindo
+`url.query` e `url.path`. O `FlowActivityListener` nunca escuta a fonte `Microsoft.AspNetCore`,
+então isso não viola o ADR-0007 hoje. Qualquer código novo que um dia precise ler alguma coisa
+dessa `Activity` nativa (mesmo padrão do backfill de tag do `HttpClient`, Fase 8/D-69) tem que
+conferir, antes de copiar qualquer tag dela, que não está recopiando `url.query`/`url.path` sem
+sanitização.
+
 ## Dashboard (ADR-0006)
 
 - Fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` ou

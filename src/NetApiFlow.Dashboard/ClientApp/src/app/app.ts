@@ -3,9 +3,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { auditTime, filter, map, merge, of, startWith, switchMap } from 'rxjs';
+import { auditTime, catchError, filter, map, merge, of, startWith, switchMap } from 'rxjs';
 import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ActionDrawerService } from './core/action-drawer.service';
 import { ApiService } from './core/api.service';
@@ -16,6 +17,7 @@ import { LanguageService } from './core/i18n/language.service';
 import { TranslatePipe } from './core/i18n/translate.pipe';
 import { SupportedLanguage, TranslationKey } from './core/i18n/translations';
 import { ThemeService } from './core/theme.service';
+import { environment } from '../environments/environment';
 
 const NARROW_BREAKPOINT = '(max-width: 1023px)';
 
@@ -32,6 +34,7 @@ const NARROW_BREAKPOINT = '(max-width: 1023px)';
     RouterLinkActive,
     MatSidenavModule,
     MatButtonModule,
+    MatMenuModule,
     TranslatePipe,
   ],
   selector: 'app-root',
@@ -49,6 +52,7 @@ export class App implements OnInit, OnDestroy {
   private readonly theme = inject(ThemeService);
   readonly actionDrawer = inject(ActionDrawerService);
 
+  readonly isDemoMode = environment.isDemoMode;
   readonly version = signal<string | null>(null);
   readonly connectionState = this.sse.state;
   readonly activeLanguage = this.language.language;
@@ -121,8 +125,12 @@ export class App implements OnInit, OnDestroy {
         auditTime(SSE_REFRESH_AUDIT_MS),
       ),
     )
-      .pipe(switchMap(() => this.api.getLiveTraces()))
-      .subscribe((traces) => this.inProgressCount.set(traces.length));
+      .pipe(switchMap(() => this.api.getLiveTraces().pipe(catchError(() => of(null)))))
+      .subscribe((traces) => {
+        if (traces) {
+          this.inProgressCount.set(traces.length);
+        }
+      });
   }
 
   ngOnDestroy(): void {

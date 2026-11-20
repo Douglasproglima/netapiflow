@@ -1,0 +1,252 @@
+# Fase 44: Layout mobile com paridade completa
+
+Projeto tocado: só `src/NetApiFlow.Dashboard/ClientApp`. Nenhuma mudança em `src/NetApiFlow`,
+nenhum pacote opcional, nenhum `.csproj`, nenhuma mudança em `docs/plano/contratos.md`.
+
+Depende da Fase 43 estar pronta e aceita: o mecanismo de scroll de página real, o piso de altura
+do grafo, o rodapé que cede por altura, a minilinha do sparkline, a rolagem única do runner e a
+orientação automática do grafo (`rankdir` com histerese) são a base estrutural compartilhada.
+
+## Escopo: paridade completa (D-163, substitui a proposta anterior de "modo consulta")
+
+Uma proposta anterior desta fase limitava o mobile a `/flow` (grafo, detalhes, replay), com
+Runner, Arquitetura e Insights em "experiência simplificada". Rejeitada: **mobile mostra a mesma
+informação e as mesmas ações que desktop, em todas as seis telas** (Flow com grafo/detalhes/
+replay, History, Components, Runner, Architecture, Insights). Nada fica oculto ou inacessível só
+por causa da largura da tela.
+
+Isso não significa pixel idêntico ao desktop: uma tabela pode rolar na horizontal em vez de
+encolher colunas, uma lista pode virar formulário em duas etapas em vez de lado a lado (como a
+Fase 43 já fez no Runner). O critério é informação e ação sempre alcançáveis, não layout idêntico.
+
+## O que a pesquisa encontrou antes de escrever as tarefas
+
+Lido o SCSS/HTML real de cada tela antes de planejar, não suposto:
+
+- **History**: já tem tratamento mobile real (filtros colapsam atrás de um botão, ordenação vira
+  `<select>` abaixo de 767px, linhas da tabela reorganizam em grid). **Gap real**: a coluna de
+  trace id com o botão de copiar (`.history__col-trace`) tem `display: none` abaixo de **1365px**,
+  não só em mobile. Nenhuma alternativa: a ação de copiar o trace id simplesmente não existe
+  abaixo desse ponto. É o único caso desta fase onde algo está hoje escondido, não só apertado.
+- **Runner**: a página inteira é `<div class="runner"><app-endpoint-form /></div>`, o mesmo
+  componente que a Fase 43 já corrigiu (lista → formulário, rolagem única, testado contra 248
+  rotas). Provavelmente já funciona isolado em largura estreita; precisa de confirmação própria,
+  não de reconstrução.
+- **Components**: tabela de 8 colunas dentro de um card com `overflow-x: auto` (corrigido na Fase
+  46). Nada oculto, rola para ver qualquer coluna. Precisa de confirmação, não de nova tarefa.
+- **Insights**: mesma forma (tabelas em `mat-card`, `overflow-x: auto`). Nada oculto. Precisa de
+  confirmação.
+- **Architecture**: zero `@media` query no arquivo inteiro (achado real, nenhuma tela desta fase
+  tinha isso além de Insights/Components/Runner, mas Architecture é a única com um canvas de
+  grafo sem o piso de altura que a Fase 43 deu a `.flow-workspace__center`). `.architecture` é
+  `height: 100%` sem `max(..., Npx)`, `.architecture__canvas` tem só `min-height: 200px` (menor
+  que o piso de 360px do Flow). Mesma classe de bug que a Tarefa 43.1 fechou para `/flow` pode
+  acontecer aqui, nunca testada.
+- **Architecture e Insights nunca passaram pela varredura de responsividade da Fase 46** (que
+  cobriu só History/Components/Runner). Dois telas sem nenhuma prova de que não vazam ou cortam
+  em largura estreita.
+
+## Tarefa 44.1: topbar compacta abaixo de ~480px (fecha o Achado 1 da Fase 46, nas seis telas)
+
+Achado real (Fase 46): abaixo de 360px de largura, a topbar (`.app-topbar`, compartilhada por
+todo o dashboard) ultrapassa a viewport em 28 a 73px, dependendo da tela (o chip "Live" é o
+elemento que mais estoura). Reproduzido em `/flow`, `/history`, `/runner` (Fase 46); como é a
+mesma topbar, vale para `/components`, `/architecture` e `/insights` também.
+
+1. Tema e idioma entram num menu (ícone único) abaixo de ~480px.
+2. "Try an endpoint" vira só ícone (sem rótulo de texto) no mesmo breakpoint.
+3. Confirmar que nenhum elemento da topbar força `scrollWidth` da página a exceder `innerWidth`
+   em `360×800` e `393×852`, nas seis telas.
+
+**Pronto quando:** `document.documentElement.scrollWidth <= window.innerWidth` nos dois viewports
+mobile, nas seis telas, tema e idioma continuam acessíveis pelo menu.
+
+## Tarefa 44.2: grafo antes das métricas em `/flow`
+
+Achado real: hoje o usuário rola por seis cartões de métrica e pelo sparkline antes de ver o
+grafo, em qualquer viewport mobile. O grafo é o motivo de abrir a tela.
+
+1. Reordenar: grafo primeiro, métricas depois, abaixo de `max-width: 767px`.
+2. Métricas em faixa com rolagem horizontal, ou recolhidas por padrão com um controle para
+   expandir (a Executora decide qual das duas, documentando o motivo).
+
+**Pronto quando:** em `360×800` e `393×852`, o grafo aparece sem rolar a página, confirmado por
+`getBoundingClientRect()` do canvas mostrando `top < window.innerHeight` sem scroll.
+
+## Tarefa 44.3: ações do cabeçalho do grafo num menu "⋯" quando não couberem
+
+Achado real: as ações do cabeçalho ("Back to live", "Replay", exportar) vazam à direita em
+mobile, e o título "Request path" some.
+
+1. Abaixo de um breakpoint mobile, ações que não couberem na linha do cabeçalho entram num menu
+   "⋯" (mesmo padrão de menu compacto da Tarefa 44.1).
+2. O título "Request path" nunca desaparece: se precisar de espaço, as ações cedem primeiro.
+
+**Pronto quando:** em `360×800`/`393×852`, nenhuma ação vaza para fora do card, "Request path"
+sempre visível.
+
+## Tarefa 44.4: Histórico, trace id nunca desaparece
+
+Achado real (pesquisa desta fase): `.history__col-trace` (trace id curto mais botão de copiar)
+tem `display: none` abaixo de 1365px. Sem alternativa: a ação de copiar o trace id direto da
+lista não existe abaixo desse ponto, em qualquer largura, não só em mobile.
+
+1. No layout de card (`@media max-width: 767px`, linhas da tabela já viram grid), acrescentar o
+   trace id curto e o botão de copiar como mais um item do grid, mesmo padrão visual que
+   `.recent-executions__item`/`.event-feed` já usam para dados secundários numa linha compacta.
+2. Entre 768px e 1365px (tela ainda em modo tabela, não card), decidir entre: encolher a coluna
+   de trace id (menos caracteres visíveis, `title` com o valor completo) ou mover o botão de
+   copiar para dentro da célula de rota como ação secundária. A Executora decide qual, documentando
+   o motivo; qualquer uma das duas mantém a ação alcançável, que é o critério.
+
+**Pronto quando:** em `360×800`, `393×852` e numa largura intermediária (ex. `1024×800`), o botão
+de copiar o trace id está presente e funcional em toda largura testada, confirmado clicando e
+checando a área de transferência (ou o estado visual de "copiado" que o componente já mostra).
+
+## Tarefa 44.5: Arquitetura, piso de altura e scroll de página
+
+Achado real (pesquisa desta fase): `.architecture`/`.architecture__canvas` nunca ganhou o
+mecanismo da Tarefa 43.1. Mesma classe de bug (grafo cortado ou invisível em viewport curto) pode
+acontecer aqui, nunca testada.
+
+1. Aplicar o mesmo mecanismo da Fase 43 (`height: max(100%, Npx)` em `.architecture`,
+   `min-height` real em `.architecture__canvas`), com valores próprios: o orçamento de altura
+   fixa de `/architecture` é diferente do de `/flow` (sem rodapé de dois cartões, sem faixa de
+   métricas). Medir contra o DOM real, mesmo método da Fase 43 (varredura fina via Playwright),
+   não estimar de cabeça.
+2. `.app-content` rola de verdade abaixo do piso medido, mesmo mecanismo já existente desde a
+   Fase 43 (nenhuma mudança na cadeia do shell).
+
+**Pronto quando:** em `1366×728` e numa altura ainda mais curta, com uma rota real selecionada, o
+grafo de arquitetura aparece inteiro ou a página rola até ele aparecer, nunca os dois ao mesmo
+tempo, confirmado por `getBoundingClientRect()`.
+
+## Tarefa 44.6: varredura e verificação de paridade nas seis telas
+
+Diferente das tarefas acima, estas três telas não têm achado prévio de algo escondido. A
+pesquisa desta fase não encontrou `display: none` nem conteúdo inalcançável. Confirmar com
+geometria real, mesma régua da Fase 46 (varredura por faixa, largura e altura):
+
+1. **Architecture e Insights**: nunca passaram por nenhuma varredura de responsividade (a Fase
+   46 cobriu só History/Components/Runner). Rodar a mesma matriz de larguras/alturas da Fase 46,
+   documentando achado real (se houver) ou a ausência confirmada dele.
+2. **Runner (página standalone, `/runner`, distinta do painel embutido em `/flow`)**: confirmar
+   isoladamente em `360×800`/`393×852` que o `EndpointFormComponent` (já corrigido na Fase 43)
+   funciona igual fora do contexto de `/flow`.
+3. **Components e Insights**: confirmar que a rolagem horizontal das tabelas alcança de fato toda
+   coluna em `360×800`/`393×852`, nenhuma informação impossível de ver mesmo rolando até o fim.
+
+**Pronto quando:** as três telas documentadas com o resultado da varredura (achado real ou
+nenhum) em `tests/manual-verification/`, mesmo padrão dos READMEs já existentes. Qualquer achado
+real vira tarefa própria desta fase antes de aceitar, mesmo padrão de "achado real durante a
+rodada" já usado nas Fases 43/46 (não teórico, D-141).
+
+## Tarefa 44.7: regressão da base estrutural da Fase 43, nas seis telas
+
+Confirmar que os mecanismos entregues na Fase 43 continuam corretos fora de `/flow`, não só
+dentro dela:
+
+- Scroll de página real (Tarefa 43.1) e sparkline dentro do cartão (Tarefa 43.4): só se aplicam a
+  `/flow`, confirmar que nada regrediu ali nas duas larguras mobile.
+- Valores nunca truncados (Tarefa 43.7, `formatDurationMicrosCompact`): usado hoje só em
+  `metric-cards`; confirmar se Insights/Architecture também formatam duração e, se sim, se sofrem
+  do mesmo truncamento que motivou a correção original.
+- Orientação automática do grafo com histerese (Tarefa 43.5): **confirmado como falso (D-166)**.
+  A presunção original desta tarefa estava errada: a histerese vive em `flow-page.component.ts`,
+  não dentro do `app-flow-graph` compartilhado, então Architecture não herda nada de graça.
+  Ver Tarefa 44.8 para a correção.
+
+**Pronto quando:** os dois primeiros pontos confirmados por geometria real em `360×800` e
+`393×852`, tema claro e escuro. O terceiro ponto não fecha aqui, fecha na Tarefa 44.8.
+
+## Tarefa 44.8: histerese de `rankdir` também em Architecture (D-166)
+
+A Tarefa 43.5 implementou a troca automática de `rankdir` (histerese, `TB` acima de 1,2 de
+proporção altura/largura do canvas, `LR` abaixo de 0,9) dentro de `flow-page.component.ts`, não
+dentro do `app-flow-graph` que os dois componentes compartilham. Architecture nunca troca de
+orientação: um canvas de Architecture estreito em mobile fica preso em `LR`, o mesmo sintoma que
+a Tarefa 43.5 existe para evitar em `/flow`.
+
+1. Extrair o mecanismo (o `ResizeObserver` do canvas, o `effect()` de histerese, as duas
+   constantes de proporção) para um lugar reutilizável: uma função/diretiva/serviço, não uma
+   cópia do código em `architecture.component.ts`.
+2. `flow-page.component.ts` e `architecture.component.ts` passam a usar o mesmo mecanismo
+   extraído. Nenhuma mudança de comportamento em `/flow`: mesmos dois limiares, mesma histerese.
+
+**Pronto quando:** redimensionar a largura da janela até o canvas de `/architecture` ficar mais
+alto que largo troca o grafo para `TB`, mesma prova por tabela da Tarefa 43.5 (incluindo a zona
+morta da histerese), com uma rota real selecionada. `/flow` continua passando no mesmo teste de
+antes, sem regressão.
+
+## Tarefa 44.9: duração de nó coberta pelos controles de zoom (D-167/D-168)
+
+**Tratamento prioritário, não item de roadmap (D-168).** Critério do D-141 (falha reproduzida de
+verdade, sem mudança de API pública esperada) está satisfeito: isto não é teórico nem suposição de
+leitura de código, é uma anotação real do `visual-quality`, com posição e percentual de
+sobreposição medidos. Diferente de um hotfix clássico (branch a partir de `main`, tag, publicação
+no nuget.org), o código afetado nunca foi publicado, existe só em `develop`: a correção é direta
+em `develop`, com a mesma prioridade e o mesmo rigor de prova de um hotfix, sem a mecânica de
+tag/release que um hotfix exigiria para algo já em produção. Não entra no mesmo balde do item 15
+do roadmap (limpeza de comentário, zero risco técnico, pode esperar um levantamento completo).
+
+Achado real do `visual-quality` do CI (PR #299), primeira vez que o modo URL do Impeccable roda
+de verdade contra `/flow?trace=<id>` com grafo carregado (fases anteriores sempre travavam pela
+conexão SSE persistente, só rodavam em modo arquivo estático): `text-occlusion`, o texto de
+duração de um nó (`110.5 ms`) com 50% coberto por `.flow-workspace__zoom-controls`. Diferente do
+achado "legenda sobre os controles de zoom" que a Tarefa 44.1/PR #296 já corrigiu: este é a
+duração de um nó, não a legenda.
+
+Não confirmado se é regressão desta rodada ou achado antigo nunca pego (nenhuma fase anterior
+tinha o modo URL rodando de verdade contra uma trace com o grafo carregado). Investigar antes de
+corrigir: reproduzir com Playwright contra o mesmo trace/viewport que o CI usou, confirmar a
+posição real do nó afetado e dos controles de zoom, então decidir se o ajuste é no cálculo de
+margem do `viewBox` (`computeGraphViewBox`, Fase 25/D-107, que já reserva margem para legenda e
+controles, mas pode não reservar o suficiente pra todo layout de nó possível) ou em outro lugar.
+
+**Pronto quando:** o trace e o viewport exatos do achado do CI reproduzidos localmente,
+confirmando `getBoundingClientRect()` do texto de duração não mais sobreposto aos controles de
+zoom, sem introduzir achado novo de `low-contrast`/`undersized-ui-text` nem regredir a correção
+da Tarefa 44.1.
+
+**Entregue (PR #302), com a pergunta em aberto respondida por uma auditoria independente**: é
+regressão desta mesma rodada, não achado antigo. `git log`/`git blame` confirmam que a regra de
+CSS que move os controles de zoom pro topo abaixo de 768px nasceu no commit `952ad4d` (PR #296,
+esta própria Fase 44), nunca publicada em nenhuma tag. Consequência prática, já aplicada
+corretamente antes mesmo desta confirmação: nenhuma linha em `### Fixed` no `CHANGELOG.md` pra
+isto, porque não há comportamento publicado pra corrigir, só o comportamento final (correto) da
+Fase 44 inteira. `computeGraphViewBox` ganhou suporte a overlay de topo (`topOverlayHeightsPx`),
+classificação por posição medida (`getBoundingClientRect().top` contra o meio do canvas), teto de
+50% dividido entre as duas bordas. Sobreposição medida (duas rodadas independentes, dois traces
+diferentes): 0% em `390×844`, `1280×720` e `1920×1080`, sem regressão da legenda (Tarefa 44.1).
+Verificado que a divisão proporcional da margem entre as duas bordas é exata algebricamente, não
+aproximada. Pendência pequena, não bloqueante, registrada para quando fizer sentido: os 4 testes
+novos cobrem só o regime limitado por largura; o regime limitado por altura (grafo `TB` alto num
+canvas estreito, o caso real do achado original) tem a mesma matemática exata, mas sem teste
+unitário próprio ainda, só a cobertura ao vivo do `visual-quality` no CI.
+
+## Fora de escopo
+
+- Qualquer mecanismo novo de layout que não exista já na Fase 43: esta fase estende a base, não
+  cria um segundo conjunto de mecanismos paralelo.
+- Redesenho de Components/Runner/Insights além do necessário para os achados reais da Tarefa
+  44.6. É correção de paridade, não oportunidade de redesenho.
+
+## Aceite da fase
+
+Critérios de pronto das sete tarefas acima, medidos por geometria real, tema claro e escuro, nos
+modos ao vivo e replay onde se aplica, com o trace de 4 spans do sample e com um trace de pelo
+menos 20 spans. Varredura de largura na faixa `< 768` do guia (320, 360, 393, 480, 767) nas seis
+telas, mais o redimensionamento contínuo já exigido pela Fase 43/D-161.
+
+`npx impeccable detect` nas seis telas, tema claro e escuro, nos pontos de largura acima.
+Contagem de avisos antes e depois no resumo final; qualquer achado novo de
+`low-contrast`/`undersized-ui-text` bloqueia a fase.
+
+Fecha o Achado 1 da Fase 46 (topbar) de vez, nas seis telas de uma vez, não só nas três que a
+Fase 46 cobriu.
+
+## Ao terminar
+
+Resumo para a Planejadora: o que foi feito por tarefa, como verificar, o que ficou pendente.
+Atualizar `docs/plano/riscos.md` é tarefa da Planejadora depois de revisar esta fase, não da
+Executora.

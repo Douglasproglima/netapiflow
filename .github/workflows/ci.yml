@@ -78,7 +78,7 @@ jobs:
 
       - name: Setup .NET
         if: needs.detect-changes.outputs.docs_only != 'true'
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
           dotnet-version: |
@@ -130,6 +130,7 @@ jobs:
           if [ "${{ runner.os }}" != "Windows" ]; then
             dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build --collect:"XPlat Code Coverage"
             dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
+            dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
           fi
 
       - name: Pack (verification only)
@@ -164,7 +165,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
           dotnet-version: |

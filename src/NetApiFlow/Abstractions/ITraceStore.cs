@@ -23,11 +23,22 @@ public interface ITraceStore
     /// <summary>Aggregated statistics per HTTP method/route template within <paramref name="query"/>'s time window.</summary>
     ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
 
-    /// <summary>Static graph of an endpoint, built from the union of every execution within <paramref name="query"/>'s time window.</summary>
-    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken);
+    /// <summary>
+    /// Static graph of an endpoint, built from the union of every execution within
+    /// <paramref name="query"/>'s time window. <paramref name="routeKey"/> is matched with every
+    /// recorded trace's route template reduced to the same parameter-constraint-free shape, so a
+    /// caller without access to parameter constraints (e.g. an OpenAPI document) still finds the
+    /// endpoint.
+    /// </summary>
+    ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken);
 
-    /// <summary>Gets the last successful trace with its spans for an endpoint, used as the blueprint for "not executed" steps.</summary>
-    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken);
+    /// <summary>
+    /// Gets the last successful trace with its spans for an endpoint, used as the blueprint for
+    /// "not executed" steps. <paramref name="routeKey"/> is matched with every recorded trace's
+    /// route template reduced to the same parameter-constraint-free shape, so a caller without
+    /// access to parameter constraints (e.g. an OpenAPI document) still finds the endpoint.
+    /// </summary>
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken);
 
     /// <summary>Removes traces beyond <paramref name="policy"/>'s limits. Returns the number of traces removed.</summary>
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);

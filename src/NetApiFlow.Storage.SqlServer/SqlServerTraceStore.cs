@@ -2,6 +2,7 @@ using System.Data;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using NetApiFlow.Domain;
+using NetApiFlow.Routing;
 
 namespace NetApiFlow.Storage.SqlServer;
 
@@ -228,17 +229,17 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
             .ToList<RouteStat>();
     }
 
-    public async ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeTemplate, StatsQuery query, CancellationToken cancellationToken)
+    public async ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var totalCommand = new SqlCommand($"""
             SELECT COUNT(*) FROM {_tracesTable}
-            WHERE method = @method AND route_template = @route
+            WHERE UPPER(method) = UPPER(@method) AND route_key = @routeKey
               AND (@from IS NULL OR started_at >= @from) AND (@to IS NULL OR started_at <= @to)
             """, connection);
         totalCommand.Parameters.AddWithValue("method", method);
-        totalCommand.Parameters.AddWithValue("route", routeTemplate);
+        totalCommand.Parameters.AddWithValue("routeKey", routeKey);
         totalCommand.Parameters.AddWithValue("from", (object?)query.From ?? DBNull.Value);
         totalCommand.Parameters.AddWithValue("to", (object?)query.To ?? DBNull.Value);
         var totalExecutions = (int)(await totalCommand.ExecuteScalarAsync(cancellationToken))!;
@@ -248,11 +249,11 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
             FROM {_spansTable} s
             JOIN {_tracesTable} t ON s.trace_id = t.trace_id
             LEFT JOIN {_spansTable} p ON s.parent_span_id = p.span_id AND s.trace_id = p.trace_id
-            WHERE t.method = @method AND t.route_template = @route
+            WHERE UPPER(t.method) = UPPER(@method) AND t.route_key = @routeKey
               AND (@from IS NULL OR t.started_at >= @from) AND (@to IS NULL OR t.started_at <= @to)
             """, connection);
         command.Parameters.AddWithValue("method", method);
-        command.Parameters.AddWithValue("route", routeTemplate);
+        command.Parameters.AddWithValue("routeKey", routeKey);
         command.Parameters.AddWithValue("from", (object?)query.From ?? DBNull.Value);
         command.Parameters.AddWithValue("to", (object?)query.To ?? DBNull.Value);
 
@@ -274,18 +275,18 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         return BuildArchitectureMap(totalExecutions, rows);
     }
 
-    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeTemplate, CancellationToken cancellationToken)
+    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var command = new SqlCommand($"""
             SELECT TOP (1) trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE method = @method AND route_template = @route AND status = 'Success'
+            WHERE UPPER(method) = UPPER(@method) AND route_key = @routeKey AND status = 'Success'
             ORDER BY started_at DESC
             """, connection);
         command.Parameters.AddWithValue("method", method);
-        command.Parameters.AddWithValue("route", routeTemplate);
+        command.Parameters.AddWithValue("routeKey", routeKey);
 
         FlowTrace? trace;
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -337,7 +338,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
         if (query.Method is not null)
         {
-            conditions.Add("method = @method");
+            conditions.Add("UPPER(method) = UPPER(@method)");
             command.Parameters.AddWithValue("method", query.Method);
         }
 
@@ -427,7 +428,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
             await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
-            await SqlServerSchemaInitializer.NormalizeRouteTemplatesAsync(connection, _tracesTable, cancellationToken);
+            await SqlServerSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
             _schemaReady = true;
         }
         finally
@@ -511,6 +512,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         table.Columns.Add("trace_id", typeof(string));
         table.Columns.Add("method", typeof(string));
         table.Columns.Add("route_template", typeof(string));
+        table.Columns.Add("route_key", typeof(string));
         table.Columns.Add("http_status", typeof(int));
         table.Columns.Add("status", typeof(string));
         table.Columns.Add("started_at", typeof(DateTimeOffset));
@@ -525,6 +527,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
             trace.TraceId,
             trace.Method,
             trace.RouteTemplate,
+            RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate),
             (object?)trace.HttpStatus ?? DBNull.Value,
             trace.Status.ToString(),
             new DateTimeOffset(DateTime.SpecifyKind(trace.StartedAt, DateTimeKind.Utc)),
@@ -586,7 +589,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
     {
         foreach (var column in new[]
         {
-            "trace_id", "method", "route_template", "http_status", "status", "started_at",
+            "trace_id", "method", "route_template", "route_key", "http_status", "status", "started_at",
             "ended_at", "duration_micros", "span_count", "truncated", "error_message", "tags",
         })
         {

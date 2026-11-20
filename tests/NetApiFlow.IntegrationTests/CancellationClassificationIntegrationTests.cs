@@ -22,9 +22,9 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class CancellationClassificationIntegrationTests
 {
-    private static async Task<(IHost Host, HttpClient Client, ConcurrentDictionary<string, FlowTrace> Completed)> CreateHostAsync()
+    private static async Task<(IHost Host, HttpClient Client, CompletedTraces Completed)> CreateHostAsync()
     {
-        var completed = new ConcurrentDictionary<string, FlowTrace>();
+        var completed = new CompletedTraces();
 
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -60,23 +60,34 @@ public class CancellationClassificationIntegrationTests
 
         await host.StartAsync();
 
-        host.Services.GetRequiredService<FlowRecorder>().TraceCompleted += trace => completed[trace.RouteTemplate] = trace;
+        host.Services.GetRequiredService<FlowRecorder>().TraceCompleted += completed.Record;
 
         var addresses = host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses;
         var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
         return (host, client, completed);
     }
 
-    private static async Task<FlowTrace> WaitForCompletionAsync(ConcurrentDictionary<string, FlowTrace> completed, string routeTemplate)
+    /// <summary>
+    /// Resolves the moment <c>FlowRecorder.TraceCompleted</c> fires for a route, so the wait ends
+    /// on the event itself. A polling loop against a short budget reports failure for CPU
+    /// contention, which says nothing about whether the trace was classified correctly.
+    /// </summary>
+    private sealed class CompletedTraces
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (!completed.TryGetValue(routeTemplate, out var trace))
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<FlowTrace>> _byRouteTemplate = new();
+
+        public void Record(FlowTrace trace) => Awaiter(trace.RouteTemplate).TrySetResult(trace);
+
+        public async Task<FlowTrace> WaitForAsync(string routeTemplate)
         {
-            timeout.Token.ThrowIfCancellationRequested();
-            await Task.Delay(20, CancellationToken.None);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            return await Awaiter(routeTemplate).Task.WaitAsync(timeout.Token);
         }
 
-        return completed[routeTemplate];
+        private TaskCompletionSource<FlowTrace> Awaiter(string routeTemplate) =>
+            _byRouteTemplate.GetOrAdd(
+                routeTemplate,
+                _ => new TaskCompletionSource<FlowTrace>(TaskCreationOptions.RunContinuationsAsynchronously));
     }
 
     [Fact]
@@ -94,7 +105,7 @@ public class CancellationClassificationIntegrationTests
 
         await Should.ThrowAsync<Exception>(() => pendingRequest);
 
-        var trace = await WaitForCompletionAsync(completed, "/client-cancel");
+        var trace = await completed.WaitForAsync("/client-cancel");
         trace.Status.ShouldBe(FlowStatus.Cancelled);
     }
 
@@ -107,7 +118,7 @@ public class CancellationClassificationIntegrationTests
 
         using var response = await client.GetAsync("/internal-timeout");
 
-        var trace = await WaitForCompletionAsync(completed, "/internal-timeout");
+        var trace = await completed.WaitForAsync("/internal-timeout");
         trace.Status.ShouldBe(FlowStatus.Timeout);
     }
 }

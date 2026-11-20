@@ -9,6 +9,7 @@ import { TranslationKey } from '../../core/i18n/translations';
 import { PeriodPreset, periodPresetFrom } from '../../shared/period-preset';
 import { downloadTextFile } from '../../shared/download-file';
 import { FlowGraphComponent } from '../flow/graph/flow-graph.component';
+import { rankdirHysteresis } from '../flow/graph/rankdir-hysteresis';
 import { buildArchitectureGraph } from './architecture-graph-builder';
 import { architectureMapToMermaid } from './architecture-mermaid';
 
@@ -80,6 +81,7 @@ export class ArchitectureComponent {
   readonly tailSamplingRateLabel = computed(() => `${Math.round(this.successSampleRate() * 100)}%`);
 
   private readonly graphHost = viewChild<ElementRef<HTMLElement>>('graphHost');
+  readonly graphRankdir = rankdirHysteresis(this.graphHost);
 
   private readonly endpointsByKey = computed(
     () =>
@@ -97,7 +99,9 @@ export class ArchitectureComponent {
   });
 
   readonly graph = computed(() =>
-    this.map() ? buildArchitectureGraph(this.map()!) : { nodes: [], edges: [] },
+    this.map()
+      ? buildArchitectureGraph(this.map()!, this.graphRankdir())
+      : { nodes: [], edges: [] },
   );
 
   private readonly architectureTrigger$ = new Subject<{

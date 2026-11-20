@@ -106,7 +106,7 @@ plano fechado que não existe.
 Uma frase honesta no README.md e no README.pt-BR.md, na seção de requisitos ou de target
 frameworks: `net8.0` segue suportado pelo pacote por enquanto, mesmo fora do ciclo de vida oficial
 da Microsoft, porque a próxima LTS (`net12.0`) ainda não existe; a decisão de quando sair está sob
-investigação (ligada ao item 16 do `roadmap-valor.md`, que também cobre o furo de doze meses do
+investigação (ligada ao item 19 do `roadmap-valor.md`, que também cobre o furo de doze meses do
 próprio ADR-0003), não fechada ainda.
 
 **Pronto quando:** a frase está nos dois READMEs, e não afirma um plano que o ADR-0003 não
@@ -189,7 +189,7 @@ Achado da Planejadora (D-136), verificando se a frase do atributo AOT na Tarefa 
 README (`using NetApiFlow;` seguido de `NetApiFlow.Step(...)`) não compila quando o código que
 chama fica na global namespace, caso mais comum de todos: um `Program.cs` de top-level statements,
 exatamente o estilo que o README usa em todo canto. Erro `CS0234`, porque o namespace `NetApiFlow`
-e a classe estática `NetApiFlow` compartilham o nome (o mesmo achado de CA1724, item 15 do
+e a classe estática `NetApiFlow` compartilham o nome (o mesmo achado de CA1724, item 18 do
 `roadmap-valor.md`), e partindo da global namespace a busca de identificador encontra o namespace
 antes do tipo importado por `using`. Dentro de qualquer namespace nomeado o problema não aparece,
 por isso nenhum teste da suíte pegou isso: nenhum teste nem sample do repositório chama `Step()` a
@@ -228,7 +228,7 @@ build`, zero erro.
   compatibilidade possível (mesma régua do D-75), decisão que precisa da Planejadora antes da
   1.0, não cabe num hotfix PATCH. Registrado em `roadmap-valor.md`.
 - Qualquer trabalho sobre `net11.0`: precisa de fase de investigação própria antes de qualquer
-  ADR, não é tarefa de hotfix. Registrado em `roadmap-valor.md` (item 16, que agora também cobre
+  ADR, não é tarefa de hotfix. Registrado em `roadmap-valor.md` (item 19, que agora também cobre
   o furo de doze meses do ADR-0003, achado em D-134).
 - Rodar a suíte completa de integração com Testcontainers, testar Native AOT publicado de
   verdade, e reinstalar o pacote publicado do zero numa API de terceiro: três verificações que

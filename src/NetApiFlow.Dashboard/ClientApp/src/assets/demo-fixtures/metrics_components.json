@@ -1,0 +1,92 @@
+[
+  {
+    "component": "OrdersController",
+    "operation": "Get",
+    "executionCount": 16,
+    "errorCount": 0,
+    "medianDurationMicros": 2457,
+    "averageDurationMicros": 12238,
+    "p95DurationMicros": 108731,
+    "maxDurationMicros": 108731
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetAsync",
+    "executionCount": 16,
+    "errorCount": 0,
+    "medianDurationMicros": 2430,
+    "averageDurationMicros": 12000,
+    "p95DurationMicros": 105524,
+    "maxDurationMicros": 105524
+  },
+  {
+    "component": "OrderRepository",
+    "operation": "FindAsync",
+    "executionCount": 16,
+    "errorCount": 0,
+    "medianDurationMicros": 2417,
+    "averageDurationMicros": 11954,
+    "p95DurationMicros": 105242,
+    "maxDurationMicros": 105242
+  },
+  {
+    "component": "EntityFrameworkCore",
+    "operation": "SELECT Orders",
+    "executionCount": 16,
+    "errorCount": 0,
+    "medianDurationMicros": 1617,
+    "averageDurationMicros": 2084,
+    "p95DurationMicros": 8675,
+    "maxDurationMicros": 8675
+  },
+  {
+    "component": "OrdersController",
+    "operation": "GetParallel",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 81,
+    "averageDurationMicros": 329,
+    "p95DurationMicros": 1268,
+    "maxDurationMicros": 1268
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetManyInParallelAsync",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 41,
+    "averageDurationMicros": 223,
+    "p95DurationMicros": 834,
+    "maxDurationMicros": 834
+  },
+  {
+    "component": "OrdersController",
+    "operation": "GetSequential",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 112,
+    "averageDurationMicros": 419,
+    "p95DurationMicros": 1177,
+    "maxDurationMicros": 1177
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetManySequentiallyAsync",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 68,
+    "averageDurationMicros": 304,
+    "p95DurationMicros": 802,
+    "maxDurationMicros": 802
+  },
+  {
+    "component": "OrderRepository",
+    "operation": "FindManyAsync",
+    "executionCount": 6,
+    "errorCount": 0,
+    "medianDurationMicros": 48,
+    "averageDurationMicros": 181,
+    "p95DurationMicros": 590,
+    "maxDurationMicros": 590
+  }
+]

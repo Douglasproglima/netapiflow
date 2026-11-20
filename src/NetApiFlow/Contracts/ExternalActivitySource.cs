@@ -12,8 +12,20 @@ public enum ExternalActivitySource
 
     /// <summary>
     /// SQL commands from Npgsql's own <c>ActivitySource</c>, mapped to a <see cref="ComponentType.Database"/>
-    /// span. Deduplicated against <c>NetApiFlow.EntityFrameworkCore</c>'s own span for the same
-    /// command via <see cref="System.Diagnostics.Activity.Parent"/>, never both.
+    /// span, recorded as a child of the step that issued the command. Dropped only when a
+    /// <see cref="ComponentType.Database"/> step already wraps the call (the one
+    /// <c>NetApiFlow.EntityFrameworkCore</c> opens), checked through
+    /// <see cref="System.Diagnostics.Activity.Parent"/>, so a command is never recorded twice.
     /// </summary>
     Npgsql = 2,
+
+    /// <summary>
+    /// SQL commands from Microsoft.Data.SqlClient, mapped to a <see cref="ComponentType.Database"/>
+    /// span, so data access outside EF Core (Dapper, a raw command) is still recorded as a child of
+    /// the step that issued it. Dropped under the same rule as <see cref="Npgsql"/>: only when a
+    /// <see cref="ComponentType.Database"/> step already wraps the command.
+    /// Needs a driver that publishes its diagnostic payload as a key/value list, which
+    /// Microsoft.Data.SqlClient does from 6.0; an older driver records nothing here.
+    /// </summary>
+    SqlClient = 4,
 }

@@ -9,15 +9,32 @@
 
 .metric-cards {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  // The p95/sparkline card is a 7th grid item, same row, same 88px height as the other six
+  // (guide seção 6.2) — not a card of its own below them, which is what made a two-point trace's
+  // sparkline stretch into an ~1800px diagonal with nothing else on its line to constrain it.
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1rem;
 
-  @media (max-width: 1199px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  // Below 1600px (guide seção 5.2) the sparkline card itself stops rendering, so the row goes
+  // back to the original six.
+  @media (max-width: 1599px) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  @media (max-width: 767px) {
+  // 3 equal columns in this range used to leave each card too narrow for its own value and
+  // label: "Latência média" and "Latência máxima" both lost their only distinguishing word to
+  // the same ellipsis. 2 wider columns give both room to render in full.
+  @media (max-width: 1199px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  // Below 768px the cards stack one per row instead of three rows of two: the graph renders
+  // above it on this width, so scrolling here is the page's own vertical scroll, not a second,
+  // nested horizontal one.
+  @media (max-width: 767px) {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: unset;
   }
 }
 
@@ -31,6 +48,11 @@
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+
+  @media (max-width: 767px) {
+    flex: none;
+    width: 100%;
+  }
 }
 
 .metric-cards__card--highlight {
@@ -115,7 +137,9 @@
 }
 
 .metric-cards__card--sparkline {
-  grid-column: 1 / -1;
+  @media (max-width: 1599px) {
+    display: none;
+  }
 }
 
 .metric-cards__sparkline {

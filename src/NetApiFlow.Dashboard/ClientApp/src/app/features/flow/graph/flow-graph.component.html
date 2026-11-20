@@ -150,7 +150,13 @@
   </g>
 </svg>
 
-<div #legend class="flow-graph__legend" role="list" [attr.aria-label]="legendAriaLabel()">
+<div
+  #legend
+  class="flow-graph__legend"
+  [class.flow-graph__legend--compact]="legendCompact()"
+  role="list"
+  [attr.aria-label]="legendAriaLabel()"
+>
   @for (state of legendStates; track state) {
     <span class="flow-graph__legend-item" role="listitem">
       <svg
@@ -162,7 +168,7 @@
       >
         <image [attr.href]="legendIconSrc(state)" width="11" height="11"></image>
       </svg>
-      <span>{{ legendLabel(state) }}</span>
+      <span [class.sr-only]="legendCompact()">{{ legendLabel(state) }}</span>
     </span>
   }
 </div>

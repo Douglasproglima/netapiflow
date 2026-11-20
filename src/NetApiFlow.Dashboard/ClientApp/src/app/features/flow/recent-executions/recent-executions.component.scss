@@ -2,6 +2,14 @@
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
+
+  // `visibleTraces()` already caps the list short enough to fit without its own scroll here: a
+  // finger landing on this card on a touch screen should scroll the page behind it, not get
+  // caught scrolling a second, nested area first.
+  @media (max-width: 767px) {
+    height: auto;
+    overflow-y: visible;
+  }
 }
 
 .recent-executions--collapsed {
@@ -84,6 +92,33 @@
   &:hover {
     background: var(--naf-surface-2);
   }
+
+  // The route is the one piece of information this list exists to show; a single row with four
+  // other fixed-width fields competing for the same line squeezed it down to almost nothing. A
+  // row of its own, with the rest underneath, means it never has to compete for space.
+  @media (max-width: 767px) {
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas:
+      'route route route route'
+      'status method duration ago';
+    row-gap: 0.25rem;
+
+    .recent-executions__status-text {
+      grid-area: status;
+    }
+
+    .naf-tag {
+      grid-area: method;
+    }
+
+    .recent-executions__duration {
+      grid-area: duration;
+    }
+
+    .recent-executions__ago {
+      grid-area: ago;
+    }
+  }
 }
 
 .recent-executions__route {
@@ -92,6 +127,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  @media (max-width: 767px) {
+    grid-area: route;
+  }
 }
 
 .recent-executions__status-text {

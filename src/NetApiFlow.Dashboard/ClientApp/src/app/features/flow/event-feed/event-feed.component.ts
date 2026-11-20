@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, model, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { SseService } from '../../../core/sse.service';
@@ -26,7 +26,12 @@ export class EventFeedComponent implements OnInit, OnDestroy {
   private subscription = this.sse.events$.subscribe((event) => this.onEvent(event));
 
   readonly events = signal<FlowEvent[]>([]);
-  readonly collapsed = signal(false);
+  /**
+   * `model()`, not a plain internal signal: the parent workspace needs to know when this card
+   * collapses so it can shrink the shared footer row and return the freed height to the graph,
+   * which a signal private to this component could never report upward.
+   */
+  readonly collapsed = model(false);
   readonly connectionState = this.sse.state;
 
   toggleCollapsed(): void {

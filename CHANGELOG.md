@@ -7,6 +7,73 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-19
+
+### Added
+
+- `NetApiFlow.Dashboard`: the dashboard now reaches the same depth on a narrow screen as it does
+  on desktop, across all six screens (Flow, History, Components, Runner, Architecture, Insights).
+  Nothing that used to require a wide window is hidden or unreachable on a phone anymore: the
+  History trace ID and its copy action, the graph legend, the metric cards, and the endpoint
+  runner's form all stay fully usable. The graph itself gains a proper height floor and automatic
+  top-to-bottom orientation on a tall, narrow canvas, with the same automatic orientation now also
+  applying to the Architecture screen's graph. The same depth now holds on a short desktop window:
+  the graph legend shrinks to icons on a low canvas, the `/components` table scrolls inside its own
+  card, the metric cards show at most three digits of duration, and the Runner form fits in a
+  single scroll.
+- `NetApiFlow.Testing`: new package, published for the first time in this release. It adds
+  assertions over the flow a request actually took, for integration tests, such as how many
+  database calls an endpoint makes. It pulls in no assertion library.
+- `NetApiFlow`: SQL Server commands issued outside EF Core (Dapper, a plain `SqlCommand`) become
+  database spans through `ExternalActivitySource.SqlClient`. The application's own
+  `Microsoft.Data.SqlClient` has to be `6.0` or newer, and installing
+  `NetApiFlow.Storage.SqlServer` does not raise it (its floor stays `5.2.2`). An app on an older
+  driver has to update its own SqlClient to see these spans.
+- `NetApiFlow.Dashboard`: the Runner shows the time left on a pasted JWT in the Authorize panel,
+  marks the routes that require authentication, and retries the OpenAPI document with the
+  remembered bearer token when the first request returns 401. The Runner URL is now resolved
+  against the host's `PathBase` through `GET /config`, which closes the limitation documented in
+  0.3.2.
+- `NetApiFlow`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer`: a route recorded
+  with a routing constraint (`/api/orders/{id:int}`) and the same route listed from an OpenAPI
+  document without one (`/api/orders/{id}`) are now recognized as the same route by the
+  architecture map and the blueprint lookup. Both already matched correctly once a parameter's
+  presence or absence lined up; the mismatch only showed up for a constrained parameter.
+
+### Changed
+
+- `NetApiFlow`: the native external sources (`HttpClient`, `Npgsql` and `SqlClient`) are on by
+  default in the Development environment, so an upgraded app shows new spans without any
+  configuration change. Set `ExternalSources = ExternalActivitySource.None` to turn them off. A
+  value stated explicitly, in code or in configuration, still wins over the default.
+- `ITraceStore.GetArchitectureMapAsync` and `GetLastSuccessfulAsync` take `routeKey`, not
+  `routeTemplate`: the value is compared ignoring a route parameter's constraint, not by exact
+  string equality anymore. The two official storage packages already do this. A custom
+  `ITraceStore` implementation needs the same comparison rule for these two methods specifically;
+  every other method keeps comparing the recorded route template as-is.
+
+### Fixed
+
+- `NetApiFlow.Storage.SqlServer`: the HTTP method is compared without regard to letter case,
+  whatever the database collation.
+- `NetApiFlow.Dashboard`: the in-flight request counter updates again after a failed live traces
+  call.
+- `NetApiFlow.Dashboard`: a warning appears when none of the OpenAPI document's authorization
+  alternatives applies.
+- `NetApiFlow.Dashboard`: the Runner route list keeps three rows visible in a short window.
+- `NetApiFlow`: with `ExternalActivitySource.Npgsql` on, a SQL command issued inside an action, a
+  service, a repository or any other NetApiFlow step (Dapper, a plain `NpgsqlCommand`) produced no
+  span. Only commands issued outside every step were recorded, which in an MVC action means none.
+  They are now recorded as children of the step that issued them, and EF Core commands are still
+  recorded once.
+- `NetApiFlow`: `LogCorrelation.Enabled` and `CapturePrePipelineSteps` set only in the `NetApiFlow`
+  section of the configuration changed the option's value but did not turn the feature on. They
+  now do, the same as when set in the lambda passed to `AddNetApiFlow`. Left off, both cost
+  nothing per request.
+- All packages: the nuget.org page and the Visual Studio package manager showed the SDK's
+  placeholder description ("Package Description") and no tags. Every package now has a one-line
+  description, tags and a project URL, and `dotnet pack` fails when one is missing.
+
 ## [0.4.4] - 2026-11-18
 
 ### Fixed

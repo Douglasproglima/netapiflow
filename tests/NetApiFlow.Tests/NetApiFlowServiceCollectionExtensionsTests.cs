@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using NetApiFlow.DependencyInjection;
 using NetApiFlow.Recording;
 using Shouldly;
 using Xunit;
@@ -23,8 +26,9 @@ public class NetApiFlowServiceCollectionExtensionsTests
 
         using var provider = services.BuildServiceProvider();
 
-        provider.GetServices<IHostedService>().Count().ShouldBe(3);
+        provider.GetServices<IHostedService>().Count().ShouldBe(5);
         provider.GetServices<IStartupFilter>().Count().ShouldBe(1);
+        provider.GetServices<IConfigureOptions<MvcOptions>>().OfType<FlowResourceFilterMvcOptionsSetup>().Count().ShouldBe(1);
         provider.GetRequiredService<FlowRecorder>().ShouldNotBeNull();
     }
 }
