@@ -82,11 +82,16 @@ Fase 60, se couber. O que não couber vira item de roadmap, um registro por item
   ("idcaminho", "bodycorpo"); POST sem exemplo de corpo; mensagem genérica no 500. Achados pela Executora
   na demo, sem correção: uma corrida no formulário (o campo de rota preenchido poucas dezenas de
   milissegundos depois de escolher o endpoint volta vazio e o envio diz "Preencha o parâmetro de rota":
-  1 em 25 tentativas no `develop` e 3 em 25 num branch, causa não determinada); e o `/runner` sozinho
-  mostra `Trace: <id>` sem grafo, embora o subtítulo diga "O grafo acompanha em tempo real".
+  1 em 25 tentativas no `develop` e 3 em 25 num branch, causa não determinada); e o `/runner` sozinho,
+  depois de enviar, mostra `Trace: <id>` só em texto, sem link e sem levar ao grafo, embora o subtítulo diga
+  "O grafo acompanha em tempo real" e o painel do Fluxo leve. **Vale para o produto, não só para a demo:** o
+  `/runner` navega para o grafo, ou pelo menos tem o link (auditoria, 20/11/2026).
 - **Texto e rótulos:** `aria-label="Request summary"` fixo em inglês em
   `flow-details-panel.component.html`, mesmo em português. O OpenAPI lista `/api/orders/{id}` e o histórico
   mostra `/api/orders/{id:int}`.
+- **Acessibilidade:** no celular, o botão ▷ do cabeçalho do Fluxo, que abre o Runner, tem `aria-label`
+  vazio. Medido pela auditoria: os botões do cabeçalho são `["Abrir navegação", "", "PT", "EN", ...]`, e
+  um leitor de tela anuncia só "botão".
 - A lista "ETAPAS" não é clicável. O chip "Ao vivo" fica aceso numa trace importada.
 - **Arquitetura:** legenda com estados que não existem num mapa estático; N+1 sem contagem; SVG exportado
   quebra fora do painel (`_ngcontent` sem CSS).
