@@ -130,6 +130,7 @@ jobs:
           if [ "${{ runner.os }}" != "Windows" ]; then
             dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build --collect:"XPlat Code Coverage"
             dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
+            dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
           fi
 
       - name: Pack (verification only)

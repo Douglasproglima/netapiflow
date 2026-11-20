@@ -457,16 +457,18 @@ captured, same guarantee as every other span.
 `Npgsql` covers SQL commands (ADR-0018), recorded as a `Database` span named after the command
 type and the main table it touches, for example `SELECT Users`. When you also use
 `NetApiFlow.EntityFrameworkCore`, the two never record the same command twice: the driver's own
-`Activity` is dropped whenever a NetApiFlow step already wraps the call, which is exactly what
-`FlowDbCommandInterceptor` does. Without that package (plain Npgsql, or Dapper over Npgsql), the
-driver's `Activity` is the only record of the call and is ingested normally. The full SQL text
+`Activity` is dropped only when a `Database` step already wraps the call, which is exactly what
+`FlowDbCommandInterceptor` opens. Inside a controller, a service, a repository or any other step,
+the command is recorded as a child of that step. A manual `Database` step around direct SQL swallows
+the driver's commands that run inside it. Without that package (plain Npgsql, or Dapper over
+Npgsql), the driver's `Activity` is the only record of the call and is ingested normally. The full SQL text
 only reaches the span when `CaptureSqlText` is enabled, the same rule the EF Core interceptor
 follows.
 
 `SqlClient` does the same for SQL Server, so a Dapper query or a raw `SqlCommand` still shows up
-as a `Database` span instead of leaving a gap in the flow. It is deduplicated against
-`NetApiFlow.EntityFrameworkCore` exactly like the Npgsql one, and obeys the same `CaptureSqlText`
-rule. One difference worth knowing: unlike Npgsql, `Microsoft.Data.SqlClient` publishes no
+as a `Database` span instead of leaving a gap in the flow. It follows the same rule as the Npgsql
+one against `NetApiFlow.EntityFrameworkCore` (dropped only when a `Database` step already wraps the
+command), and obeys the same `CaptureSqlText` rule. One difference worth knowing: unlike Npgsql, `Microsoft.Data.SqlClient` publishes no
 `ActivitySource` of its own, so NetApiFlow reads the driver's diagnostic events instead. Those
 events only carry a readable payload from `Microsoft.Data.SqlClient` 6.0 on. If your application
 pins an older driver, the flag is accepted but records nothing, and NetApiFlow logs that once at

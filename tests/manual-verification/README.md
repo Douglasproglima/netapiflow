@@ -183,9 +183,43 @@ still listed after restarting the app, the dashboard answers 200, and `--vulnera
 **Expected, `control`:** the same app with the two keys absent. No `AuthorizationFilters` or
 `ResourceFilters` span and no correlated log.
 
-**Known failure, not a regression:** inside the controller, the `SqlCommand` of `/api/smoke` produces
-no `SqlClient` span, in `on` and in `control`. A command issued while a NetApiFlow step is the
-current activity is dropped on purpose, so the EF Core interceptor does not record the same command
-twice, and in an MVC action the controller step is always current. The same thing happens inside a
-`NetApiFlow.Step(...)` in a Minimal API endpoint. A later phase changes that rule. Until then, the
-check that the `SqlCommand` becomes a span uses `/mini/plain`.
+**Expected, `on` and `control`:** the `SqlCommand` of `/api/smoke` produces a `SqlClient` span whose
+`parentSpanId` is the `spanId` of the `SmokeController`/`Get` step. `verify.sh` prints both. In both
+modes the source is on by default, because the app runs in `Development`.
+
+## SQL commands inside a step, Npgsql
+
+Proves, with real packages, that a command issued by Npgsql inside a controller or a step is recorded
+as a child of that step, and that an EF Core query with the interceptor is still recorded once.
+`NpgsqlCommandInsideStepVerification` runs `AddNetApiFlow()` with no lambda, in `Development`, with
+PostgreSQL storage, against Postgres 16 and `Npgsql.EntityFrameworkCore.PostgreSQL` 9.0.4. It has
+four routes:
+
+| Route | Shape | Expected in the trace |
+|---|---|---|
+| `/api/raw` | controller, `NpgsqlCommand` directly | one `Npgsql` span, child of the controller step |
+| `/api/step` | controller, `NpgsqlCommand` inside `NetApiFlow.Step(...)` | one `Npgsql` span, child of that step |
+| `/mini/step` | Minimal API, `NpgsqlCommand` inside `NetApiFlow.Step(...)` | one `Npgsql` span, child of that step |
+| `/api/ef` | controller, EF Core with the package's interceptor | exactly one `Database` span, `EntityFrameworkCore`, and no `Npgsql` span |
+
+From the repo root, with `<n>` a number not used before for that version (never the real version
+number, never `-p:VersionSuffix`):
+
+```bash
+dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:Version=0.5.0-verify.<n>
+docker run -d --name smoke-pg -e POSTGRES_PASSWORD=pw -p 54320:5432 postgres:16
+cd tests/manual-verification/NpgsqlCommandInsideStepVerification
+bash verify.sh net11.0 on 0.5.0-verify.<n>
+bash verify.sh net11.0 control 0.5.0-verify.<n>
+bash verify.sh net8.0 on 0.5.0-verify.<n>
+bash verify.sh net8.0 control 0.5.0-verify.<n>
+```
+
+`net11.0` resolves the `lib/net10.0` assets and `net8.0` the `lib/net8.0` ones, printed from
+`project.assets.json`. `verify.sh` prints each trace's spans with their `spanId` and `parentSpanId`,
+then checks that the trace survives a restart, that the dashboard answers 200, and runs
+`dotnet list package --vulnerable --include-transitive` without any filter. Remove the container and
+the `verify` packages afterwards and commit none of them.
+
+**Control:** the same app with `ExternalSources` set to `None` in the configuration. No `Npgsql` span
+on the first three routes, and `/api/ef` still has the interceptor's span.

@@ -59,6 +59,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow.Dashboard`: a warning appears when none of the OpenAPI document's authorization
   alternatives applies.
 - `NetApiFlow.Dashboard`: the Runner route list keeps three rows visible in a short window.
+- `NetApiFlow`: with `ExternalActivitySource.Npgsql` on, a SQL command issued inside an action, a
+  service, a repository or any other NetApiFlow step (Dapper, a plain `NpgsqlCommand`) produced no
+  span. Only commands issued outside every step were recorded, which in an MVC action means none.
+  They are now recorded as children of the step that issued them, and EF Core commands are still
+  recorded once.
 - `NetApiFlow`: `LogCorrelation.Enabled` and `CapturePrePipelineSteps` set only in the `NetApiFlow`
   section of the configuration changed the option's value but did not turn the feature on. They
   now do, the same as when set in the lambda passed to `AddNetApiFlow`. Left off, both cost
