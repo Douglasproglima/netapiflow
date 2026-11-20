@@ -1,6 +1,6 @@
 # Fase 52: hotfix `0.5.2`, as rotas do NetApiFlow fora do documento OpenAPI do app (D-188)
 
-**Hotfix `0.5.2`, só com o achado (a) da Fase 50.** Branch `hotfix/0.5.2-openapi-internal-routes` a
+**Hotfix `0.5.2`, com o achado (a) da Fase 50 e a correção dos workflows (Tarefa 52.6, D-194).** Branch `hotfix/0.5.2-openapi-internal-routes` a
 partir de `main` (tag `v0.5.1`), PR para `main`, tag `v0.5.2`, página de Release no GitHub e merge de
 `main` de volta em `develop`, tudo como o `docs/gitflow.md` descreve na seção "Hotfix", e como nas
 Fases 34, 35, 42 e 49. O resto da Fase 50 vai no `0.6.0`, junto com a Fase 51.
@@ -25,6 +25,7 @@ A Executora para e relata se vir qualquer um destes sinais:
 - `ExcludeFromDescription()` tirar do documento uma rota **do usuário**, ou mudar o que o Runner lista.
 - O `.nuspec` de qualquer um dos nove pacotes mudar em algo além da versão.
 - `GET /flow/api/endpoints` (a lista que o dashboard monta a partir do `EndpointDataSource`) mudar.
+- Qualquer um dos três projetos de teste da Tarefa 52.6 falhar na primeira rodada.
 
 ## O achado
 
@@ -33,6 +34,13 @@ Os grupos `endpoints.MapGroup(basePath + "/api")` (`DashboardApiEndpoints.cs`) e
 `ExcludeFromDescription()`. As rotas entram no documento de qualquer gerador que leia o
 `ApiExplorer`: `Microsoft.AspNetCore.OpenApi` e Swashbuckle. O stream SSE e o endpoint do
 `NetApiFlow.Mcp` também são rotas mapeadas pelo próprio NetApiFlow.
+
+## Errata (D-193)
+
+O plano supôs que o endpoint do MCP aparecia no documento. Não aparece com o SDK que o pacote usa
+(`ModelContextProtocol.AspNetCore` 2.3.1): o `/flow/mcp/` não tem `MethodInfo`, e o ApiExplorer o
+ignora. A marca no MCP fica como proteção contra um SDK mais novo, e só tem teste de marca, não de
+documento. O bump de versão do hotfix também leva o `demo-fixtures/config.json`.
 
 ## Tarefa 52.0: reproduzir de novo, antes de corrigir
 
@@ -88,11 +96,31 @@ publicado da `0.5.1`
 - PR para `main` (squash), tag `v0.5.2`, página de Release no GitHub criada à mão
   (`gh release create v0.5.2 --title v0.5.2 --notes-file <corpo> --target main`), e merge de `main` de
   volta em `develop`.
-- O `release.yml` do `v0.5.2` roda a lista completa de testes (D-183).
+- O `release.yml` do `v0.5.2` roda a lista de 6 projetos do D-183, não a suíte inteira: `Mcp.Tests`,
+  `OpenTelemetry.Tests` e `PrePipelineInteropSpike` não rodam em nenhum workflow (D-193, corrigido na
+  Fase 50).
 - O README da `main` já traz o Quick start corrigido (PR #329), então este hotfix não toca nele.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor.
 - Ao terminar: abrir a PR contra `main` e parar. O merge, a tag e a página de Release exigem confirmação
   do dono.
+
+## Tarefa 52.6: os três projetos de teste nos dois workflows (D-194)
+
+Decisão do dono: `NetApiFlow.Mcp.Tests`, `NetApiFlow.OpenTelemetry.Tests` e
+`NetApiFlow.PrePipelineInteropSpike`, que não rodam em nenhum workflow (D-193), entram no `ci.yml` e no
+`release.yml` dentro desta PR, antes do merge.
+
+1. Primeira rodada local dos três, em Release, nos dois TFMs, com a saída real colada antes do push. Se
+   algum falhar, parar e relatar. Não consertar teste dentro do hotfix.
+2. Os três entram antes do bloco que só roda fora do Windows, junto com o `Ef8Tests`, nos dois
+   workflows. Nenhum usa Docker.
+3. Um commit novo, sem emendar o `5b1c885`, em inglês, uma linha. Sem entrada de CHANGELOG: nada muda
+   para quem instala.
+4. Depois do push, o log real da PR mostra os três projetos executando nos dois sistemas, com a
+   contagem de testes de cada um.
+
+**Pronto quando:** os dois workflows listam os mesmos projetos, o log do CI mostra os três executando
+e verdes, e a auditoria revalida o commit novo.
 
 ## Critério que vale para a fase inteira
 
@@ -108,6 +136,7 @@ Todo o resto da Fase 50 (aviso do grafo vazio, conta do painel, OpenAPI fora do 
 
 ## Relatório final
 
-O teste de host real dos casos O1 a O5, falhando antes e passando depois. A saída literal do
+O teste de host real dos casos O1 a O5, falhando antes e passando depois. A saída da primeira rodada
+local dos três projetos da Tarefa 52.6 e a contagem de testes de cada um no CI. A saída literal do
 `--vulnerable`. A comparação dos nove `.nuspec` com os da `0.5.1`. A confirmação de que o `release.yml`
 do `v0.5.2` rodou a lista nova de testes. O número da PR e o resultado do `AotCoreVerification`.

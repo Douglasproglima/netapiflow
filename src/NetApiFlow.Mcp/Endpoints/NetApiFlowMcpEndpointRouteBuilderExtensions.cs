@@ -15,6 +15,7 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
     {
         var group = endpoints.MapMcp(basePath);
         group.AddEndpointFilter(McpAccessGate.EnforceAsync);
+        group.ExcludeFromDescription();
         return group;
     }
 }

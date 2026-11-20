@@ -150,6 +150,16 @@ quem chega ao produto pela primeira vez:
 A auditoria do dono achou sete problemas (D-185) que as rodadas anteriores deixaram passar por conferir
 só diff, CI e status HTTP.
 
+## Clone ou worktree novo: construir o Angular antes
+
+Todo teste cujo host usa o Dashboard ou os samples (o `IntegrationTests` e o `PrePipelineInteropSpike`,
+por exemplo) falha num clone ou worktree novo com `Could not load the embedded file manifest ... for
+assembly 'NetApiFlow.Dashboard'`, porque `ClientApp/dist` não existe e a UI não é embutida. A mensagem
+não aponta a causa. Antes de rodar, na ordem do CI: `npm ci` e `npm run build` em
+`src/NetApiFlow.Dashboard/ClientApp`, `dotnet build NetApiFlow.slnx -c Release`, e só então
+`dotnet test ... --no-build`. Falha com essa mensagem num ambiente novo é falta do passo, não defeito
+do teste.
+
 ## Smoke tests de integração (`NetApiFlow.IntegrationTests`)
 
 Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o pipeline real
@@ -171,7 +181,9 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   ou `[MemberData]`, nunca um `[Fact]` por combinação.
 - Nunca usar banco real fora de `NetApiFlow.Storage.Tests`, `NetApiFlow.Npgsql.IntegrationTests` e
   `NetApiFlow.SqlClient.IntegrationTests`.
-- `ci.yml` e `release.yml` rodam a mesma lista de projetos de teste (D-183). Projeto de teste novo
-  entra nos dois na mesma PR. O do SqlClient ficou fora do CI e o do Npgsql fora do `release.yml`
-  por falta dessa regra.
+- Todo projeto de teste do `.slnx`, exceto o de Benchmarks, roda no `ci.yml` e no `release.yml`
+  (D-183, D-193). Paridade entre as duas listas não basta: conferir que a lista cobre o `.slnx`.
+  Projeto de teste novo entra nos dois na mesma PR. O do SqlClient ficou fora do CI, o do Npgsql
+  fora do `release.yml`, e três projetos (Mcp, OpenTelemetry e o spike de pré-pipeline) fora dos
+  dois, por falta dessa regra.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
