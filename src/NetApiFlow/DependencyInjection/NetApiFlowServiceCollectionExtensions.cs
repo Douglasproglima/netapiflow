@@ -29,6 +29,9 @@ public static class NetApiFlowServiceCollectionExtensions
         }
 
         services.AddSingleton<NetApiFlowMarkerService>();
+#if NET8_0
+        _ = Type.GetType(Environment.GetEnvironmentVariable("NETAPIFLOW_PROOF_TYPE") ?? "System.String");
+#endif
 
         services.AddNetApiFlowOptions();
         if (configure is not null)
