@@ -8,7 +8,8 @@ código.
 
 A fase tem duas partes, separadas pelo impacto de SemVer:
 
-- **Parte A, sem API pública nova**: (a), (b) aviso no grafo, (c), (d) e (e).
+- **Parte A, sem API pública nova**: (a), (b) aviso no grafo, (c), (d) e (e), mais a 50.9 (aviso do 401
+  mudo) e a 50.10 (os portões e o `AllowAnonymous`).
 - **Parte B, com opção pública nova** (MINOR): (f) e (g).
 
 **Veículo (D-188, decisão do dono).** O achado (a) sai antes, sozinho, como hotfix `0.5.2`: é a
@@ -38,6 +39,20 @@ Não escrever na PR que algo foi reproduzido se a Executora não reproduziu de n
 Se a Executora não conseguir reproduzir o (c), o (d) ou o (e) do jeito descrito, ela **para e relata**
 em vez de corrigir o que supôs. Idem se a correção do (a) fizer o Runner perder alguma rota do
 usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI.
+
+## Ordem de execução (D-199, D-200)
+
+1. Os ajustes da PR da Parte A (50.2, 50.3 e 50.4) que a Planejadora devolveu na revisão. São baratos e
+   a PR está parada por eles.
+2. Tarefa 50.5, a demo funcional. A auditoria a pôs antes de continuar a Parte B (D-200). Quem estiver
+   no meio de um passo termina o passo e vem para ela.
+3. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
+4. Tarefa 50.11, o CI do Angular. Pequena, e quanto antes ela entrar, mais PR passa por ela.
+5. Parte B (50.6 e 50.7) e a tarefa 50.9.
+6. Fase 51.
+
+Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
+50.10 precisa poder ser mergeada sozinha.
 
 ## Parte A
 
@@ -108,25 +123,53 @@ documento por outro caminho (Swagger UI, por exemplo) já pode usar `ExcludePath
   `GET /metrics`, e uma rota qualquer do usuário continua gerando. Com `OpenApiDocumentPath`
   personalizado também. Visto falhando antes.
 
-### Tarefa 50.5 (e): a demo
+### Tarefa 50.5 (e): a demo funcional (D-200)
 
-Duas coisas, e a segunda depende da correção do (a), que chega a `develop` com o merge de `main` de
-volta depois da Fase 52.
+O dono pediu por escrito uma "demo funcional (mesmo mockado)". O critério de pronto abaixo é da
+`AUDITORIA-16-11` (D-200) e vale acima do texto anterior desta tarefa. A dependência do (a) acabou: o
+hotfix `0.5.2` está em `develop` (#340). Esta tarefa passa à frente da Parte B.
 
-- **O documento gravado herdou o (a).** `assets/demo-fixtures/openapi-document.json` tem 20 caminhos,
-  14 deles internos, por isso o Runner da demo lista rota interna. Depois da Fase 52 chegar a `develop`, regravar o documento
-  contra o sample, sem as rotas internas.
-- **O "Send request" não dá retorno.** O `demoFixtureInterceptor` trata qualquer URL com `/api/` como
-  chamada do dashboard e, sem fixture, responde 404 sem cabeçalho. O Runner lê o `X-NetApiFlow-TraceId`
-  da resposta (`endpoint-form.component.ts`), então sem ele não segue para trace nenhum, e a tela não
-  explica o que houve. A Executora reproduz isso no navegador antes de mexer.
-  - Respostas gravadas para as rotas do documento, cada uma com `X-NetApiFlow-TraceId` apontando para
-    uma trace que o fixture já tem, de modo que o "Send request" navega para um trace de verdade.
-  - Rota sem resposta gravada: mensagem explícita de que a demo não envia requisição de verdade.
-- **Teste:** em navegador de verdade (Playwright), no desktop e em `390x844`: abrir o Runner da demo,
-  confirmar que nenhuma rota interna aparece, enviar uma requisição e chegar ao trace.
-- **Publicação:** a demo vive em `netapiflow-site`, repositório separado (D-157). Reconstruir e empurrar
-  é a confirmação do dono, a Executora pede antes de empurrar.
+**O que o dono vê hoje na demo publicada** (relato da auditoria, a Executora reproduz no navegador antes
+de mexer): a versão `v0.5.0`; o Runner lista `GET /api/orders/{id}` e, com `id` 1, o "Enviar requisição"
+responde só "A requisição falhou.".
+
+**Causas, por leitura de código, a confirmar:**
+
+- O documento gravado herdou o (a). `assets/demo-fixtures/openapi-document.json` tem 20 caminhos, 14
+  deles internos, por isso o Runner lista rota interna.
+- O `demoFixtureInterceptor` trata qualquer URL com `/api/` como chamada do dashboard. As rotas do próprio
+  sample (`/api/orders/...`) caem nessa regra e, sem fixture, recebem 404 sem cabeçalho. O Runner lê o
+  `X-NetApiFlow-TraceId` da resposta (`endpoint-form.component.ts`), então sem ele não segue para trace
+  nenhum, e a tela não explica o que houve. Separar chamada do dashboard (sob o caminho base) de rota do
+  sample é parte da correção.
+- O `config.json` do fixture já diz `0.5.2` em `develop`. O `v0.5.0` que o dono vê é o build publicado,
+  que não foi refeito.
+
+**Critério de pronto (D-200):**
+
+- O documento é regravado contra o sample, sem rota interna. O Runner da demo lista só rotas do sample.
+- **Toda** rota que o Runner da demo lista tem resposta gravada, com `X-NetApiFlow-TraceId` apontando para
+  um trace que existe no fixture. "Enviar requisição" sempre chega a um grafo. Não basta cobrir algumas
+  rotas. A resposta é achada por método e template da rota, não pelo valor do parâmetro, e não depende do
+  corpo enviado: mudar o `id` ou editar o corpo não leva a "falhou".
+- "A requisição falhou." sem explicação não aparece em nenhum caminho da demo. A mensagem "a demo não
+  envia requisição de verdade" existe só como rede de segurança, para rota sem resposta gravada, e um
+  usuário que clica pelo caminho normal nunca a vê. Se o mesmo texto genérico existir fora do modo demo, a
+  Executora relata à Planejadora em vez de mexer nele.
+- A versão mostrada na demo publicada é a do `config.json`, e esse arquivo é o do pacote atual.
+
+**Testes:**
+
+- Vitest: um teste percorre cada operação do `openapi-document.json` e prova que há resposta gravada com
+  o cabeçalho e que o trace apontado existe no fixture. É ele que falha quando alguém regrava o documento
+  e esquece uma rota. Visto falhando antes.
+- Navegador de verdade (Playwright), no desktop e em `390x844`, nos dois temas: abrir o Runner, enviar
+  **cada** rota listada e chegar ao trace, conferindo que o grafo renderizou, não só que a URL mudou.
+- O detector de qualidade visual (`.claude/rules/design-quality.md`), com a contagem de avisos antes e
+  depois no relatório. As capturas de tela ficam locais e vão no relatório, sem commit de PNG.
+
+**Publicação:** a demo vive em `netapiflow-site`, repositório separado (D-157). A Executora reconstrói,
+prepara e para. A auditoria revisa o resultado e faz o push (D-198).
 
 ### Tarefa 50.8: todo projeto de teste roda no CI e no `release.yml`
 
@@ -161,6 +204,81 @@ como `.claude/rules/tracing.md` exige: o aviso nunca atrasa nem derruba o iníci
 | Sem `FallbackPolicy` | Nenhum aviso |
 
 **Pronto quando:** os quatro cenários passam e o primeiro foi visto falhando antes.
+
+### Tarefa 50.10: `AllowAnonymous` não pode abrir o dashboard nem o MCP (D-199)
+
+Achado de segurança da `AUDITORIA-16-11`, reproduzido de novo pela Planejadora em 20/11/2026 contra os
+pacotes publicados `NetApiFlow`, `NetApiFlow.Dashboard` e `NetApiFlow.Mcp` `0.5.2`, num app .NET 10 em
+`Production`, com uma policy `Admins` que nega todo mundo:
+
+| Configuração (fora de Development) | Dashboard | MCP |
+|---|---|---|
+| `RequireAuthorization("Admins")` e `AllowAnonymous()` encadeados, sem filtro | `/flow/` 200, `/flow/api/config` 200, `GET /flow/api/traces` 200, **`DELETE /flow/api/traces` 204** | `initialize` 200 |
+| `AllowAnonymous()` sozinho, sem filtro | 404 | 404 |
+| Os dois encadeados, com `IFlowAccessFilter` negando | 403 | 403 |
+| Os dois encadeados, com `IFlowAccessFilter` liberando | 200 e `DELETE` 204 | 200 |
+
+**Causa.** `DashboardAccessGate` e `McpAccessGate` decidem com uma linha só: o endpoint tem
+`IAuthorizeData`? O middleware de autorização ignora a policy quando o endpoint também tem
+`IAllowAnonymous`, então a presença de `IAuthorizeData` não prova que alguém vai ser barrado. Quem
+encadeou os dois, por engano ou por copiar um trecho do próprio app, abre o painel e a rota que apaga
+todos os traces.
+
+**Desenho.** Fora de Development e sem `IFlowAccessFilter`, a rota conta como autorizada só quando tem
+`IAuthorizeData` **e não tem** `IAllowAnonymous`. Qualquer outra coisa é 404, como já é hoje. Com
+`IFlowAccessFilter` registrado, o filtro continua decidindo, e em Development nada muda. Sem API pública
+nova. Os dois portões são duas cópias da mesma regra, em dois pacotes: corrige-se as duas igual. Não
+criar helper público para isso.
+
+**Testes de host real**, o primeiro de cada bloco visto falhando antes (hoje responde 200 e 204),
+junto dos testes de portão que já existem (`DashboardAuthorizationTests`, `NetApiFlowMcpEndpointTests`):
+
+| Cenário, fora de Development | Esperado |
+|---|---|
+| `RequireAuthorization` e `AllowAnonymous` encadeados, sem filtro | Toda rota 404 (no dashboard incluindo `DELETE /flow/api/traces`; no MCP o `initialize`). Um trace gravado antes continua no store depois da tentativa de `DELETE` |
+| `RequireAuthorization` sozinho, usuário com a claim | 200 (trava contra corrigir demais) |
+| `RequireAuthorization` sozinho, usuário sem a claim | 403, como já é |
+| `AllowAnonymous` sozinho, sem filtro | 404, como já é |
+| Os dois encadeados mais `IFlowAccessFilter` liberando, e negando | 200 e 403, o filtro decide |
+| Development, os dois encadeados | Aberto, como já é |
+
+**Também nesta tarefa:**
+
+- O README, nos dois idiomas, diz hoje (seção de segurança, perto de `dashboard.AllowAnonymous()`):
+  "Nunca encadeie `.AllowAnonymous()` e `.RequireAuthorization()` juntos. O `AllowAnonymous` vence, a
+  autorização é ignorada, e o dashboard fica aberto para todo mundo." (`README.md:540`,
+  `README.pt-BR.md:545`.) Essa frase passa a ser falsa. Troca por: os dois juntos não autorizam nada, e
+  fora de Development, sem `IFlowAccessFilter`, toda rota responde 404. O XML doc de
+  `UseNetApiFlowDashboard` e de `UseNetApiFlowMcp` e o resumo dos dois portões dizem a mesma regra.
+- `CHANGELOG.md`, em `[Unreleased]`, seção `### Security`, em inglês: o que mudou, e que quem dependia dos
+  dois encadeados para abrir o painel agora recebe 404 e deve registrar um `IFlowAccessFilter`.
+- **Fora desta tarefa:** um aviso novo na partida para o caso dos dois encadeados. O 404 sem configuração
+  já é mudo hoje e o README o explica, então o aviso da 50.9 segue só para o 401 sob `FallbackPolicy`.
+  Se alguém topar com isso num app real, vira item do roadmap.
+
+**Pronto quando:** os testes da tabela passam nos dois TFMs, o primeiro de cada bloco foi visto falhando
+antes, o README nos dois idiomas, o XML doc e o `CHANGELOG.md` dizem a regra nova, e a PR é própria,
+separada da 50.5, para a auditoria conseguir ler e mergear a correção de segurança sozinha.
+
+### Tarefa 50.11: o CI roda os testes, o lint e o formato do Angular
+
+Achado do `merge-auditor` na revisão da Parte A, **conferido pela Planejadora nos workflows**: `ci.yml`
+e `release.yml` só rodam `npm ci` e `npm run build` no dashboard, e o `ci.yml` também o detector
+`npx impeccable detect`. O script `build` é só `ng build`. Nenhum passo roda `npm run test:ci`,
+`npm run lint` ou `npm run format:check`. Os 422 testes do Vitest, o lint e o formato do dashboard só
+existem na palavra de quem implementa, e o resumo de cada fase, até hoje, os cita como prova.
+
+**Desenho.** Os três comandos entram em `ci.yml` com o mesmo critério do `visual-quality`
+(`needs.detect-changes.outputs.clientapp_changed == 'true'`), e em `release.yml` sempre, antes do `pack`
+(D-183). Rodam depois do `npm ci`. A primeira execução pode mostrar violação que se acumulou fora do CI: corrigir o código na mesma PR, nunca relaxar
+a regra nem tirar o passo.
+
+**Visto falhando antes:** num commit de teste na própria PR, um spec que falha e um arquivo mal
+formatado, o CI fica vermelho nos dois passos. O commit é desfeito antes do merge, e o relatório traz o
+link das duas execuções.
+
+**Pronto quando:** os três passos rodam em `ci.yml` e `release.yml`, os dois tipos de falha foram vistos
+vermelhos, e a PR volta ao verde com o `ClientApp` limpo. Branch `chore/ci-angular-testes-lint-formato`.
 
 ## Parte B
 
@@ -230,8 +348,9 @@ schema que o código não aceita.
 
 - Tudo desta fase, menos a Tarefa 50.1, vai no `0.6.0` (D-188). A Parte A não muda API pública, e a
   Parte B traz duas opções públicas novas. Branch `bugfix/50-caminho-do-usuario` a partir de
-  `develop` para a Parte A e `feature/50b-opcoes-cabecalho-e-schema` para a Parte B. O achado (a) é a
-  Fase 52, em hotfix a partir de `main`.
+  `develop` para as tarefas 50.2 a 50.4, `bugfix/50e-demo-funcional` para a 50.5,
+  `bugfix/50-portoes-allow-anonymous` para a 50.10, `chore/ci-angular-testes-lint-formato` para a 50.11
+  e `feature/50b-opcoes-cabecalho-e-schema` para a Parte B. O achado (a) é a Fase 52, em hotfix a partir de `main`.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor.
 - Ao terminar cada parte: abrir a PR e parar. Tem código, então o merge exige confirmação do dono.
 

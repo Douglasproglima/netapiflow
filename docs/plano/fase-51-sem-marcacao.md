@@ -246,6 +246,28 @@ pequena e segura, sem mudar a assinatura. O exemplo do README, que usa `EndsWith
 | S7 | Handler de MediatR com o `NetApiFlow.MediatR` | Uma etapa `UseCase`, nunca duas |
 | S8 | App em camadas, repositório noutro assembly | Sem configuração não pega, com `IncludeAssembly` pega |
 
+### Tarefa 51.8: o estado vazio do grafo depois do degrau 1
+
+A Tarefa 50.2 faz o grafo de um trace sem etapa explicar como marcar um endpoint
+(`.WithNetApiFlowTracking()`). Depois do degrau 1 esse texto fica errado para o caso comum: um endpoint de
+Minimal API passa a ter a etapa `Endpoint` sozinho, então um trace sem etapa já não significa "falta
+marcar". O `merge-auditor` apontou, por leitura de código, que a condição do estado vazio
+(`trace.spans.length === 0 && trace.status !== 'Running'`, `flow-page.component.html`) também pega os
+traces `(unmatched)`, de 404 e de arquivo estático, que não têm rota para marcar.
+
+**Trabalho:** com o degrau 1 pronto, a Executora reproduz os três casos no navegador antes de mexer e
+ajusta o texto para dizer a causa certa de cada um:
+
+- trace `(unmatched)`: a requisição não casou com nenhuma rota, e não há endpoint para marcar;
+- trace sem etapa de uma rota que não é de Minimal API (controller, por exemplo), ou com
+  `CaptureMinimalApiEndpoints = false`: o texto da 50.2 continua valendo;
+- trace de Minimal API com a captura ligada e mesmo assim sem etapa: não deve acontecer, e se acontecer é
+  defeito do degrau 1, não texto de ajuda.
+
+Os dois idiomas, com teste de componente para cada caso, visto falhando antes. As duas frases do README
+que falam do grafo vazio (`README.md` e `README.pt-BR.md`, perto de "the graph stays empty"), que a 50.2
+já corrige para o que vale hoje, são conferidas de novo nesta tarefa.
+
 ## Documentação, nos dois idiomas
 
 O Quick start mostra o grafo funcionando **sem marcação** (degrau 1) e o atalho de uma linha, chamado
