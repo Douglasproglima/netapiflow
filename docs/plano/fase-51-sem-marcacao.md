@@ -101,6 +101,10 @@ componente chamado `HTTP: GET ...`. Um controller de MVC sai limpo (`OrdersContr
 são as linhas 12 e 13 do `FlowEndpointFilter`: `component = endpoint.DisplayName` e
 `operation = RoutePattern.RawText`.
 
+**O sintoma foi visto renderizado pela auditoria** (Playwright headless, pacote `0.6.0-audit.1` do
+`f1d2f11`, `net10.0`): na tela `/flow?trace=<id>` de um `GET /hello` marcado, a lista de etapas mostra
+`HTTP: GET /hello./hello | 86 µs`, e o nó do grafo mostra `Concluído · Endpoint | /hello`.
+
 O defeito é anterior à Fase 51, mas o degrau 1 gravaria esse mesmo rótulo, sozinho, para **todo**
 endpoint de Minimal API. Por isso a regra do nome se define antes dele. Vai no `0.6.0` (D-205).
 
@@ -151,10 +155,17 @@ com `WithName`, método estático, método de instância, função local, rota c
 dentro de `MapGroup` e `MapMethods` com dois verbos. E um teste que, para o mesmo conjunto de endpoints,
 prova que os dois caminhos gravam o **mesmo** par.
 
-**As telas.** A Executora monta um app com um endpoint de cada forma e captura quatro telas: o painel de
-detalhes e a cascata do trace, Componentes, Arquitetura e o Diff. Se alguma ler mal, ela propõe o ajuste
-e a Planejadora decide **antes** de seguir. A auditoria põe o nome de cada tipo de etapa no inventário
-dela.
+**As telas.** A Executora monta dois apps. O primeiro tem um endpoint de cada forma. O segundo, por
+exigência da auditoria, tem **pelo menos 6 endpoints de lambda em dois `MapGroup` diferentes**, para ver
+como o componente `Minimal API` se comporta num app com volume. Ela captura as quatro telas de cada um: o
+painel de detalhes e a cascata do trace, Componentes, Arquitetura e o Diff.
+
+A regra junta todas as lambdas de um app num só componente, e o MVC separa por controller. Se no segundo
+app as telas ficarem num bloco único sem sentido, a alternativa autorizada é o componente pelo prefixo
+do `MapGroup`, quando houver grupo. Antes de propô-la, a Executora **mede o que o ASP.NET Core expõe**
+para recuperar o grupo de um endpoint, porque o `RawText` traz o prefixo mas não diz onde o grupo
+termina, e diz o que achou. Se alguma tela ler mal, ela propõe o ajuste e a Planejadora decide **com as
+telas na mão**, antes de seguir. A auditoria põe o nome de cada tipo de etapa no inventário dela.
 
 **Compatibilidade, para o `CHANGELOG.md`** (`### Changed`, em inglês): o nome da etapa de um endpoint de
 Minimal API mudou. O histórico guardado no PostgreSQL ou no SQL Server mantém os nomes antigos, então o
