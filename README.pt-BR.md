@@ -132,6 +132,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 ```
 
+O pacote exige EF Core 9 ou superior, também no `net8.0`. Um app em EF Core 8 com um provedor do EF 8
+falha com `TypeLoadException` ao instalar o pacote.
+
 ### Tags numa etapa
 
 Uma etapa aberta com `NetApiFlow.Step(...)` aceita tags livres, chave e valor, gravadas naquele

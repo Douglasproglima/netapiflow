@@ -39,11 +39,24 @@ dotnet build --no-restore -nologo -v q 2>&1 | grep -E "Erro\(s\)|error"
 
 stop_app
 start_app || exit 1
+trace_count() {
+  curl -s "localhost:$PORT/flow/api/traces?limit=1" | python -c "import json,sys;print(json.load(sys.stdin)['totalCount'])" 2>/dev/null || echo 0
+}
+
+wait_for_persisted_trace() {
+  for waited in $(seq 1 30); do
+    [ "$(trace_count)" -gt "$1" ] && { echo "  trace persisted after ${waited}s"; return 0; }
+    sleep 1
+  done
+  echo "  trace NOT persisted after 30s"
+}
+
 show_trace() {
+  before=$(trace_count)
   local label=$1 path=$2
   curl -s -o /dev/null -w "$label request:%{http_code}
 " "localhost:$PORT$path"
-  sleep 3
+  wait_for_persisted_trace "$before"
   TRACE=$(curl -s "localhost:$PORT/flow/api/traces?limit=1" | python -c "import json,sys;print(json.load(sys.stdin)['items'][0]['traceId'])")
   curl -s "localhost:$PORT/flow/api/traces/$TRACE" | python -c "
 import json,sys
