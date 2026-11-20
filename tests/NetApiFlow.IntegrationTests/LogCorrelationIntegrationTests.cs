@@ -16,8 +16,8 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies log correlation (ADR-0017) is opt-in: disabled by default, no <c>FlowLoggerProvider</c>
-/// is registered; enabled, a real <c>ILogger</c> call inside a <see cref="FlowStep"/> reaches the
+/// Verifies log correlation is opt-in: the <c>FlowLoggerProvider</c> is always registered, but
+/// disabled by default it correlates nothing; enabled, a real <c>ILogger</c> call inside a <see cref="FlowStep"/> reaches the
 /// active span's <c>Logs</c>.
 /// </summary>
 public class LogCorrelationIntegrationTests
@@ -58,11 +58,21 @@ public class LogCorrelationIntegrationTests
         host.Services.GetServices<ILoggerProvider>().Any(provider => provider.GetType().Name == "FlowLoggerProvider");
 
     [Fact]
-    public void AddNetApiFlow_WithLogCorrelationDisabledByDefault_RegistersNoFlowLoggerProvider()
+    public async Task Request_WithLogCorrelationDisabledByDefault_CorrelatesNoLogEvenWithTheProviderRegistered()
     {
         using var host = CreateHost(_ => { });
 
-        HasFlowLoggerProvider(host).ShouldBeFalse();
+        HasFlowLoggerProvider(host).ShouldBeTrue();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/api/warn");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+
+        var detailResponse = await client.GetAsync($"/flow/api/traces/{traceId}");
+        using var doc = JsonDocument.Parse(await detailResponse.Content.ReadAsStringAsync());
+
+        doc.RootElement.GetProperty("spans").EnumerateArray().Single().GetProperty("logs").GetArrayLength().ShouldBe(0);
     }
 
     [Fact]

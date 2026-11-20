@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>$(SmokeTfm)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetApiFlow" Version="$(SmokePackageVersion)" />
+    <PackageReference Include="NetApiFlow.Dashboard" Version="$(SmokePackageVersion)" />
+    <PackageReference Include="NetApiFlow.Storage.SqlServer" Version="$(SmokePackageVersion)" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
+  </ItemGroup>
+
+</Project>

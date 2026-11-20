@@ -78,4 +78,25 @@ public class ArchitectureTests
             memberTypeNamespaces.ShouldNotContain(ns => ns!.StartsWith(forbiddenNamespace, StringComparison.Ordinal));
         }
     }
+
+    [Fact]
+    public void AddNetApiFlow_NeverDecidesRegistrationFromADiscardedOptionsInstance()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "NetApiFlow", "DependencyInjection", "NetApiFlowServiceCollectionExtensions.cs"));
+
+        source.ShouldNotContain("probedOptions");
+        source.ShouldNotContain("new NetApiFlowOptions()");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "NetApiFlow.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("NetApiFlow.slnx was not found above the test output folder.");
+    }
 }

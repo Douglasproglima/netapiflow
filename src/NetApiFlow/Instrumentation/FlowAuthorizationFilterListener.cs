@@ -20,13 +20,24 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     private readonly ConcurrentDictionary<(string TraceId, object Filter), FlowStep> _pendingSteps = new();
     private readonly ILogger<FlowAuthorizationFilterListener> _logger;
-    private readonly IDisposable _allListenersSubscription;
+    private IDisposable? _allListenersSubscription;
     private IDisposable? _listenerSubscription;
     private volatile bool _disposed;
 
     public FlowAuthorizationFilterListener(ILogger<FlowAuthorizationFilterListener> logger)
     {
         _logger = logger;
+    }
+
+    internal bool IsSubscribed => _allListenersSubscription is not null;
+
+    public void Start()
+    {
+        if (_disposed || _allListenersSubscription is not null)
+        {
+            return;
+        }
+
         _allListenersSubscription = DiagnosticListener.AllListeners.Subscribe(this);
     }
 
@@ -34,7 +45,7 @@ internal sealed partial class FlowAuthorizationFilterListener
     {
         _disposed = true;
         _listenerSubscription?.Dispose();
-        _allListenersSubscription.Dispose();
+        _allListenersSubscription?.Dispose();
     }
 
     /// <summary>
@@ -50,6 +61,11 @@ internal sealed partial class FlowAuthorizationFilterListener
     /// </summary>
     internal void CloseOrphanedSteps(string traceId, Exception? exception)
     {
+        if (!IsSubscribed)
+        {
+            return;
+        }
+
         foreach (var key in _pendingSteps.Keys)
         {
             if (key.TraceId != traceId)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NetApiFlow.Configuration;
 using NetApiFlow.DependencyInjection;
 using NetApiFlow.Events;
@@ -50,22 +51,14 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();
 
-        var probedOptions = new NetApiFlowOptions();
-        configure?.Invoke(probedOptions);
-        if (probedOptions.LogCorrelation.Enabled)
-        {
-            services.AddSingleton<ILoggerProvider, FlowLoggerProvider>();
-        }
+        services.AddSingleton<ILoggerProvider, FlowLoggerProvider>();
 
         services.AddSingleton<SqlClientCommandListener>();
         services.AddHostedService<SqlClientCommandListenerWarmupHostedService>();
 
-        if (probedOptions.CapturePrePipelineSteps)
-        {
-            services.Configure<MvcOptions>(options => options.Filters.Add<FlowResourceFilter>());
-            services.AddSingleton<FlowAuthorizationFilterListener>();
-            services.AddHostedService<FlowAuthorizationFilterListenerWarmupHostedService>();
-        }
+        services.AddSingleton<IConfigureOptions<MvcOptions>, FlowResourceFilterMvcOptionsSetup>();
+        services.AddSingleton<FlowAuthorizationFilterListener>();
+        services.AddHostedService<FlowAuthorizationFilterListenerWarmupHostedService>();
 
         return services;
     }
