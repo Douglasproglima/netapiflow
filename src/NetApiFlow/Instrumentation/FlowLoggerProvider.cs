@@ -4,8 +4,9 @@ using NetApiFlow.Recording;
 
 namespace NetApiFlow.Instrumentation;
 
-/// <summary>Registers <see cref="FlowLogger"/> alongside the host's own logging providers (ADR-0017).
-/// Only registered in DI when <see cref="LogCorrelationOptions.Enabled"/> is <see langword="true"/>.</summary>
+/// <summary>Registers <see cref="FlowLogger"/> alongside the host's own logging providers. Always
+/// registered, and the logger it hands out records nothing unless the resolved
+/// <see cref="LogCorrelationOptions.Enabled"/> is <see langword="true"/>.</summary>
 internal sealed class FlowLoggerProvider : ILoggerProvider
 {
     private readonly FlowLogger _logger;

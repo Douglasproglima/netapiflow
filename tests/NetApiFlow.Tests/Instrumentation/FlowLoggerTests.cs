@@ -15,6 +15,7 @@ public class FlowLoggerTests
         LogLevel minLevel = LogLevel.Warning, int maxLogEntriesPerSpan = 20)
     {
         var options = new NetApiFlowOptions();
+        options.LogCorrelation.Enabled = true;
         options.LogCorrelation.MinLevel = minLevel;
         options.Limits.MaxLogEntriesPerSpan = maxLogEntriesPerSpan;
         var wrappedOptions = Options.Create(options);
@@ -143,5 +144,18 @@ public class FlowLoggerTests
         var span = recorder.GetActiveTrace(traceId)!.Spans.Single();
         span.Logs.Count.ShouldBe(2);
         recorder.DroppedLogCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void IsEnabled_WithLogCorrelationDisabled_IsFalseForEveryLevel()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        options.Value.LogCorrelation.Enabled.ShouldBeFalse();
+        var subject = new FlowLogger(new FlowRecorder(options), options);
+
+        foreach (var level in Enum.GetValues<LogLevel>())
+        {
+            subject.IsEnabled(level).ShouldBeFalse();
+        }
     }
 }
