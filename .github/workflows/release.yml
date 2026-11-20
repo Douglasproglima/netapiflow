@@ -75,6 +75,13 @@ jobs:
           dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build
 
+      - name: Create the local package folders the verification projects list
+        run: mkdir -p tests/manual-verification/local-nuget-feed tests/manual-verification/local-packages
+
+      - name: Publish the core as native AOT, any trim or AOT warning fails
+        working-directory: tests/manual-verification/AotCoreVerification
+        run: dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=true
+
       - name: Pack the six packages
         run: >
           dotnet pack NetApiFlow.slnx -c Release --no-build

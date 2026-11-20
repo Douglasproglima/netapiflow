@@ -152,6 +152,15 @@ jobs:
             dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
           fi
 
+      - name: Create the local package folders the verification projects list
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: mkdir -p tests/manual-verification/local-nuget-feed tests/manual-verification/local-packages
+
+      - name: Publish the core as native AOT, any trim or AOT warning fails
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerification
+        run: dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=true
+
       - name: Pack (verification only)
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet pack NetApiFlow.slnx -c Release --no-build
