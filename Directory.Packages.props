@@ -68,7 +68,7 @@
     <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
 
     <!-- NetApiFlow.Storage.PostgreSql -->
-    <PackageVersion Include="Npgsql" Version="8.0.5" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
 
     <!-- NetApiFlow.Storage.SqlServer -->
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" Condition="'$(MSBuildProjectName)' != 'NetApiFlow.SqlClient.IntegrationTests'" />
