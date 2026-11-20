@@ -6,11 +6,14 @@ pegou, porque todas conferiam diff, CI e status HTTP, e nenhuma seguia o caminho
 produto. O (b) já teve a parte de documentação resolvida na PR #325. Aqui fica a parte que exige
 código.
 
-A fase tem duas partes, separadas pelo impacto de SemVer, para o dono poder escolher o veículo de
-cada uma (`docs/plano/decisoes-pendentes.md`):
+A fase tem duas partes, separadas pelo impacto de SemVer:
 
-- **Parte A, sem API pública nova** (candidata a PATCH): (a), (b) aviso no grafo, (c), (d) e (e).
+- **Parte A, sem API pública nova**: (a), (b) aviso no grafo, (c), (d) e (e).
 - **Parte B, com opção pública nova** (MINOR): (f) e (g).
+
+**Veículo (D-188, decisão do dono).** O achado (a) sai antes, sozinho, como hotfix `0.5.2`: é a
+Fase 52. Todo o resto desta fase vai no `0.6.0`, junto com a Fase 51, e a Executora o implementa em
+`develop`.
 
 Cada achado com código pede **um teste por host real, visto falhando antes da correção**
 (`.claude/rules/testing.md`, D-176 e D-180). Teste que confere só o valor de uma opção ou o retorno de
@@ -40,17 +43,9 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
 
 ### Tarefa 50.1 (a): rotas internas fora do documento OpenAPI
 
-Os grupos `endpoints.MapGroup(basePath + "/api")` (`DashboardApiEndpoints.cs`) e
-`endpoints.MapGroup(basePath)` (`NetApiFlowDashboardEndpointRouteBuilderExtensions.cs`) não chamam
-`ExcludeFromDescription()`. As 14 rotas internas, `DELETE /flow/api/traces` e `POST /flow/api/deploys`
-entre elas, vão para o Swagger e para os SDKs gerados a partir do documento.
-
-- `ExcludeFromDescription()` nos dois grupos. Conferir também o endpoint do stream SSE e o do
-  `NetApiFlow.Mcp`: qualquer rota mapeada pelo próprio NetApiFlow.
-- **Teste (host real):** host com `AddOpenApi()`, `AddNetApiFlowDashboard()`, `AddNetApiFlowMcp()` e
-  `MapOpenApi()`, uma rota do usuário, `GET /openapi/v1.json`. Esperado: a rota do usuário presente e
-  nenhum caminho sob o caminho base do dashboard nem do MCP. Visto falhando antes. Rodar também com um
-  caminho base diferente de `/flow`.
+**Movida para a Fase 52 (hotfix `0.5.2`, D-188).** O texto completo, os testes e o ponto de parada
+estão lá. Quando o hotfix chega a `develop` pelo merge de `main` de volta, esta tarefa está cumprida,
+e a Tarefa 50.5 pode regravar o documento da demo.
 
 ### Tarefa 50.2 (b): o grafo vazio ensina a marcar
 
@@ -111,10 +106,11 @@ documento por outro caminho (Swagger UI, por exemplo) já pode usar `ExcludePath
 
 ### Tarefa 50.5 (e): a demo
 
-Duas coisas, e a segunda depende da 50.1.
+Duas coisas, e a segunda depende da correção do (a), que chega a `develop` com o merge de `main` de
+volta depois da Fase 52.
 
 - **O documento gravado herdou o (a).** `assets/demo-fixtures/openapi-document.json` tem 20 caminhos,
-  14 deles internos, por isso o Runner da demo lista rota interna. Depois da 50.1, regravar o documento
+  14 deles internos, por isso o Runner da demo lista rota interna. Depois da Fase 52 chegar a `develop`, regravar o documento
   contra o sample, sem as rotas internas.
 - **O "Send request" não dá retorno.** O `demoFixtureInterceptor` trata qualquer URL com `/api/` como
   chamada do dashboard e, sem fixture, responde 404 sem cabeçalho. O Runner lê o `X-NetApiFlow-TraceId`
@@ -194,11 +190,10 @@ schema que o código não aceita.
 
 ## Versionamento e fluxo
 
-- Parte A: PATCH, nenhuma mudança de API pública. Parte B: MINOR, duas opções públicas novas. O veículo
-  de cada parte é decisão do dono (`docs/plano/decisoes-pendentes.md`). Se a Parte A sair como `0.5.2`,
-  a branch é `hotfix/0.5.2-user-path-fixes` a partir de `main`, como o `docs/gitflow.md` descreve. Se
-  esperar o `0.6.0`, `bugfix/50-caminho-do-usuario` a partir de `develop`. A Parte B é
-  `feature/50b-opcoes-cabecalho-e-schema` a partir de `develop`.
+- Tudo desta fase, menos a Tarefa 50.1, vai no `0.6.0` (D-188). A Parte A não muda API pública, e a
+  Parte B traz duas opções públicas novas. Branch `bugfix/50-caminho-do-usuario` a partir de
+  `develop` para a Parte A e `feature/50b-opcoes-cabecalho-e-schema` para a Parte B. O achado (a) é a
+  Fase 52, em hotfix a partir de `main`.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor.
 - Ao terminar cada parte: abrir a PR e parar. Tem código, então o merge exige confirmação do dono.
 
