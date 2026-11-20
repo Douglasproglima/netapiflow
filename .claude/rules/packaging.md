@@ -8,9 +8,13 @@
   no nuget.org antes do uso (tarefa 0.1; `NetApiFlow.Mcp` conferido pela Planejadora em
   2026-11-04, D-72; `NetApiFlow.Testing` conferido pela Planejadora em 2026-11-17, ADR-0022).
 - `PackageReadmeFile`, `PackageIcon` (`docs/images/icon.png`, tarefa 0.7), `Description`,
-  `PackageTags`, `RepositoryUrl` (`https://github.com/Douglasproglima/netapiflow`),
-  `PackageLicenseExpression=MIT`. Autor e licença herdados de `Directory.Build.props`
-  (tarefa 0.3) não precisam ser repetidos por projeto.
+  `PackageTags`, `PackageProjectUrl`, `RepositoryUrl`, `PackageLicenseExpression=MIT`. Vêm do
+  `Directory.Build.props` da raiz e não se repetem por projeto: autor, licença, `RepositoryUrl`
+  (`https://github.com/Douglasproglima/netapiflow`), `PackageProjectUrl` (o site,
+  `https://douglasproglima.github.io/netapiflow-site/`) e um `PackageTags` padrão
+  (`netapiflow;aspnetcore;tracing;observability;diagnostics`). `Description` é de cada `.csproj`,
+  nunca herdada: é o texto que o nuget.org e o gerenciador de pacotes do Visual Studio mostram
+  daquele pacote específico.
 - `PackageReadmeFile` aponta para um `README.md` **do próprio pacote**
   (`src/<Pacote>/README.md`, curto, com link para o README principal do repositório), não o
   `README.md` da raiz diretamente: o NuGet exige o arquivo dentro do conteúdo empacotado.
@@ -66,6 +70,18 @@ diretamente, e o SDK só usa `VersionSuffix` pra compor `$(Version)` a partir de
 -p:TargetFramework=net10.0`: devolve o número real (`0.4.4`), não um sufixado. **Comando certo:
 `-p:Version=<próxima>-verify.<n>`** (sobrescreve `<Version>` de verdade), nunca repetindo o mesmo
 `<n>` numa mesma versão em avaliação.
+
+**Pasta padrão de fumaça e a fonte de usuário removida (D-174, D-178).** A fumaça roda em
+`tests/manual-verification/`, que já tem um `nuget.config` próprio: `<clear />` nas fontes, só
+`nuget.org` mais `netapiflow-local` apontando pra `./local-nuget-feed` (caminho relativo, vale só
+pra essa pasta), e `globalPackagesFolder` em `./local-packages`, fora do cache global da máquina.
+Um deslize no número de versão contamina o cache daquela pasta, não o `~/.nuget/packages` do
+resto. A fonte `netapiflow-local` que existia no `NuGet.Config` de usuário desta máquina foi
+removida, junto com os builds locais `0.4.2` de número real que ocupavam o cache global. **Não
+registrar de novo:** fonte nomeada no arquivo de usuário vale pra todo projeto da máquina, e a
+isolação da fumaça vem do `nuget.config` da própria pasta. Fumaça fora de `tests/manual-verification/`
+não tem esse `nuget.config` e volta a ter o risco da D-153: usa `-p:Version=<próxima>-verify.<n>`
+mais `--source` com o caminho literal da pasta, nunca um nome registrado por `nuget add source -n`.
 
 ## Release (ver também `docs/gitflow.md`)
 
