@@ -124,6 +124,25 @@ volta depois da Fase 52.
 - **Publicação:** a demo vive em `netapiflow-site`, repositório separado (D-157). Reconstruir e empurrar
   é a confirmação do dono, a Executora pede antes de empurrar.
 
+### Tarefa 50.8: todo projeto de teste roda no CI e no `release.yml` (D-193)
+
+Achado pelo `merge-auditor` na revisão da Fase 52 e confirmado pela auditoria no `main`: o `ci.yml`
+(`dotnet test`, linhas 127 a 134) e o `release.yml` (linhas 56 a 61) rodam os mesmos 6 projetos.
+`NetApiFlow.Mcp.Tests`, `NetApiFlow.OpenTelemetry.Tests` e `NetApiFlow.PrePipelineInteropSpike` estão no
+`.slnx` e não rodam em nenhum dos dois. `NetApiFlow.Benchmarks` fica de fora de propósito.
+
+1. Antes de mexer nos workflows, rodar os três localmente, nos dois TFMs, e colar o resultado no
+   resumo. Falha antiga escondida é ponto de parada, como na Tarefa 48.4.
+2. `Mcp.Tests` e `OpenTelemetry.Tests` entram nos dois workflows. Não usam Docker, então entram antes
+   do bloco que só roda fora do Windows, junto com o `Ef8Tests`.
+3. `PrePipelineInteropSpike`: a Executora lista o que cada um dos 6 testes prova e se o
+   `IntegrationTests` já cobre o mesmo (`PrePipelineStepsIntegrationTests`). Relata, e a Planejadora
+   decide entre rodar e aposentar o projeto. Não decidir sozinha.
+4. Um projeto de teste novo entra nos dois workflows na mesma PR (`.claude/rules/testing.md`).
+
+**Pronto quando:** o log real do `build-test` mostra os projetos executando, e os dois workflows
+listam os mesmos projetos.
+
 ## Parte B
 
 ### Tarefa 50.6 (f): o cabeçalho `X-NetApiFlow-TraceId`

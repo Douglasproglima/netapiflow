@@ -46,7 +46,9 @@ A skill `/release` do Claude Code guia esse processo.
 ## Hotfix
 
 1. Criar `hotfix/<versao>` a partir de `main`, com o `PATCH` incrementado.
-2. Corrigir, atualizar o `CHANGELOG.md`.
+2. Corrigir, atualizar o `CHANGELOG.md`, subir o `Version` do `Directory.Build.props` e o `version` de
+   `src/NetApiFlow.Dashboard/ClientApp/src/assets/demo-fixtures/config.json`, que o
+   `DemoFixtureVersionTests` compara com o `Directory.Build.props` (D-193).
 3. Teste com o pacote real (empacotado de verdade) em `tests/manual-verification/`, antes da PR: mesma
    regra do passo 4 da skill `/release` (D-176), `-p:Version=<próxima>-verify.<n>`,
    `AddNetApiFlow()` sem lambda, em `Development`, com storage real e pelo menos uma requisição.
