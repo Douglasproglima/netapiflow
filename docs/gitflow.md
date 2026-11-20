@@ -63,6 +63,11 @@ A skill `/release` do Claude Code guia esse processo.
    sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
 6. Merge de `main` de volta em `develop`.
 
+**Exceção: hotfix só de documentação (D-191).** Um PR cujo diff inteiro é documentação que o público vê
+na página do repositório (o `README.md` e o `README.pt-BR.md`) pode ir para `main` por uma branch
+`hotfix/*` **sem número de versão e sem tag**, seguido do merge de `main` de volta em `develop`. O dono
+confirma cada uso. Qualquer outro caso continua exigindo versão e tag.
+
 ## Versionamento: SemVer (D-01)
 
 Exemplo: `0.1.0`, depois `0.1.1` (patch), `0.2.0` (minor), `1.0.0` (primeira versão estável).

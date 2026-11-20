@@ -1,7 +1,9 @@
 # ADR-0023: três TFMs (`net8.0;net10.0;net11.0`), fechando o furo do ADR-0003
 
 ## Status
-Aceito, substitui a cláusula de sucessão do ADR-0003 (ADR-0003 continua valendo no resto)
+Substituído pelo ADR-0025. Decidia três alvos, `net8.0;net10.0;net11.0`. Uma auditoria do zero
+mostrou que o núcleo não usa nenhuma API exclusiva do .NET 11, então o terceiro alvo seria idêntico ao
+de `net10.0`.
 
 ## Discussion
 [#270](https://github.com/Douglasproglima/netapiflow/discussions/270)

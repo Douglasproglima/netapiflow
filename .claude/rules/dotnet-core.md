@@ -72,3 +72,5 @@ de quem consome o pacote.
 - `net8.0;net10.0` em todo `.csproj` de produto (ADR-0003). Divergência de API entre os dois
   alvos isolada com `#if NET10_0_OR_GREATER`, no menor número de arquivos possível.
 - Não assumir API só disponível em `net10.0` fora de um bloco `#if`.
+- `net11.0` só vira alvo próprio no dia em que o código usar uma API exclusiva do 11 (ADR-0025). Até
+  lá a suíte roda também no runtime 11, contra a build de `net10.0`.

@@ -63,7 +63,7 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
   representa.
 - Um critério só, num lugar só, para os dois drivers. Não reintroduzir uma cópia da regra por driver.
 
-## Risco latente do `net11.0` (ADR-0023)
+## Risco latente do `net11.0` (ADR-0025)
 
 A partir do ASP.NET Core 11, a `Activity` HTTP nativa (a mesma cujo `TraceId` o NetApiFlow reusa)
 passa a carregar doze tags de semantic convention do OpenTelemetry por padrão, incluindo

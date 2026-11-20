@@ -1,7 +1,8 @@
 # Fase 51: o grafo nunca vazio, e as camadas com uma linha (D-187)
 
 Decisão do dono (20/11/2026): fazer os dois degraus baratos do rastreamento sem marcação. É capacidade
-nova com API pública nova, então é **MINOR e vai para o `0.6.0`**, não para um PATCH.
+nova com API pública nova, então é **MINOR e vai para o `0.6.0`**, não para um PATCH. O mecanismo do
+degrau 1 está no ADR-0026 (D-187, D-192).
 
 - **Degrau 1.** Todo endpoint de Minimal API aparece no grafo sem marcação.
 - **Degrau 2.** Um atalho público de uma linha para serviços, repositórios e handlers.
@@ -23,6 +24,7 @@ A Executora para e relata, sem improvisar, se vir qualquer um destes sinais:
 - O `AotCoreVerification` ganhar um aviso.
 - Uma classe do .NET, de pacote de terceiro ou do próprio NetApiFlow aparecer como etapa por causa do
   atalho do degrau 2.
+- A etapa do endpoint abrir numa requisição que o NetApiFlow não rastreia, nos testes T7 ou T11 (D-192).
 
 ## Degrau 1: todo endpoint aparece sem marcação
 
@@ -75,7 +77,7 @@ depois de o endpoint ser escolhido e antes de ele executar.
 | E. Um `MapGroup` do usuário | Só vale para o que for mapeado dentro dele, e exige código do usuário |
 
 O mecanismo A tem precedente neste repositório: `SqlClientCommandListener` e
-`FlowAuthorizationFilterListener` também abrem etapa a partir de evento de `DiagnosticListener`.
+`FlowAuthorizationFilterListener` também abrem etapa a partir de evento de `DiagnosticListener`. A decisão está no ADR-0026.
 
 **O risco do mecanismo A, dito sem enfeite.** `EndpointMatched` é um evento de diagnóstico que está no
 código-fonte, e eu não o encontrei descrito nas duas páginas da documentação oficial que li. Não é uma
@@ -108,7 +110,13 @@ hosting não gerar os outros eventos do `Microsoft.AspNetCore` por causa do NetA
 
 O listener, ao receber o evento com o `HttpContext`:
 
-- só age se o trace da requisição estiver ativo (`NetApiFlow.Step` já devolve etapa vazia sem trace);
+- **só age numa requisição que o NetApiFlow rastreia.** O `NetApiFlowMiddleware` marca no `HttpContext`,
+  sob uma chave interna, que o trace começou (`TryStartTrace` verdadeiro), e o listener só abre a etapa
+  com essa marca. Não basta confiar em `NetApiFlow.Step` devolver etapa vazia sem trace: ele só faz
+  isso quando nenhuma fonte tem ouvinte (`HasListeners`), e com um segundo `ActivityListener` na fonte
+  `NetApiFlow` (o do `NetApiFlow.OpenTelemetry`) a `Activity` nasce mesmo sem trace ativo e vai para o
+  exportador. Requisição em `ExcludePaths`, nas rotas do dashboard, no `OpenApiDocumentPath` ou com
+  `Enabled = false` nunca ganha etapa (D-192);
 - só age num `RouteEndpoint` que não seja de MVC nem de Razor Pages, isto é, sem `ActionDescriptor` nos
   metadados, e com `MethodInfo`, que é o que um Minimal API traz;
 - abre a etapa `Endpoint` com o **mesmo** componente e a mesma operação que o `FlowEndpointFilter` grava
@@ -156,10 +164,11 @@ marcada. Colar os números no resumo. Se o custo por requisição passar do dobr
 | T4 | Opção em `false`, no código e só na configuração | Sem marcação, 0 etapas. Com marcação, 1 |
 | T5 | Endpoint dentro de `MapGroup(...).WithNetApiFlowTracking()` | Uma etapa |
 | T6 | Endpoint que lança, com e sem `UseExceptionHandler` | Etapa em `Error`, origem do erro (Tarefa 51.4) |
-| T7 | Requisição ao dashboard e ao `OpenApiDocumentPath` | Sem trace e sem etapa |
+| T7 | Requisição ao dashboard, ao `OpenApiDocumentPath` e a um caminho de `ExcludePaths`, e com `Enabled = false` | Sem trace e sem etapa |
 | T8 | 16 requisições concorrentes | Cada trace com uma etapa `Endpoint`, nenhuma cruzada |
 | T9 | Uma `NetApiFlow.Step` dentro do handler | `ParentSpanId` igual ao da etapa `Endpoint` |
 | T10 | `MapHealthChecks` e arquivos estáticos | Sem exceção e sem etapa duplicada. A Executora lista no resumo quais outros endpoints passam a ter etapa |
+| T11 | Os mesmos casos do T7 com um segundo `ActivityListener` gravando a fonte `NetApiFlow`, o cenário do OpenTelemetry | Nenhuma `Activity` de etapa é criada: a marca do middleware impede a abertura |
 
 ## Degrau 2: serviços e repositórios com uma linha
 
@@ -247,7 +256,9 @@ conteúdo, sem travessão.
 
 `CHANGELOG.md`, `[Unreleased]`, em `### Added`: o endpoint de Minimal API passa a ter etapa sem
 marcação (com a opção para desligar) e o atalho de uma linha para as camadas. Em `### Changed`, o
-`DecorateFlowTracked` ignorar os tipos do próprio NetApiFlow.
+comportamento padrão novo, cada endpoint de Minimal API ganha uma etapa por requisição, com
+`CaptureMinimalApiEndpoints = false` para voltar ao de antes, e o `DecorateFlowTracked` ignorar os tipos
+do próprio NetApiFlow (D-192).
 
 ## Pronto quando
 
@@ -283,7 +294,7 @@ marcação (com a opção para desligar) e o atalho de uma linha para as camadas
 
 ## Relatório final
 
-Os testes T1 a T10 e S1 a S8: a saída de cada um falhando antes e passando depois. O resultado do
+Os testes T1 a T11 e S1 a S8: a saída de cada um falhando antes e passando depois. O resultado do
 benchmark antes e depois. A lista de endpoints que passaram a ter etapa além do Minimal API (T10). O
 `AotCoreVerification`. O resultado do teste com o pacote real no caminho do usuário, com a captura de
 tela do grafo sem marcação. Qual arquivo de teste prova o R-32.
