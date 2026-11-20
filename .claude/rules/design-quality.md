@@ -29,26 +29,45 @@ Medido pela Executora em 20/11/2026, no Windows 10, com o `impeccable` da versã
   "http://127.0.0.1:<porta>/"` termina com exit 0, e o mesmo comando funciona no CI do ubuntu. A causa
   provável é o stream SSE, mas **isso não foi provado**: o que se mediu foi só "host vivo estoura,
   estático não".
-- Abrir o Edge sem janela e apontar o detector para a porta de depuração funciona para o **detector
-  conectar**:
+- O que funciona é emular o tema e a largura por CDP e provar a página antes de rodar o detector. O
+  procedimento abaixo foi medido pela Executora em 20/11/2026, em 32 execuções, todas com sonda. As flags de
+  linha de comando para tema e largura **não** funcionam: `--blink-settings=preferredColorScheme=1` deixou
+  `prefers-color-scheme: dark` em `false`, e `--window-size=390,844` deu `innerWidth` 496. Esta seção dizia o
+  contrário até 20/11/2026, e estava errada.
 
-  ```text
-  "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --remote-debugging-port=9333 --user-data-dir=<pasta temporária> --no-first-run --disable-extensions "http://localhost:<porta>/flow?trace=<id>"
-  ```
-
-  Esperar a porta responder (`curl http://127.0.0.1:9333/json/version`, cerca de 4 segundos) e depois,
-  em `src/NetApiFlow.Dashboard/ClientApp`: `npx impeccable detect --cdp 9333 --target <porta>`.
-- **As flags de tema e de largura não bastam.** `--blink-settings=preferredColorScheme=1` não deixou a
-  página escura (`prefers-color-scheme: dark` deu `false`), e `--window-size=390,844` deu `innerWidth`
-  496. Esta seção dizia o contrário até 20/11/2026, e estava errada. Tema e largura saem de emulação por
-  CDP (`Emulation.setEmulatedMedia` e `Emulation.setDeviceMetricsOverride`), com a sessão mantida aberta
-  durante a varredura. O comando completo da emulação ainda não está registrado aqui: a Executora o
-  entrega no relatório, e a Planejadora o escreve com o que ela rodou.
-- **Saída vazia só vale como "zero achados" com prova.** Antes de cada varredura, conferir com
-  `Runtime.evaluate` a largura, o tema e que o app renderizou. Uma matriz feita sem isso deu zeros vazios
-  que não significavam nada. Conferir também que nenhum Edge antigo ficou preso na porta `9333`, senão o
-  detector conversa com a página errada. `--json` imprime `[]` quando não há achado. Para encerrar o
-  Edge: `taskkill //F //T //PID <pid>`.
+  1. Subir o Edge sem janela, com porta de depuração e um perfil temporário de nome único, para poder matar
+     só os processos dele: `msedge.exe --headless=new --remote-debugging-port=9333
+     --user-data-dir=<pasta temporária única> --window-size=1280,800 --no-first-run --disable-extensions
+     "http://localhost:<porta><rota>"`.
+  2. Esperar `GET http://127.0.0.1:9333/json/version` responder. Depois `GET http://127.0.0.1:9333/json` e
+     escolher a aba `type=page` cuja `url` contém `localhost:<porta><rota>`. A aba de boas-vindas do Edge vem
+     antes e não serve.
+  3. Abrir um WebSocket em `webSocketDebuggerUrl` dessa aba (o `WebSocket` global do Node 22 ou superior) e
+     **mantê-lo aberto até o detector terminar**. A emulação vale só enquanto essa sessão existe.
+  4. Pela sessão, enviar `Emulation.setEmulatedMedia` com
+     `{ features: [{ name: "prefers-color-scheme", value: "dark" }] }` (ou `"light"`),
+     `Emulation.setDeviceMetricsOverride` com `{ width: 390, height: 844, deviceScaleFactor: 1, mobile: false }`
+     (ou 1280 e 800), `Page.enable` e `Page.reload`.
+  5. **A sonda.** `Runtime.evaluate` com `returnByValue` em `JSON.stringify({ width: innerWidth, prefersDark:
+     matchMedia("(prefers-color-scheme: dark)").matches, background:
+     getComputedStyle(document.body).backgroundColor, nodes: document.querySelectorAll("*").length,
+     appHtmlLength: document.querySelector("app-root")?.innerHTML.length ?? 0, textLength:
+     document.body.innerText.length })`. Repetir de 500 em 500 ms até `appHtmlLength` passar de 1000, esperar
+     mais 1,5 s e ler de novo. Se não passar de 1000, a execução é **inválida**: a página está vazia e um zero
+     do detector não vale. A prova de cada execução é `width` igual ao pedido, `prefersDark` igual ao tema
+     pedido e `appHtmlLength` grande (de 50 mil a 70 mil nas telas reais).
+  6. Com a sessão ainda aberta, em `src/NetApiFlow.Dashboard/ClientApp`: `npx impeccable detect --json --cdp
+     9333 --target "localhost:<porta><rota>"`. Saída `[]` e exit 0 são zero achados. A chave de cada achado
+     no JSON é `antipattern` (por exemplo, `low-contrast`).
+  7. Fechar o WebSocket e matar o Edge **pelo perfil, nunca pelo nome da imagem**, porque esse seria o Edge
+     do dono. Em PowerShell, `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'"` onde `CommandLine`
+     é `-like '*<nome único do perfil>*'`, com `Stop-Process` num laço, porque o Edge recria os filhos, até a
+     contagem zerar. Um Edge antigo preso na `9333` faz o detector varrer a página errada: conferir que a
+     porta está livre antes de cada execução.
+- **Saída vazia só vale como "zero achados" com a sonda do passo 5.** Uma matriz feita sem ela deu zeros
+  vazios que não significavam nada.
+- **No Git Bash, um argumento que começa com `/` é reescrito** (`/history` vira
+  `C:/Program Files/Git/history`). Rodar com `MSYS_NO_PATHCONV=1`.
 
 ## Conferir qual build o navegador está mostrando
 
