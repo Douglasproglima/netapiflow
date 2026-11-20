@@ -7,6 +7,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
+  in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
+  want the trace id in its responses. The default is `true`, so nothing changes unless you set it.
+  Requests are still traced with it off, but `GetFlowTrace` from `NetApiFlow.Testing` reads that
+  header and throws, and its message now names the option.
+
 ### Fixed
 
 - `NetApiFlow`: the request that fetches your OpenAPI document (`OpenApiDocumentPath`, `/openapi/v1.json`

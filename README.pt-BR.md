@@ -547,6 +547,23 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > Encadear `.AllowAnonymous()` junto com `.RequireAuthorization()` não autoriza nada: o
 > `AllowAnonymous` vence a policy, então sem `IFlowAccessFilter` toda rota responde 404.
 
+### O cabeçalho com o trace id
+
+O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada, em qualquer
+ambiente. Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega, e é
+por ele que o `NetApiFlow.Testing` acha o trace de uma resposta. Saber um trace id não abre o
+dashboard: as rotas dele continuam atrás das regras acima.
+
+Para manter o trace id fora das suas respostas, desligue o cabeçalho:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+```
+
+Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. As requisições continuam
+rastreadas. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção
+enquanto o cabeçalho estiver desligado.
+
 ## Servidor MCP
 
 ```bash

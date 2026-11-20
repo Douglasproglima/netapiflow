@@ -43,7 +43,10 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         var started = recorder.TryStartTrace(traceId, context.Request.Method, UnmatchedRouteTemplate, DateTime.UtcNow);
         if (started)
         {
-            context.Response.Headers[TraceIdHeaderName] = traceId;
+            if (flowOptions.EmitTraceIdHeader)
+            {
+                context.Response.Headers[TraceIdHeaderName] = traceId;
+            }
 
             var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
             if (!string.IsNullOrEmpty(tenant))
@@ -66,12 +69,9 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         {
             if (started)
             {
-                // A downstream exception-handler middleware may clear response headers (including
-                // the one set above) before producing its own error response, so it is re-applied
-                // here as long as nothing has been written to the response body yet.
-                if (!context.Response.HasStarted)
+                if (flowOptions.EmitTraceIdHeader)
                 {
-                    context.Response.Headers[TraceIdHeaderName] = traceId;
+                    RestoreTraceIdHeaderClearedByExceptionHandler(context, traceId);
                 }
 
                 // An Authorization-filter step opened via DiagnosticListener can be left pending
@@ -103,6 +103,14 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
 
                 recorder.CompleteTrace(traceId, context.Response.StatusCode, status, caughtException?.Message);
             }
+        }
+    }
+
+    private static void RestoreTraceIdHeaderClearedByExceptionHandler(HttpContext context, string traceId)
+    {
+        if (!context.Response.HasStarted)
+        {
+            context.Response.Headers[TraceIdHeaderName] = traceId;
         }
     }
 }
