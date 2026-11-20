@@ -144,6 +144,12 @@ TFMs (ADR-0025, que substitui o ADR-0023, D-189), a divulgação depois do `0.6.
 mecanismo da Fase 51 vira ADR (ADR-0026, D-192). A data de saída do `net8.0`, 10 de maio de 2027,
 foi confirmada pelo dono (D-195).
 
+O teste da auditoria num app real, privado (D-196), não achou regressão na `0.5.2` e achou dois
+problemas de documentação: o dashboard dá 401 num app com `FallbackPolicy` que exige usuário
+autenticado, e a correlação de log não alcança o trace com `UseSerilog` sem
+`writeToProviders: true`. Os dois estão corrigidos no `README.md` e no `README.pt-BR.md`, sem mudar
+nenhum pacote.
+
 ## Regra de avanço
 
 A Executora só avança de fase quando todos os critérios de aceite da fase atual passarem

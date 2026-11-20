@@ -150,6 +150,16 @@ quem chega ao produto pela primeira vez:
 A auditoria do dono achou sete problemas (D-185) que as rodadas anteriores deixaram passar por conferir
 só diff, CI e status HTTP.
 
+## Clone ou worktree novo: construir o Angular antes
+
+Todo teste cujo host usa o Dashboard ou os samples (o `IntegrationTests` e o `PrePipelineInteropSpike`,
+por exemplo) falha num clone ou worktree novo com `Could not load the embedded file manifest ... for
+assembly 'NetApiFlow.Dashboard'`, porque `ClientApp/dist` não existe e a UI não é embutida. A mensagem
+não aponta a causa. Antes de rodar, na ordem do CI: `npm ci` e `npm run build` em
+`src/NetApiFlow.Dashboard/ClientApp`, `dotnet build NetApiFlow.slnx -c Release`, e só então
+`dotnet test ... --no-build`. Falha com essa mensagem num ambiente novo é falta do passo, não defeito
+do teste.
+
 ## Smoke tests de integração (`NetApiFlow.IntegrationTests`)
 
 Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o pipeline real

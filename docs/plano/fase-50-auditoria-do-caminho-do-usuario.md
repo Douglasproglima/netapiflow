@@ -83,6 +83,10 @@ faz a contradição aparecer. O mesmo `Date.parse` calcula o deslocamento de cad
   traz. Se ele chegar até 7 dígitos, ler todos. Se truncar em milissegundo, a conta usa
   `durationMicros` de cada etapa, que é a fonte da duração exibida (seção 7.3 do prompt).
 - Corrigir o deslocamento das barras pelo mesmo caminho.
+- **Não corrigir o que está certo (D-196).** A auditoria num app real mostrou que, com etapa de
+  milissegundos, a conta bate (40% sem cobertura, controller com 77 de 131 ms). E um "96% (1,01 s de
+  1,05 s)" com uma etapa de 41 ms na primeira requisição também está certo: o tempo da primeira
+  requisição fora das etapas é real. O defeito é só o de etapa de microssegundos.
 - **Teste:** uma trace de 441 µs com uma etapa de 120 µs esperando 321 µs sem cobertura, 73%, e não
   100%. Visto falhando antes. Casos que já existiam (etapa aninhada, `Task.WhenAll`) continuam
   passando. Mais um teste em navegador de verdade que abre o painel de uma trace gravada com etapa de
