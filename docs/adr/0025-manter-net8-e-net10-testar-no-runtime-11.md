@@ -49,10 +49,10 @@ Opção 2.
 - O CI roda a suíte também no runtime .NET 11, contra a build de `net10.0`. Não é um terceiro alvo, é
   um teste de que o asset de `net10.0` funciona no runtime novo. A mecânica (instalar o runtime, a
   variável de roll-forward) é da fase que implementar.
-- O `net8.0` sai do pacote numa **data anunciada**. A Planejadora propõe **10 de maio de 2027**, seis
-  meses depois do fim de suporte: a saída acontece na primeira versão publicada a partir dessa data. O
-  aviso vai para o `README.md` e para o `CHANGELOG.md` já no `0.6.0`. A data é uma proposta, e o dono a
-  confirma antes de o anúncio sair (`docs/plano/decisoes-pendentes.md`).
+- O `net8.0` sai do pacote numa **data anunciada**: **10 de maio de 2027**, seis meses depois do fim
+  de suporte. A saída acontece na primeira versão publicada a partir dessa data. O aviso vai para o
+  `README.md` e para o `CHANGELOG.md` já no `0.6.0`. A Planejadora propôs a data e o dono a confirmou
+  em 20 de novembro de 2026 (D-195).
 - Quem está em `net11.0` resolve o asset de `net10.0`. Isso passa a ser dito no `README.md`.
 
 ## Consequências

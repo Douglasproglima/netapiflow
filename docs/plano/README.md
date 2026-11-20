@@ -141,8 +141,8 @@ gitflow registrada no D-191. Vira a Fase 50, e o passo de teste com o pacote rea
 caminho do usuário (D-186). O dono decidiu o veículo (D-188): o achado das rotas internas no OpenAPI
 sai antes, como hotfix `0.5.2` (Fase 52), e o resto vai no `0.6.0` com a Fase 51. Decidiu também os
 TFMs (ADR-0025, que substitui o ADR-0023, D-189), a divulgação depois do `0.6.0` (D-190) e que o
-mecanismo da Fase 51 vira ADR (ADR-0026, D-192). Resta confirmar a data de saída do `net8.0`, em
-`decisoes-pendentes.md`.
+mecanismo da Fase 51 vira ADR (ADR-0026, D-192). A data de saída do `net8.0`, 10 de maio de 2027,
+foi confirmada pelo dono (D-195).
 
 ## Regra de avanço
 
