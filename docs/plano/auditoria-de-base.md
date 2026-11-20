@@ -28,7 +28,7 @@ antes de corrigir.
 | S1 | O OTLP exporta a mensagem de erro crua, sem sanitizar e sem os 300 caracteres. O painel mostra `password=[redacted]`, o OTLP recebeu `password=PW_SECRET` com 745 caracteres | **Código:** `FlowStep.cs:44` grava `exception.Message` na tag da atividade, e só o `FlowActivityListener` sanitiza, para o span do painel. A medição no OTLP é da auditoria | 54 |
 | S2 | Brechas no sanitizador: `Authorization: Bearer X` apaga só `Bearer`; `access_token=`, `client_secret=` e `DB_PASSWORD=` passam porque `\b` não casa depois de `_`; `api_key` não está na lista; trunca antes de sanitizar | **Código:** li a regex (`\b(password\|token\|authorization\|api-key\|secret)\s*[:=]\s*\S+`) e o corte antes da limpeza. As brechas decorrem do texto dela. Não rodei | 54 |
 | S3 | A identidade da trace é o W3C trace id que o cliente manda: o mesmo `traceparent` em duas requisições apaga a primeira trace, um serviço que chama a API duas vezes vira etapas dentro da trace do chamador, e um cliente anônimo escolhe o id e sobrescreve uma trace | **Código:** `InMemoryTraceStore` grava `_entries[trace.TraceId] = ...`, que sobrescreve, e `FlowRecorder.TryStartTrace` recusa um id que já está ativo. A auditoria reproduziu no `0.5.2` com um `traceparent` fixo em `/orders` e `/stock` (comandos abaixo): só `/stock` fica no store. Não reproduzi de novo eu mesma | 55 |
-| S4 | `AllowAnonymous` mais `RequireAuthorization` abrem o painel e o MCP | **Reproduzi no `0.5.2`** (Tarefa 50.10) | 50.10 |
+| S4 | `AllowAnonymous` mais `RequireAuthorization` abrem o painel e o MCP | **Reproduzi no `0.5.2`.** **Fechado** pela #360 (`8e0ff41`): eu reverifiquei o vermelho dos dois portões em worktree limpo, e a auditoria testou o pacote real `0.6.0-audit.3` nas duas ordens (D-216) | 50.10 |
 | S5 | `PathBase` | **Reproduzi no `0.5.2`**, e a Executora mediu a matriz inteira (53.0) | 53 |
 | S6 | O MCP e o REST não validam `Origin` nem `Host` em Development: `POST /flow/mcp` com `Origin: http://evil.example` deu 200. A especificação do MCP exige validar `Origin` contra DNS rebinding | **Reproduzido pela auditoria no `0.5.2` publicado** (comandos abaixo): `initialize` 200 com `Origin: http://evil.example`, `tools/list` lista as três ferramentas, `GET /flow/api/traces` 200 com `Origin` e `Host` falsos, `DELETE /flow/api/traces` 204. Não reproduzi de novo eu mesma | 56 |
 | S7 | Sem cabeçalhos de segurança em `/flow`: CSP, `X-Frame-Options` ou `frame-ancestors`, `X-Content-Type-Options`. O painel, com o botão de apagar traces, carrega num iframe | **Reproduzido pela auditoria no `0.5.2`**: `GET /flow/` só traz `Content-Type: text/html`, sem CSP, `X-Frame-Options`, `X-Content-Type-Options` nem `Referrer-Policy`. Não reproduzi de novo eu mesma | 56 |
@@ -188,6 +188,26 @@ navega e não diz nada. Isso vale para o 500 do F3 e para `EmitTraceIdHeader = f
 que a Executora derivou do código e **não mediu no navegador**. A Fase 58 faz o Runner dizer por que não
 achou o trace, nomeando as causas possíveis (a opção desligada, a rota fora do rastreamento), e o teste
 mede isso no navegador. A Parte B (f) não ganha esse escopo: ela só liga a opção.
+
+**Fase 56, exigências já decididas (D-216).** A matriz de autorização do painel e do MCP é teste de host real e
+cobre toda rota e todo método: no painel, a API REST (`GET`, `POST` e `DELETE`), o `/flow/api/stream`, os
+arquivos estáticos e o `index.html`; no MCP, `POST`, `GET` e `DELETE` em `/flow/mcp`. E cobre toda forma de pôr
+`AllowAnonymous`: a convenção `AllowAnonymous()`, o atributo `[AllowAnonymous]` no handler, o
+`MapGroup(...).AllowAnonymous()` e as duas ordens de `AllowAnonymous()` e `RequireAuthorization()`. A
+auditoria já mediu a ordem inversa e o stream no pacote `0.6.0-audit.3`. O fixture de
+`DashboardAuthorizationTests.cs` com `RouteTemplate = "/api/orders/1"` passa para template (`{id}`).
+Nomear as condições do portão (`HasAuthorizationRequirement` e `AllowsAnonymousAccess`) é opcional, para quem
+tocar o portão de novo.
+
+**Fase 59, a varredura única do XML doc (D-216).** Há 28 citações de `ADR-`, `D-` ou `risk R-` em comentários
+`///` sob `src/`. **A contagem é do commit `f6d6649`, e a Executora conta de novo antes de começar.**
+Exemplos: `TailSamplingOptions.cs:3` ("(D-82)"), `LogCorrelationOptions.cs:5` ("(ADR-0017)"),
+`FlowActivityListener.cs:12` ("(risk R-05)") e `FlowTraceDetail.cs:5` ("(D-19)"). Várias estão em membros
+públicos e aparecem no IntelliSense de quem instala o pacote, contra a regra de ouro do `CLAUDE.md`. A tarefa:
+zerar as 28; onde a citação carrega um porquê real, reescrever o porquê sem o número; e pôr no CI uma
+checagem que falhe com o padrão (por exemplo, um `grep` em `///` por `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk
+R-[0-9]`), com execução de prova vermelha. O parágrafo "Same security rule as the dashboard" do README do
+MCP, que só aponta para a seção do painel, também fica na Fase 59.
 
 ## Ordem aprovada, e por quê
 
