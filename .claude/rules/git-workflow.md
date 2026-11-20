@@ -53,6 +53,14 @@ Push, merge, tag, abrir ou mergear PR e criar release são visíveis publicament
 repositório é público). Nunca fazer nenhuma delas sem confirmação explícita na conversa.
 Confirmação vale para aquela ação, não para as próximas.
 
+### Delegação à auditoria (D-198)
+
+O dono delegou à sessão de auditoria (`AUDITORIA-16-11`) as ações públicas depois de ela aprovar com
+evidência: o merge, a tag, o Release e o back-merge, incluindo cada uso da exceção do D-191. A
+Planejadora e a Executora continuam sem executar nenhuma delas, e abrem a PR e param. Decisão de
+produto (escopo, posicionamento, datas) fica com o dono, e uma decisão explícita dele vale acima da
+auditoria.
+
 ### Exceção: PR só de documentação (D-109, critério ajustado pela D-154)
 
 O critério é **nenhum arquivo de código no diff**, não o diretório onde o arquivo mora: um `.md`
