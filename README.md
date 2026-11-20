@@ -563,6 +563,23 @@ separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Stu
 > Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
 > `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
 
+### The trace id header
+
+NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request, in every
+environment. It carries the trace id, the same value the W3C `traceparent` header already carries,
+and it is how `NetApiFlow.Testing` finds the trace of a response. Knowing a trace id does not open
+the dashboard: its routes stay behind the rules above.
+
+To keep the trace id out of your responses, turn the header off:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+```
+
+Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. Requests are still
+traced. `GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is
+off.
+
 ## MCP server
 
 ```bash
@@ -715,9 +732,18 @@ NetApiFlow never captures, under any configuration:
 > are cluttering your history with `(unmatched)` noise, `ExcludePaths` keeps them out of tracing
 > entirely.
 
-Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
-CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.
-See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+Error messages are sanitized and then truncated to 300 characters, in every output: the dashboard,
+the MCP tools, the stored trace, correlated logs and the `netapiflow.error.message` tag on the
+`Activity`, which is what an OpenTelemetry exporter sends. Sanitizing first means a secret cut by
+the limit leaves nothing behind. What is removed: e-mail addresses, CPF, CNPJ, long numeric
+sequences, and the value of any `key=value`, `key: value` or JSON `"key": "value"` pair whose key
+contains `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (also `api_key` and `apikey`) or
+`authorization`, in any case. A quoted value is removed whole, the value of `Authorization` includes
+its scheme (`Bearer`, `Basic` or any other), a bare `Bearer <token>` is removed, and the value of a
+connection string pair ends at `;`. Any message with one of those words followed by `:` or `=` loses
+what comes after it, even a harmless one such as `Unexpected token: '}'`, because a secret cannot be
+told apart from it and leaking one is the worse failure. See
+[`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
 
 The one exception is what you write yourself: a step's tags (see
 [Tagging a step](#tagging-a-step)) are stored and served exactly as given, with no sanitization.

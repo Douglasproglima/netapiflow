@@ -22,9 +22,12 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
   Core embute o valor como literal na própria consulta antes de chegar no driver. Isso não é falha
   de sanitização (não existe parâmetro para sanitizar), é o SQL de verdade contendo o valor; o
   mesmo risco de sempre do texto completo, não um caso novo.
-- Mensagem de erro é truncada (300 caracteres) **antes** de sanitizar, e sanitizada removendo
-  e-mail, CPF, CNPJ, sequência numérica longa e os pares `password=`/`token=`/`authorization`/
-  `api-key`/`secret`.
+- Mensagem de erro é sanitizada **antes** de truncar (300 caracteres), removendo e-mail, CPF, CNPJ,
+  sequência numérica longa e o valor de toda chave que contenha `password`, `passwd`, `pwd`, `token`,
+  `secret`, `api-key` ou `authorization`. Truncar antes deixa um pedaço de segredo sem a chave ao lado e a
+  mensagem limpa pode passar do limite. A entrada é limitada a 16384 caracteres antes de sanitizar, só para o
+  custo não crescer com uma mensagem enorme. A sanitização é por padrão e cobre as formas conhecidas, não
+  todas.
 - Tags são só as explicitamente adicionadas via `FlowStep.Tag(...)`, com limite de quantidade e
   tamanho (ver `docs/plano/riscos.md`, limites da seção 6.7 do prompt).
 

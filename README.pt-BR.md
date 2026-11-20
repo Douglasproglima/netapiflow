@@ -569,6 +569,23 @@ versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server
 > Encadear `.AllowAnonymous()` junto com `.RequireAuthorization()` não autoriza nada: o
 > `AllowAnonymous` vence a policy, então sem `IFlowAccessFilter` toda rota responde 404.
 
+### O cabeçalho com o trace id
+
+O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada, em qualquer
+ambiente. Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega, e é
+por ele que o `NetApiFlow.Testing` acha o trace de uma resposta. Saber um trace id não abre o
+dashboard: as rotas dele continuam atrás das regras acima.
+
+Para manter o trace id fora das suas respostas, desligue o cabeçalho:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+```
+
+Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. As requisições continuam
+rastreadas. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção
+enquanto o cabeçalho estiver desligado.
+
 ## Servidor MCP
 
 ```bash
@@ -725,8 +742,17 @@ O NetApiFlow nunca captura, em nenhuma configuração:
 > o próprio documento OpenAPI estiverem poluindo o histórico com ruído de `(unmatched)`,
 > `ExcludePaths` tira os dois do rastreamento de vez.
 
-Mensagem de erro é truncada em 300 caracteres e sanitizada, removendo e-mail, CPF, CNPJ, sequência
-numérica longa, e os pares `password=`/`token=`/`authorization`/`api-key`/`secret`. Veja
+Mensagem de erro é sanitizada e depois truncada em 300 caracteres, em toda saída: o dashboard, as
+ferramentas do MCP, o trace gravado, o log correlacionado e a tag `netapiflow.error.message` da
+`Activity`, que é o que um exportador do OpenTelemetry envia. Sanitizar primeiro quer dizer que um
+segredo cortado pelo limite não deixa pedaço nenhum. O que é removido: e-mail, CPF, CNPJ, sequência
+numérica longa, e o valor de qualquer par `chave=valor`, `chave: valor` ou `"chave": "valor"` em JSON
+cuja chave contenha `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (também `api_key` e
+`apikey`) ou `authorization`, em qualquer caixa. Valor entre aspas some inteiro, o valor de
+`Authorization` inclui o esquema (`Bearer`, `Basic` ou outro qualquer), um `Bearer <token>` solto é
+removido, e o valor de um par de connection string termina no `;`. Toda mensagem com uma dessas
+palavras seguida de `:` ou `=` perde o que vem depois, até uma inofensiva como
+`Unexpected token: '}'`, porque um segredo não se distingue dela e vazar um é a falha pior. Veja
 [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
 
 A única exceção é o que você mesmo escreve: as tags de uma etapa (veja
