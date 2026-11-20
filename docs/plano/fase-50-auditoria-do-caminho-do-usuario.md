@@ -51,7 +51,7 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
 4. Fase 53, Tarefa 53.0: medir o `PathBase`, sem corrigir (D-205).
 5. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
 6. Tarefa 50.12, o CI publica o núcleo em AOT (D-209).
-7. Parte B (50.6 e 50.7) e a tarefa 50.9.
+7. Parte B (50.6 e 50.7), a tarefa 50.9 e a 50.13 (F3, junto do (f)).
 8. Fase 51, e depois a correção da Fase 53.
 
 Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
@@ -467,6 +467,45 @@ schema que o código não aceita.
   store (salvar, consultar, mapa de arquitetura) passa. E o catálogo do banco criado pelo script,
   colunas e índices, é igual ao do criado pelo inicializador. Com `AutoCreateSchema = false` num banco
   vazio, nenhuma tabela é criada. Visto falhando antes, no `route_key` do script.
+
+### Tarefa 50.13 (F3): a resposta 500 de uma exceção não tratada sai com o cabeçalho
+
+Achado da auditoria de base, **reproduzido pela Planejadora no `0.5.2` publicado**: um `GET /boom` que lança uma
+exceção sem `UseExceptionHandler` responde 500 **sem** `X-NetApiFlow-TraceId`, em Development e em Production. Em
+Development a trace existe no store (`Error`, 500), então o cabeçalho é que sumiu, não a trace. Efeitos: o Runner
+mostra só "A requisição falhou." e o grafo não abre; o `NetApiFlow.Testing.GetFlowTrace` diz "did not track this
+request", o que é falso; e o primeiro bloco de "Asserting" do README, que faz uma requisição que lança, quebra.
+
+Vai junto do (f), na mesma branch (`feature/50b-opcoes-cabecalho-e-schema`), **num commit separado e com teste
+próprio**, porque os dois mexem no mesmo trecho do middleware que escreve o cabeçalho.
+
+**Causa a confirmar** (a Planejadora a deduz da leitura do `NetApiFlowMiddleware` e não a mediu): o middleware
+grava o cabeçalho no início e o reaplica no `finally` só se `!Response.HasStarted`. Em Development, o
+`DeveloperExceptionPage` limpa a resposta e escreve o corpo, então o `HasStarted` fica verdadeiro e o `finally` não
+consegue mais escrever. Em Production, o 500 é montado pelo servidor depois que a exceção sai do middleware.
+
+**Mecanismo a avaliar pela Executora, medindo e não supondo:** `Response.OnStarting`, que roda logo antes de os
+cabeçalhos irem ao cliente e vale também para uma resposta que o servidor monta. Se ela achar outro que cumpra
+os requisitos abaixo, decide e justifica no relatório.
+
+**Requisitos:**
+
+- Com `EmitTraceIdHeader = true`, **toda** resposta de uma requisição rastreada traz o cabeçalho, inclusive o 500
+  de exceção não tratada, em Development e em Production.
+- Com `EmitTraceIdHeader = false`, nenhuma resposta o traz, esse 500 incluído.
+- O `NetApiFlow.Testing.GetFlowTrace` passa a achar a trace desse 500.
+- Os casos que já funcionam (com `UseExceptionHandler`, a resposta normal) continuam funcionando, e o método
+  `RestoreTraceIdHeaderClearedByExceptionHandler` só sai se o mecanismo novo o cobrir.
+
+**Testes de host real, nos dois TFMs, vistos falhando antes.** Um aviso que a Planejadora não confirmou: o
+`TestServer` costuma **relançar** a exceção para o teste em vez de montar o 500, então este teste provavelmente
+precisa de um Kestrel de verdade. A Executora confirma e diz no relatório.
+
+**Fora desta tarefa:** o Runner explicar por que não achou o trace quando a resposta não traz o cabeçalho. Isso é a
+Fase 58, e depende desta.
+
+**Pronto quando:** os testes dos requisitos passam e o 500 sem tratamento foi visto sem o cabeçalho antes da
+correção, nos dois TFMs, em Development e em Production.
 
 ## Critério que vale para a fase inteira
 
