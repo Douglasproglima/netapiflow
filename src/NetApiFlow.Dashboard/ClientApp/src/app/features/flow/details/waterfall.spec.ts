@@ -40,6 +40,22 @@ function makeSpan(overrides: Partial<FlowSpan> & Pick<FlowSpan, 'spanId' | 'star
   };
 }
 
+function makeTraceWithinOneMillisecond(): FlowTraceDetail {
+  return makeTrace({
+    startedAt: '2026-01-01T00:00:00.123000Z',
+    endedAt: '2026-01-01T00:00:00.123441Z',
+    durationMicros: 441,
+    spans: [
+      makeSpan({
+        spanId: 'endpoint',
+        startedAt: '2026-01-01T00:00:00.123150Z',
+        endedAt: '2026-01-01T00:00:00.123270Z',
+        durationMicros: 120,
+      }),
+    ],
+  });
+}
+
 describe('buildWaterfall', () => {
   it('returns an empty list for a trace with no spans', () => {
     expect(buildWaterfall(makeTrace({ spans: [] }), 250_000)).toEqual([]);
@@ -148,6 +164,13 @@ describe('buildWaterfall', () => {
     const [row] = buildWaterfall(trace, 250_000);
 
     expect(row.state).toBe('error');
+  });
+
+  it('positions the bar by microseconds when the whole trace fits inside one millisecond', () => {
+    const [row] = buildWaterfall(makeTraceWithinOneMillisecond(), 250_000);
+
+    expect(row.offsetPercent).toBeCloseTo((150 / 441) * 100, 1);
+    expect(row.widthPercent).toBeCloseTo((120 / 441) * 100, 1);
   });
 });
 
@@ -263,5 +286,32 @@ describe('computeUnexplainedTime', () => {
     const result = computeUnexplainedTime(trace);
 
     expect(result?.unexplainedMicros).toBe(50_000);
+  });
+
+  it('counts a step shorter than a millisecond as coverage instead of reporting the whole trace as uncovered', () => {
+    const result = computeUnexplainedTime(makeTraceWithinOneMillisecond());
+
+    expect(result?.unexplainedMicros).toBe(321);
+    expect(result?.unexplainedPercent).toBeCloseTo((321 / 441) * 100, 1);
+  });
+
+  it('reads sub-millisecond digits beyond the sixth without losing the microsecond', () => {
+    const trace = makeTrace({
+      startedAt: '2026-01-01T00:00:00.1230000Z',
+      endedAt: '2026-01-01T00:00:00.1234419Z',
+      durationMicros: 441,
+      spans: [
+        makeSpan({
+          spanId: 'endpoint',
+          startedAt: '2026-01-01T00:00:00.1231507Z',
+          endedAt: '2026-01-01T00:00:00.1232703Z',
+          durationMicros: 120,
+        }),
+      ],
+    });
+
+    const result = computeUnexplainedTime(trace);
+
+    expect(result?.unexplainedMicros).toBe(321);
   });
 });
