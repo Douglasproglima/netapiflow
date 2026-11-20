@@ -27,12 +27,12 @@ antes de corrigir.
 |---|---|---|---|
 | S1 | O OTLP exporta a mensagem de erro crua, sem sanitizar e sem os 300 caracteres. O painel mostra `password=[redacted]`, o OTLP recebeu `password=PW_SECRET` com 745 caracteres | **Código:** `FlowStep.cs:44` grava `exception.Message` na tag da atividade, e só o `FlowActivityListener` sanitiza, para o span do painel. A medição no OTLP é da auditoria | 54 |
 | S2 | Brechas no sanitizador: `Authorization: Bearer X` apaga só `Bearer`; `access_token=`, `client_secret=` e `DB_PASSWORD=` passam porque `\b` não casa depois de `_`; `api_key` não está na lista; trunca antes de sanitizar | **Código:** li a regex (`\b(password\|token\|authorization\|api-key\|secret)\s*[:=]\s*\S+`) e o corte antes da limpeza. As brechas decorrem do texto dela. Não rodei | 54 |
-| S3 | A identidade da trace é o W3C trace id que o cliente manda: o mesmo `traceparent` em duas requisições apaga a primeira trace, um serviço que chama a API duas vezes vira etapas dentro da trace do chamador, e um cliente anônimo escolhe o id e sobrescreve uma trace | **Código:** `InMemoryTraceStore` grava `_entries[trace.TraceId] = ...`, que sobrescreve, e `FlowRecorder.TryStartTrace` recusa um id que já está ativo. A medição no `0.5.2` é da auditoria | 55 |
+| S3 | A identidade da trace é o W3C trace id que o cliente manda: o mesmo `traceparent` em duas requisições apaga a primeira trace, um serviço que chama a API duas vezes vira etapas dentro da trace do chamador, e um cliente anônimo escolhe o id e sobrescreve uma trace | **Código:** `InMemoryTraceStore` grava `_entries[trace.TraceId] = ...`, que sobrescreve, e `FlowRecorder.TryStartTrace` recusa um id que já está ativo. A auditoria reproduziu no `0.5.2` com um `traceparent` fixo em `/orders` e `/stock` (comandos abaixo): só `/stock` fica no store. Não reproduzi de novo eu mesma | 55 |
 | S4 | `AllowAnonymous` mais `RequireAuthorization` abrem o painel e o MCP | **Reproduzi no `0.5.2`** (Tarefa 50.10) | 50.10 |
 | S5 | `PathBase` | **Reproduzi no `0.5.2`**, e a Executora mediu a matriz inteira (53.0) | 53 |
-| S6 | O MCP e o REST não validam `Origin` nem `Host` em Development: `POST /flow/mcp` com `Origin: http://evil.example` deu 200. A especificação do MCP exige validar `Origin` contra DNS rebinding | **Não verifiquei** | 56 |
-| S7 | Sem cabeçalhos de segurança em `/flow`: CSP, `X-Frame-Options` ou `frame-ancestors`, `X-Content-Type-Options`. O painel, com o botão de apagar traces, carrega num iframe | **Não verifiquei** | 56 |
-| F1 | O estado "Aguardando" nunca aparece: o middleware abre a trace com `(unmatched)` e só grava a rota no fim, e o painel busca o blueprint por essa rota. "Não executado" ao vivo também não funciona. E "Não executado" usa o **último sucesso**, mesmo posterior à trace aberta, então o desenho de uma trace antiga muda com o tempo | **Código:** a primeira parte confere, o middleware abre com `UnmatchedRouteTemplate` e atualiza a rota no `finally`. A parte do blueprint posterior: não verifiquei | 57 |
+| S6 | O MCP e o REST não validam `Origin` nem `Host` em Development: `POST /flow/mcp` com `Origin: http://evil.example` deu 200. A especificação do MCP exige validar `Origin` contra DNS rebinding | **Reproduzido pela auditoria no `0.5.2` publicado** (comandos abaixo): `initialize` 200 com `Origin: http://evil.example`, `tools/list` lista as três ferramentas, `GET /flow/api/traces` 200 com `Origin` e `Host` falsos, `DELETE /flow/api/traces` 204. Não reproduzi de novo eu mesma | 56 |
+| S7 | Sem cabeçalhos de segurança em `/flow`: CSP, `X-Frame-Options` ou `frame-ancestors`, `X-Content-Type-Options`. O painel, com o botão de apagar traces, carrega num iframe | **Reproduzido pela auditoria no `0.5.2`**: `GET /flow/` só traz `Content-Type: text/html`, sem CSP, `X-Frame-Options`, `X-Content-Type-Options` nem `Referrer-Policy`. Não reproduzi de novo eu mesma | 56 |
+| F1 | O estado "Aguardando" nunca aparece: o middleware abre a trace com `(unmatched)` e só grava a rota no fim, e o painel busca o blueprint por essa rota. "Não executado" ao vivo também não funciona. E "Não executado" usa o **último sucesso**, mesmo posterior à trace aberta, então o desenho de uma trace antiga muda com o tempo | **Código:** a primeira parte confere, o middleware abre com `UnmatchedRouteTemplate` e atualiza a rota no `finally`. A parte do blueprint posterior: **reproduzida pela auditoria no `0.5.2`** (comandos abaixo): a trace B, mais nova, vira o blueprint da trace A, mais antiga, porque `/blueprint` não recebe âncora de tempo. Não reproduzi de novo eu mesma | 57 |
 | F2 | O Npgsql 10 sai sempre como "SQL command", sem SQL, porque o código só lê `db.statement` e o Npgsql 10 manda `db.query.text`. A suíte testa só o Npgsql do EF 9.0.4 | **Código:** `NpgsqlActivityTagNames.Statement = "db.statement"`. Que o Npgsql 10 emita `db.query.text`: não verifiquei | 58 |
 | F3 | Uma resposta 500 de exceção não tratada sai sem `X-NetApiFlow-TraceId`, embora a trace exista. O Runner mostra só "A requisição falhou.", o `NetApiFlow.Testing` diz "did not track this request", e o primeiro bloco de "Asserting" do README quebra | **Reproduzi no `0.5.2`**: 500 sem o cabeçalho em Development e em Production, e em Development a trace existe no store (`Error`, 500) | 58 |
 | F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()`. Sem a chamada, nada aparece e nada avisa | **Não verifiquei** | 58 |
@@ -92,10 +92,59 @@ Fase 60, se couber. O que não couber vira item de roadmap, um registro por item
 - O `NetApiFlow.Storage.SqlServer` traz o `Microsoft.Data.SqlClient` 5.2.2, que não grava comandos. O README
   não fala da licença do MediatR 13 ou superior.
 
-## Ordem proposta, e por quê
+## Reproduções da auditoria, no `0.5.2` publicado
+
+Vêm da auditoria e **não foram rodadas de novo pela Planejadora**. Pacotes `NetApiFlow`,
+`NetApiFlow.Dashboard` e `NetApiFlow.Mcp` `0.5.2`, `net10.0`, Development, com `AddNetApiFlowMcp` e
+`UseNetApiFlowMcp` e o painel montado. `B` é `http://127.0.0.1:<porta>`. A primeira tarefa de cada fase
+parte do comando, e o teste de host real que o prova entra com a correção.
+
+**S6, sem checagem de `Origin` nem de `Host`:**
+
+```text
+curl -s -o /dev/null -w "%{http_code}" -X POST "$B/flow/mcp" -H "Origin: http://evil.example" -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"x","version":"1"}}}'
+curl -s -o /dev/null -w "%{http_code}" "$B/flow/api/traces" -H "Origin: http://evil.example" -H "Host: evil.example"
+curl -s -o /dev/null -w "%{http_code}" -X DELETE "$B/flow/api/traces" -H "Origin: http://evil.example"
+```
+
+Deu 200, 200 e 204. Com `{"jsonrpc":"2.0","id":2,"method":"tools/list"}` o MCP listou
+`get_component_stats`, `get_trace` e `list_recent_traces`.
+
+**S7, cabeçalhos ausentes:** `curl -s -D - -o /dev/null "$B/flow/"`. O único cabeçalho de conteúdo é
+`Content-Type: text/html`. Não há `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` nem
+`Referrer-Policy`.
+
+**F1, blueprint posterior.** Um endpoint marcado com retorno antecipado:
+
+```csharp
+app.MapGet("/orders/{id:int}", async (int id, bool cached) => {
+    using (NetApiFlow.NetApiFlow.Step("OrderCache", "TryGet")) { await Task.Delay(5); }
+    if (cached) return "cached";
+    using (NetApiFlow.NetApiFlow.Step("OrderRepository", "Find")) { await Task.Delay(5); }
+    return "loaded";
+}).WithNetApiFlowTracking();
+```
+
+1. `DELETE /flow/api/traces`. 2. `GET /orders/1?cached=true` (trace A). 3. `GET /orders/2?cached=false` (trace
+B, depois de A). 4. `GET /flow/api/blueprint?method=GET&route=/orders/{id:int}`. O blueprint devolvido é a
+trace B, posterior à A, com `OrderCache.TryGet` e `OrderRepository.Find`. A trace A, mais antiga, é desenhada
+contra uma execução que aconteceu depois dela.
+
+**S3, o mesmo `traceparent`:** `TP="00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"`, depois
+`curl -H "traceparent: $TP" $B/orders` e `curl -H "traceparent: $TP" $B/stock`. Só `/stock` fica em
+`/flow/api/traces`. Um serviço que chama `/orders` e `/stock` com `HttpClient` gera uma trace só, a do
+chamador, com as duas requisições como etapas filhas.
+
+**F2, o Npgsql 10 com `db.query.text`: ainda não reproduzido por ninguém.** O projeto do revisor ficou no
+Npgsql 9, e a reprodução da auditoria foi interrompida por um travamento da máquina. A auditoria a refaz, e
+até lá o item fica como não verificado.
+
+## Ordem aprovada, e por quê
+
+A auditoria aprovou esta ordem em 20/11/2026, sem mudança.
 
 Já na fila, pela ordem decidida antes: **50.10** (S4), **50.12** (AOT no CI), **Parte B** (f, g) e **50.9**,
-**Fase 51** (a 51.9 primeiro), **correção da Fase 53**. A proposta encaixa as fases novas assim:
+**Fase 51** (a 51.9 primeiro), **correção da Fase 53**. A ordem aprovada encaixa as fases novas assim:
 
 1. **50.10 e 50.12.** Seguem como estão.
 2. **Fase 54 (S1, S2): os segredos nunca saem.** Sem dependência, é segurança de dado e é pequena.
@@ -119,10 +168,10 @@ README (59) fica para o fim para não ser reescrito duas vezes.
 
 ## O que isto faz com a `0.6.0`
 
-A `0.6.0` deixou de ser as Fases 50 e 51 e passou a ter, além delas, as fases 53 a 59, e a 60 se couber.
-Escopo e data são decisão de produto, do dono (D-195, D-198). A Planejadora registra o tamanho e não o
-decide: se o dono preferir uma `0.6.0` menor, o corte natural é o que a auditoria já separou, nível 3 numa
-versão seguinte.
+**Decisão do dono (D-212): tudo na `0.6.0`, sem data.** O escopo é as Fases 50, 51 e 53 a 59, e a 60 se
+couber. A `0.6.0` sai quando o nível 1 e o nível 2 estiverem fechados e a segunda passada da auditoria
+passar, limpa nos dois níveis. A `0.6.0` deixou de ser as Fases 50 e 51 e ficou maior, e o dono escolheu
+isso de olhos abertos.
 
 ## ADRs que precisam existir antes do código
 
