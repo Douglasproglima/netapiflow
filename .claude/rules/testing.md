@@ -157,4 +157,7 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   ou `[MemberData]`, nunca um `[Fact]` por combinação.
 - Nunca usar banco real fora de `NetApiFlow.Storage.Tests`, `NetApiFlow.Npgsql.IntegrationTests` e
   `NetApiFlow.SqlClient.IntegrationTests`.
+- `ci.yml` e `release.yml` rodam a mesma lista de projetos de teste (D-183). Projeto de teste novo
+  entra nos dois na mesma PR. O do SqlClient ficou fora do CI e o do Npgsql fora do `release.yml`
+  por falta dessa regra.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
