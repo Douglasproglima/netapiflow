@@ -11,6 +11,11 @@ internal sealed class TracingRoutePolicy(NetApiFlowOptions options)
             return false;
         }
 
+        if (string.Equals(routeTemplate, options.OpenApiDocumentPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (options.ExcludePatterns.Any(pattern => RouteGlobMatcher.Matches(pattern, routeTemplate)))
         {
             return false;
