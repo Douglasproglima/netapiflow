@@ -132,8 +132,8 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 ```
 
-O pacote exige EF Core 9 ou superior, também no `net8.0`. Um app em EF Core 8 com um provedor do EF 8
-falha com `TypeLoadException` ao instalar o pacote.
+O pacote funciona com EF Core 8.0.10 ou superior, no `net8.0` e no `net10.0`. Foi testado no
+EF Core 8, 9 e 10.
 
 ### Tags numa etapa
 
