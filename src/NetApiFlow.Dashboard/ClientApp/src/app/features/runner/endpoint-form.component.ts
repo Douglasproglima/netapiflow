@@ -3,6 +3,7 @@ import { Component, computed, inject, output, signal } from '@angular/core';
 import { HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { environment } from '../../../environments/environment';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
 import { OpenApiDocument, OpenApiSecurityScheme } from '../../core/models';
@@ -432,14 +433,17 @@ export class EndpointFormComponent {
     request.subscribe({
       next: (response) => this.onDispatched(response.headers.get('X-NetApiFlow-TraceId')),
       error: (error: HttpErrorResponse) => {
-        // A non-2xx response still carries the trace id header, so the Error scenario stays followable.
-        const traceId = error.headers.get('X-NetApiFlow-TraceId');
-        if (!traceId) {
-          this.sendError.set('action.requestFailed');
+        const traceIdOfFailedRequest = error.headers.get('X-NetApiFlow-TraceId');
+        if (!traceIdOfFailedRequest) {
+          this.sendError.set(this.messageForFailureWithoutTrace());
         }
-        this.onDispatched(traceId);
+        this.onDispatched(traceIdOfFailedRequest);
       },
     });
+  }
+
+  private messageForFailureWithoutTrace(): TranslationKey {
+    return environment.isDemoMode ? 'action.demoCannotSend' : 'action.requestFailed';
   }
 
   private onDispatched(traceId: string | null): void {

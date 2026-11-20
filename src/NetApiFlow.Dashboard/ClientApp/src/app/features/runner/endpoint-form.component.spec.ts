@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { EndpointFormComponent } from './endpoint-form.component';
 import { DashboardConfig, OpenApiDocument } from '../../core/models';
 import { RunnerCredentialsService } from '../../core/runner-credentials.service';
+import { environment } from '../../../environments/environment';
 
 const CONFIG: DashboardConfig = {
   slowThresholdMicros: 250_000,
@@ -208,6 +209,41 @@ describe('EndpointFormComponent', () => {
 
     expect(fixture.componentInstance.lastTraceId()).toBe('t1');
     expect(dispatchedTraceId).toBe('t1');
+  });
+
+  describe('a failure that carries no trace id', () => {
+    async function sendAndFailWithoutTraceId(): Promise<ComponentFixture<EndpointFormComponent>> {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+      httpMock.expectOne('/api/orders/5').flush(null, { status: 404, statusText: 'Not Found' });
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    it('says in the demo that it shows recorded runs and sends no real request', async () => {
+      environment.isDemoMode = true;
+      try {
+        const fixture = await sendAndFailWithoutTraceId();
+
+        expect(fixture.componentInstance.sendError()).toBe('action.demoCannotSend');
+        expect(fixture.nativeElement.textContent).toContain('não envia requisições de verdade');
+      } finally {
+        environment.isDemoMode = false;
+      }
+    });
+
+    it('keeps the generic message outside the demo', async () => {
+      const fixture = await sendAndFailWithoutTraceId();
+
+      expect(fixture.componentInstance.sendError()).toBe('action.requestFailed');
+    });
   });
 
   it('sends a configured custom header on the dispatched request', async () => {
