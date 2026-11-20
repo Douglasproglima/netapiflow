@@ -39,6 +39,9 @@ commit de governança) e para texto em inglês visível a quem usa o pacote (REA
   em fragmentos telegráficos, é candidata a virar frase de verdade).
 - Citar fase, etapa de plano ou número de ADR em comentário de código (regra de ouro do
   `CLAUDE.md`, sem exceção desde D-87).
+- "Fumaça" como nome de teste (D-184). Em português, escrever "teste com o pacote real". O termo
+  confunde quem lê. Vale para os arquivos vivos; `decisoes.md` e os planos de fases fechadas ficam
+  como estão, porque são histórico.
 
 ## Antes de entregar texto
 
