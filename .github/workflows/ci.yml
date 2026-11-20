@@ -152,6 +152,29 @@ jobs:
             dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
           fi
 
+      - name: Create the local package folders the verification projects list
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: mkdir -p tests/manual-verification/local-nuget-feed tests/manual-verification/local-packages
+
+      - name: Publish the core as native AOT, any trim or AOT warning fails
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerification
+        run: dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=true
+
+      - name: Publish the net8.0 core host as native AOT, any IL warning in the output fails
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish -c Release -r linux-x64 -o ./publish | tee publish.log
+          if grep -E "warning IL[0-9]+" publish.log; then exit 1; fi
+
+      - name: Run the net8.0 native binary, the HttpClient backfill must record method, URL and status
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        run: ./publish/AotCoreVerificationNet8 --verify-http-backfill
+
       - name: Pack (verification only)
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet pack NetApiFlow.slnx -c Release --no-build

@@ -11,8 +11,8 @@ Vai no `0.6.0` (D-210, D-212). É defeito antigo e não regressão, então não 
 
 | # | Achado (auditoria de base) | Conferi |
 |---|---|---|
-| S1 | O OTLP exporta a mensagem de erro crua, sem sanitizar e sem os 300 caracteres. O painel mostra `password=[redacted]`, e o OTLP recebeu `password=PW_SECRET` com 745 caracteres | **Código.** `FlowStep.MarkError` (`FlowStep.cs:44`) grava `exception.Message` cru na tag `netapiflow.error.message` da atividade. É o **único** ponto que grava essa tag. Quem lê a tag, o `FlowActivityListener` (linha 204), sanitiza, e é o que alimenta o painel. Um exportador que lê a atividade direto não passa por ali. A medição no OTLP foi do revisor independente C, e a auditoria a reproduz agora (correção dela: ela só tinha confirmado a causa no código). Eu não a reproduzi |
-| S2 | Brechas no sanitizador: `Authorization: Bearer X` apaga só `Bearer` e deixa `X`; `access_token=`, `client_secret=` e `DB_PASSWORD=` passam, porque `\b` não casa depois de `_`; `api_key` não está na lista; o corte em 300 vem **antes** da limpeza | **Código.** Li a regex `\b(password\|token\|authorization\|api-key\|secret)\s*[:=]\s*\S+` e a ordem em `ErrorMessageSanitizer.Sanitize` (corta, depois limpa). Cada brecha decorre do texto da regex. Não rodei |
+| S1 | O OTLP exporta a mensagem de erro crua, sem sanitizar e sem os 300 caracteres. O painel mostra `password=[redacted]`, e o OTLP recebeu `password=PW_SECRET` com 745 caracteres | **Código.** `FlowStep.MarkError` (`FlowStep.cs:44`) grava `exception.Message` cru na tag `netapiflow.error.message` da atividade. É o **único** ponto que grava essa tag. Quem lê a tag, o `FlowActivityListener` (linha 204), sanitiza, e é o que alimenta o painel. Um exportador que lê a atividade direto não passa por ali. **Reproduzido pela auditoria** com um coletor real nos 13 casos abaixo, contra o pacote publicado `0.5.2`: o OTLP vaza em todos. A medição original foi do revisor independente C. Eu não a reproduzi de novo |
+| S2 | Brechas no sanitizador: `Authorization: Bearer X` apaga só `Bearer` e deixa `X`; `access_token=`, `client_secret=` e `DB_PASSWORD=` passam, porque `\b` não casa depois de `_`; `api_key` não está na lista; o corte em 300 vem **antes** da limpeza | **Código.** Li a regex `\b(password\|token\|authorization\|api-key\|secret)\s*[:=]\s*\S+` e a ordem em `ErrorMessageSanitizer.Sanitize` (corta, depois limpa). Cada brecha decorre do texto da regex. **Reproduzido pela auditoria** nos 13 casos abaixo: o **painel** vaza em 10 das 12 formas de segredo, e só pega `password=` simples e `Password=` de connection string. Eu não reproduzi de novo |
 
 **O mapa de por onde a mensagem de erro entra em cada saída**, que a Planejadora fez lendo o código. Todo o resto
 já sanitiza antes de entrar no modelo de domínio, e é o modelo de domínio que alimenta o painel (REST e SSE), o
@@ -25,7 +25,9 @@ MCP e os dois storages:
 | `FlowLogger` (linhas 36 e 38) | Sim |
 | **`FlowStep.MarkError` (linha 44), a tag da atividade** | **Não, e é o que o OTLP exporta** |
 
-Por isso o S1 tem um ponto de correção só, e o S2 vale para todas as saídas, incluindo o OTLP depois do S1.
+Por isso o S1 tem um ponto de correção só, e o S2 vale para todas as saídas, incluindo o OTLP depois do S1. E
+o S2 é maior do que parecia: como o REST, o SSE, o MCP, o log e o storage usam o mesmo sanitizador, **todos**
+vazam hoje as formas que a regex não pega, não só o OTLP.
 
 ## Ponto de parada
 
@@ -43,8 +45,10 @@ Dois testes de **host real**, vistos falhando antes de qualquer mudança (`.clau
   lê o que o exportador recebeu e exige que `PW_SECRET` não apareça e que a mensagem não passe de 300
   caracteres. Hoje falha. Não vale um `ActivityListener` próprio no lugar do exportador: é o pipeline do
   pacote que a promessa cobre.
-- **S2.** Cada entrada da tabela da Tarefa 54.1 contra o sanitizador, pelo caminho que o painel usa. Hoje falham
-  as quatro famílias que a auditoria listou.
+- **S2.** Os **13 casos literais** da auditoria (a tabela acima), mais cada linha da tabela da Tarefa 54.1,
+  contra o sanitizador, pelo caminho que o painel usa. O vermelho de antes tem de ser **comparável** com o da
+  auditoria: a mesma entrada, e o resultado de hoje (painel e OTLP) é o da tabela. Hoje falham 10 das 12 formas
+  no painel e os 13 casos no OTLP.
 
 A primeira execução parte dos comandos e das entradas que a auditoria mediu (a Planejadora os cola aqui
 quando chegarem), e o relatório diz o que foi reproduzido e o que não.
@@ -56,6 +60,46 @@ corte antes da limpeza pode deixar um pedaço que a regra já não reconhece (um
 cortados no meio). Para o custo não crescer com uma mensagem enorme, a entrada pode ser limitada a um teto
 generoso antes de sanitizar, e o teto exato é escolha da Executora, com teste.
 
+## Os 13 casos que a auditoria mediu, o ponto de partida da tabela de teste
+
+Pacotes publicados `0.5.2`, `net10.0`, Development. Cada caso é uma exceção lançada por um passo
+(`step.MarkError(new InvalidOperationException(...))`), lida no painel (`errorMessage` de
+`GET /flow/api/traces/{id}`) e no atributo `netapiflow.error.message` do span que um coletor OpenTelemetry
+real recebeu. **Cada um tem de sair limpo em toda saída.**
+
+| # | Entrada | Painel hoje | OTLP hoje |
+|---|---|---|---|
+| 0 | `password=PW_SECRET joe@example.com ` mais 700 `x` | Limpo, mas com 302 caracteres | **Vaza**, 735 caracteres, sem truncar |
+| 1 | `Authorization: Bearer TOKEN_A` | **Vaza** (`Authorization=[redacted] TOKEN_A`) | **Vaza** |
+| 2 | `access_token=TOKEN_B` | **Vaza** | **Vaza** |
+| 3 | `client_secret=TOKEN_C` | **Vaza** | **Vaza** |
+| 4 | `DB_PASSWORD=TOKEN_D` | **Vaza** | **Vaza** |
+| 5 | `api_key=TOKEN_E` | **Vaza** | **Vaza** |
+| 6 | `apikey=TOKEN_F` | **Vaza** | **Vaza** |
+| 7 | `{"password":"TOKEN_G"}` | **Vaza** | **Vaza** |
+| 8 | `Server=db;Password=TOKEN_H;` | Limpo | **Vaza** |
+| 9 | `Server=db;Pwd=TOKEN_I;` | **Vaza** | **Vaza** |
+| 10 | `Bearer TOKEN_J` | **Vaza** | **Vaza** |
+| 11 | `xpassword=TOKEN_K` | **Vaza** | **Vaza** |
+| 12 | 296 `A` seguidos de ` password=TOKEN_L` | Limpo, porque o corte cortou o segredo | **Vaza**, 313 caracteres |
+
+O OTLP vaza nos 13 casos. O painel vaza em 10 das 12 formas de segredo. O caso 0 mostra um terceiro achado: como o
+corte vem antes da limpeza, a mensagem limpa **passa do limite** (302 caracteres), então o teste confere o
+tamanho **depois** de sanitizar.
+
+O caso 11 (`xpassword=`) decide o desenho do padrão (decisão da auditoria): a regra é "a chave **contém** uma
+das palavras", e não "a chave é igual a uma palavra". As palavras são `password`, `passwd`, `pwd`, `token`,
+`secret`, `api-key` (também com `_` e sem separador) e `authorization`, em qualquer caixa. O falso
+positivo em `tokenizer=`, `secretary=` e `passwordless=` é **conhecido e aceito** (medido pela Executora): perder
+uma palavra de diagnóstico custa menos que vazar um segredo no painel e no OTLP, e a Executora lista no
+relatório os que o teste achar além desses.
+
+**Proteger o valor, não só a chave (decisão a partir da medição da Executora).** Casar a chave mais largo
+não basta se o limite do valor continua errado. O padrão novo trata: o valor entre aspas (`"..."` ou `'...'`)
+vai até a aspa de fechamento, e não até o primeiro espaço; o esquema do `Authorization` (`Bearer x`, `Basic x`
+ou um esquema desconhecido) é **parte do valor**; e a chave com aspas antes do `:` (JSON, `"password":"x"`)
+tem um ramo próprio, porque as aspas entre a chave e o `:` quebram o `\s*[:=]` atual.
+
 **O que a função tem de pegar**, cada caso com teste:
 
 | Entrada | Esperado |
@@ -64,12 +108,16 @@ generoso antes de sanitizar, e o teto exato é escolha da Executora, com teste.
 | `access_token=XYZ`, `client_secret=S`, `DB_PASSWORD=P` | Somem. O casamento não depende de `\b` junto de `_` |
 | `api_key=K`, `api-key=K`, `apikey=K` | Somem |
 | `password=PW`, `token=T`, `secret=S`, `authorization=A` | Continuam sumindo, em qualquer caixa |
-| Um valor entre aspas ou com espaço (`password="a b"`) | Some inteiro, ou o teste diz o que sobra e por quê |
+| Valor entre aspas ou com espaço: `password = 'two words'` e `password="a b"` | O valor inteiro some, até a aspa de fechamento. Hoje o primeiro vira `password=[redacted] words'` |
+| `Password=abc;Server=db` | O `Password` some até o `;`, e o `Server=db` fica |
 | JSON com a chave entre aspas: `"password":"x"` e `"access_token": "x"` | O valor some. Uma exceção de desserialização costuma trazer esse formato |
 | Par de connection string: `Password=x;` e `Pwd=x;` | O valor some até o `;`. Uma exceção de banco costuma trazer esse formato |
 | `Bearer x` **sem** a palavra `Authorization` antes | O token some |
 | Uma mensagem de 297 caracteres seguida de um segredo | Nada do segredo na saída |
 | Uma mensagem já sanitizada | Sanitizar de novo não muda nada (idempotência) |
+| O tamanho depois de sanitizar | Nunca passa de 300 caracteres. Hoje o caso 0 sai com 302 no painel |
+| Chave que **termina** com (ou contém) uma palavra sensível, em qualquer caixa: `DB_PASSWORD`, `xpassword`, `userPassword`, `X-Api-Key`, `refresh_token` | O valor some. A regra é "a chave contém uma das palavras", e a lista inclui `passwd` e `pwd` |
+| `Authorization: Basic dXNlcjpwYXNz`, e um esquema desconhecido (`Authorization: Foo abc`) | O valor inteiro some, não só o nome do esquema |
 
 **Restrições que a Planejadora leu e a Executora confirma:** todo padrão continua com
 `RegexOptions.NonBacktracking`, que roda em tempo linear e é a garantia de que nenhum padrão sofre
@@ -94,9 +142,9 @@ sem sanitização.
 
 ## Tarefa 54.3: o teste por cada saída
 
-Um teste de host real, com a mesma exceção contendo `password=PW_SECRET`, `access_token=XYZ`,
-`client_secret=S`, `DB_PASSWORD=P`, `api_key=K` e `Authorization: Bearer abc.def`, que lê **cada** saída e exige que
-nenhum dos valores apareça e que a mensagem não passe de 300 caracteres:
+Um teste de host real que lança, para **cada um dos 13 casos literais** (e para as linhas da tabela da 54.1), a
+exceção com aquela entrada, lê **cada** saída e exige que nenhum valor secreto apareça e que a mensagem não passe
+de 300 caracteres **depois** de sanitizar (o caso 0 dá 302 hoje):
 
 | Saída | Como o teste lê |
 |---|---|
@@ -120,16 +168,86 @@ Visto falhando antes onde falha hoje (o OTLP), e passando depois.
   de chegar ao OpenTelemetry, e o sanitizador cobre `access_token`, `client_secret`, `DB_PASSWORD`, `api_key` e
   `Authorization: Bearer ...`.
 
-**Dependência de teste nova.** O `OpenTelemetry.Exporter.InMemory` só entra em projeto de teste. A Executora
-confere a licença (Apache 2.0, compatível), a manutenção e o `dotnet list package --vulnerable`, e registra o
-pacote no resumo com o motivo (`.claude/rules/dependencies.md`). Ele não entra no `.nuspec`.
+**Dependência de teste.** O `OpenTelemetry.Exporter.InMemory` já era do `NetApiFlow.OpenTelemetry.Tests`
+(`1.20.1`, em `Directory.Packages.props`), então não há pacote de exportação novo. A Executora acrescentou
+`Microsoft.AspNetCore.Mvc.Testing` a esse projeto, na versão central que os outros projetos de teste já
+usam, e registra isso no resumo. Nada disso entra no `.nuspec`.
 
-## Pergunta em aberto, para a auditoria e o dono
+## O advisory (D-221)
 
-O S1 faz uma promessa pública ("never captures") deixar de valer para quem exporta pelo OTLP. Isto também merece
-um **GitHub Security Advisory**, como o do D-203, ou só a entrada de `### Security`? É decisão de comunicação
-pública, do dono, e a Planejadora não a toma. A recomendação, para ele decidir: o advisory só se existir um
-caminho real em que um segredo chegue à mensagem de uma exceção do usuário, o que o próprio teste da 54.0 mostra.
+O dono decidiu publicar um **segundo GitHub Security Advisory**, de severidade baixa, para este achado,
+junto do `0.6.0` e do primeiro (D-203, D-206). Quem publica é a auditoria. Esta seção é só o rascunho, em
+inglês, sem dado de app real. A Executora não publica nada.
+
+**O que foi verificado para escrever o texto, e o que não foi:**
+
+- A tag crua `netapiflow.error.message` aparece em `FlowStep.cs` já no `v0.1.0` (commit `1f9d7f8`) e segue lá no
+  `v0.5.2`. O `NetApiFlow` publicado vai de `0.1.0` a `0.5.2`.
+- A regex de chaves do sanitizador é a mesma no `v0.1.0` e no `v0.5.2` (nasceu na Fase 1, commit `9eb10b2`).
+- O `NetApiFlow.OpenTelemetry` foi publicado de `0.2.0` a `0.5.2`. O `AddNetApiFlowOtlpExport` registra a fonte
+  `NetApiFlow` no SDK e esse pacote não sanitiza nada (li o código).
+- Como a tag está na própria `Activity` desde o `0.1.0`, qualquer `ActivityListener` do host que escute a fonte
+  `NetApiFlow` a recebe crua, **mesmo sem** o pacote `NetApiFlow.OpenTelemetry`.
+- **Reproduzido de verdade só no `0.5.2`**, pela auditoria, com um coletor real: o OTLP vaza nos 13 casos, e o
+  painel em 10 das 12 formas de segredo. As versões anteriores são afirmadas pela leitura do mesmo código.
+  Eu não reproduzi de novo.
+
+**A conta do CVSS 3.1, feita por script** (a pedido da auditoria, com a regra "se não der Baixa com o texto
+verdadeiro, vale o texto verdadeiro"):
+
+| Vetor | Nota | Quando se aplica |
+|---|---|---|
+| `AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N` | **3,1, Baixa** | A confidencialidade perdida é limitada ao que a aplicação pôs numa mensagem de exceção |
+| `AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N` | 5,3, Média | O segredo vazado costuma ser uma credencial de alto valor |
+
+**A Planejadora recomenda a Baixa**, com este raciocínio: `AC:H`, porque o disparo (um segredo dentro de uma
+mensagem de exceção) não é controlado por quem lê; `PR:L`, porque ler o backend de telemetria ou o painel exige
+uma conta (em Production o painel responde 404 sem proteção); `C:L`, porque o que vaza é só o que a aplicação
+escolheu pôr na mensagem, e não dados que o NetApiFlow colete. A Média só vale se a auditoria e o dono entendem
+que a credencial vazada costuma ser de alto valor. O texto abaixo diz que a gravidade **depende do que a
+aplicação põe nas mensagens**, que é a parte verdadeira nos dois casos.
+
+**Texto (campos do formulário de advisory do GitHub):**
+
+> **Title:** Secrets in exception messages are exported to OpenTelemetry unredacted, and only partly
+> redacted in the dashboard
+>
+> **Ecosystem and packages:** NuGet. `NetApiFlow`, affected `>= 0.1.0, <= 0.5.2`.
+> `NetApiFlow.OpenTelemetry`, affected `>= 0.2.0, <= 0.5.2`. Patched version: `0.6.0` for both.
+>
+> **CWE:** CWE-532, Insertion of Sensitive Information into Log File.
+>
+> **Severity:** Low. CVSS 3.1 base score 3.1, `CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N`.
+>
+> **Description:** NetApiFlow documents that it never captures request or response bodies, headers, query
+> strings, method arguments or SQL parameter values, and that error messages are truncated to 300 characters and
+> sanitized. Two defects broke that promise for the error message of a step. First, `FlowStep.MarkError` wrote the
+> raw exception message to an activity tag, so anything that listens to the `NetApiFlow` activity source,
+> including the OpenTelemetry export, received it without redaction and without truncation. Second, the
+> sanitizer redacted only a short list of forms: a key spelled exactly as `password`, `token`, `authorization`,
+> `api-key` or `secret`, followed by `:` or `=`. Common forms such as access tokens, client secrets,
+> connection-string passwords, JSON keys and an `Authorization` header with a scheme were left unredacted in the
+> dashboard, the REST API, the event stream, the MCP tools, the correlated logs and the storage. The message was
+> also truncated before it was sanitized.
+>
+> **Trigger:** An application records an exception on a step, for example a traced endpoint or service that
+> throws, and the message of that exception contains a secret.
+>
+> **Impact:** The secret reaches the OTLP backend without any filtering and at any length, and it is shown in the
+> dashboard in most common secret shapes (10 of the 12 tested). The severity depends on what the application puts
+> in exception messages. NetApiFlow does not add secrets itself.
+>
+> **Not affected:** Applications whose exception messages contain no secret. Step tags set explicitly by the
+> application are documented as stored without sanitization and are not part of this issue.
+>
+> **Patches:** From `0.6.0`, the message is sanitized and truncated before it is written to the activity, so
+> every consumer receives the clean value. The sanitizer matches any key that contains a sensitive word,
+> redacts the whole value (quoted values and `Authorization` schemes included), and the final message never
+> exceeds 300 characters.
+>
+> **Workarounds:** Do not put secrets in exception messages. Drop the `netapiflow.error.message` attribute in the
+> OpenTelemetry Collector, for example with the `attributes` processor and the `delete` action, or disable the
+> OTLP export. Restrict access to the dashboard. Upgrade to `0.6.0`.
 
 ## Fora de escopo
 

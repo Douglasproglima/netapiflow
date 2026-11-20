@@ -758,8 +758,8 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   `[RequiresDynamicCode]` (e o `DecorateFlowTracked` também `[RequiresUnreferencedCode]`), então
   você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. A
   forma de marcação que continua segura sob Native AOT e trimming é o `NetApiFlow.Step(...)`: uma
-  aplicação que chama só `AddNetApiFlow()` e `Step(...)` publica com zero aviso de AOT ou trimming,
-  e existe uma verificação no repositório que prova isso.
+  aplicação que chama só `AddNetApiFlow()` e `Step(...)` publica com zero aviso de AOT ou trimming
+  no net8.0 e no net10.0, e existe uma verificação no repositório que prova isso.
 - O interceptor do `NetApiFlow.EntityFrameworkCore` é outra conversa. O interceptor em si não emite
   aviso nenhum, mas o próprio EF Core declara que não é totalmente compatível com Native AOT, e uma
   aplicação publicada que o usa acusa isso: `IL2026`/`IL3050` no construtor do `DbContext` e
