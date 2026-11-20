@@ -703,8 +703,17 @@ O NetApiFlow nunca captura, em nenhuma configuração:
 > o próprio documento OpenAPI estiverem poluindo o histórico com ruído de `(unmatched)`,
 > `ExcludePaths` tira os dois do rastreamento de vez.
 
-Mensagem de erro é truncada em 300 caracteres e sanitizada, removendo e-mail, CPF, CNPJ, sequência
-numérica longa, e os pares `password=`/`token=`/`authorization`/`api-key`/`secret`. Veja
+Mensagem de erro é sanitizada e depois truncada em 300 caracteres, em toda saída: o dashboard, as
+ferramentas do MCP, o trace gravado, o log correlacionado e a tag `netapiflow.error.message` da
+`Activity`, que é o que um exportador do OpenTelemetry envia. Sanitizar primeiro quer dizer que um
+segredo cortado pelo limite não deixa pedaço nenhum. O que é removido: e-mail, CPF, CNPJ, sequência
+numérica longa, e o valor de qualquer par `chave=valor`, `chave: valor` ou `"chave": "valor"` em JSON
+cuja chave contenha `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (também `api_key` e
+`apikey`) ou `authorization`, em qualquer caixa. Valor entre aspas some inteiro, o valor de
+`Authorization` inclui o esquema (`Bearer`, `Basic` ou outro qualquer), um `Bearer <token>` solto é
+removido, e o valor de um par de connection string termina no `;`. Toda mensagem com uma dessas
+palavras seguida de `:` ou `=` perde o que vem depois, até uma inofensiva como
+`Unexpected token: '}'`, porque um segredo não se distingue dela e vazar um é a falha pior. Veja
 [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
 
 A única exceção é o que você mesmo escreve: as tags de uma etapa (veja
