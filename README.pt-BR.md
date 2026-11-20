@@ -544,8 +544,8 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 >
 > Fora de Development, encadeie só `.RequireAuthorization("SuaPolicy")`, ou encadeie
 > `.AllowAnonymous()` e registre um `IFlowAccessFilter`, que passa a decidir toda requisição.
-> **Nunca encadeie `.AllowAnonymous()` e `.RequireAuthorization()` juntos.** O `AllowAnonymous`
-> vence, a autorização é ignorada, e o dashboard fica aberto para todo mundo.
+> Encadear `.AllowAnonymous()` junto com `.RequireAuthorization()` não autoriza nada: o
+> `AllowAnonymous` vence a policy, então sem `IFlowAccessFilter` toda rota responde 404.
 
 ## Servidor MCP
 
