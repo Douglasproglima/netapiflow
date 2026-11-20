@@ -1,23 +1,23 @@
 {
-  "totalExecutions": 6,
+  "totalExecutions": 4,
   "nodes": [
     {
       "component": "OrdersController",
       "operation": "GetSequential",
       "type": "Controller",
-      "executionCount": 6
+      "executionCount": 4
     },
     {
       "component": "OrderService",
       "operation": "GetManySequentiallyAsync",
       "type": "Service",
-      "executionCount": 6
+      "executionCount": 4
     },
     {
       "component": "OrderRepository",
       "operation": "FindManyAsync",
       "type": "Repository",
-      "executionCount": 6
+      "executionCount": 4
     }
   ],
   "edges": [
@@ -26,14 +26,14 @@
       "fromOperation": "GetSequential",
       "toComponent": "OrderService",
       "toOperation": "GetManySequentiallyAsync",
-      "callCount": 6
+      "callCount": 4
     },
     {
       "fromComponent": "OrderService",
       "fromOperation": "GetManySequentiallyAsync",
       "toComponent": "OrderRepository",
       "toOperation": "FindManyAsync",
-      "callCount": 6
+      "callCount": 4
     }
   ]
 }

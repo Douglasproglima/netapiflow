@@ -56,7 +56,6 @@ describe('demoFixtureInterceptor', () => {
     const result = firstValue(api.getConfig());
     flushManifest();
 
-    // The only request that leaves is the fixture read: the API URL itself is never requested.
     httpMock.expectNone('api/config');
     httpMock
       .expectOne('assets/demo-fixtures/config.json')
@@ -122,6 +121,98 @@ describe('demoFixtureInterceptor', () => {
     httpMock.expectOne('/icons/database.svg').flush('<svg />');
 
     expect(await result).toBeTruthy();
+  });
+
+  describe('a route of the sample application, sent by the Runner', () => {
+    const MANIFEST_WITH_RECORDINGS = {
+      routes: {},
+      sampleResponses: [
+        {
+          method: 'GET',
+          template: '/api/orders/{id}',
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: 'sample_order.json',
+          traceId: 'trace-order',
+        },
+        {
+          method: 'GET',
+          template: '/api/orders/parallel',
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: 'sample_parallel.json',
+          traceId: 'trace-parallel',
+        },
+        {
+          method: 'GET',
+          template: '/api/orders/{id}/shipping-status',
+          status: 200,
+          contentType: 'text/plain; charset=utf-8',
+          body: 'sample_shipping.txt',
+          traceId: 'trace-shipping',
+        },
+      ],
+    };
+
+    function sendFromRunner(method: string, url: string) {
+      return firstValue(TestBed.inject(HttpClient).request(method, url, { observe: 'response' }));
+    }
+
+    it('is answered by its recording, with the trace id header the Runner follows', async () => {
+      const result = sendFromRunner('GET', '/api/orders/1');
+      httpMock.expectOne(DEMO_MANIFEST_PATH).flush(MANIFEST_WITH_RECORDINGS);
+
+      httpMock.expectNone('/api/orders/1');
+      httpMock.expectOne('assets/demo-fixtures/sample_order.json').flush({ id: 1 });
+
+      const response = await result;
+      expect(response.status).toBe(200);
+      expect(response.headers.get('X-NetApiFlow-TraceId')).toBe('trace-order');
+      expect(response.body).toEqual({ id: 1 });
+    });
+
+    it.each(['/api/orders/1', '/api/orders/999', '/api/orders/not-a-number', '/api/orders/7?x=1'])(
+      'is found by method and template, not by the value sent: %s',
+      async (url) => {
+        const result = sendFromRunner('GET', url);
+        httpMock.expectOne(DEMO_MANIFEST_PATH).flush(MANIFEST_WITH_RECORDINGS);
+        httpMock.expectOne('assets/demo-fixtures/sample_order.json').flush({ id: 1 });
+
+        expect((await result).headers.get('X-NetApiFlow-TraceId')).toBe('trace-order');
+      },
+    );
+
+    it('prefers the template with more literal segments over one with a parameter', async () => {
+      const result = sendFromRunner('GET', '/api/orders/parallel');
+      httpMock.expectOne(DEMO_MANIFEST_PATH).flush(MANIFEST_WITH_RECORDINGS);
+      httpMock.expectOne('assets/demo-fixtures/sample_parallel.json').flush([]);
+
+      expect((await result).headers.get('X-NetApiFlow-TraceId')).toBe('trace-parallel');
+    });
+
+    it('hands back a plain text recording as text', async () => {
+      const result = sendFromRunner('GET', '/api/orders/1/shipping-status');
+      httpMock.expectOne(DEMO_MANIFEST_PATH).flush(MANIFEST_WITH_RECORDINGS);
+      const bodyRead = httpMock.expectOne('assets/demo-fixtures/sample_shipping.txt');
+      expect(bodyRead.request.responseType).toBe('text');
+      bodyRead.flush('Keep it logically awesome.');
+
+      const response = await result;
+      expect(response.body).toBe('Keep it logically awesome.');
+      expect(response.headers.get('Content-Type')).toContain('text/plain');
+    });
+
+    it('goes to the network when no recording matches, instead of being taken for a dashboard call', () => {
+      let failure: unknown;
+      TestBed.inject(HttpClient)
+        .request('POST', '/api/orders', { observe: 'response' })
+        .subscribe({ error: (error: unknown) => (failure = error) });
+      httpMock.expectOne(DEMO_MANIFEST_PATH).flush(MANIFEST_WITH_RECORDINGS);
+
+      httpMock.expectOne('/api/orders').flush({}, { status: 404, statusText: 'Not Found' });
+
+      expect(failure).toBeDefined();
+    });
   });
 });
 

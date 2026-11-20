@@ -1,0 +1,39 @@
+{
+  "totalExecutions": 3,
+  "nodes": [
+    {
+      "component": "OrdersController",
+      "operation": "GetShippingStatus",
+      "type": "Controller",
+      "executionCount": 3
+    },
+    {
+      "component": "OrderService",
+      "operation": "GetShippingStatusAsync",
+      "type": "Service",
+      "executionCount": 3
+    },
+    {
+      "component": "HttpClient",
+      "operation": "GET api.github.com/zen",
+      "type": "Http",
+      "executionCount": 3
+    }
+  ],
+  "edges": [
+    {
+      "fromComponent": "OrdersController",
+      "fromOperation": "GetShippingStatus",
+      "toComponent": "OrderService",
+      "toOperation": "GetShippingStatusAsync",
+      "callCount": 3
+    },
+    {
+      "fromComponent": "OrderService",
+      "fromOperation": "GetShippingStatusAsync",
+      "toComponent": "HttpClient",
+      "toOperation": "GET api.github.com/zen",
+      "callCount": 3
+    }
+  ]
+}

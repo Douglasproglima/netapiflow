@@ -92,6 +92,7 @@ const en = {
   'action.invalidJson': 'Body is not valid JSON.',
   'action.emptyPathParam': 'Fill in the "{name}" path parameter before sending.',
   'action.requestFailed': 'Request failed.',
+  'action.demoCannotSend': 'This demo shows recorded runs and does not send real requests.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Close the action panel',
 
@@ -424,6 +425,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.invalidJson': 'O corpo não é um JSON válido.',
   'action.emptyPathParam': 'Preencha o parâmetro de rota "{name}" antes de enviar.',
   'action.requestFailed': 'A requisição falhou.',
+  'action.demoCannotSend':
+    'Esta demo mostra execuções gravadas e não envia requisições de verdade.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Fechar o painel de ação',
 

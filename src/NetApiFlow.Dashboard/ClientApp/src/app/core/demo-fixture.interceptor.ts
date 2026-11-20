@@ -1,39 +1,35 @@
 import {
+  HttpClient,
   HttpErrorResponse,
   HttpEvent,
   HttpHandlerFn,
+  HttpHeaders,
   HttpRequest,
   HttpResponse,
 } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, of, shareReplay, switchMap, throwError } from 'rxjs';
 
 export const DEMO_FIXTURES_PATH = 'assets/demo-fixtures';
 export const DEMO_MANIFEST_PATH = `${DEMO_FIXTURES_PATH}/manifest.json`;
+export const TRACE_ID_HEADER = 'X-NetApiFlow-TraceId';
 
-/**
- * Maps a request the dashboard would send to the file holding a recorded answer for it. The key
- * is the request as the dashboard writes it (`api/traces?status=Error`), so a fixture is matched
- * without re-deriving route shapes here.
- */
+export interface DemoSampleResponse {
+  method: string;
+  template: string;
+  status: number;
+  contentType: string;
+  body: string | null;
+  traceId: string;
+}
+
 export interface DemoManifest {
   routes: Record<string, string>;
   fallbacks?: Record<string, string>;
-
-  /**
-   * Paths outside the dashboard's own API that a screen still fetches, keyed exactly as
-   * requested. The host's OpenAPI document is the one that matters: the Runner reads it, and
-   * without it the demo would log a 404 on every load.
-   */
   documents?: Record<string, string>;
+  sampleResponses?: DemoSampleResponse[];
 }
 
-/**
- * Answers the dashboard's own REST calls from recorded files instead of the network, for the
- * static demo build. Nothing in `ApiService` changes: a fixture holds exactly the payload the
- * real endpoint returns, so the screens run against the same contract.
- */
 export function demoFixtureInterceptor(
   request: HttpRequest<unknown>,
   next: HttpHandlerFn,
@@ -47,34 +43,26 @@ export function demoFixtureInterceptor(
   return loadManifest(http).pipe(
     switchMap((manifest) => {
       const file = resolveFixtureFile(manifest, request);
-      if (!file) {
-        // Nothing recorded for it: a dashboard API call has nowhere else to go, anything else
-        // (a static asset served alongside the page) is still a real file on disk.
-        return isDashboardApiRequest(request)
-          ? throwError(
-              () =>
-                new HttpErrorResponse({
-                  status: 404,
-                  statusText: 'Not Found',
-                  url: request.urlWithParams,
-                }),
-            )
-          : next(request);
+      if (file) {
+        return http
+          .get<unknown>(`${DEMO_FIXTURES_PATH}/${file}`)
+          .pipe(map((body) => new HttpResponse({ body, status: 200, url: request.urlWithParams })));
       }
 
-      return http
-        .get<unknown>(`${DEMO_FIXTURES_PATH}/${file}`)
-        .pipe(map((body) => new HttpResponse({ body, status: 200, url: request.urlWithParams })));
+      const sampleResponse = isDashboardApiRequest(request)
+        ? undefined
+        : findSampleResponse(manifest, request.method, request.url);
+      if (sampleResponse) {
+        return answerFromRecording(http, sampleResponse, request);
+      }
+
+      return isDashboardApiRequest(request) ? throwError(() => notFound(request)) : next(request);
     }),
   );
 }
 
 let manifest$: Observable<DemoManifest> | null = null;
 
-/**
- * The in-flight request is cached, not just its result: the dashboard fires several API calls at
- * once on load, and caching only the resolved value would send one manifest request per call.
- */
 function loadManifest(http: HttpClient): Observable<DemoManifest> {
   manifest$ ??= http.get<DemoManifest>(DEMO_MANIFEST_PATH).pipe(
     catchError(() => of({ routes: {} } satisfies DemoManifest)),
@@ -84,25 +72,94 @@ function loadManifest(http: HttpClient): Observable<DemoManifest> {
   return manifest$;
 }
 
-/** Exposed so a test can start from a known state; the manifest never changes at run time. */
 export function resetDemoManifestCache(): void {
   manifest$ = null;
 }
 
-/** The interceptor's own reads, which must never be intercepted again. */
 function isFixtureRequest(request: HttpRequest<unknown>): boolean {
   return request.url.startsWith(DEMO_FIXTURES_PATH);
 }
 
 function isDashboardApiRequest(request: HttpRequest<unknown>): boolean {
-  return request.url.startsWith('api/') || request.url.includes('/api/');
+  return request.url.startsWith('api/');
 }
 
-/**
- * Prefers an exact match including the query string, so `/traces?status=Error` can have its own
- * recorded answer, and falls back to the path alone, which is what every filter combination the
- * recording did not capture lands on.
- */
+function notFound(request: HttpRequest<unknown>): HttpErrorResponse {
+  return new HttpErrorResponse({
+    status: 404,
+    statusText: 'Not Found',
+    url: request.urlWithParams,
+  });
+}
+
+function answerFromRecording(
+  http: HttpClient,
+  recording: DemoSampleResponse,
+  request: HttpRequest<unknown>,
+): Observable<HttpEvent<unknown>> {
+  const headers = new HttpHeaders()
+    .set(TRACE_ID_HEADER, recording.traceId)
+    .set('Content-Type', recording.contentType);
+  const body$ = recording.body ? readRecordedBody(http, recording) : of(null);
+
+  return body$.pipe(
+    map(
+      (body) =>
+        new HttpResponse({ body, status: recording.status, headers, url: request.urlWithParams }),
+    ),
+  );
+}
+
+function readRecordedBody(http: HttpClient, recording: DemoSampleResponse): Observable<unknown> {
+  const file = `${DEMO_FIXTURES_PATH}/${recording.body}`;
+  return recording.contentType.includes('json')
+    ? http.get<unknown>(file)
+    : http.get(file, { responseType: 'text' });
+}
+
+export function findSampleResponse(
+  manifest: DemoManifest,
+  method: string,
+  url: string,
+): DemoSampleResponse | undefined {
+  const requestedSegments = pathSegments(url);
+
+  return (manifest.sampleResponses ?? [])
+    .filter(
+      (recording) =>
+        recording.method === method.toUpperCase() &&
+        matchesTemplate(pathSegments(recording.template), requestedSegments),
+    )
+    .sort((left, right) => literalSegmentCount(right.template) - literalSegmentCount(left.template))
+    .at(0);
+}
+
+function pathSegments(urlOrTemplate: string): string[] {
+  return urlOrTemplate
+    .replace(/^https?:\/\/[^/]+/, '')
+    .split('?')[0]
+    .split('/')
+    .filter((segment) => segment.length > 0);
+}
+
+function matchesTemplate(templateSegments: string[], requestedSegments: string[]): boolean {
+  return (
+    templateSegments.length === requestedSegments.length &&
+    templateSegments.every(
+      (segment, index) =>
+        isParameter(segment) || segment.toLowerCase() === requestedSegments[index].toLowerCase(),
+    )
+  );
+}
+
+function isParameter(segment: string): boolean {
+  return segment.startsWith('{') && segment.endsWith('}');
+}
+
+function literalSegmentCount(template: string): number {
+  return pathSegments(template).filter((segment) => !isParameter(segment)).length;
+}
+
 export function resolveFixtureFile(
   manifest: DemoManifest,
   request: HttpRequest<unknown>,
@@ -126,11 +183,6 @@ export function resolveFixtureFile(
   );
 }
 
-/**
- * A fallback is keyed by the collection (`api/traces`), so any id the recording never captured
- * still resolves to something. Shows a recorded trace instead of a 404 in a build where the
- * reader cannot produce new data.
- */
 function findFallback(manifest: DemoManifest, path: string): string | undefined {
   let candidate = path;
   while (candidate.includes('/')) {
@@ -144,11 +196,6 @@ function findFallback(manifest: DemoManifest, path: string): string | undefined 
   return undefined;
 }
 
-/**
- * Canonical form of a request: the path, then its query decoded and sorted by name. The dashboard
- * builds query strings with `HttpParams`, whose escaping differs from the recorder's, so matching
- * on the raw URL would miss. Decoding both sides removes the question entirely.
- */
 function normalizeKey(url: string): string {
   const withoutBase = url.replace(/^.*?\bapi\//, 'api/').replace(/^\/+/, '');
   const [path, query] = withoutBase.split('?');

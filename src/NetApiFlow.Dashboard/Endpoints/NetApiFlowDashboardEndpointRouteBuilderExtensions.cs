@@ -17,7 +17,10 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
     /// under <c>{basePath}/api</c>, and the compiled Angular client everywhere else under
     /// <paramref name="basePath"/>, with a SPA fallback to <c>index.html</c> for any route that
     /// matches neither a static asset nor an API route (risco R-03). Chain <c>RequireAuthorization</c>
-    /// on the result to protect every dashboard route with the same policy (risco R-09).
+    /// on the result to protect every dashboard route with the same policy (risco R-09). Outside
+    /// Development, without an <see cref="IFlowAccessFilter"/>, every route answers 404 unless it
+    /// requires authorization and does not allow anonymous access: chaining
+    /// <c>AllowAnonymous</c> together with <c>RequireAuthorization</c> authorizes nothing.
     /// </summary>
     public static IEndpointConventionBuilder UseNetApiFlowDashboard(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
     {

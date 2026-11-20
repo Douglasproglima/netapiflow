@@ -538,8 +538,8 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 >
 > Outside Development, either chain `.RequireAuthorization("YourPolicy")` and nothing else, or
 > chain `.AllowAnonymous()` and register an `IFlowAccessFilter`, which then decides every request.
-> **Never chain `.AllowAnonymous()` and `.RequireAuthorization()` together.** `AllowAnonymous`
-> wins, the authorization is ignored, and the dashboard is open to everyone.
+> Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
+> `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
 
 ## MCP server
 

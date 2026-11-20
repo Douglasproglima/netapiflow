@@ -21,6 +21,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   trace whose steps last microseconds, and the waterfall bars of such a trace no longer all start at
   the same point. Both are now measured in microseconds, the precision the timestamps already carry.
 
+### Security
+
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: chaining `AllowAnonymous()` together with
+  `RequireAuthorization(...)` no longer opens the dashboard and the MCP endpoint outside Development.
+  The authorization middleware ignores the policy when an endpoint also allows anonymous access, and
+  the access gate only checked that a policy was present. So every dashboard route was served,
+  including `DELETE /flow/api/traces`, which deletes every stored trace, and the MCP endpoint
+  answered. A route now counts as protected only when it requires authorization and does not allow
+  anonymous access. If you relied on the two chained calls to open the dashboard, it now answers 404:
+  register an `IFlowAccessFilter` instead.
+
 ## [0.5.2] - 2026-11-20
 
 ### Fixed
