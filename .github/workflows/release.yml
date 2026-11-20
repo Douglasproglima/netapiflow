@@ -56,6 +56,9 @@ jobs:
           dotnet test tests/NetApiFlow.Tests -c Release --no-build
           dotnet test tests/NetApiFlow.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.EntityFrameworkCore.Ef8Tests -c Release --no-build
+          dotnet test tests/NetApiFlow.Mcp.Tests -c Release --no-build
+          dotnet test tests/NetApiFlow.OpenTelemetry.Tests -c Release --no-build
+          dotnet test tests/NetApiFlow.PrePipelineInteropSpike -c Release --no-build
           dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build
           dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build
