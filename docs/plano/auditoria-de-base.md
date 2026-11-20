@@ -25,8 +25,8 @@ antes de corrigir.
 
 | # | Achado | Conferi | Fase |
 |---|---|---|---|
-| S1 | O OTLP exporta a mensagem de erro crua, sem sanitizar e sem os 300 caracteres. O painel mostra `password=[redacted]`, o OTLP recebeu `password=PW_SECRET` com 745 caracteres | **Código:** `FlowStep.cs:44` grava `exception.Message` na tag da atividade, e só o `FlowActivityListener` sanitiza, para o span do painel. A medição no OTLP foi do revisor independente C, e a auditoria a reproduz (correção dela) | 54 |
-| S2 | Brechas no sanitizador: `Authorization: Bearer X` apaga só `Bearer`; `access_token=`, `client_secret=` e `DB_PASSWORD=` passam porque `\b` não casa depois de `_`; `api_key` não está na lista; trunca antes de sanitizar | **Código:** li a regex (`\b(password\|token\|authorization\|api-key\|secret)\s*[:=]\s*\S+`) e o corte antes da limpeza. As brechas decorrem do texto dela. Não rodei | 54 |
+| S1 | O OTLP exporta a mensagem de erro crua, sem sanitizar e sem os 300 caracteres. O painel mostra `password=[redacted]`, o OTLP recebeu `password=PW_SECRET` com 745 caracteres | **Código:** `FlowStep.cs:44` grava `exception.Message` na tag da atividade, e só o `FlowActivityListener` sanitiza, para o span do painel. **Reproduzido pela auditoria** com um coletor real nos 13 casos do `0.5.2`: o OTLP vaza em todos (ver abaixo). Não reproduzi de novo eu mesma | 54 |
+| S2 | Brechas no sanitizador: `Authorization: Bearer X` apaga só `Bearer`; `access_token=`, `client_secret=` e `DB_PASSWORD=` passam porque `\b` não casa depois de `_`; `api_key` não está na lista; trunca antes de sanitizar | **Código:** li a regex (`\b(password\|token\|authorization\|api-key\|secret)\s*[:=]\s*\S+`) e o corte antes da limpeza. As brechas decorrem do texto dela. **Reproduzido pela auditoria** nos 13 casos: o painel vaza em 10 das 12 formas de segredo. Não reproduzi de novo eu mesma | 54 |
 | S3 | A identidade da trace é o W3C trace id que o cliente manda: o mesmo `traceparent` em duas requisições apaga a primeira trace, um serviço que chama a API duas vezes vira etapas dentro da trace do chamador, e um cliente anônimo escolhe o id e sobrescreve uma trace | **Código:** `InMemoryTraceStore` grava `_entries[trace.TraceId] = ...`, que sobrescreve, e `FlowRecorder.TryStartTrace` recusa um id que já está ativo. A auditoria reproduziu no `0.5.2` com um `traceparent` fixo em `/orders` e `/stock` (comandos abaixo): só `/stock` fica no store. Não reproduzi de novo eu mesma | 55 |
 | S4 | `AllowAnonymous` mais `RequireAuthorization` abrem o painel e o MCP | **Reproduzi no `0.5.2`.** **Fechado** pela #360 (`8e0ff41`): eu reverifiquei o vermelho dos dois portões em worktree limpo, e a auditoria testou o pacote real `0.6.0-audit.3` nas duas ordens (D-216) | 50.10 |
 | S5 | `PathBase` | **Reproduzi no `0.5.2`**, e a Executora mediu a matriz inteira (53.0) | 53 |
@@ -35,7 +35,7 @@ antes de corrigir.
 | F1 | O estado "Aguardando" nunca aparece: o middleware abre a trace com `(unmatched)` e só grava a rota no fim, e o painel busca o blueprint por essa rota. "Não executado" ao vivo também não funciona. E "Não executado" usa o **último sucesso**, mesmo posterior à trace aberta, então o desenho de uma trace antiga muda com o tempo | **Código:** a primeira parte confere, o middleware abre com `UnmatchedRouteTemplate` e atualiza a rota no `finally`. A parte do blueprint posterior: **reproduzida pela auditoria no `0.5.2`** (comandos abaixo): a trace B, mais nova, vira o blueprint da trace A, mais antiga, porque `/blueprint` não recebe âncora de tempo. Não reproduzi de novo eu mesma | 57 |
 | F2 | O Npgsql 10 sai sempre como "SQL command", sem SQL, porque o código só lê `db.statement` e o Npgsql 10 manda `db.query.text`. A suíte testa só o Npgsql do EF 9.0.4 | **Código:** `NpgsqlActivityTagNames.Statement = "db.statement"`. **Reproduzido pela auditoria** com o Npgsql 10.0.0 em `net10.0` (ver abaixo): são três defeitos, não um. Não reproduzi de novo eu mesma | 58 |
 | F3 | Uma resposta 500 de exceção não tratada sai sem `X-NetApiFlow-TraceId`, embora a trace exista. O Runner mostra só "A requisição falhou.", o `NetApiFlow.Testing` diz "did not track this request", e o primeiro bloco de "Asserting" do README quebra | **Reproduzi no `0.5.2`**: 500 sem o cabeçalho em Development e em Production, e em Development a trace existe no store (`Error`, 500) | 58 |
-| F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()`. Sem a chamada, nada aparece e nada avisa | **Não verifiquei.** A auditoria o reproduz, e o item é dela | 58 |
+| F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()`. Sem a chamada, nada aparece e nada avisa | **Reproduzido pela auditoria** no `0.5.2` (ver abaixo). Não reproduzi de novo eu mesma | 58 |
 
 ## Nível 2: correção do README nos dois idiomas, e do código quando o texto não puder ficar verdadeiro sem ele
 
@@ -208,6 +208,25 @@ zerar as 28; onde a citação carrega um porquê real, reescrever o porquê sem 
 checagem que falhe com o padrão (por exemplo, um `grep` em `///` por `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk
 R-[0-9]`), com execução de prova vermelha. O parágrafo "Same security rule as the dashboard" do README do
 MCP, que só aponta para a seção do painel, também fica na Fase 59.
+
+**S1 e S2, um app só (auditoria, contra os pacotes publicados `0.5.2`).** `NetApiFlow`, `NetApiFlow.Dashboard` e
+`NetApiFlow.OpenTelemetry`, com `AddNetApiFlowOtlpExport` apontando para um coletor
+`otel/opentelemetry-collector-contrib:0.115.1` (receptor OTLP gRPC na `4317`, exportador de arquivo). Uma rota
+`/case/{n:int}` que abre um passo e chama `step.MarkError(new InvalidOperationException(cases[n]))`. A leitura
+compara o atributo `netapiflow.error.message` de cada span no arquivo OTLP com o `errorMessage` de
+`GET /flow/api/traces/{id}`. **No Git Bash, rodar o `docker run` com `MSYS_NO_PATHCONV=1`**, senão ele reescreve o
+caminho do `--config` e o coletor sai com erro. Os 13 casos e o resultado estão em
+`docs/plano/fase-54-segredos-nunca-saem.md`.
+
+**F4, MediatR (auditoria).** `NetApiFlow`, `NetApiFlow.Dashboard` e `NetApiFlow.MediatR` `0.5.2` com `MediatR`
+12.5.0, um `IRequestHandler<GetOrder, string>` e `GET /orders/{id:int}` com `.WithNetApiFlowTracking()` chamando
+`Send`. **Sem** `AddNetApiFlowMediatR()` as etapas são só `[Endpoint]`, sem nenhum aviso no log. **Com** a
+chamada: `[Endpoint, UseCase GetOrder.Handle]`. A palavra `AddNetApiFlowMediatR` aparece 0 vezes em
+`README.md`, `README.pt-BR.md` e `src/NetApiFlow.MediatR/README.md`. **Decisão da Planejadora (D-219), para a
+Fase 58:** a correção é a linha nos **três** READMEs. O aviso de log fica fora, porque sem a chamada nenhum
+código do pacote `NetApiFlow.MediatR` executa, então o próprio pacote não tem como avisar. Só o núcleo
+poderia, procurando um serviço `MediatR.IMediator` por nome de tipo (o núcleo não referencia o MediatR), o que
+é viável mas é um truque. Vai como item de roadmap.
 
 ## Ordem aprovada, e por quê
 
