@@ -89,8 +89,16 @@ tamanho **depois** de sanitizar.
 
 O caso 11 (`xpassword=`) decide o desenho do padrão (decisão da auditoria): a regra é "a chave **contém** uma
 das palavras", e não "a chave é igual a uma palavra". As palavras são `password`, `passwd`, `pwd`, `token`,
-`secret`, `api-key` (também com `_` e sem separador) e `authorization`, em qualquer caixa. Falso positivo (por
-exemplo, `tokenizer=...`) é preferível a vazar, e a Executora lista no relatório os que o teste achou.
+`secret`, `api-key` (também com `_` e sem separador) e `authorization`, em qualquer caixa. O falso
+positivo em `tokenizer=`, `secretary=` e `passwordless=` é **conhecido e aceito** (medido pela Executora): perder
+uma palavra de diagnóstico custa menos que vazar um segredo no painel e no OTLP, e a Executora lista no
+relatório os que o teste achar além desses.
+
+**Proteger o valor, não só a chave (decisão a partir da medição da Executora).** Casar a chave mais largo
+não basta se o limite do valor continua errado. O padrão novo trata: o valor entre aspas (`"..."` ou `'...'`)
+vai até a aspa de fechamento, e não até o primeiro espaço; o esquema do `Authorization` (`Bearer x`, `Basic x`
+ou um esquema desconhecido) é **parte do valor**; e a chave com aspas antes do `:` (JSON, `"password":"x"`)
+tem um ramo próprio, porque as aspas entre a chave e o `:` quebram o `\s*[:=]` atual.
 
 **O que a função tem de pegar**, cada caso com teste:
 
@@ -100,7 +108,8 @@ exemplo, `tokenizer=...`) é preferível a vazar, e a Executora lista no relató
 | `access_token=XYZ`, `client_secret=S`, `DB_PASSWORD=P` | Somem. O casamento não depende de `\b` junto de `_` |
 | `api_key=K`, `api-key=K`, `apikey=K` | Somem |
 | `password=PW`, `token=T`, `secret=S`, `authorization=A` | Continuam sumindo, em qualquer caixa |
-| Um valor entre aspas ou com espaço (`password="a b"`) | Some inteiro, ou o teste diz o que sobra e por quê |
+| Valor entre aspas ou com espaço: `password = 'two words'` e `password="a b"` | O valor inteiro some, até a aspa de fechamento. Hoje o primeiro vira `password=[redacted] words'` |
+| `Password=abc;Server=db` | O `Password` some até o `;`, e o `Server=db` fica |
 | JSON com a chave entre aspas: `"password":"x"` e `"access_token": "x"` | O valor some. Uma exceção de desserialização costuma trazer esse formato |
 | Par de connection string: `Password=x;` e `Pwd=x;` | O valor some até o `;`. Uma exceção de banco costuma trazer esse formato |
 | `Bearer x` **sem** a palavra `Authorization` antes | O token some |
