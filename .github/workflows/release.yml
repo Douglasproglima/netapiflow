@@ -82,6 +82,18 @@ jobs:
         working-directory: tests/manual-verification/AotCoreVerification
         run: dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=true
 
+      - name: Publish the net8.0 core host as native AOT, any IL warning in the output fails
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish -c Release -r linux-x64 -o ./publish | tee publish.log
+          if grep -E "warning IL[0-9]+" publish.log; then exit 1; fi
+
+      - name: Run the net8.0 native binary, the HttpClient backfill must record method, URL and status
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        run: ./publish/AotCoreVerificationNet8 --verify-http-backfill
+
       - name: Pack the six packages
         run: >
           dotnet pack NetApiFlow.slnx -c Release --no-build
