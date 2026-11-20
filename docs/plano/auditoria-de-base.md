@@ -33,7 +33,7 @@ antes de corrigir.
 | S6 | O MCP e o REST não validam `Origin` nem `Host` em Development: `POST /flow/mcp` com `Origin: http://evil.example` deu 200. A especificação do MCP exige validar `Origin` contra DNS rebinding | **Reproduzido pela auditoria no `0.5.2` publicado** (comandos abaixo): `initialize` 200 com `Origin: http://evil.example`, `tools/list` lista as três ferramentas, `GET /flow/api/traces` 200 com `Origin` e `Host` falsos, `DELETE /flow/api/traces` 204. Não reproduzi de novo eu mesma | 56 |
 | S7 | Sem cabeçalhos de segurança em `/flow`: CSP, `X-Frame-Options` ou `frame-ancestors`, `X-Content-Type-Options`. O painel, com o botão de apagar traces, carrega num iframe | **Reproduzido pela auditoria no `0.5.2`**: `GET /flow/` só traz `Content-Type: text/html`, sem CSP, `X-Frame-Options`, `X-Content-Type-Options` nem `Referrer-Policy`. Não reproduzi de novo eu mesma | 56 |
 | F1 | O estado "Aguardando" nunca aparece: o middleware abre a trace com `(unmatched)` e só grava a rota no fim, e o painel busca o blueprint por essa rota. "Não executado" ao vivo também não funciona. E "Não executado" usa o **último sucesso**, mesmo posterior à trace aberta, então o desenho de uma trace antiga muda com o tempo | **Código:** a primeira parte confere, o middleware abre com `UnmatchedRouteTemplate` e atualiza a rota no `finally`. A parte do blueprint posterior: **reproduzida pela auditoria no `0.5.2`** (comandos abaixo): a trace B, mais nova, vira o blueprint da trace A, mais antiga, porque `/blueprint` não recebe âncora de tempo. Não reproduzi de novo eu mesma | 57 |
-| F2 | O Npgsql 10 sai sempre como "SQL command", sem SQL, porque o código só lê `db.statement` e o Npgsql 10 manda `db.query.text`. A suíte testa só o Npgsql do EF 9.0.4 | **Código:** `NpgsqlActivityTagNames.Statement = "db.statement"`. Que o Npgsql 10 emita `db.query.text`: não verifiquei | 58 |
+| F2 | O Npgsql 10 sai sempre como "SQL command", sem SQL, porque o código só lê `db.statement` e o Npgsql 10 manda `db.query.text`. A suíte testa só o Npgsql do EF 9.0.4 | **Código:** `NpgsqlActivityTagNames.Statement = "db.statement"`. **Reproduzido pela auditoria** com o Npgsql 10.0.0 em `net10.0` (ver abaixo): são três defeitos, não um. Não reproduzi de novo eu mesma | 58 |
 | F3 | Uma resposta 500 de exceção não tratada sai sem `X-NetApiFlow-TraceId`, embora a trace exista. O Runner mostra só "A requisição falhou.", o `NetApiFlow.Testing` diz "did not track this request", e o primeiro bloco de "Asserting" do README quebra | **Reproduzi no `0.5.2`**: 500 sem o cabeçalho em Development e em Production, e em Development a trace existe no store (`Error`, 500) | 58 |
 | F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()`. Sem a chamada, nada aparece e nada avisa | **Não verifiquei** | 58 |
 
@@ -135,9 +135,40 @@ contra uma execução que aconteceu depois dela.
 `/flow/api/traces`. Um serviço que chama `/orders` e `/stock` com `HttpClient` gera uma trace só, a do
 chamador, com as duas requisições como etapas filhas.
 
-**F2, o Npgsql 10 com `db.query.text`: ainda não reproduzido por ninguém.** O projeto do revisor ficou no
-Npgsql 9, e a reprodução da auditoria foi interrompida por um travamento da máquina. A auditoria a refaz, e
-até lá o item fica como não verificado.
+**F2, o Npgsql 10: reproduzido pela auditoria, três defeitos.** Pacotes `NetApiFlow` e
+`NetApiFlow.Dashboard` `0.5.2`, Npgsql `10.0.0`, `net10.0`, Development, `postgres:16-alpine` em contêiner,
+com um `ActivityListener` próprio na fonte `Npgsql` registrando as tags cruas:
+
+```csharp
+builder.Services.AddNetApiFlow(o => { o.ExternalSources = ExternalActivitySource.Npgsql; o.CaptureSqlText = true; });
+app.MapGet("/users", async () => {
+    await using var c = new NpgsqlConnection("Host=127.0.0.1;Port=55432;Username=postgres;Password=audit");
+    await c.OpenAsync();
+    await using var cmd = new NpgsqlCommand("SELECT 1 AS id", c);
+    return (int)(await cmd.ExecuteScalarAsync())!;
+}).WithNetApiFlowTracking();
+```
+
+Tags cruas que o Npgsql 10 emite: a atividade `postgresql` traz `db.query.text`, `db.system.name`,
+`db.namespace`, `server.address`, `server.port`, `db.npgsql.data_source` e `db.npgsql.connection_id`. A
+atividade `CONNECT postgres` traz `db.system.name`, `db.npgsql.data_source`, `db.namespace`, `server.address`,
+`server.port` e `db.npgsql.connection_id`. O NetApiFlow gravou, na trace de `/users`:
+`Endpoint | HTTP: GET /users | /users` e duas etapas `Database | Npgsql | SQL command | tags: {}`.
+
+1. A operação é sempre `SQL command`, porque o rótulo vem de `db.statement`, que o Npgsql 10 não manda mais.
+2. O SQL nunca é gravado, nem com `CaptureSqlText = true`.
+3. O `CONNECT` vira uma segunda etapa `Database` idêntica à do comando. Num grafo isso parece uma consulta
+   duplicada, e pode disparar o selo de N+1 com várias conexões.
+
+**O que a Fase 58 exige:** ler `db.query.text` com fallback para `db.statement`; decidir o que fazer com o
+`CONNECT`; o Npgsql 10 na matriz de `Npgsql.IntegrationTests`, sem tirar o 9 nem o 8, que continuam
+suportados; e o teste novo tem de **falhar hoje** com o Npgsql 10.
+
+**Sobre o `CONNECT`, a recomendação da Planejadora é ignorar**, porque não é um comando SQL e duplica a
+etapa. A Executora mede antes o que distingue um `CONNECT` de um comando no Npgsql 8, 9 e 10 (o nome da
+atividade e as tags) e propõe o critério, porque classificar pelo nome ou pela falta da tag de texto são as
+duas formas frágeis, e a Planejadora decide com a medição. Um teste prova que várias conexões não disparam
+o selo de N+1.
 
 ## Ordem aprovada, e por quê
 
