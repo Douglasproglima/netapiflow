@@ -131,6 +131,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 ```
 
+The package requires EF Core 9 or later, on `net8.0` as well. An app on EF Core 8 with an EF 8
+provider fails with a `TypeLoadException` when the package is installed.
+
 ### Tagging a step
 
 A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
