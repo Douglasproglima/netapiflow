@@ -5,13 +5,6 @@ using Microsoft.Extensions.Hosting;
 
 namespace NetApiFlow.Mcp.Endpoints;
 
-/// <summary>
-/// Shared gate for every MCP route (risco R-14): outside
-/// Development, a route 404s unless <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>
-/// was configured. An <see cref="IFlowAccessFilter"/>, when registered, is always enforced (even in
-/// Development, since the host asked for it explicitly), returning <c>403</c> when it denies the
-/// request.
-/// </summary>
 internal static class McpAccessGate
 {
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -32,7 +25,10 @@ internal static class McpAccessGate
             return await next(context);
         }
 
-        var hasRequireAuthorization = httpContext.GetEndpoint()?.Metadata.GetMetadata<IAuthorizeData>() is not null;
-        return hasRequireAuthorization ? await next(context) : Results.NotFound();
+        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await next(context) : Results.NotFound();
     }
+
+    private static bool IsGuardedByAuthorization(Endpoint? endpoint) =>
+        endpoint?.Metadata.GetMetadata<IAuthorizeData>() is not null
+        && endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null;
 }

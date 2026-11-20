@@ -9,7 +9,10 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
 {
     /// <summary>
     /// Serves the MCP server at <paramref name="basePath"/> (default <c>/flow/mcp</c>). Chain
-    /// <c>RequireAuthorization</c> on the result to protect it with a policy (risco R-14).
+    /// <c>RequireAuthorization</c> on the result to protect it with a policy (risco R-14). Outside
+    /// Development, without an <see cref="IFlowAccessFilter"/>, every route answers 404 unless it
+    /// requires authorization and does not allow anonymous access: chaining
+    /// <c>AllowAnonymous</c> together with <c>RequireAuthorization</c> authorizes nothing.
     /// </summary>
     public static IEndpointConventionBuilder UseNetApiFlowMcp(this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp")
     {

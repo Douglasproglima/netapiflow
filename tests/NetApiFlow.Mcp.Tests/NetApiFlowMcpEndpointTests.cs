@@ -21,7 +21,6 @@ using Xunit;
 
 namespace NetApiFlow.Mcp.Tests;
 
-/// <summary>Proves risco R-14: outside Development, every MCP route 404s unless the host configured <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>.</summary>
 public class NetApiFlowMcpEndpointTests
 {
     [Fact]
@@ -74,6 +73,84 @@ public class NetApiFlowMcpEndpointTests
         var response = await PostInitializeAsync(httpClient);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task OutsideDevelopment_WithRequireAuthorizationAndAllowAnonymousChained_EveryRouteReturns404()
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureServices: DenyEveryoneAuthorization,
+            configureMcp: builder => builder.RequireAuthorization(DenyEveryonePolicy).AllowAnonymous());
+        var httpClient = host.GetTestServer().CreateClient();
+
+        var response = await PostInitializeAsync(httpClient);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task OutsideDevelopment_WithRequireAuthorizationAndTheRequiredClaim_HandshakeSucceeds()
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureServices: services => services
+                .AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, AdminClaimAuthenticationHandler>("Test", _ => { })
+                .Services
+                .AddAuthorization(options => options.AddPolicy("RequiresAdmin", policy => policy.RequireClaim("role", "admin"))),
+            configureMcp: builder => builder.RequireAuthorization("RequiresAdmin"));
+        var httpClient = host.GetTestServer().CreateClient();
+
+        await using var client = await ConnectAsync(httpClient);
+
+        client.ServerInfo.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task OutsideDevelopment_WithAllowAnonymousAlone_EveryRouteReturns404()
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureMcp: builder => builder.AllowAnonymous());
+        var httpClient = host.GetTestServer().CreateClient();
+
+        var response = await PostInitializeAsync(httpClient);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Theory]
+    [InlineData(true, HttpStatusCode.OK)]
+    [InlineData(false, HttpStatusCode.Forbidden)]
+    public async Task OutsideDevelopment_WithBothChainedAndAFlowAccessFilter_TheFilterDecides(bool filterAllows, HttpStatusCode expected)
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureServices: services =>
+            {
+                DenyEveryoneAuthorization(services);
+                services.AddSingleton<IFlowAccessFilter>(new FixedAccessFilter(filterAllows));
+            },
+            configureMcp: builder => builder.RequireAuthorization(DenyEveryonePolicy).AllowAnonymous());
+        var httpClient = host.GetTestServer().CreateClient();
+
+        var response = await PostInitializeAsync(httpClient);
+
+        response.StatusCode.ShouldBe(expected);
+    }
+
+    [Fact]
+    public async Task InDevelopment_WithRequireAuthorizationAndAllowAnonymousChained_HandshakeSucceeds()
+    {
+        using var host = await StartHostAsync(
+            Environments.Development,
+            configureServices: DenyEveryoneAuthorization,
+            configureMcp: builder => builder.RequireAuthorization(DenyEveryonePolicy).AllowAnonymous());
+        var httpClient = host.GetTestServer().CreateClient();
+
+        await using var client = await ConnectAsync(httpClient);
+
+        client.ServerInfo.ShouldNotBeNull();
     }
 
     private static Task<HttpResponseMessage> PostInitializeAsync(HttpClient httpClient)
@@ -135,9 +212,34 @@ public class NetApiFlowMcpEndpointTests
             .StartAsync();
     }
 
+    private const string DenyEveryonePolicy = "DenyEveryone";
+
+    private static void DenyEveryoneAuthorization(IServiceCollection services) => services
+        .AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, NoClaimsAuthenticationHandler>("Test", _ => { })
+        .Services
+        .AddAuthorization(options => options.AddPolicy(DenyEveryonePolicy, policy => policy.RequireAssertion(_ => false)));
+
     private sealed class DenyingAccessFilter : IFlowAccessFilter
     {
         public ValueTask<bool> AuthorizeAsync(HttpContext context) => new(false);
+    }
+
+    private sealed class FixedAccessFilter(bool allows) : IFlowAccessFilter
+    {
+        public ValueTask<bool> AuthorizeAsync(HttpContext context) => new(allows);
+    }
+
+    private sealed class AdminClaimAuthenticationHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    {
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            var identity = new ClaimsIdentity([new Claim("role", "admin")], "Test");
+            var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), "Test");
+            return Task.FromResult(AuthenticateResult.Success(ticket));
+        }
     }
 
     private sealed class NoClaimsAuthenticationHandler(
