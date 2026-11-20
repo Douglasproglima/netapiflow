@@ -79,7 +79,7 @@
 
 
     <!-- SourceLink (every src/ package) -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="11.0.100" />
 
     <!-- tests/NetApiFlow.Benchmarks (Fase 7, medição de overhead) -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
