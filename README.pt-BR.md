@@ -460,16 +460,19 @@ mesma garantia de qualquer outro span.
 `Npgsql` cobre comando SQL (ADR-0018), gravado como span `Database` nomeado pelo tipo do comando e
 pela tabela principal, por exemplo `SELECT Users`. Quando você também usa
 `NetApiFlow.EntityFrameworkCore`, os dois nunca gravam o mesmo comando duas vezes: a `Activity` do
-próprio driver é descartada sempre que um step do NetApiFlow já envolve a chamada, que é
-exatamente o que o `FlowDbCommandInterceptor` faz. Sem esse pacote (Npgsql puro, ou Dapper sobre
-Npgsql), a `Activity` do driver é o único registro da chamada e é ingerida normalmente. O texto
+próprio driver é descartada só quando um step `Database` já envolve a chamada, que é exatamente
+o que o `FlowDbCommandInterceptor` abre. Dentro de um controller, um serviço, um repositório ou
+qualquer outro step, o comando é gravado como filho desse step. Um step `Database` manual em volta
+de SQL direto engole os comandos do driver que ficam dentro dele. Sem esse pacote (Npgsql puro, ou
+Dapper sobre Npgsql), a `Activity` do driver é o único registro da chamada e é ingerida
+normalmente. O texto
 completo do SQL só chega ao span com `CaptureSqlText` ligado, mesma regra do interceptor do EF
 Core.
 
 `SqlClient` faz o mesmo para SQL Server, então uma consulta Dapper ou um `SqlCommand` cru aparece
-como span `Database` em vez de deixar um buraco no fluxo. A deduplicação contra o
-`NetApiFlow.EntityFrameworkCore` é igual à do Npgsql, e a regra do `CaptureSqlText` vale do mesmo
-jeito. Uma diferença que vale saber: diferente do Npgsql, o `Microsoft.Data.SqlClient` não publica
+como span `Database` em vez de deixar um buraco no fluxo. Contra o `NetApiFlow.EntityFrameworkCore`
+vale a mesma regra do Npgsql (descartado só quando um step `Database` já envolve o comando), e a
+regra do `CaptureSqlText` vale do mesmo jeito. Uma diferença que vale saber: diferente do Npgsql, o `Microsoft.Data.SqlClient` não publica
 `ActivitySource` própria, então o NetApiFlow lê os eventos de diagnóstico do driver. Esses eventos
 só trazem um payload legível a partir do `Microsoft.Data.SqlClient` 6.0. Se a sua aplicação fixa
 um driver mais antigo, a flag é aceita mas não grava nada, e o NetApiFlow registra isso uma vez,
