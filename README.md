@@ -51,10 +51,20 @@ builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
 app.UseNetApiFlowDashboard(); // mounted at /flow by default
+
+app.MapGet("/hello", () => "Hello")
+    .WithNetApiFlowTracking();
+
 app.Run();
 ```
 
-Open `http://localhost:<port>/flow` and send a request to any endpoint under your app. See
+MVC controllers become a step on their own. A Minimal API endpoint only becomes one with
+`.WithNetApiFlowTracking()`, on the endpoint or on a whole group
+(`app.MapGroup("/api").WithNetApiFlowTracking()`). The default `dotnet new webapi` template uses
+Minimal API, so add the call to its `MapGet`. Without it the request is still recorded and listed,
+but with zero steps, and the graph stays empty.
+
+Open `http://localhost:<port>/flow` and send a request to the endpoint. See
 [Dashboard security in production](#dashboard-security-in-production) before deploying this
 anywhere but your own machine.
 
@@ -65,6 +75,7 @@ layer. They compose freely in the same request.
 
 | Form | What it does | When to use it |
 |---|---|---|
+| `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Minimal API apps. MVC controllers don't need it |
 | `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
 | `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention (e.g. `I*Repository`) |
