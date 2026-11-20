@@ -83,6 +83,10 @@ faz a contradição aparecer. O mesmo `Date.parse` calcula o deslocamento de cad
   traz. Se ele chegar até 7 dígitos, ler todos. Se truncar em milissegundo, a conta usa
   `durationMicros` de cada etapa, que é a fonte da duração exibida (seção 7.3 do prompt).
 - Corrigir o deslocamento das barras pelo mesmo caminho.
+- **Não corrigir o que está certo (D-196).** A auditoria num app real mostrou que, com etapa de
+  milissegundos, a conta bate (40% sem cobertura, controller com 77 de 131 ms). E um "96% (1,01 s de
+  1,05 s)" com uma etapa de 41 ms na primeira requisição também está certo: o tempo da primeira
+  requisição fora das etapas é real. O defeito é só o de etapa de microssegundos.
 - **Teste:** uma trace de 441 µs com uma etapa de 120 µs esperando 321 µs sem cobertura, 73%, e não
   100%. Visto falhando antes. Casos que já existiam (etapa aninhada, `Task.WhenAll`) continuam
   passando. Mais um teste em navegador de verdade que abre o painel de uma trace gravada com etapa de
@@ -130,6 +134,33 @@ volta depois da Fase 52.
 workflows dentro do hotfix `0.5.2`. Resta aqui só a regra: um projeto de teste novo entra nos dois
 workflows na mesma PR (`.claude/rules/testing.md`). A decisão de rodar ou aposentar o
 `PrePipelineInteropSpike` fica adiada.
+
+### Tarefa 50.9: aviso quando o dashboard cai num 401 mudo (D-197)
+
+Num app com `FallbackPolicy` que exige usuário autenticado, as rotas do dashboard respondem 401 se
+ninguém encadeou `AllowAnonymous()` nem `RequireAuthorization(...)` (D-196). Quem recebe esse 401 não
+tem como saber por quê.
+
+**Desenho.** Depois que os endpoints existem (`IHostApplicationLifetime.ApplicationStarted`), um aviso
+em log, uma vez, nível `Warning`, quando as duas coisas são verdadeiras: o
+`AuthorizationOptions.FallbackPolicy` está definido, e as rotas do dashboard (as sob o caminho base)
+não têm `IAllowAnonymous` nem `IAuthorizeData` nos metadados. A mensagem diz o que acontece (401 no
+lugar da UI) e como resolver: em Development, `AllowAnonymous()` encadeado em
+`UseNetApiFlowDashboard()`. Fora de Development, `RequireAuthorization(...)` sozinho, ou
+`AllowAnonymous()` junto de um `IFlowAccessFilter`. E nunca `AllowAnonymous()` junto de
+`RequireAuthorization()`. Sem API pública nova, e a exceção da própria checagem é logada e engolida,
+como `.claude/rules/tracing.md` exige: o aviso nunca atrasa nem derruba o início do app.
+
+**Testes de host real**, o aviso visto faltando antes:
+
+| Cenário | Esperado |
+|---|---|
+| `FallbackPolicy` e nada encadeado no dashboard, em Development e em Production | Um aviso, com o texto-chave |
+| O mesmo com `.AllowAnonymous()` encadeado | Nenhum aviso |
+| O mesmo com `.RequireAuthorization("x")` encadeado | Nenhum aviso |
+| Sem `FallbackPolicy` | Nenhum aviso |
+
+**Pronto quando:** os quatro cenários passam e o primeiro foi visto falhando antes.
 
 ## Parte B
 
