@@ -32,7 +32,7 @@ public sealed class NetApiFlowOptions
     /// Root-relative path of the OpenAPI document the dashboard's "Run an endpoint" panel reads to
     /// list your endpoints. Set it to wherever your host serves its document, for example
     /// <c>/swagger/v1/swagger.json</c> under Swashbuckle. Default: <c>/openapi/v1.json</c>, what
-    /// <c>MapOpenApi()</c> serves.
+    /// <c>MapOpenApi()</c> serves. Requests to this path are never traced.
     /// </summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
 

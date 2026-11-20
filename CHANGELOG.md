@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `NetApiFlow`: the request that fetches your OpenAPI document (`OpenApiDocumentPath`, `/openapi/v1.json`
+  by default) is no longer traced. The dashboard fetches that document on its own, so it used to show
+  up in recent executions and in the metrics as if it were your traffic. The match ignores case and
+  only covers that one path.
+- `NetApiFlow.Dashboard`: a trace with no steps no longer draws a blank graph. It now says the
+  request was recorded but nothing was marked, and shows how to mark a step: MVC controllers need
+  nothing, a Minimal API endpoint needs `.WithNetApiFlowTracking()`, and other code can call
+  `NetApiFlow.Step(...)` or use `AddFlowTracked`. The message is in English and Portuguese.
+- `NetApiFlow.Dashboard`: the details panel no longer says that 100% of the time is uncovered for a
+  trace whose steps last microseconds, and the waterfall bars of such a trace no longer all start at
+  the same point. Both are now measured in microseconds, the precision the timestamps already carry.
+
 ## [0.5.2] - 2026-11-20
 
 ### Fixed
