@@ -1,7 +1,8 @@
 # ADR-0018: Ingestão nativa da `ActivitySource` do Npgsql, dedup por cadeia de `Parent`
 
 ## Status
-Aceito
+Aceito. O critério de descarte do comando do driver (qualquer step em volta) foi substituído pelo
+ADR-0024: só um step do tipo `Database` cobre o comando. O resto desta decisão continua valendo.
 
 ## Discussion
 [#190](https://github.com/Douglasproglima/netapiflow/discussions/190)
