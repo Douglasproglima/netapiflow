@@ -176,6 +176,20 @@ passa a descrever a regra.
 **Pronto quando:** a regra numa função só, os testes dos dois caminhos passando e vistos falhando antes,
 as quatro capturas anexadas ao resumo, e o `CHANGELOG.md` dizendo a mudança.
 
+### Tarefa 51.10: o rótulo da etapa não pode cortar o que distingue duas rotas (D-223)
+
+As capturas da 51.9 mostraram um ponto que lê mal. No grafo, o nó corta `GET /api/orders/{id:i…`, e a linha do
+painel de detalhes e o rótulo da cascata mostram `Minimal API.GET /api/orde…`, **sem tooltip**
+(`flow-details-panel.component.html`, a linha do `flow-waterfall__label`, sem `title`). Com uma rota longa, o
+corte esconde exatamente o trecho que distingue duas rotas do mesmo grupo. A elipse já existia com o rótulo
+antigo, que era mais longo. Componentes, Arquitetura e o Diff leem bem nos dois apps de captura.
+
+**Decisão:** a regra do nome da 51.9 **não muda**, e o prefixo do `MapGroup` **não** vira componente (a coluna
+Operação distingue as rotas no app de volume, então o componente único não virou um bloco sem sentido). A elipse
+se trata numa **PR de frontend própria**, com o texto inteiro num `title` (ou quebra de linha na linha do
+painel), no nó do grafo, na linha do painel e no rótulo da cascata. Teste de componente, e medição no
+navegador. Vem logo depois do veredito da 51.9.
+
 ### Tarefa 51.1: a opção
 
 `NetApiFlowOptions.CaptureMinimalApiEndpoints`, padrão **`true`** (texto em `contratos.md`).

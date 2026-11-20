@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\SecretLeakCases.cs" Link="Shared\SecretLeakCases.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Mcp\NetApiFlow.Mcp.csproj" />
   </ItemGroup>

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using NetApiFlow.Instrumentation;
+using NetApiFlow.Sanitization;
 
 namespace NetApiFlow;
 
@@ -41,7 +42,7 @@ public readonly struct FlowStep : IDisposable
         var isOrigin = OriginClaimedExceptions.TryAdd(exception, OriginClaimed);
 
         _activity.SetTag(FlowTagNames.ErrorType, exception.GetType().FullName);
-        _activity.SetTag(FlowTagNames.ErrorMessage, exception.Message);
+        _activity.SetTag(FlowTagNames.ErrorMessage, ErrorMessageSanitizer.Sanitize(exception.Message));
         _activity.SetTag(FlowTagNames.ErrorOrigin, isOrigin ? bool.TrueString : bool.FalseString);
         _activity.SetStatus(ActivityStatusCode.Error);
     }
