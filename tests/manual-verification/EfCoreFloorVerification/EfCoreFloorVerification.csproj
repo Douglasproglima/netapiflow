@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>$(SmokeTfm)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetApiFlow" Version="$(SmokePackageVersion)" />
+    <PackageReference Include="NetApiFlow.Dashboard" Version="$(SmokePackageVersion)" />
+    <PackageReference Include="NetApiFlow.EntityFrameworkCore" Version="$(SmokePackageVersion)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(SmokeEfVersion)" />
+  </ItemGroup>
+
+</Project>

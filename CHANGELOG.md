@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-20
+
+### Fixed
+
+- `NetApiFlow.EntityFrameworkCore`: the package asked for EF Core 9 even on `net8.0`, so an app on
+  EF Core 8 with an EF 8 provider failed with a `TypeLoadException` as soon as the package was
+  installed. It now asks for EF Core 8.0.10, the first version of the 8 line without a known
+  vulnerability, and works with EF Core 8, 9 and 10.
+
 ## [0.5.0] - 2026-11-19
 
 ### Added
