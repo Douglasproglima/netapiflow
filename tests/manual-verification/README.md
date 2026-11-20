@@ -223,3 +223,49 @@ the `verify` packages afterwards and commit none of them.
 
 **Control:** the same app with `ExternalSources` set to `None` in the configuration. No `Npgsql` span
 on the first three routes, and `/api/ef` still has the interceptor's span.
+
+## EF Core floor
+
+Proves, with real packages, that `NetApiFlow.EntityFrameworkCore` runs on the lowest EF Core version it
+declares, and keeps running on newer ones. `EfCoreFloorVerification` runs `AddNetApiFlow()` with no
+lambda, in `Development`, with SQLite in memory and the package's interceptor attached to the
+`DbContext`. It needs no container. It has two routes:
+
+| Route | Shape | Expected in the trace |
+|---|---|---|
+| `GET /api/query` | controller, `CountAsync` on a `DbSet` | exactly one `Database` span, `EntityFrameworkCore`, child of the controller step |
+| `POST /api/insert` | controller, `SaveChanges` with an `INSERT` | exactly one `Database` span, `EntityFrameworkCore`, child of the controller step |
+
+From the repo root, with `<n>` a number not used before for that version (never the real version
+number, never `-p:VersionSuffix`):
+
+```bash
+dotnet pack NetApiFlow.slnx -c Release -o tests/manual-verification/local-nuget-feed -p:Version=0.5.1-verify.<n>
+cd tests/manual-verification/EfCoreFloorVerification
+bash verify.sh net8.0 8.0.10 0.5.1-verify.<n>
+bash verify.sh net8.0 9.0.23 0.5.1-verify.<n>
+bash verify.sh net11.0 10.0.15 0.5.1-verify.<n>
+```
+
+The arguments are the app's target framework, the version of `Microsoft.EntityFrameworkCore.Sqlite`
+(which sets the EF Core version the restore resolves), and the NetApiFlow version. `net11.0` resolves
+the `lib/net10.0` assets. `verify.sh` prints the resolved EF Core and NetApiFlow assets from
+`project.assets.json`, each route's spans with their `spanId` and `parentSpanId`, whether the app
+logged any exception, and runs `dotnet list package --vulnerable --include-transitive` without any
+filter. Remove the `verify` packages afterwards and commit none of them.
+
+To see the failure the floor removes, run the same script against a published version that still
+required EF Core 9, with the real number and no local pack:
+
+```bash
+bash verify.sh net8.0 8.0.10 0.5.0
+```
+
+The app does not start. `NetApiFlow.EntityFrameworkCore` 0.5.0 makes the restore resolve EF Core
+9.0.22 under a provider built for EF Core 8, and EF Core throws a `TypeLoadException` on
+`SqliteHistoryRepository`.
+
+**Expected, the three cases:** one `Database` span per route, no exception in the log. The
+`--vulnerable` list is empty for EF Core 9 and 10. For EF Core 8.0.10 it lists
+`SQLitePCLRaw.lib.e_sqlite3` 2.1.6, which comes from that version of the SQLite provider the app
+references, not from EF Core or from a NetApiFlow package.
