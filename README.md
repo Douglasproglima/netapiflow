@@ -62,7 +62,7 @@ MVC controllers become a step on their own. A Minimal API endpoint only becomes 
 `.WithNetApiFlowTracking()`, on the endpoint or on a whole group
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). The default `dotnet new webapi` template uses
 Minimal API, so add the call to its `MapGet`. Without it the request is still recorded and listed,
-but with zero steps, and the graph stays empty.
+but with zero steps. The dashboard says so and shows how to mark one, instead of drawing a graph.
 
 Open `http://localhost:<port>/flow` and send a request to the endpoint. See
 [Dashboard security in production](#dashboard-security-in-production) before deploying this
@@ -444,7 +444,8 @@ builder.Services.AddNetApiFlow(options =>
 `OpenApiDocumentPath` tells the dashboard's "Run an endpoint" panel where your application serves
 its OpenAPI document. The default is what `MapOpenApi()` serves. Point it at
 `/swagger/v1/swagger.json` for Swashbuckle, or wherever else you serve it. The panel lists your
-endpoints from that document, so a wrong path leaves it with nothing to show.
+endpoints from that document, so a wrong path leaves it with nothing to show. Requests to that path
+are never traced, so the document the dashboard fetches does not show up in your traces.
 
 `CapturePrePipelineSteps` records what runs before your controller is even called, on MVC
 Controller routes: one step per Authorization filter, under the component `AuthorizationFilters`

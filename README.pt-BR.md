@@ -63,7 +63,7 @@ Controllers MVC viram uma etapa sozinhos. Um endpoint de Minimal API só vira co
 `.WithNetApiFlowTracking()`, no endpoint ou num grupo inteiro
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). O modelo padrão `dotnet new webapi` usa Minimal
 API, então acrescente a chamada ao `MapGet` dele. Sem ela, a requisição é gravada e aparece na
-lista, mas com zero etapas, e o grafo fica vazio.
+lista, mas com zero etapas. O dashboard avisa e mostra como marcar uma, em vez de desenhar um grafo.
 
 Abra `http://localhost:<porta>/flow` e envie uma requisição para o endpoint. Veja
 [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção) antes de publicar isso
@@ -448,6 +448,8 @@ builder.Services.AddNetApiFlow(options =>
 o documento OpenAPI. O padrão é o que o `MapOpenApi()` serve. Aponte para
 `/swagger/v1/swagger.json` no Swashbuckle, ou para onde você servir o documento. O painel lista os
 seus endpoints a partir desse documento, então um caminho errado deixa o painel sem nada a mostrar.
+As requisições a esse caminho nunca são rastreadas, então o documento que o dashboard busca não
+aparece nos seus traces.
 
 `CapturePrePipelineSteps` grava o que roda antes do seu controller ser chamado, em rotas de MVC
 Controller: uma etapa por filtro de autorização, no componente `AuthorizationFilters`, com o nome
