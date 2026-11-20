@@ -392,15 +392,29 @@ rodando:
    commit de prova (por exemplo, uma chamada a `Type.GetType(string)` no caminho do `AddNetApiFlow`), o
    passo fica vermelho, o commit é desfeito antes do merge, e o relatório traz o link. Um gate que nunca
    viu vermelho pode estar apontando para o lugar errado.
-5. **Medir o `net8.0`.** O núcleo tem os dois alvos, o README não diz qual deles a promessa cobre, e o
-   projeto é só `net10.0`. A Executora publica o mesmo host com `-f net8.0` (um projeto irmão ou
-   multi-alvo, o que der menos trabalho) e diz o resultado. **A decisão da auditoria, já tomada:**
-   - Se publicar limpo, os dois alvos entram no CI e o README diz "on net8.0 and net10.0".
-   - Se não publicar limpo, o README qualifica a promessa pelo alvo que publica limpo, a medição do
-     `net8.0` vai para o relatório, e a correção do núcleo vira item de roadmap.
-   - Exceção: se o aviso do `net8.0` for uma mudança pequena e local no núcleo, a Executora a corrige,
-     com o mesmo rito de prova.
-   - Em qualquer caso, a frase final do README só diz o que o CI prova.
+5. **Medir o `net8.0`, e o comportamento do binário.** O núcleo tem os dois alvos, o README não diz qual
+   deles a promessa cobre, e o projeto é só `net10.0`. A Executora publica o mesmo host com `-f net8.0` e
+   mede **o que o binário AOT faz de verdade**: com `ExternalSources.HttpClient` ligado e uma chamada de
+   `HttpClient` real, a etapa recebe o método, o host e o status pelo backfill, ou o backfill vira um
+   no-op? Medido por ela: o publish do `net8.0` termina com exit 0 e 3 avisos `IL2075`, todos em
+   `HttpClientActivityTagBackfill.cs`, e o `-p:TreatWarningsAsErrors=true` **não** derruba o publish ali,
+   porque o ILCompiler 8.0.34 não liga o `--warnaserror`. No `net10.0` ele funciona. **A decisão da
+   auditoria, tomada para os dois resultados (D-217):**
+   - **Se o backfill grava:** pode suprimir com `UnconditionalSuppressMessage`, com a `Justification`
+     dizendo o fato medido, em inglês e sem número de plano (por exemplo, "The DiagnosticSource payload
+     properties read here are preserved in published Native AOT output; verified by AotCoreVerification on
+     net8.0."). A prova não fica na palavra: o `AotCoreVerification` do `net8.0` passa a fazer a chamada e
+     conferir o valor gravado, para o CI acusar se um runtime futuro mudar. O README continua com "zero AOT
+     or trimming warnings" e diz "on net8.0 and net10.0".
+   - **Se vira no-op:** não suprime, e o núcleo não muda. O README qualifica a promessa em uma frase,
+     verdadeira e medida: zero aviso no `net10.0`, e no `net8.0` o publish sai com 3 `IL2075` do backfill de
+     HttpClient e, sob Native AOT, esse enriquecimento não acontece. O `net8.0` não entra como gate de "zero
+     aviso" no CI. Entra o `net10.0`, com o `--warnaserror` que funciona e a prova vermelha. A correção do
+     `net8.0` vai para o roadmap, com a nota de que o `net8.0` sai em 10/05/2027 (D-195), então o valor é
+     baixo.
+   - **Nos dois casos:** o gate do `net8.0`, se entrar, lê `warning IL` na saída do publish e tem a sua
+     própria prova vermelha. A medição que decidiu o caminho vai, literal, no corpo da PR. O README só
+     promete o que o CI prova.
 
 **Pronto quando:** a saída local colada, o passo no `ci.yml` (ubuntu) e no `release.yml`, a execução de
 prova vista vermelha e desfeita, o tempo medido, o `net8.0` medido, e a frase do README dizendo só o
