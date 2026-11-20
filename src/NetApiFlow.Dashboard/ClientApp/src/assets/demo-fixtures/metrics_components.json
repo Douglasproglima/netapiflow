@@ -1,92 +1,162 @@
 [
   {
-    "component": "OrdersController",
-    "operation": "Get",
-    "executionCount": 16,
-    "errorCount": 0,
-    "medianDurationMicros": 2457,
-    "averageDurationMicros": 12238,
-    "p95DurationMicros": 108731,
-    "maxDurationMicros": 108731
-  },
-  {
-    "component": "OrderService",
-    "operation": "GetAsync",
-    "executionCount": 16,
-    "errorCount": 0,
-    "medianDurationMicros": 2430,
-    "averageDurationMicros": 12000,
-    "p95DurationMicros": 105524,
-    "maxDurationMicros": 105524
-  },
-  {
     "component": "OrderRepository",
     "operation": "FindAsync",
-    "executionCount": 16,
+    "executionCount": 15,
     "errorCount": 0,
-    "medianDurationMicros": 2417,
-    "averageDurationMicros": 11954,
-    "p95DurationMicros": 105242,
-    "maxDurationMicros": 105242
+    "medianDurationMicros": 9636,
+    "averageDurationMicros": 90663,
+    "p95DurationMicros": 821132,
+    "maxDurationMicros": 821132
   },
   {
     "component": "EntityFrameworkCore",
     "operation": "SELECT Orders",
-    "executionCount": 16,
+    "executionCount": 15,
     "errorCount": 0,
-    "medianDurationMicros": 1617,
-    "averageDurationMicros": 2084,
-    "p95DurationMicros": 8675,
-    "maxDurationMicros": 8675
+    "medianDurationMicros": 4878,
+    "averageDurationMicros": 10733,
+    "p95DurationMicros": 47100,
+    "maxDurationMicros": 47100
   },
   {
     "component": "OrdersController",
-    "operation": "GetParallel",
-    "executionCount": 6,
+    "operation": "Get",
+    "executionCount": 9,
     "errorCount": 0,
-    "medianDurationMicros": 81,
-    "averageDurationMicros": 329,
-    "p95DurationMicros": 1268,
-    "maxDurationMicros": 1268
+    "medianDurationMicros": 15740,
+    "averageDurationMicros": 149029,
+    "p95DurationMicros": 845742,
+    "maxDurationMicros": 845742
   },
   {
     "component": "OrderService",
-    "operation": "GetManyInParallelAsync",
-    "executionCount": 6,
+    "operation": "GetAsync",
+    "executionCount": 9,
     "errorCount": 0,
-    "medianDurationMicros": 41,
-    "averageDurationMicros": 223,
-    "p95DurationMicros": 834,
-    "maxDurationMicros": 834
+    "medianDurationMicros": 15579,
+    "averageDurationMicros": 146288,
+    "p95DurationMicros": 823067,
+    "maxDurationMicros": 823067
   },
   {
     "component": "OrdersController",
     "operation": "GetSequential",
-    "executionCount": 6,
+    "executionCount": 4,
     "errorCount": 0,
-    "medianDurationMicros": 112,
-    "averageDurationMicros": 419,
-    "p95DurationMicros": 1177,
-    "maxDurationMicros": 1177
+    "medianDurationMicros": 870,
+    "averageDurationMicros": 2859,
+    "p95DurationMicros": 7312,
+    "maxDurationMicros": 7312
   },
   {
     "component": "OrderService",
     "operation": "GetManySequentiallyAsync",
-    "executionCount": 6,
+    "executionCount": 4,
     "errorCount": 0,
-    "medianDurationMicros": 68,
-    "averageDurationMicros": 304,
-    "p95DurationMicros": 802,
-    "maxDurationMicros": 802
+    "medianDurationMicros": 732,
+    "averageDurationMicros": 1987,
+    "p95DurationMicros": 4297,
+    "maxDurationMicros": 4297
   },
   {
     "component": "OrderRepository",
     "operation": "FindManyAsync",
-    "executionCount": 6,
+    "executionCount": 4,
     "errorCount": 0,
-    "medianDurationMicros": 48,
-    "averageDurationMicros": 181,
-    "p95DurationMicros": 590,
-    "maxDurationMicros": 590
+    "medianDurationMicros": 612,
+    "averageDurationMicros": 1325,
+    "p95DurationMicros": 3163,
+    "maxDurationMicros": 3163
+  },
+  {
+    "component": "OrdersController",
+    "operation": "GetParallel",
+    "executionCount": 4,
+    "errorCount": 0,
+    "medianDurationMicros": 1210,
+    "averageDurationMicros": 2945,
+    "p95DurationMicros": 7339,
+    "maxDurationMicros": 7339
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetManyInParallelAsync",
+    "executionCount": 4,
+    "errorCount": 0,
+    "medianDurationMicros": 146,
+    "averageDurationMicros": 1951,
+    "p95DurationMicros": 4818,
+    "maxDurationMicros": 4818
+  },
+  {
+    "component": "OrdersController",
+    "operation": "GetSlowly",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 321699,
+    "averageDurationMicros": 321118,
+    "p95DurationMicros": 324198,
+    "maxDurationMicros": 324198
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetSlowlyAsync",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 321618,
+    "averageDurationMicros": 320019,
+    "p95DurationMicros": 323831,
+    "maxDurationMicros": 323831
+  },
+  {
+    "component": "OrdersController",
+    "operation": "GetShippingStatus",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 27262,
+    "averageDurationMicros": 167056,
+    "p95DurationMicros": 449588,
+    "maxDurationMicros": 449588
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetShippingStatusAsync",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 27168,
+    "averageDurationMicros": 166120,
+    "p95DurationMicros": 447120,
+    "maxDurationMicros": 447120
+  },
+  {
+    "component": "HttpClient",
+    "operation": "GET api.github.com/zen",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 26443,
+    "averageDurationMicros": 121430,
+    "p95DurationMicros": 315918,
+    "maxDurationMicros": 315918
+  },
+  {
+    "component": "OrdersController",
+    "operation": "Confirm",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 12493,
+    "averageDurationMicros": 12907,
+    "p95DurationMicros": 17318,
+    "maxDurationMicros": 17318
+  },
+  {
+    "component": "OrderService",
+    "operation": "GetWithBusinessRuleAsync",
+    "executionCount": 3,
+    "errorCount": 0,
+    "medianDurationMicros": 12103,
+    "averageDurationMicros": 11448,
+    "p95DurationMicros": 13559,
+    "maxDurationMicros": 13559
   }
 ]
