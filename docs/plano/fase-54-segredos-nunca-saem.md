@@ -188,12 +188,13 @@ alguma forma for inviável com `NonBacktracking` e sem lookaround, a Executora r
 | Forma | Exemplo | O que acontece hoje (por leitura do código, ainda não reproduzido) |
 |---|---|---|
 | `Authorization` com valor de mais de dois tokens (`Digest`, AWS SigV4) | `Authorization: AWS4-HMAC-SHA256 Credential=..., SignedHeaders=..., Signature=...` | O valor para no segundo token, e o resto fica. O valor inteiro some até o fim da linha ou até o próximo par `chave=valor` |
-| `;` dentro de um valor sem aspas | `password=ab;cd` | O valor termina no `;`, e `cd` fica |
+| `;` dentro de um valor sem aspas | `password=ab;cd` | **Aceito e documentado num teste, não corrigido** (decisão da auditoria): o valor termina no `;` e `;cd` fica |
 | Aspa escapada dentro de valor entre aspas | `password="p\"w"` e `{\"password\":\"x\"}` | O valor termina na aspa escapada, e `w"` fica |
 | Chave com colchetes | `config[password]=x` | A chave não casa, o valor fica |
 | Cookies | `Cookie: sid=...` e `Set-Cookie: sid=...` | Nenhuma regra |
 | Chaves de connection string do Azure | `AccountKey=...`, `SharedAccessKey=...`, `SharedAccessSignature=...` (e `sig=`) | Nenhuma regra |
 | JWT solto | Três segmentos base64url começando por `eyJ`, sem a palavra `Bearer` | Nenhuma regra |
+| JSON com chave entre aspas, **a estrutura** | `{"password":"x"}` | Sai `{"password=[redacted]}`: o segredo some, mas o JSON quebra. O esperado é `{"password":"[redacted]"}` |
 
 **Do revisor independente, que a auditoria não pôs na lista dela.** A Executora reproduz cada uma e **decide o
 que cabe**, dizendo no relatório. O que ficar de fora vira item de roadmap, com a forma e o motivo:
@@ -206,11 +207,14 @@ que cabe**, dizendo no relatório. O que ficar de fora vira item de roadmap, com
   `credentials`. O revisor lembra, **de memória e sem verificar**, que exceções do Microsoft.IdentityModel trazem
   o JWT na mensagem (`IDX12741: JWT: 'eyJ...'`). A Executora confere antes de contar com isso.
 
-**Uma tensão que o plano não resolve sozinho.** "`;` dentro de um valor sem aspas" contradiz a decisão da 54.1 de
-que o valor de uma connection string vai até o `;` (`Password=abc;Server=db` deixa o `Server=db`). Sem lookahead
-o padrão não consegue olhar o que vem depois do `;` para distinguir os dois casos. A Executora propõe como
-resolver (por exemplo, um padrão que consome `;` mais uma palavra só quando não há `=` logo depois), mede, e se
-não houver forma limpa **relata e a auditoria decide** entre os dois comportamentos. Não escolher em silêncio.
+**A tensão do `;`, decidida pela auditoria.** "`;` dentro de um valor sem aspas" contradizia a decisão da 54.1 de
+que o valor de uma connection string vai até o `;`. A auditoria decidiu: **a connection string vai até o `;`**.
+Então `password=ab;cd` deixa `;cd`, e isso é **aceito e documentado num teste**. Um segredo sem aspas com `;`
+dentro é raro, e `Password=x;Server=db` precisa continuar legível.
+
+**O JSON precisa continuar JSON.** O caso `{"password":"x"}` sai `{"password=[redacted]}`, e o esperado é
+`{"password":"[redacted]"}`. A substituição do ramo de JSON preserva as aspas e o `:`, para a mensagem
+sanitizada continuar legível por quem a lê.
 
 **Também nesta tarefa, lacunas de teste da #371 que o revisor achou:**
 
