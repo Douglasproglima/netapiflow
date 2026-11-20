@@ -111,8 +111,15 @@ public sealed class NetApiFlowOptions
     public bool CapturePrePipelineSteps { get; set; }
 
     /// <summary>Root-relative path of the OpenAPI document the dashboard's "Run an endpoint"
-    /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves.</summary>
+    /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves. Requests to
+    /// this path are never traced.</summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
+
+    /// <summary>Writes <c>X-NetApiFlow-TraceId</c> on the response of every traced request, so a
+    /// caller can find the trace and <c>NetApiFlow.Testing</c> can read it. Default:
+    /// <see langword="true"/>. Set it to <see langword="false"/> to keep the trace id out of
+    /// responses.</summary>
+    public bool EmitTraceIdHeader { get; set; } = true;
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
@@ -365,11 +372,17 @@ public static class NetApiFlowPostgreSqlServiceCollectionExtensions
 public sealed class PostgreSqlStorageOptions
 {
     public string TablePrefix { get; set; } = "netapiflow_";
+
+    /// <summary>Creates and upgrades the tables on first use, with a <c>CREATE TABLE</c>, an
+    /// <c>ALTER TABLE</c> and an <c>UPDATE</c> against the application's database. Default:
+    /// <see langword="true"/>. With <see langword="false"/> nothing is created or changed and the
+    /// tables must already exist; <c>schema.sql</c> in the package's repository folder creates them.</summary>
+    public bool AutoCreateSchema { get; set; } = true;
 }
 
 // NetApiFlow.Storage.SqlServer espelha a mesma forma: AddNetApiFlowSqlServerStorage(
 // this IServiceCollection, string connectionString, Action<SqlServerStorageOptions>?)
-// e SqlServerStorageOptions com o mesmo TablePrefix.
+// e SqlServerStorageOptions com o mesmo TablePrefix e o mesmo AutoCreateSchema.
 ```
 
 Chamar depois de `AddNetApiFlow(...)`: substitui o `ITraceStore` em memória pelo storage
