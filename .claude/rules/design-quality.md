@@ -29,17 +29,26 @@ Medido pela Executora em 20/11/2026, no Windows 10, com o `impeccable` da versã
   "http://127.0.0.1:<porta>/"` termina com exit 0, e o mesmo comando funciona no CI do ubuntu. A causa
   provável é o stream SSE, mas **isso não foi provado**: o que se mediu foi só "host vivo estoura,
   estático não".
-- O que funcionou foi abrir o Edge sem janela e apontar o detector para a porta de depuração:
+- Abrir o Edge sem janela e apontar o detector para a porta de depuração funciona para o **detector
+  conectar**:
 
   ```text
-  "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --remote-debugging-port=9333 --user-data-dir=<pasta temporária> --window-size=1280,800 --blink-settings=preferredColorScheme=1 --no-first-run --disable-extensions "http://localhost:<porta>/flow?trace=<id>"
+  "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --remote-debugging-port=9333 --user-data-dir=<pasta temporária> --no-first-run --disable-extensions "http://localhost:<porta>/flow?trace=<id>"
   ```
 
   Esperar a porta responder (`curl http://127.0.0.1:9333/json/version`, cerca de 4 segundos) e depois,
   em `src/NetApiFlow.Dashboard/ClientApp`: `npx impeccable detect --cdp 9333 --target <porta>`.
-- `preferredColorScheme=1` é o tema escuro e `0` o claro. `--window-size=390,844` dá o viewport
-  mobile. Saída vazia é zero achados, e `--json` imprime `[]`. Para encerrar o Edge:
-  `taskkill //F //T //PID <pid>`.
+- **As flags de tema e de largura não bastam.** `--blink-settings=preferredColorScheme=1` não deixou a
+  página escura (`prefers-color-scheme: dark` deu `false`), e `--window-size=390,844` deu `innerWidth`
+  496. Esta seção dizia o contrário até 20/11/2026, e estava errada. Tema e largura saem de emulação por
+  CDP (`Emulation.setEmulatedMedia` e `Emulation.setDeviceMetricsOverride`), com a sessão mantida aberta
+  durante a varredura. O comando completo da emulação ainda não está registrado aqui: a Executora o
+  entrega no relatório, e a Planejadora o escreve com o que ela rodou.
+- **Saída vazia só vale como "zero achados" com prova.** Antes de cada varredura, conferir com
+  `Runtime.evaluate` a largura, o tema e que o app renderizou. Uma matriz feita sem isso deu zeros vazios
+  que não significavam nada. Conferir também que nenhum Edge antigo ficou preso na porta `9333`, senão o
+  detector conversa com a página errada. `--json` imprime `[]` quando não há achado. Para encerrar o
+  Edge: `taskkill //F //T //PID <pid>`.
 
 ## Conferir qual build o navegador está mostrando
 
