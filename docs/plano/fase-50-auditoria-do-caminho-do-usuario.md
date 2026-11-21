@@ -537,7 +537,7 @@ O padrão de `EmitTraceIdHeader` passa a ser **ligado só em `Development`**, co
 
 - **Mudança de comportamento para quem atualiza:** quem lê o cabeçalho em `Production` deixa de recebê-lo, em silêncio. Entra em `### Changed` do `CHANGELOG.md`, em destaque, e no README, dizendo como ligar (`EmitTraceIdHeader = true`).
 - **O `NetApiFlow.Testing` precisa continuar funcionando.** Ele roda em `Development` pelo `WebApplicationFactory`: **confirmar por teste**. Se o ambiente do teste do usuário for outro, o texto diz o que fazer.
-- O texto da #372 (a opção) é ajustado para o novo padrão.
+- O texto da #372 (a opção) é ajustado para o novo padrão. **O README** (inglês e português) e o `CHANGELOG.md` dizem, em destaque: "a partir da `0.6.0`, o cabeçalho só sai em `Development` por padrão; para manter em produção, `EmitTraceIdHeader = true`" (D-238).
 - Teste de host real em `Development` (cabeçalho presente), em `Production` (ausente), e em `Production` com a opção ligada (presente). Visto falhando antes.
 
 ## Critério que vale para a fase inteira
