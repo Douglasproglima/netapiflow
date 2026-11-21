@@ -1,0 +1,11 @@
+id: NetApiFlow
+dependencies:
+  net10.0:
+    (none)
+  net8.0:
+    (none)
+frameworkReferences:
+  net10.0:
+    Microsoft.AspNetCore.App
+  net8.0:
+    Microsoft.AspNetCore.App

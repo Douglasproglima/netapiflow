@@ -1,0 +1,81 @@
+name: Real package
+
+on:
+  workflow_call:
+    inputs:
+      run:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  real-package:
+    name: real-package
+    if: inputs.run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+          cache: npm
+          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+      - name: Test the scripts of this job
+        run: node --test scripts/*.test.mjs
+
+      - name: Choose the version and the folders, all outside the repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)
+          echo "PACKAGE_VERSION=${BASE_VERSION}-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "FEED=$RUNNER_TEMP/feed" >> "$GITHUB_ENV"
+          echo "USER_APP=$RUNNER_TEMP/user-app" >> "$GITHUB_ENV"
+          echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-packages" >> "$GITHUB_ENV"
+
+      - name: Build dashboard UI
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npm ci
+          npm run build
+
+      - name: Pack the packages with a version that is never the real one
+        shell: bash
+        run: |
+          set -euo pipefail
+          for project in src/*/*.csproj; do
+            dotnet pack "$project" -c Release -p:Version="$PACKAGE_VERSION" -o "$FEED"
+          done
+
+      - name: What each package declares as a dependency matches its approved snapshot
+        run: node scripts/nuspec-snapshot.mjs --feed "$FEED"
+
+      - name: Create a new webapi app
+        run: dotnet new webapi -f net10.0 -n UserApp -o "$USER_APP"
+
+      - name: Paste the README blocks into the app and build it
+        run: node scripts/build-user-app.mjs --app "$USER_APP" --feed "$FEED" --version "$PACKAGE_VERSION"
+
+      - name: Run the app in Development and in Production and walk the HTTP script
+        run: node scripts/package-scenarios.mjs --dll "$USER_APP/bin/Release/net10.0/UserApp.dll"
+
+      - name: Stop any app left running
+        if: always()
+        run: pkill -f UserApp.dll || true
