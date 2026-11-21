@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
@@ -146,16 +147,89 @@ public class FlowRecorderReservationTests
     }
 
     [Fact]
-    public void TryReserveTrace_AtTheLimitOfActiveTraces_ReturnsFalseAndCountsTheDrop()
+    public void TryReserveTrace_AtTheLimitOfActiveTraces_ReturnsFalseWithoutCountingADrop()
+    {
+        FillWithReservations();
+
+        var overTheLimit = _subject.TryReserveTrace("one-too-many", "GET", DateTime.UtcNow);
+
+        overTheLimit.ShouldBeFalse();
+        _subject.DroppedTraceCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void TryStartTrace_AfterAFailedReservationAtTheLimit_CountsTheDropOnce()
+    {
+        FillWithReservations();
+        _subject.TryReserveTrace("one-too-many", "GET", DateTime.UtcNow).ShouldBeFalse();
+
+        var started = _subject.TryStartTrace("one-too-many", "GET", "/orders", DateTime.UtcNow);
+
+        started.ShouldBeFalse();
+        _subject.DroppedTraceCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void GetPublishedActiveTrace_ForAReservationNobodyPublished_ReturnsNull()
+    {
+        _subject.TryReserveTrace(TraceId, "GET", DateTime.UtcNow);
+
+        _subject.GetPublishedActiveTrace(TraceId).ShouldBeNull();
+        _subject.GetActiveTrace(TraceId).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void GetPublishedActiveTrace_AfterThePublication_ReturnsTheTrace()
+    {
+        _subject.TryReserveTrace(TraceId, "GET", DateTime.UtcNow);
+        _subject.PublishReserved(TraceId, "/orders/{id}");
+
+        _subject.GetPublishedActiveTrace(TraceId)!.RouteTemplate.ShouldBe("/orders/{id}");
+    }
+
+    [Fact]
+    public async Task PublishReserved_WhileAnotherThreadAddsAndCompletesSpans_PublishesEachEventOnce()
+    {
+        const int rounds = 4000;
+        const int spansPerRound = 6;
+        for (var round = 0; round < rounds; round++)
+        {
+            var recorder = new FlowRecorder(Options.Create(new NetApiFlowOptions()));
+            var started = new ConcurrentQueue<string>();
+            var completed = new ConcurrentQueue<string>();
+            recorder.SpanStarted += span => started.Enqueue(span.SpanId);
+            recorder.SpanCompleted += span => completed.Enqueue(span.SpanId);
+            var traceId = Guid.NewGuid().ToString("N");
+            recorder.TryReserveTrace(traceId, "GET", DateTime.UtcNow);
+            using var barrier = new Barrier(2);
+
+            var publisher = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                recorder.PublishReserved(traceId, "/orders/{id}");
+            });
+            var adder = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                for (var index = 0; index < spansPerRound; index++)
+                {
+                    var span = CreateSpan($"span-{index}", index + 1);
+                    recorder.TryAddSpan(traceId, span);
+                    recorder.CompleteSpan(traceId, span with { Status = FlowStatus.Success });
+                }
+            });
+            await Task.WhenAll(publisher, adder);
+
+            started.OrderBy(id => id, StringComparer.Ordinal).ShouldBe(Enumerable.Range(0, spansPerRound).Select(index => $"span-{index}"));
+            completed.OrderBy(id => id, StringComparer.Ordinal).ShouldBe(Enumerable.Range(0, spansPerRound).Select(index => $"span-{index}"));
+        }
+    }
+
+    private void FillWithReservations()
     {
         for (var index = 0; index < FlowRecorder.MaxActiveTraces; index++)
         {
             _subject.TryReserveTrace($"trace-{index}", "GET", DateTime.UtcNow).ShouldBeTrue();
         }
-
-        var overTheLimit = _subject.TryReserveTrace("one-too-many", "GET", DateTime.UtcNow);
-
-        overTheLimit.ShouldBeFalse();
-        _subject.DroppedTraceCount.ShouldBe(1);
     }
 }

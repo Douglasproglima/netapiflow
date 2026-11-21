@@ -85,8 +85,6 @@ internal sealed class FlowRecorder
     {
         if (_activeTraces.Count >= MaxActiveTraces)
         {
-            Interlocked.Increment(ref _droppedTraceCount);
-            FlowMetrics.DroppedTraces.Add(1);
             return false;
         }
 
@@ -102,9 +100,6 @@ internal sealed class FlowRecorder
             return false;
         }
 
-        trace.RouteTemplate = routeTemplate;
-        trace.Published = true;
-
         TraceStarted?.Invoke(new FlowTrace
         {
             TraceId = trace.TraceId,
@@ -114,7 +109,13 @@ internal sealed class FlowRecorder
             StartedAt = trace.StartedAtUtc,
         });
 
-        foreach (var span in trace.Spans)
+        var heldSpans = trace.Publish(routeTemplate);
+        if (heldSpans is null)
+        {
+            return false;
+        }
+
+        foreach (var span in heldSpans)
         {
             SpanStarted?.Invoke(span);
             if (span.Status == FlowStatus.Error)
@@ -205,9 +206,9 @@ internal sealed class FlowRecorder
             return false;
         }
 
-        if (trace.TryAddSpan(span, _options.Limits.MaxSpansPerTrace))
+        if (trace.TryAddSpan(span, _options.Limits.MaxSpansPerTrace, out var published))
         {
-            if (trace.Published)
+            if (published)
             {
                 SpanStarted?.Invoke(span);
             }
@@ -237,9 +238,7 @@ internal sealed class FlowRecorder
             return;
         }
 
-        trace.ReplaceSpan(span);
-
-        if (!trace.Published)
+        if (!trace.ReplaceSpan(span))
         {
             return;
         }
@@ -273,6 +272,9 @@ internal sealed class FlowRecorder
 
     public ActiveTrace? GetActiveTrace(string traceId) =>
         _activeTraces.TryGetValue(traceId, out var trace) ? trace : null;
+
+    public ActiveTrace? GetPublishedActiveTrace(string traceId) =>
+        _activeTraces.TryGetValue(traceId, out var trace) && trace.Published ? trace : null;
 
     /// <summary>Snapshot of every trace currently being recorded.</summary>
     public IReadOnlyList<ActiveTrace> GetActiveTraces() => [.. _activeTraces.Values.Where(trace => trace.Published)];

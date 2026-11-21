@@ -9,6 +9,7 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
     private readonly List<FlowSpan> _spans = [];
     private IReadOnlyDictionary<string, string> _tags = EmptyTags;
     private int _nextSequence;
+    private bool _published = published;
 
     private static readonly IReadOnlyDictionary<string, string> EmptyTags = new Dictionary<string, string>();
 
@@ -22,7 +23,31 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
 
     public bool Truncated { get; private set; }
 
-    public bool Published { get; set; } = published;
+    public bool Published
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _published;
+            }
+        }
+    }
+
+    public IReadOnlyList<FlowSpan>? Publish(string routeTemplate)
+    {
+        lock (_lock)
+        {
+            if (_published)
+            {
+                return null;
+            }
+
+            RouteTemplate = routeTemplate;
+            _published = true;
+            return [.. _spans];
+        }
+    }
 
     public IReadOnlyDictionary<string, string> Tags
     {
@@ -56,10 +81,11 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
 
     public int NextSequence() => Interlocked.Increment(ref _nextSequence);
 
-    public bool TryAddSpan(FlowSpan span, int maxSpansPerTrace)
+    public bool TryAddSpan(FlowSpan span, int maxSpansPerTrace, out bool published)
     {
         lock (_lock)
         {
+            published = _published;
             if (_spans.Count >= maxSpansPerTrace)
             {
                 Truncated = true;
@@ -71,7 +97,7 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
         }
     }
 
-    public void ReplaceSpan(FlowSpan updated)
+    public bool ReplaceSpan(FlowSpan updated)
     {
         lock (_lock)
         {
@@ -80,6 +106,8 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
             {
                 _spans[index] = updated;
             }
+
+            return _published;
         }
     }
 
