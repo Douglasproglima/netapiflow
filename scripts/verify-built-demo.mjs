@@ -1,8 +1,8 @@
-import { createServer } from 'node:http';
-import { createServer as createSocketServer } from 'node:net';
 import { readFile, stat } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { delay, freePort } from './app-harness.mjs';
 import { findBrowser, openBrowser } from './browser-session.mjs';
 
 const MANIFEST_PATH = 'assets/demo-fixtures/manifest.json';
@@ -31,10 +31,6 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
   '.txt': 'text/plain',
 };
-
-function delay(milliseconds) {
-  return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
-}
 
 export function tracesOfManifest(manifest) {
   return Object.keys(manifest.routes)
@@ -154,17 +150,6 @@ async function startStaticServer(directory) {
   });
   await new Promise((resolveListening) => server.listen(0, '127.0.0.1', resolveListening));
   return { url: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((resolveClosed) => server.close(resolveClosed)) };
-}
-
-function freePort() {
-  return new Promise((resolvePort, reject) => {
-    const probe = createSocketServer();
-    probe.on('error', reject);
-    probe.listen(0, '127.0.0.1', () => {
-      const { port } = probe.address();
-      probe.close(() => resolvePort(port));
-    });
-  });
 }
 
 export function summarize(results, expected) {

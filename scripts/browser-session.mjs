@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { access, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
+import { delay } from './app-harness.mjs';
 
 const DEBUGGER_START_TIMEOUT_MS = 30_000;
 const COMMAND_TIMEOUT_MS = 30_000;
@@ -16,10 +17,6 @@ const FIXED_BROWSER_PATHS = [
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
 ];
-
-function delay(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
 
 async function exists(path) {
   return access(path).then(
