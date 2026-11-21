@@ -65,6 +65,8 @@ A skill `/release` do Claude Code guia esse processo.
    sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
 6. Merge de `main` de volta em `develop`.
 
+**Se o `develop` mudou o `.gitleaks.toml` depois da última release, o hotfix leva a mesma mudança (D-239).** O `secret-scan` do CI varre o histórico de **todas as refs**, o `develop` incluído, com a config da branch que está sendo testada. Uma `[allowlist]` que só existe no `develop` faz o scan da `main` falhar com achados do histórico do `develop`. Copiar o arquivo inteiro do `develop` evita o conflito no back-merge.
+
 **Exceção: hotfix só de documentação (D-191).** Um PR cujo diff inteiro é documentação que o público vê
 na página do repositório (o `README.md` e o `README.pt-BR.md`) pode ir para `main` por uma branch
 `hotfix/*` **sem número de versão e sem tag**, seguido do merge de `main` de volta em `develop`. O dono

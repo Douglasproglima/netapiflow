@@ -5,6 +5,10 @@ Release no GitHub e merge de `main` de volta em `develop`, tudo como o `docs/git
 merge, a tag, o Release e o back-merge são da auditoria (D-198). A Executora abre a PR e para. **Esta fase passa à
 frente de qualquer outra tarefa da Executora**, inclusive a Fase 56 e a PR da 54.5 (#388), que esperam.
 
+## Estado
+
+**Entregue e publicada em `v0.5.3`** (21/11/2026): PR #395 mergeada em squash (`8bf62ec`), tag, página de Release e os nove pacotes no nuget.org, e o back-merge na #396. A Planejadora reverificou em worktree limpo: 5 de 7 testes falham com a costura mantida e as correções desligadas, e 7 de 7 passam, nos dois TFMs. A auditoria rodou o teste longo com o pacote real, dois ticks com o PostgreSQL derrubado, 0 falha de requisição e o processo vivo. **Pendente, com a Executora:** a varredura 61.3 dos serviços que só existem no `develop`.
+
 ## Por que hotfix, e por que o D-205 agora cobre isto
 
 A auditoria reproduziu contra o `0.5.2` **publicado**, num app `net10.0` com `AddNetApiFlow` e
@@ -106,6 +110,10 @@ Os dois testes da 61.0, agora **verdes** nos dois TFMs, mais:
 - Teste com o pacote real empacotado em `tests/manual-verification/` (`-p:Version=0.5.3-verify.<n>`, D-153 e D-174),
   `AddNetApiFlow()` sem lambda, `Development`, storage real e pelo menos uma requisição, como o `docs/gitflow.md` pede.
   **O caso com o PostgreSQL real derrubado**, por mais de um intervalo de retenção, é da auditoria.
+
+## Tarefa 61.6: a allowlist do gitleaks vai junto na `main` (D-239)
+
+Achado durante a PR, não previsto no plano: o `secret-scan` do CI roda o gitleaks em modo git com `fetch-depth: 0`, que traz **todas as refs**, e o histórico do `develop` tem o JWT falso dos testes do sanitizador (#388). A `main` não tinha a `[allowlist]` que a #388 pôs só no `develop`, então a PR do hotfix falhou no scan com 4 achados, embora o diff dela não tivesse segredo nenhum. O hotfix levou o mesmo `[allowlist]` do `develop`, **byte a byte**, só da regex ancorada do token falso, sem caminho de arquivo e sem mexer no workflow. Com a config do `develop` o scan de todas as refs passa (512 commits, nenhum achado). A auditoria aprovou.
 
 ## Fora de escopo
 
