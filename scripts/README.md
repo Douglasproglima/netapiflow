@@ -53,6 +53,19 @@ it is silent unless the demo says so. It does: `demo-fixture.interceptor.ts` wri
 points at the last successful trace of the same method and route that started strictly before it, or, for a key
 in `noContent`, there is none.
 
+## The regression guards
+
+`check-regression-guards.mjs` reads `tests/regression-guards/guards.json` (see the `README.md` next to it)
+and checks, after one run of the tests, that each guard it lists is still there and passed. Run it by
+hand after `dotnet test ... --logger "trx;LogFileName=<project>.trx" --results-directory <folder>` for the
+projects that the rows name:
+
+```bash
+node scripts/check-regression-guards.mjs --trx <folder> --vitest <report.json>
+```
+
+The Vitest report comes from `npm run test:ci -- --reporters default --reporters json --output-file <report.json>`.
+
 ## The comparison with the published package
 
 The second job of `real-package.yml`, `comparison`, runs the same scenarios against two builds of the same

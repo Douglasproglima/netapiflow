@@ -6,6 +6,8 @@ import { delay, freePort } from './app-harness.mjs';
 import { findBrowser, openBrowser } from './browser-session.mjs';
 
 const MANIFEST_PATH = 'assets/demo-fixtures/manifest.json';
+export const CHECKS = { traces: 'traces-of-the-manifest', screens: 'screens' };
+export const CHECK_IDS = Object.values(CHECKS);
 const TRACE_ID_ROUTE = /^api\/traces\/([0-9a-f]{32})$/;
 const READY_TIMEOUT_MS = 20_000;
 const QUIET_MS = 600;
@@ -200,8 +202,8 @@ async function main() {
     await server.close();
   }
 
-  console.log(`\nTRACES ${summarize(traces, traceIds.length)} traces of the manifest`);
-  console.log(`SCREENS ${summarize(screens, SCREENS.length)} screens`);
+  console.log(`\n${CHECKS.traces}: ${summarize(traces, traceIds.length)}`);
+  console.log(`${CHECKS.screens}: ${summarize(screens, SCREENS.length)}`);
 
   const visitedEveryTrace = traces.length === traceIds.length;
   const failed = [...traces, ...screens].some((result) => result.problems.length > 0);
