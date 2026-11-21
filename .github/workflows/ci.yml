@@ -128,7 +128,7 @@ jobs:
       - name: Test dashboard UI
         if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
         working-directory: src/NetApiFlow.Dashboard/ClientApp
-        run: npm run test:ci
+        run: npm run test:ci -- --reporters default --reporters json --output-file "$RUNNER_TEMP/vitest.json"
 
       - name: Restore
         if: needs.detect-changes.outputs.docs_only != 'true'
@@ -147,18 +147,25 @@ jobs:
         shell: bash
         run: |
           set -e
-          dotnet test tests/NetApiFlow.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.EntityFrameworkCore.Ef8Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.Mcp.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.OpenTelemetry.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.PrePipelineInteropSpike -c Release --no-build --collect:"XPlat Code Coverage"
+          run_tests() {
+            dotnet test "tests/$1" -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=$1.trx" --results-directory "$RUNNER_TEMP/trx"
+          }
+          run_tests NetApiFlow.Tests
+          run_tests NetApiFlow.IntegrationTests
+          run_tests NetApiFlow.EntityFrameworkCore.Ef8Tests
+          run_tests NetApiFlow.Mcp.Tests
+          run_tests NetApiFlow.OpenTelemetry.Tests
+          run_tests NetApiFlow.PrePipelineInteropSpike
           # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners (tarefa 6.5).
           if [ "${{ runner.os }}" != "Windows" ]; then
-            dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-            dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
-            dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
+            run_tests NetApiFlow.Storage.Tests
+            run_tests NetApiFlow.Npgsql.IntegrationTests
+            run_tests NetApiFlow.SqlClient.IntegrationTests
           fi
+
+      - name: Check that every regression guard still exists and passes
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: node scripts/check-regression-guards.mjs --trx "$RUNNER_TEMP/trx" --vitest "$RUNNER_TEMP/vitest.json"
 
       - name: Create the local package folders the verification projects list
         if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'

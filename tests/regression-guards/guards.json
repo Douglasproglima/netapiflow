@@ -1,0 +1,587 @@
+[
+  {
+    "id": "S1-otlp-export",
+    "defect": "The OTLP exporter sent the raw error message, with no sanitizing and no 300 character cut",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.OpenTelemetry.Tests",
+      "test": "NetApiFlow.OpenTelemetry.Tests.ErrorMessageExportTests.MarkError_WithASecretInTheMessage_ExportsNoFragmentOfItAndNoMoreThan300Characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S1-activity-tag",
+    "defect": "The error message tag of the Activity carried the raw message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.Activity_WithASecretInTheMessage_CarriesTheErrorMessageTagAlreadyClean"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-sanitizer-audit-cases",
+    "defect": "The sanitizer let a secret through in the forms the audit measured (Bearer, access_token, client_secret, DB_PASSWORD, api_key) and cut the message before cleaning it",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Sanitization.ErrorMessageSanitizerTests.Sanitize_WithEachCaseTheAuditMeasured_LeavesNoFragmentOfTheSecretAndNoMoreThan300Characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-sanitizer-leaked-forms",
+    "defect": "The sanitizer let through the forms of secret that had leaked before",
+    "fixedIn": "#388",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Sanitization.ErrorMessageSanitizerTests.Sanitize_WithASecretInAFormThatLeakedBefore_ReturnsTheMessageWithOnlyTheSecretRedacted"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-sanitizer-limit",
+    "defect": "A secret that starts just before the limit of 300 characters was cut instead of removed",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Sanitization.ErrorMessageSanitizerTests.Sanitize_WithASecretStartingJustBeforeTheLimit_NeverLeaksItNorExceeds300Characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-panel-rest",
+    "defect": "The REST API of the panel served a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.PanelRest_WithASecretInTheMessage_ServesNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-panel-sse",
+    "defect": "The live stream of the panel carried a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.PanelSse_WithASecretInTheMessage_StreamsNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-storage",
+    "defect": "The store persisted a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.Storage_WithASecretInTheMessage_PersistsNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-correlated-log",
+    "defect": "A log correlated to a span carried a secret of the logged message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.CorrelatedLog_WithASecretInTheLoggedMessage_ReachesTheSpanWithNoFragmentOfIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-mcp",
+    "defect": "The MCP tool get_trace returned a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.ErrorMessageMcpTests.GetTrace_WithASecretInTheMessage_ReturnsNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S4-dashboard-matrix",
+    "defect": "AllowAnonymous together with RequireAuthorization opened the dashboard",
+    "fixedIn": "#360",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardAuthorizationMatrixTests.EveryDashboardRouteAndMethod_FollowsTheMatrix"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S4-mcp-matrix",
+    "defect": "AllowAnonymous together with RequireAuthorization opened the MCP endpoint",
+    "fixedIn": "#360",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAuthorizationMatrixTests.EveryMcpRouteAndMethod_FollowsTheMatrix"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-dashboard-routes-traced",
+    "defect": "Under UsePathBase the dashboard (pages, REST and stream) was traced as the traffic of the app",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.RoutesOfTheDashboard_AreNeverTraced"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-stream-running",
+    "defect": "Under UsePathBase the stream of the dashboard showed as a trace that stayed Running",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.StreamOfTheDashboard_IsNeverTraced_AndNeverShowsAsRunning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-mcp-traced",
+    "defect": "Under UsePathBase the MCP server was traced as the traffic of the app",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.InitializeOfTheMcpServer_IsNeverTraced"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-exclude-paths",
+    "defect": "Under UsePathBase, ExcludePaths compared the full path and excluded nothing",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.ExcludePaths_OnAMatchedEndpoint_ValuesThePathTheUserSees"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-include-paths",
+    "defect": "Under UsePathBase, IncludePaths left the route of the user out of the store",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.IncludePaths_OnAMatchedEndpoint_KeepsTheUsersRouteInTheStore"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-without-tracking",
+    "defect": "A route marked with WithoutNetApiFlowTracking was traced, with or without a PathBase",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.EndpointWithoutNetApiFlowTracking_IsNeverTraced"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S6-dashboard-origin-host",
+    "defect": "The dashboard accepted a foreign Origin and a foreign Host in Development (DNS rebinding)",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardOriginAndHostTests.EveryRestMethod_AppliesTheSharedOriginAndHostTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S6-mcp-origin-host",
+    "defect": "The MCP endpoint accepted a foreign Origin and a foreign Host in Development",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpOriginAndHostTests.Initialize_AppliesTheSharedOriginAndHostTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S6-dashboard-in-a-new-app",
+    "defect": "The dashboard accepted a foreign Origin and a foreign Host, seen in a new app with the published package",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "d"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S6-mcp-in-a-new-app",
+    "defect": "The MCP endpoint accepted a foreign Origin and a foreign Host, seen in a new app with the published package",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "h"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S7-dashboard-document-policy",
+    "defect": "The page of the dashboard had no security policy and could be shown in an iframe",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSecurityHeadersTests.TheDashboardDocument_CarriesTheWholePolicy"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S7-dashboard-refusal-headers",
+    "defect": "A refused request of the dashboard came without the security headers",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSecurityHeadersTests.ARefusedRequest_ComesWithTheSecurityHeaders"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S7-mcp-headers",
+    "defect": "An answer of the MCP endpoint came without the security headers",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpSecurityHeadersTests.AnAnsweredRequest_ComesWithTheSecurityHeaders"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S7-headers-in-a-new-app",
+    "defect": "The page, the API and the refusals of the dashboard came without the security headers, seen in a new app with the published package",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "e"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B1-cancelled-command",
+    "defect": "A cancelled EF Core command left its step in the singleton for ever and the span Running",
+    "fixedIn": "#407",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.EntityFrameworkCore.FlowDbCommandInterceptorTests.Query_CancelledWhileItRuns_ClosesTheDatabaseStepAndReleasesIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B2-decorated-service-disposed",
+    "defect": "DecorateFlowTracked created the original service with the container never disposing it",
+    "fixedIn": "#407",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Marking.DecorateFlowTrackedTests.DecorateFlowTracked_ForADisposableScopedService_DisposesTheOriginalWhenTheScopeEnds"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B3-cancelled-task",
+    "defect": "The proxy of a marked service returned a cancelled Task as faulted and closed the span as Success",
+    "fixedIn": "#407",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Marking.FlowInterceptorProxyTests.Invoke_WhenTaskIsCanceled_ReturnsACanceledTaskAndClosesTheSpanAsTheCancellation"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-blueprint-from-a-later-run",
+    "defect": "The blueprint of a trace came from a later execution, so the drawing of an old trace changed with time",
+    "fixedIn": "#412",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.BlueprintAnchorTests.Blueprint_OfAnEarlyReturnTrace_NeverComesFromALaterExecution"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-blueprint-store-default",
+    "defect": "A store written before the anchored blueprint could return a trace that started at or after the anchor",
+    "fixedIn": "#412",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Storage.TraceStoreBlueprintAnchorDefaultTests.GetLastSuccessfulAsync_StoreWithoutTheAnchoredMember_NeverReturnsATraceThatStartedAtOrAfterTheAnchor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-panel-anchor",
+    "defect": "The panel asked for the blueprint of a trace with no anchor, so it got the last success even if it was later",
+    "fixedIn": "#416",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent asks for the blueprint of a trace with the start of that trace as the anchor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-route-known-while-running",
+    "defect": "A trace that matched an endpoint was listed as (unmatched) until the request ended",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnmatchedRequestLiveVisibilityTests.RequestWithAMatchedEndpoint_WhileItRuns_IsListedAsRunningWithItsRoute"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-header-on-an-unhandled-500",
+    "defect": "A 500 of an exception nothing handled came without X-NetApiFlow-TraceId although the trace existed",
+    "fixedIn": "#405",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnhandledExceptionTraceIdHeaderTests.UnhandledException_InDevelopmentWithTheHeaderOn_IsAnswered500CarryingTheTraceIdOfItsTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-header-in-a-new-app",
+    "defect": "The trace id header was sent where it should not or missing where it should, seen in a new app with the published package",
+    "fixedIn": "#405",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "f"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "QuickStart-does-not-compile",
+    "defect": "The Quick start, pasted into a new webapi, did not compile (CS1529, a using in the middle of the file)",
+    "fixedIn": "#414",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "a"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "Demo-404-on-every-trace",
+    "defect": "The built demo answered 404 on every trace after the panel started to send before",
+    "fixedIn": "#416",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/demo-fixture-coverage.spec.ts",
+      "test": "the blueprints of the recorded demo points"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Demo-says-what-it-lacks",
+    "defect": "The demo answered a call it had no recording for with a 404 that nothing showed",
+    "fixedIn": "#440",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/demo-fixture.interceptor.spec.ts",
+      "test": "demoFixtureInterceptor says on the console which request it has no recording for when it answers"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Demo-opened-in-a-browser",
+    "defect": "No job opened the built demo, so a broken demo reached the review",
+    "fixedIn": "#440",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "traces-of-the-manifest"
+    },
+    "job": "built-demo"
+  },
+  {
+    "id": "EfFloor-moved-to-9",
+    "defect": "The package asked for EF Core 9.0.22, which broke an app on EF Core 8 with a provider of EF 8",
+    "fixedIn": "#323",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.EntityFrameworkCore.Ef8Tests",
+      "test": "NetApiFlow.EntityFrameworkCore.Ef8Tests.FlowDbCommandInterceptorOnEfCore8Tests.ResolvedEfCore_InThisProject_IsTheDeclaredFloor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "EfFloor-works-on-the-floor",
+    "defect": "The interceptor did not record the commands on the floor version of EF Core",
+    "fixedIn": "#323",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.EntityFrameworkCore.Ef8Tests",
+      "test": "NetApiFlow.EntityFrameworkCore.Ef8Tests.FlowDbCommandInterceptorOnEfCore8Tests.Query_OnTheFloorEfCore_RecordsOneEntityFrameworkCoreDatabaseStep"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "EfFloor-in-the-nuspec",
+    "defect": "The floor of EF Core that the package declares moved without anyone seeing it",
+    "fixedIn": "#422",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.EntityFrameworkCore"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "Options-only-in-config-log-correlation",
+    "defect": "LogCorrelation.Enabled set only in the configuration never turned the feature on",
+    "fixedIn": "#309",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ConfigOnlyOptionsIntegrationTests.LogCorrelation_EnabledOnlyInConfiguration_CorrelatesLogToTheActiveSpan"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Options-only-in-config-pre-pipeline",
+    "defect": "CapturePrePipelineSteps set only in the configuration never turned the feature on",
+    "fixedIn": "#309",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ConfigOnlyOptionsIntegrationTests.PrePipelineSteps_EnabledOnlyInConfiguration_ProducesAuthorizationAndResourceFilterSpans"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-status-page-excluded-path",
+    "defect": "A status code page that re-executes opened a trace and a header for a path in ExcludePaths",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.StatusCodePageReExecution_ForAPathInExcludePaths_LeavesNoTraceAndNoHeader"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-status-page-excluded-error-path",
+    "defect": "A status code page that re-executes dropped the trace of a request when only the error path was excluded",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.StatusCodePageReExecution_WhenOnlyTheErrorPathIsExcluded_StillRecordsTheRequest"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-exception-handler-excluded-path",
+    "defect": "An exception handler that re-executes opened a trace and a header for a path in ExcludePaths",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.ExceptionHandlerReExecution_ForAPathInExcludePaths_LeavesNoTraceAndNoHeader"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-exception-handler-excluded-error-path",
+    "defect": "An exception handler that re-executes dropped the trace of a request when only the error path was excluded",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.ExceptionHandlerReExecution_WhenOnlyTheErrorPathIsExcluded_StillRecordsTheRequest"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-against-the-published-package",
+    "defect": "A re-executed request behaved differently from the published package, in the header and in the recorded route",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "status-page-reexecution-excluded-path"
+    },
+    "job": "comparison"
+  },
+  {
+    "id": "R2-request-without-an-endpoint-live",
+    "defect": "A request that matches no endpoint was listed as running and its steps were published before the end, the decision to keep them for the end",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnmatchedRequestLiveVisibilityTests.RequestWithoutAMatchedEndpoint_WhileItRuns_IsNotListedAsRunningAndItsStepWaitsForTheEnd"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R2-against-the-published-package",
+    "defect": "The live view of a request with no endpoint changed against the published package without anyone listing it",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "slow-request-in-a-terminal-middleware"
+    },
+    "job": "comparison"
+  },
+  {
+    "id": "Reservation-drop-counter",
+    "defect": "A reservation that was never going to be traced counted a dropped trace",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.TryReserveTrace_AtTheLimitOfActiveTraces_ReturnsFalseWithoutCountingADrop"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Reservation-seen-by-the-panel",
+    "defect": "The panel read a reservation nobody published and showed it in place of the stored trace with the same id",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnpublishedReservationVisibilityTests.TraceLookupOfThePanel_WhileAnExcludedRequestUsesTheSameTraceId_ServesTheStoredTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Reservation-duplicated-event",
+    "defect": "A step added from another thread while a reservation was published came out twice",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.PublishReserved_WhileAnotherThreadAddsAndCompletesSpans_PublishesEachEventOnce"
+    },
+    "job": "build-test"
+  }
+]

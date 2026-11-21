@@ -11,6 +11,7 @@ import {
 } from './readme-blocks.mjs';
 
 const NUGET_ORG = 'https://api.nuget.org/v3/index.json';
+export const SCENARIO_ID = 'a';
 const ADVISORY_WARNINGS = 'NU1901%3BNU1902%3BNU1903%3BNU1904';
 const AFTER_BUILD = ['UserPipeline.Configure(app);', ''];
 const BEFORE_RUN = ['UserEndpoints.Map(app);'];
@@ -64,11 +65,11 @@ async function main() {
   );
 
   if (build.status !== 0) {
-    console.error('FAIL a [build] the Quick start compiles with 0 warnings, with the README blocks pasted in the order the text says');
+    console.error(`FAIL ${SCENARIO_ID} [build] the Quick start compiles with 0 warnings, with the README blocks pasted in the order the text says`);
     process.exit(1);
   }
 
-  console.log('PASS a [build] the Quick start compiles with 0 warnings, with the README blocks pasted in the order the text says');
+  console.log(`PASS ${SCENARIO_ID} [build] the Quick start compiles with 0 warnings, with the README blocks pasted in the order the text says`);
 }
 
 function run(command, args, directory, failOnError = true) {
