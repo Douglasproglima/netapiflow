@@ -45,6 +45,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.EntityFrameworkCore`: a query cancelled by its `CancellationToken` no longer leaves its
+  step open. The interceptor did not handle the cancellation event, so the step stayed in its
+  internal table for good and the span kept showing as running. The span now closes as failed with
+  an `OperationCanceledException`, and the step is released.
+- `NetApiFlow`: `DecorateFlowTracked` no longer leaves the services it decorates undisposed. It built
+  the original with `ActivatorUtilities`, so a decorated service that implements `IDisposable` was
+  never disposed. The container now owns the original and disposes it with the lifetime the service
+  was registered with. The original is registered with a private key, so the container has to
+  support keyed services. The default container does, from .NET 8.
+- `NetApiFlow`: a call through a tracked interface (`AddFlowTracked` or `DecorateFlowTracked`) that
+  returns a cancelled `Task` or `ValueTask` now hands the caller a cancelled task. It used to hand
+  back a faulted one, and the span closed as a success. The span now closes as failed with the
+  cancellation exception.
 - `NetApiFlow`: a store that fails to save no longer fills the log with one error and a stack trace
   per trace. A failed save logs a warning with the type and the message of the exception, and the
   next trace is tried normally. After three failures in a row the writer discards the traces that
