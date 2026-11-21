@@ -602,20 +602,33 @@ A proxy that ends TLS needs nothing for the scheme, because it is not compared.
 
 ### The trace id header
 
-NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request, in every
-environment. It carries the trace id, the same value the W3C `traceparent` header already carries,
-and it is how `NetApiFlow.Testing` finds the trace of a response. Knowing a trace id does not open
-the dashboard: its routes stay behind the rules above.
+NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request in Development. It
+carries the trace id, the same value the W3C `traceparent` header already carries. It is how
+`NetApiFlow.Testing` finds the trace of a response and how the dashboard's Runner opens the graph of
+the request it sent. Knowing a trace id does not open the dashboard: its routes stay behind the
+rules above.
 
-To keep the trace id out of your responses, turn the header off:
+**From 0.6.0 the header is sent only in Development by default. To keep it in Production, set
+`EmitTraceIdHeader = true`.**
 
 ```csharp
-builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = true);
 ```
 
-Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. Requests are still
-traced. `GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is
-off.
+Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": true }`. Set it to `false` to keep
+the trace id out of your responses in Development too. Requests are traced either way.
+`GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is off. A
+test host built with `WebApplicationFactory` runs in Development and needs nothing. If your tests run
+in another environment, such as `Testing` or `Staging`, set `EmitTraceIdHeader = true` in the test
+host.
+
+One response does not carry it even with the header on. In Production with no exception handler,
+an exception that nothing handles reaches the server, and the server builds the 500 itself and
+drops the headers set before. That 500 has no `X-NetApiFlow-TraceId`, although the trace is
+recorded. Measured on Kestrel, on
+`net8.0` and `net10.0`. NetApiFlow does not change that response. Add `UseExceptionHandler` and the
+500 is answered inside your pipeline, so it carries the header. In Development the developer
+exception page does that for you.
 
 ### Security headers
 

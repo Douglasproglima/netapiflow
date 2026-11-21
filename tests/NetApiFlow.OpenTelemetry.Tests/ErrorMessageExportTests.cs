@@ -83,7 +83,7 @@ public sealed class ErrorMessagesExportedForEveryCase : IAsyncLifetime
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
-                    services.AddNetApiFlow();
+                    services.AddNetApiFlow(options => options.EmitTraceIdHeader = true);
                     services.AddNetApiFlowOtlpExport();
                     services.ConfigureOpenTelemetryTracerProvider(builder => builder.AddInMemoryExporter(exported));
                 });

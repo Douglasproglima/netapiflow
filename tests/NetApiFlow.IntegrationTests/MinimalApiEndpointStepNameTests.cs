@@ -103,7 +103,11 @@ public class MinimalApiEndpointStepNameTests
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
-                    services.AddNetApiFlow(options => options.IncludePaths("/**"));
+                    services.AddNetApiFlow(options =>
+                    {
+                        options.IncludePaths("/**");
+                        options.EmitTraceIdHeader = true;
+                    });
                 });
                 webBuilder.Configure(app =>
                 {
