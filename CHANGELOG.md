@@ -89,6 +89,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   lists what it does not touch: `Basic <base64>` without `Authorization`, `credentials: ...`, a
   cookie in `name=value` form, an unquoted value with a space or a `;` (it is cut there, as in a
   connection string), a JSON value that is not a string, and a URL password with an unencoded `@`.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: both now refuse a request whose `Host` or `Origin` is
+  not their own, with a 403 that says what to change. They used to answer any page on the web, so
+  with the dashboard or the MCP endpoint open, which is the default in Development, a page under an
+  attacker's control could use DNS rebinding to read your traces, delete all of them with
+  `DELETE /flow/api/traces` and call the MCP tools. In Development the `Host` must now be
+  `localhost`, `127.0.0.1`, `[::1]` or a name you declare in `AllowedHosts` (a `*` does not count),
+  so opening the dashboard by a LAN address, `host.docker.internal` or a WSL address needs that
+  declaration. In every environment an `Origin` must match the `Host` the application sees, and the
+  scheme is not compared. Behind a reverse proxy that rewrites the `Host`, keep the original `Host`
+  or call `UseForwardedHeaders` with `XForwardedHost`, otherwise a `DELETE` from the browser gets 403.
 
 ## [0.5.2] - 2026-11-20
 

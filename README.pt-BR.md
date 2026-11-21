@@ -573,6 +573,35 @@ versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server
 > `.RequireAuthorization()`, o NetApiFlow registra um aviso que nomeia o 401 e o caminho para
 > resolver, para ele não ficar sem explicação.
 
+### Quais `Host` e `Origin` são aceitos
+
+O dashboard e o endpoint do MCP conferem o `Host` e a `Origin` de toda requisição, em todo método: a
+API REST, o stream ao vivo, os arquivos e o transporte do MCP. A conferência roda depois do seu
+próprio pipeline, então o `UseForwardedHeaders` já definiu o `Host`. Uma requisição recusada recebe
+**403**, com uma mensagem que diz o motivo e o que mudar.
+
+- **Em Development**, o `Host` tem de ser `localhost`, `127.0.0.1` ou `[::1]`, ou um nome que você
+  declara na configuração `AllowedHosts`. Um `"*"` não conta como declarar. É isso que barra o DNS
+  rebinding: uma página de outro site, cujo nome resolve para a sua máquina, chega ao dashboard com
+  esse nome como `Host`, então só o `Host` consegue recusá-la.
+- **Em qualquer ambiente**, uma requisição com `Origin` tem de ter o host e a porta do `Host` que a
+  aplicação enxerga. O esquema não é comparado. Uma requisição sem `Origin` passa, como um `GET` da
+  mesma página ou um cliente que não é navegador, e um `Origin: null` é recusado.
+- **Fora de Development**, o `Host` segue o seu próprio `AllowedHosts` e o `UseForwardedHeaders`.
+
+Para abrir o dashboard em Development por um nome que não seja localhost, por exemplo do celular
+pelo endereço da sua máquina na rede local, ou `host.docker.internal`, declare o nome:
+
+```json
+{ "AllowedHosts": "localhost;192.168.1.13" }
+```
+
+Atrás de um proxy reverso a aplicação precisa enxergar o `Host` original. Senão a `Origin` que o
+navegador manda não casa com ele e um `DELETE` recebe 403. Mantenha o `Host` no proxy
+(`proxy_set_header Host $http_host;` no nginx), ou chame o `UseForwardedHeaders` com
+`ForwardedHeaders.XForwardedHost` antes do dashboard e deixe o proxy mandar o `X-Forwarded-Host`.
+Um proxy que termina o TLS não precisa de nada para o esquema, porque ele não é comparado.
+
 ### O cabeçalho com o trace id
 
 O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada, em qualquer
@@ -612,6 +641,13 @@ trace nem dispara um replay via MCP.
 > `.RequireAuthorization(...)` ou um `IFlowAccessFilter` próprio, igual a
 > [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção). Um agente de IA
 > lendo dado de trace tem o mesmo risco de exposição que o dashboard visual.
+>
+> O endpoint também recusa, com **403**, uma requisição cujo `Host` ou `Origin` não seja o dele. Em
+> Development o `Host` tem de ser `localhost`, `127.0.0.1`, `[::1]` ou um nome declarado em
+> `AllowedHosts`, e uma `Origin` tem de casar com o `Host` que a aplicação enxerga. Um cliente MCP
+> que não é navegador, como o MCP Inspector ou o cliente C# oficial, não manda `Origin`, então não é
+> afetado. Os detalhes, e o que configurar atrás de um proxy reverso, estão em
+> [Quais `Host` e `Origin` são aceitos](#quais-host-e-origin-são-aceitos).
 
 Veja `samples/SampleApi.Controllers/README.md` para como apontar um cliente MCP real (ex.:
 Claude Code) para uma instância rodando.
