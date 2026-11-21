@@ -326,9 +326,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         FindLastSuccessfulAsync(method, routeKey, before: null, cancellationToken);
 
     public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
-        FindLastSuccessfulAsync(method, routeKey, TruncatedToMicroseconds(before), cancellationToken);
-
-    private static DateTime TruncatedToMicroseconds(DateTime value) => value.AddTicks(-(value.Ticks % 10));
+        FindLastSuccessfulAsync(method, routeKey, before, cancellationToken);
 
     private async ValueTask<FlowTraceDetail?> FindLastSuccessfulAsync(string method, string routeKey, DateTime? before, CancellationToken cancellationToken)
     {

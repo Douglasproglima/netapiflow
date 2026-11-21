@@ -50,6 +50,12 @@ public interface ITraceStore
     /// <paramref name="before"/>, so it never returns a wrong trace and may return <see langword="null"/>
     /// where an exact implementation would find an earlier one.
     /// </summary>
+    /// <param name="method">The HTTP method of the endpoint.</param>
+    /// <param name="routeKey">The route of the endpoint, in the same constraint-free shape as in the other members.</param>
+    /// <param name="before">A UTC date and time, normally the <c>StartedAt</c> of the trace being drawn. A store may
+    /// reject a value whose <see cref="DateTime.Kind"/> is not <see cref="DateTimeKind.Utc"/>, and the PostgreSQL store does.</param>
+    /// <param name="cancellationToken">A token to cancel the query.</param>
+    /// <returns>The trace with its spans, or <see langword="null"/> when there is none.</returns>
     async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken)
     {
         var latest = await GetLastSuccessfulAsync(method, routeKey, cancellationToken);

@@ -467,11 +467,16 @@ public abstract class TraceStoreTestsBase
         blueprintOfTheFirst.ShouldBeNull();
     }
 
-    [Fact]
-    public async Task GetLastSuccessfulAsync_AnchoredAtTheTracesOwnStartWithSubMicrosecondTicks_NeverReturnsTheTraceItself()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(5)]
+    [InlineData(7)]
+    [InlineData(9)]
+    public async Task GetLastSuccessfulAsync_AnchoredAtTheTracesOwnStartWithSubMicrosecondTicks_NeverReturnsTheTraceItself(int extraTicks)
     {
         var store = CreateStore();
-        var startedAt = DateTime.UtcNow.AddMinutes(-2).AddTicks(3);
+        var startedAt = new DateTime(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc).AddTicks(extraTicks);
         await store.SaveAsync(MakeTrace("own-1", startedAt: startedAt), [MakeSpan("own-1", "s1", null, 0)], CancellationToken.None);
 
         var blueprint = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", startedAt, CancellationToken.None);
