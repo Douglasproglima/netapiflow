@@ -9,6 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: a Minimal API endpoint becomes an `Endpoint` step with no marking, so the graph of
+  the default `dotnet new webapi` app is no longer empty. The `CaptureMinimalApiEndpoints` option
+  (`NetApiFlowOptions`, or `NetApiFlow:CaptureMinimalApiEndpoints` in configuration, default `true`)
+  turns it off.
 - `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
   in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
   want the trace id in its responses. It is on by default in Development and off elsewhere, see
@@ -36,6 +40,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **`NetApiFlow`: every Minimal API endpoint now gets one step per traced request by default.** A
+  trace of an app that did not mark its endpoints goes from 0 steps to 1, so the span count, the
+  architecture map and the limit of 300 steps per trace see one more step per request, and a step
+  you open inside a handler now has the `Endpoint` step as its parent. The step runs from routing
+  to the end of the request, so it includes the middleware in between, such as authentication,
+  while `.WithNetApiFlowTracking()` measures only the filters and the handler. It is marked as
+  failed when the endpoint throws, and also when the response is a 5xx with no exception. Set
+  `CaptureMinimalApiEndpoints = false` to go back to marking each endpoint. An endpoint that is
+  already marked still gets one step.
 - **`NetApiFlow`: from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by
   default. To keep it in Production, set `EmitTraceIdHeader = true`**, in code or in
   `NetApiFlow:EmitTraceIdHeader`. In Production it is no longer sent and nothing warns you, so a
@@ -55,6 +68,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.EntityFrameworkCore`: a query cancelled by its `CancellationToken` no longer leaves its
+  step open. The interceptor did not handle the cancellation event, so the step stayed in its
+  internal table for good and the span kept showing as running. The span now closes as failed with
+  an `OperationCanceledException`, and the step is released.
+- `NetApiFlow`: `DecorateFlowTracked` no longer leaves the services it decorates undisposed. It built
+  the original with `ActivatorUtilities`, so a decorated service that implements `IDisposable` was
+  never disposed. The container now owns the original and disposes it with the lifetime the service
+  was registered with. The original is registered with a private key, so the container has to
+  support keyed services. The default container does, from .NET 8.
+- `NetApiFlow`: a call through a tracked interface (`AddFlowTracked` or `DecorateFlowTracked`) that
+  returns a cancelled `Task` or `ValueTask` now hands the caller a cancelled task. It used to hand
+  back a faulted one, and the span closed as a success. The span now closes as failed with the
+  cancellation exception.
 - `NetApiFlow`: a store that fails to save no longer fills the log with one error and a stack trace
   per trace. A failed save logs a warning with the type and the message of the exception, and the
   next trace is tried normally. After three failures in a row the writer discards the traces that

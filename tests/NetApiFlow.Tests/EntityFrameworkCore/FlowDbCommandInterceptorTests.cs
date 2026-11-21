@@ -18,11 +18,60 @@ public class FlowDbCommandInterceptorTests
         public DbSet<Order> Orders => Set<Order>();
     }
 
+    private sealed class CancelsTheTokenWhenTheReaderStarts(CancellationTokenSource cancellation) : Microsoft.EntityFrameworkCore.Diagnostics.DbCommandInterceptor
+    {
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<System.Data.Common.DbDataReader>> ReaderExecutingAsync(
+            System.Data.Common.DbCommand command,
+            Microsoft.EntityFrameworkCore.Diagnostics.CommandEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<System.Data.Common.DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            cancellation.Cancel();
+            return ValueTask.FromResult(result);
+        }
+    }
+
     private sealed class Order
     {
         public int Id { get; set; }
 
         public string Name { get; set; } = "";
+    }
+
+    [Fact]
+    public async Task Query_CancelledWhileItRuns_ClosesTheDatabaseStepAndReleasesIt()
+    {
+        var recorderOptions = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(recorderOptions);
+        using var listener = new FlowActivityListener(recorder, recorderOptions, NullLoggerFactory.Instance);
+
+        using var root = new Activity("TestRoot");
+        root.Start();
+        var traceId = root.TraceId.ToString();
+        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        using var cancellation = new CancellationTokenSource();
+        var interceptor = new FlowDbCommandInterceptor(Options.Create(new NetApiFlowOptions()));
+        var dbOptions = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlite(connection)
+            .AddInterceptors(interceptor, new CancelsTheTokenWhenTheReaderStarts(cancellation))
+            .Options;
+
+        await using (var context = new TestDbContext(dbOptions))
+        {
+            await context.Database.EnsureCreatedAsync();
+
+            await Should.ThrowAsync<OperationCanceledException>(async () => await context.Orders.ToListAsync(cancellation.Token));
+        }
+
+        var select = recorder.GetActiveTrace(traceId)!.Spans.Single(s => s.Type == ComponentType.Database && s.Operation == "SELECT Orders");
+        select.Status.ShouldNotBe(FlowStatus.Running);
+        select.EndedAt.ShouldNotBeNull();
+        select.ErrorType.ShouldBe(typeof(OperationCanceledException).FullName);
+        interceptor.OpenStepCount.ShouldBe(0);
     }
 
     [Fact]

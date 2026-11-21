@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,6 +63,10 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddSingleton<IConfigureOptions<MvcOptions>, FlowResourceFilterMvcOptionsSetup>();
         services.AddSingleton<FlowAuthorizationFilterListener>();
         services.AddHostedService<FlowAuthorizationFilterListenerWarmupHostedService>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IDeveloperPageExceptionFilter, FlowDeveloperPageExceptionFilter>());
+        services.AddSingleton<EndpointMatchedListener>();
+        services.AddHostedService<EndpointMatchedListenerWarmupHostedService>();
 
         return services;
     }

@@ -65,7 +65,7 @@ public class GetRecentTraceIntegrationTests
 
         trace.ShouldNotBeNull();
         trace.Trace.TraceId.ShouldBe(traceId);
-        trace.Spans.Count.ShouldBe(3);
+        trace.Spans.Count.ShouldBe(4);
         trace.Spans.ShouldAllBe(s => s.EndedAt != null);
         trace.Spans.Count(s => s.Type == ComponentType.Database).ShouldBe(1);
     }
