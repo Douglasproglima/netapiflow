@@ -138,6 +138,7 @@ saída real e o diff do README, e **não** declara a fase pronta antes disso.
 - Os itens do nível 3 (Fase 60) e o que a varredura final da auditoria acrescentar.
 - O item 26 do roadmap (filtrar o documento OpenAPI de `/endpoints`): a frase 16 vira texto, e a correção continua
   roadmap.
+- As frases do README sobre o `net8.0` e o `net11.0`: são da Fase 69 (D-250).
 
 ## Critério que vale para a fase inteira
 

@@ -105,6 +105,7 @@ Entregues em `develop` (`67029a5`). A Planejadora reproduziu os vermelhos num wo
 - `getBlueprint(method, route, before)`, e o painel manda o `startedAt` da trace que está vendo.
 - **Trace com a rota `(unmatched)` não pede blueprint.** A constante `UNMATCHED_ROUTE_TEMPLATE` já existe em `core/models.ts`, desde a Tarefa 51.8 (#411). A 57.3 a reaproveita e não cria outra.
 - A chave do efeito continua sendo o id da trace.
+- **A demo estática passa pela mudança (D-251).** O manifest da demo é indexado pela URL com a query, então o `before` novo muda a chave e dá 404. O `build:demo` tem de responder o blueprint respeitando a âncora (estritamente antes), o `subscribe` trata o erro, e a prova são as 26 traces da demo com 0 erros no console, vista falhando antes. A Planejadora não tinha escrito isso, e a auditoria devolveu a #416 por isso.
 
 ## Tarefa 57.4: "Aguardando" ao vivo (depende da 53.2)
 
