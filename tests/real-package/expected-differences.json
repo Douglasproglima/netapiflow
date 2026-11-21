@@ -69,5 +69,13 @@
     "new": false,
     "reason": "The trace id header is sent only in Development by default from 0.6.0.",
     "changelog": "from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by default."
+  },
+  {
+    "scenario": "static-file-and-request-without-a-route",
+    "aspect": "GET /site.css header",
+    "old": true,
+    "new": false,
+    "reason": "A difference that no longer happens.",
+    "changelog": "a request that matches no endpoint is now recorded only when it ends."
   }
 ]
