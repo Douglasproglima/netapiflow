@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Dashboard.StaticFiles;
 
 namespace NetApiFlow.Dashboard.Endpoints;
@@ -27,7 +29,9 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
         var apiGroup = endpoints.MapNetApiFlowDashboardApi(basePath);
 
         var fileProvider = DashboardEmbeddedFiles.CreateFileProvider();
-        var indexHtmlCache = new DashboardIndexHtmlCache(fileProvider);
+        var indexHtmlCache = new DashboardIndexHtmlCache(
+            fileProvider,
+            endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<DashboardIndexHtmlCache>());
 
         var staticGroup = endpoints.MapGroup(basePath);
         staticGroup.AddEndpointFilter(DashboardAccessGate.EnforceAsync);
@@ -54,9 +58,15 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
                 ? resolved
                 : "application/octet-stream";
 
+            if (contentType == "text/html")
+            {
+                SecurityHeaders.ApplyDocumentPolicy(context.Response);
+            }
+
             return Results.File(fileInfo.CreateReadStream(), contentType);
         }
 
+        SecurityHeaders.ApplyDocumentPolicy(context.Response);
         var fullBasePath = $"{context.Request.PathBase}{basePath}/";
         return Results.Content(indexHtmlCache.GetHtml(fullBasePath), "text/html");
     }

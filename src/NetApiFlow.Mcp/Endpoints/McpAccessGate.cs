@@ -10,6 +10,7 @@ internal static class McpAccessGate
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
+        SecurityHeaders.Apply(httpContext.Response);
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
