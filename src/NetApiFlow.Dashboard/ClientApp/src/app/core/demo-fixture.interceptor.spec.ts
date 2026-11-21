@@ -114,6 +114,35 @@ describe('demoFixtureInterceptor', () => {
     expect(await result).toBe(404);
   });
 
+  it('says on the console which request it has no recording for when it answers 404', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const result = firstValueFrom(
+      api.getBlueprint('GET', '/api/orders/{id}', '2030-01-01T00:00:00.000000Z'),
+    ).catch((error: HttpErrorResponse) => error.status);
+    flushManifest();
+
+    await result;
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(consoleError.mock.calls[0][0]).toContain('api/blueprint');
+    expect(consoleError.mock.calls[0][0]).toContain('before=2030-01-01T00:00:00.000000Z');
+    consoleError.mockRestore();
+  });
+
+  it('does not touch the console when it has a recording', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const result = firstValueFrom(
+      api.getBlueprint('GET', '/api/orders/{id}', '2026-01-01T00:00:00.000000Z'),
+    );
+    flushManifest();
+    httpMock.expectOne('assets/demo-fixtures/traces_t1.json').flush({});
+
+    await result;
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it('serves every route the dashboard calls on load', async () => {
     const calls: [string, Promise<unknown>][] = [
       ['traces.json', firstValue(api.getTraces({}))],
