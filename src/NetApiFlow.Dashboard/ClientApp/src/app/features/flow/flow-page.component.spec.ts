@@ -285,6 +285,25 @@ describe('FlowPageComponent', () => {
     expect(blueprintRequests).toHaveLength(0);
   });
 
+  it('draws the trace without a blueprint when the blueprint request fails', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const [blueprintRequest] = httpMock.match((request) => request.url === 'api/blueprint');
+    blueprintRequest.flush('boom', { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.trace()?.traceId).toBe('t1');
+    const states = fixture.componentInstance.graph().nodes.map((node) => node.state);
+    expect(states).not.toContain('not-executed');
+    expect(states).not.toContain('waiting');
+  });
+
   it('shows a branch of the blueprint as waiting while the trace runs', async () => {
     const running: FlowTraceDetail = {
       ...makeTrace('running'),

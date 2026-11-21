@@ -1,6 +1,12 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import {
   DEMO_MANIFEST_PATH,
@@ -19,7 +25,10 @@ const MANIFEST = {
     'api/endpoints': 'endpoints.json',
     'api/traces/t1': 'traces_t1.json',
     'api/architecture?method=GET&route=/api/orders/{id}': 'architecture_get.json',
+    'api/blueprint?before=2026-01-01T00:00:00.000000Z&method=GET&route=/api/orders/{id}':
+      'traces_t1.json',
   },
+  noContent: ['api/blueprint?before=2025-01-01T00:00:00.000000Z&method=GET&route=/api/orders/{id}'],
   fallbacks: {
     'api/traces': 'traces_t1.json',
   },
@@ -62,6 +71,47 @@ describe('demoFixtureInterceptor', () => {
       .flush({ slowThresholdMicros: 250_000, version: '0.4.1' });
 
     expect((await result).version).toBe('0.4.1');
+  });
+
+  it('answers a blueprint request with the recording made for the start of that trace', async () => {
+    const result = firstValue(
+      api.getBlueprint('GET', '/api/orders/{id}', '2026-01-01T00:00:00.000000Z'),
+    );
+    flushManifest();
+
+    httpMock.expectNone('api/blueprint');
+    httpMock.expectOne('assets/demo-fixtures/traces_t1.json').flush({ traceId: 't1', spans: [] });
+
+    expect((await result)?.traceId).toBe('t1');
+  });
+
+  it('answers 204 with no body for a trace that has no earlier execution', async () => {
+    const http = TestBed.inject(HttpClient);
+    const result = firstValue(
+      http.get('api/blueprint', {
+        observe: 'response',
+        params: {
+          method: 'GET',
+          route: '/api/orders/{id}',
+          before: '2025-01-01T00:00:00.000000Z',
+        },
+      }),
+    );
+    flushManifest();
+
+    httpMock.expectNone((request) => request.url.startsWith('assets/demo-fixtures/traces'));
+    const response = await result;
+    expect(response.status).toBe(204);
+    expect(response.body).toBeNull();
+  });
+
+  it('still answers 404 for a blueprint of a trace the manifest does not know', async () => {
+    const result = firstValueFrom(
+      api.getBlueprint('GET', '/api/orders/{id}', '2030-01-01T00:00:00.000000Z'),
+    ).catch((error: HttpErrorResponse) => error.status);
+    flushManifest();
+
+    expect(await result).toBe(404);
   });
 
   it('serves every route the dashboard calls on load', async () => {

@@ -25,6 +25,7 @@ export interface DemoSampleResponse {
 
 export interface DemoManifest {
   routes: Record<string, string>;
+  noContent?: string[];
   fallbacks?: Record<string, string>;
   documents?: Record<string, string>;
   sampleResponses?: DemoSampleResponse[];
@@ -42,6 +43,10 @@ export function demoFixtureInterceptor(
 
   return loadManifest(http).pipe(
     switchMap((manifest) => {
+      if (isRecordedAsNoContent(manifest, request)) {
+        return of(new HttpResponse<null>({ body: null, status: 204, url: request.urlWithParams }));
+      }
+
       const file = resolveFixtureFile(manifest, request);
       if (file) {
         return http
@@ -158,6 +163,13 @@ function isParameter(segment: string): boolean {
 
 function literalSegmentCount(template: string): number {
   return pathSegments(template).filter((segment) => !isParameter(segment)).length;
+}
+
+function isRecordedAsNoContent(manifest: DemoManifest, request: HttpRequest<unknown>): boolean {
+  return (
+    isDashboardApiRequest(request) &&
+    (manifest.noContent ?? []).includes(normalizeKey(request.urlWithParams))
+  );
 }
 
 export function resolveFixtureFile(

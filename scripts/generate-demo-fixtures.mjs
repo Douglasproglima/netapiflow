@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -28,6 +28,11 @@ let prettier;
 await main();
 
 async function main() {
+  if (options.anchorBlueprintsOnly) {
+    await anchorBlueprintsOfTheRecordedFixtures();
+    return;
+  }
+
   await warmUp();
 
   const manifest = { routes: {}, fallbacks: {}, documents: {}, sampleResponses: [] };
@@ -62,18 +67,90 @@ async function main() {
     const canonicalKey = `method=${summary.method}&route=${summary.routeTemplate}`;
     const escapedQuery = `method=${encodeURIComponent(summary.method)}&route=${encodeURIComponent(summary.routeTemplate)}`;
     await capture(manifest, `api/architecture?${canonicalKey}`, `api/architecture?${escapedQuery}`);
-    await capture(manifest, `api/blueprint?${canonicalKey}`, `api/blueprint?${escapedQuery}`);
   }
 
   await captureOpenApiDocumentTheRunnerReads(manifest);
+  await anchorBlueprints(manifest);
+  await writeManifest(manifest);
 
+  console.log(`Wrote ${Object.keys(manifest.routes).length} fixtures to ${outputDirectory}`);
+}
+
+async function writeManifest(manifest) {
   await writeFile(
     join(outputDirectory, 'manifest.json'),
     `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8',
   );
+}
 
-  console.log(`Wrote ${Object.keys(manifest.routes).length} fixtures to ${outputDirectory}`);
+async function anchorBlueprintsOfTheRecordedFixtures() {
+  const manifest = JSON.parse(await readFile(join(outputDirectory, 'manifest.json'), 'utf8'));
+  for (const key of Object.keys(manifest.routes).filter((name) => name.startsWith('api/blueprint'))) {
+    delete manifest.routes[key];
+  }
+
+  await anchorBlueprints(manifest);
+  await writeManifest(manifest);
+  console.log(
+    `Anchored ${Object.keys(manifest.routes).filter((name) => name.startsWith('api/blueprint')).length} blueprints, ${manifest.noContent.length} answered with no content.`,
+  );
+}
+
+async function anchorBlueprints(manifest) {
+  const traces = await readRecordedTraces(manifest);
+  const noContent = [];
+
+  for (const trace of traces) {
+    const key = `api/blueprint?before=${trace.startedAt}&method=${trace.method}&route=${trace.routeTemplate}`;
+    const earlier = lastSuccessBefore(traces, trace);
+    if (earlier) {
+      manifest.routes[key] = earlier.file;
+    } else {
+      noContent.push(key);
+    }
+  }
+
+  manifest.noContent = noContent.sort();
+}
+
+async function readRecordedTraces(manifest) {
+  const traces = [];
+  for (const [key, file] of Object.entries(manifest.routes)) {
+    if (/^api\/traces\/[0-9a-f]{32}$/.test(key)) {
+      const detail = JSON.parse(await readFile(join(outputDirectory, file), 'utf8'));
+      traces.push({ ...detail, file });
+    }
+  }
+
+  return traces;
+}
+
+function lastSuccessBefore(traces, trace) {
+  return traces
+    .filter(
+      (candidate) =>
+        candidate.status === 'Success' &&
+        candidate.method.toUpperCase() === trace.method.toUpperCase() &&
+        routeKey(candidate.routeTemplate) === routeKey(trace.routeTemplate) &&
+        startedAtMicros(candidate.startedAt) < startedAtMicros(trace.startedAt),
+    )
+    .sort((left, right) => startedAtMicros(right.startedAt) - startedAtMicros(left.startedAt))
+    .at(0);
+}
+
+function routeKey(routeTemplate) {
+  const withLeadingSlash = routeTemplate.startsWith('/') ? routeTemplate : `/${routeTemplate}`;
+  const withoutTrailingSlash =
+    withLeadingSlash.length > 1 && withLeadingSlash.endsWith('/')
+      ? withLeadingSlash.slice(0, -1)
+      : withLeadingSlash;
+  return withoutTrailingSlash.replace(/\{\*?([^{}:?]*)[^{}]*\}/g, '{$1}');
+}
+
+function startedAtMicros(startedAt) {
+  const [seconds, fraction = ''] = startedAt.replace('Z', '').split('.');
+  return Date.parse(`${seconds}Z`) * 1000 + Number(fraction.padEnd(6, '0').slice(0, 6));
 }
 
 function useFirstTraceForTracesWithoutRecording(manifest, firstTraceId) {
@@ -253,9 +330,12 @@ async function getJson(requestKey) {
 }
 
 function parseArguments(argv) {
-  const parsed = { baseUrl: 'http://localhost:5080', dashboardPath: '/flow' };
+  const parsed = { baseUrl: 'http://localhost:5080', dashboardPath: '/flow', anchorBlueprintsOnly: false };
   for (let i = 0; i < argv.length; i += 2) {
-    if (argv[i] === '--base-url') {
+    if (argv[i] === '--anchor-blueprints-only') {
+      parsed.anchorBlueprintsOnly = true;
+      i -= 1;
+    } else if (argv[i] === '--base-url') {
       parsed.baseUrl = argv[i + 1].replace(/\/$/, '');
     } else if (argv[i] === '--dashboard') {
       parsed.dashboardPath = `/${argv[i + 1].replace(/^\/|\/$/g, '')}`;
