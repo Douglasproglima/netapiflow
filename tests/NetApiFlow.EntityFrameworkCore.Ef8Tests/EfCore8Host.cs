@@ -51,7 +51,11 @@ internal sealed class EfCore8Host : IDisposable
     private void ConfigureServices(IServiceCollection services)
     {
         services.AddRouting();
-        services.AddNetApiFlow(options => options.IncludePaths("/**"));
+        services.AddNetApiFlow(options =>
+        {
+            options.IncludePaths("/**");
+            options.EmitTraceIdHeader = true;
+        });
         services.AddNetApiFlowEntityFrameworkCore();
         services.AddDbContext<SingleAttachedDbContext>((serviceProvider, options) => options
             .UseSqlite(_connection)

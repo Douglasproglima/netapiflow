@@ -45,7 +45,8 @@ var expectations = new Expectation[]
 var failures = 0;
 foreach (var expectation in expectations)
 {
-    var recorded = await WaitForHttpSpanAsync(store, expectation.Route);
+    var recordedTrace = await WaitForTraceAsync(store, expectation.Route);
+    var recorded = recordedTrace?.Spans.FirstOrDefault(candidate => candidate.Type == ComponentType.Http);
     var matches = recorded is not null
         && recorded.Operation == expectation.Operation
         && recorded.Status == expectation.Status;
@@ -55,6 +56,12 @@ foreach (var expectation in expectations)
         : $"FAILED: {expectation.Route} expected '{expectation.Operation}' as {expectation.Status}, recorded '{recorded?.Operation ?? "no HttpClient span"}' as {recorded?.Status.ToString() ?? "n/a"}");
 
     failures += matches ? 0 : 1;
+
+    var hasEndpointStep = recordedTrace?.Spans.Any(candidate => candidate.Type == ComponentType.Endpoint) == true;
+    Console.WriteLine(hasEndpointStep
+        ? $"ok: {expectation.Route} recorded an Endpoint step without marking"
+        : $"FAILED: {expectation.Route} recorded no Endpoint step");
+    failures += hasEndpointStep ? 0 : 1;
 }
 
 await app.StopAsync();
@@ -74,7 +81,7 @@ static async Task<string> CallAsync(string url)
     }
 }
 
-static async Task<FlowSpan?> WaitForHttpSpanAsync(ITraceStore store, string route)
+static async Task<FlowTraceDetail?> WaitForTraceAsync(ITraceStore store, string route)
 {
     var deadline = DateTime.UtcNow.AddSeconds(15);
     while (DateTime.UtcNow < deadline)
@@ -84,10 +91,9 @@ static async Task<FlowSpan?> WaitForHttpSpanAsync(ITraceStore store, string rout
         if (summary is not null)
         {
             var detail = await store.GetAsync(summary.TraceId, CancellationToken.None);
-            var span = detail?.Spans.FirstOrDefault(candidate => candidate.Type == ComponentType.Http);
-            if (span is not null)
+            if (detail?.Spans.Any(candidate => candidate.Type == ComponentType.Http) == true)
             {
-                return span;
+                return detail;
             }
         }
 

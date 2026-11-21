@@ -35,7 +35,9 @@ public static class FlowTrackedServiceCollectionExtensions
     /// <paramref name="predicate"/> with a tracking proxy, preserving the original lifetime.
     /// Only <see cref="ServiceDescriptor"/> entries with a known implementation type (registered by
     /// type or by instance) can be matched; factory-based registrations are left untouched, since
-    /// their concrete type is not known without invoking the factory.
+    /// their concrete type is not known without invoking the factory. The original is registered
+    /// with a private key, so the container owns and disposes it, and for that reason the
+    /// container has to support keyed services.
     /// </summary>
     [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection, so trimming can remove a type that would otherwise be decorated, silently dropping its steps.")]
@@ -71,14 +73,14 @@ public static class FlowTrackedServiceCollectionExtensions
         {
             var interfaceType = original.ServiceType;
             var index = services.IndexOf(original);
+            var createProxy = createProxyMethod.MakeGenericMethod(interfaceType, implementationType!);
+            Func<IServiceProvider, object> resolveOriginal = original.ImplementationType is null
+                ? _ => original.ImplementationInstance!
+                : RegisterOriginalOwnedByTheContainer(services, original);
 
             var replacement = FlowTrackedDescriptors.Remember(new ServiceDescriptor(
                 interfaceType,
-                sp =>
-                {
-                    var target = CreateOriginalInstance(original, sp);
-                    return createProxyMethod.MakeGenericMethod(interfaceType, implementationType!).Invoke(null, [target, componentType])!;
-                },
+                sp => createProxy.Invoke(null, [resolveOriginal(sp), componentType])!,
                 original.Lifetime));
             services[index] = replacement;
             decorated.Add(replacement);
@@ -139,18 +141,11 @@ public static class FlowTrackedServiceCollectionExtensions
         return descriptor.ImplementationInstance?.GetType();
     }
 
-    private static object CreateOriginalInstance(ServiceDescriptor descriptor, IServiceProvider provider)
+    private static Func<IServiceProvider, object> RegisterOriginalOwnedByTheContainer(IServiceCollection services, ServiceDescriptor original)
     {
-        if (descriptor.ImplementationInstance is not null)
-        {
-            return descriptor.ImplementationInstance;
-        }
-
-        if (descriptor.ImplementationFactory is not null)
-        {
-            return descriptor.ImplementationFactory(provider);
-        }
-
-        return ActivatorUtilities.CreateInstance(provider, descriptor.ImplementationType!);
+        var implementationType = original.ImplementationType!;
+        var key = new object();
+        services.Add(ServiceDescriptor.DescribeKeyed(implementationType, key, implementationType, original.Lifetime));
+        return sp => sp.GetRequiredKeyedService(implementationType, key);
     }
 }

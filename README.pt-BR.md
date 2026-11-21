@@ -53,17 +53,22 @@ builder.Services.AddNetApiFlowDashboard();
 var app = builder.Build();
 app.UseNetApiFlowDashboard(); // montado em /flow por padrão
 
-app.MapGet("/hello", () => "Hello")
-    .WithNetApiFlowTracking();
+app.MapGet("/hello", () => "Hello");
 
 app.Run();
 ```
 
-Controllers MVC viram uma etapa sozinhos. Um endpoint de Minimal API só vira com
-`.WithNetApiFlowTracking()`, no endpoint ou num grupo inteiro
-(`app.MapGroup("/api").WithNetApiFlowTracking()`). O modelo padrão `dotnet new webapi` usa Minimal
-API, então acrescente a chamada ao `MapGet` dele. Sem ela, a requisição é gravada e aparece na
-lista, mas com zero etapas. O dashboard avisa e mostra como marcar uma, em vez de desenhar um grafo.
+Controllers MVC e endpoints de Minimal API viram uma etapa sozinhos, sem nada para marcar. Isso
+inclui o modelo padrão `dotnet new webapi`. Um endpoint de Minimal API ganha uma etapa `Endpoint`
+por requisição rastreada, do momento em que o roteamento o escolhe até o fim da requisição, então
+a etapa também conta os middlewares que rodam no meio, como a autenticação. Uma requisição que não
+casa com nenhuma rota, um 404 ou um arquivo estático por exemplo, continua gravada e listada, com
+zero etapas.
+
+Para desligar a etapa automática, defina `CaptureMinimalApiEndpoints = false`. Um endpoint de
+Minimal API então só vira etapa com `.WithNetApiFlowTracking()`, no endpoint ou num grupo inteiro
+(`app.MapGroup("/api").WithNetApiFlowTracking()`). Marcar um endpoint com a opção ligada não faz
+mal: ele nunca ganha duas etapas.
 
 Abra `http://localhost:<porta>/flow` e envie uma requisição para o endpoint. Veja
 [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção) antes de publicar isso
@@ -76,7 +81,7 @@ em cada camada. Elas se combinam livremente na mesma requisição.
 
 | Forma | O que faz | Quando usar |
 |---|---|---|
-| `.WithNetApiFlowTracking()` | Envolve um endpoint de Minimal API, ou todos os endpoints de um `MapGroup`, numa etapa `Endpoint` | Apps com Minimal API. Controllers MVC não precisam |
+| `.WithNetApiFlowTracking()` | Envolve um endpoint de Minimal API, ou todos os endpoints de um `MapGroup`, numa etapa `Endpoint` | Só com `CaptureMinimalApiEndpoints = false`. Fora isso todo endpoint de Minimal API já ganha a etapa, e os controllers MVC sempre ganham |
 | `NetApiFlow.Step(...)` | Abre e fecha uma etapa manualmente em volta de um trecho de código | Qualquer código, sem depender de DI |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Envolve toda chamada à implementação de uma interface numa etapa, via proxy dinâmico | Uma interface de repositório/serviço já registrada no DI |
 | `TrackFlowByConvention()` | Envolve em etapas as interfaces `*Service`, `*Repository` e `*Handler` do seu código, cada uma com o seu tipo de componente | Um app em camadas: uma linha depois dos seus registros |
@@ -471,6 +476,7 @@ builder.Services.AddNetApiFlow(options =>
     options.ExcludePaths("/api/health"); // excluída mesmo que também bata com um padrão de inclusão
     options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; padrão é None
     options.CapturePrePipelineSteps = true; // opt-in; padrão é false, ver abaixo
+    options.CaptureMinimalApiEndpoints = true; // valor padrão mostrado; false pede WithNetApiFlowTracking()
     options.TailSampling.Enabled = true; // opt-in; ver Amostragem tail-based abaixo
     options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado
     options.LogCorrelation.Enabled = true; // opt-in; ver Correlação de log abaixo
@@ -495,6 +501,14 @@ para "a requisição levou 400 ms mas o meu controller levou só 20 ms, onde foi
 tempo foi para a autorização ou para um resource filter, como output caching. Vem desligado por
 padrão e não muda nada para quem não ligou. Rota de Minimal API não tem estágio de filtro do MVC,
 então não ganha etapa nova de nenhum jeito.
+
+`CaptureMinimalApiEndpoints` abre a etapa `Endpoint` de um endpoint de Minimal API sem marcação. Ele
+escuta o evento de diagnóstico `Microsoft.AspNetCore.Routing.EndpointMatched` do roteamento, que o
+framework escreve e não documenta como API, então uma versão futura do framework pode renomeá-lo.
+Um teste do repositório falha quando ele deixa de disparar, e o `.WithNetApiFlowTracking()`
+continua funcionando de qualquer jeito. A etapa é marcada como falha quando o endpoint lança
+exceção e também quando a resposta é um 5xx sem exceção, o que o `.WithNetApiFlowTracking()` não
+faz. `MapHealthChecks` e arquivos estáticos não ganham etapa.
 
 `ExternalSources` ingere a `Activity` que o runtime .NET e os drivers de banco mais comuns já
 produzem, sem nenhuma mudança de código nos seus serviços.
@@ -570,6 +584,14 @@ troque `netapiflow_` no script antes. O script cria o que falta e atualiza tabel
 versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server separa os lotes com
 `GO`, então rode com `sqlcmd`, SSMS ou Azure Data Studio.
 
+Enquanto as tabelas não existem, os traces que a sua aplicação produz não podem ser gravados. Uma
+gravação que falha registra um aviso com o tipo e a mensagem da exceção, e o trace seguinte é
+tentado normalmente. Depois de três falhas seguidas, o storage descarta por 30 segundos os traces
+que chegam e tenta de novo, com um aviso para cada tentativa que falha. Os traces que não foram
+gravados são contados em `netapiflow.persistence.failures`. Quando uma gravação volta a funcionar,
+ele registra uma linha com quantos traces não foram gravados. O mesmo acontece quando o banco está
+inalcançável. A exceção completa é registrada em `Debug`.
+
 ## Segurança do dashboard em produção
 
 > **O dashboard mostra detalhe interno de implementação da sua API: nome de componente, nome de
@@ -643,20 +665,32 @@ Um proxy que termina o TLS não precisa de nada para o esquema, porque ele não 
 
 ### O cabeçalho com o trace id
 
-O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada, em qualquer
-ambiente. Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega, e é
-por ele que o `NetApiFlow.Testing` acha o trace de uma resposta. Saber um trace id não abre o
-dashboard: as rotas dele continuam atrás das regras acima.
+O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada em Development.
+Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega. É por ele que
+o `NetApiFlow.Testing` acha o trace de uma resposta e que o Runner do dashboard abre o grafo da
+requisição que enviou. Saber um trace id não abre o dashboard: as rotas dele continuam atrás das
+regras acima.
 
-Para manter o trace id fora das suas respostas, desligue o cabeçalho:
+**A partir da 0.6.0, o cabeçalho só sai em Development por padrão. Para mantê-lo em Production,
+defina `EmitTraceIdHeader = true`.**
 
 ```csharp
-builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = true);
 ```
 
-Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. As requisições continuam
-rastreadas. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção
-enquanto o cabeçalho estiver desligado.
+Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": true }`. Defina `false` para manter o
+trace id fora das suas respostas também em Development. As requisições são rastreadas de qualquer
+forma. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção enquanto o
+cabeçalho estiver desligado. Um host de teste montado com `WebApplicationFactory` roda em Development
+e não precisa de nada. Se os seus testes rodam em outro ambiente, como `Testing` ou `Staging`,
+defina `EmitTraceIdHeader = true` no host de teste.
+
+Uma resposta não o carrega, mesmo com o cabeçalho ligado. Em Production sem tratador de exceção,
+uma exceção que ninguém trata chega ao servidor, e o servidor monta o 500 sozinho e descarta os
+cabeçalhos postos antes. Esse 500 não tem `X-NetApiFlow-TraceId`, embora o trace seja gravado. Medido no Kestrel, no `net8.0` e no
+`net10.0`. O NetApiFlow não altera essa resposta. Adicione `UseExceptionHandler` e o 500 é respondido
+dentro do seu pipeline, então ele carrega o cabeçalho. Em Development a página de exceção do
+desenvolvedor faz isso por você.
 
 ### Cabeçalhos de segurança
 
@@ -925,7 +959,8 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. A
   forma de marcação que continua segura sob Native AOT e trimming é o `NetApiFlow.Step(...)`: uma
   aplicação que chama só `AddNetApiFlow()` e `Step(...)` publica com zero aviso de AOT ou trimming
-  no net8.0 e no net10.0, e existe uma verificação no repositório que prova isso.
+  no net8.0 e no net10.0, e existe uma verificação no repositório que prova isso. A mesma
+  verificação prova que um endpoint de Minimal API vira uma etapa `Endpoint` no binário nativo.
 - O interceptor do `NetApiFlow.EntityFrameworkCore` é outra conversa. O interceptor em si não emite
   aviso nenhum, mas o próprio EF Core declara que não é totalmente compatível com Native AOT, e uma
   aplicação publicada que o usa acusa isso: `IL2026`/`IL3050` no construtor do `DbContext` e

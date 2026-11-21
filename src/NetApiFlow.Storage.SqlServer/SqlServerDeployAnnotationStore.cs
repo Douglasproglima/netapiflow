@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 
 namespace NetApiFlow.Storage.SqlServer;
 
-/// <summary><see cref="IDeployAnnotationStore"/> backed by SQL Server via raw ADO.NET.</summary>
 internal sealed class SqlServerDeployAnnotationStore : IDeployAnnotationStore, IDisposable
 {
     private readonly string _connectionString;
@@ -11,14 +10,22 @@ internal sealed class SqlServerDeployAnnotationStore : IDeployAnnotationStore, I
     private readonly bool _autoCreateSchema;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly IntervalLogLimiter _verificationFailureLog = new(PersistenceRetryInterval.Default.Value);
+    private readonly Func<SqlConnection, CancellationToken, Task<bool>> _verifySchema;
     private bool _schemaReady;
 
-    public SqlServerDeployAnnotationStore(string connectionString, SqlServerStorageOptions options, ILogger logger)
+    public SqlServerDeployAnnotationStore(
+        string connectionString,
+        SqlServerStorageOptions options,
+        ILogger logger,
+        Func<SqlConnection, CancellationToken, Task<bool>>? verifySchema = null)
     {
         _connectionString = connectionString;
         _autoCreateSchema = options.AutoCreateSchema;
         _logger = logger;
         _deployAnnotationsTable = SqlServerTableNames.ResolveDeployAnnotations(options.TablePrefix);
+        _verifySchema = verifySchema ?? ((connection, token) =>
+            SqlServerSchemaVerifier.VerifyDeployAnnotationsAsync(connection, _deployAnnotationsTable, _logger, _verificationFailureLog, token));
     }
 
     public async ValueTask SaveAsync(DeployAnnotation annotation, CancellationToken cancellationToken)
@@ -91,9 +98,9 @@ internal sealed class SqlServerDeployAnnotationStore : IDeployAnnotationStore, I
             {
                 await SqlServerSchemaInitializer.EnsureDeployAnnotationsCreatedAsync(connection, _deployAnnotationsTable, cancellationToken);
             }
-            else
+            else if (!await _verifySchema(connection, cancellationToken))
             {
-                await SqlServerSchemaVerifier.VerifyDeployAnnotationsAsync(connection, _deployAnnotationsTable, _logger, cancellationToken);
+                return;
             }
 
             _schemaReady = true;

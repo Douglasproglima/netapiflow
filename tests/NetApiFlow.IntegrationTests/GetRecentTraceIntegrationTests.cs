@@ -22,7 +22,11 @@ public class GetRecentTraceIntegrationTests
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
-                    services.AddNetApiFlow(o => o.IncludePaths("/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                 });
                 webBuilder.Configure(app =>
                 {
@@ -61,7 +65,7 @@ public class GetRecentTraceIntegrationTests
 
         trace.ShouldNotBeNull();
         trace.Trace.TraceId.ShouldBe(traceId);
-        trace.Spans.Count.ShouldBe(3);
+        trace.Spans.Count.ShouldBe(4);
         trace.Spans.ShouldAllBe(s => s.EndedAt != null);
         trace.Spans.Count(s => s.Type == ComponentType.Database).ShouldBe(1);
     }

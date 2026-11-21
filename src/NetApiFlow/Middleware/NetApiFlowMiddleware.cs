@@ -10,7 +10,6 @@ using NetApiFlow.Routing;
 
 namespace NetApiFlow.Middleware;
 
-/// <summary>Opens and closes a <see cref="FlowTrace"/> for each traced request.</summary>
 internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder recorder, IOptions<NetApiFlowOptions> options)
 {
     private const string TraceIdHeaderName = "X-NetApiFlow-TraceId";
@@ -43,9 +42,10 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         var started = recorder.TryStartTrace(traceId, context.Request.Method, UnmatchedRouteTemplate, DateTime.UtcNow);
         if (started)
         {
+            context.Items[FlowHttpContextItems.TraceStarted] = true;
             if (flowOptions.EmitTraceIdHeader)
             {
-                context.Response.Headers[TraceIdHeaderName] = traceId;
+                context.Response.OnStarting(WriteTraceIdHeader, (context.Response, traceId));
             }
 
             var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
@@ -69,11 +69,6 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         {
             if (started)
             {
-                if (flowOptions.EmitTraceIdHeader)
-                {
-                    RestoreTraceIdHeaderClearedByExceptionHandler(context, traceId);
-                }
-
                 // An Authorization-filter step opened via DiagnosticListener can be left pending
                 // when its own filter throws: the matching "after" diagnostic event never fires.
                 // A downstream UseExceptionHandler middleware can also swallow the exception before
@@ -85,6 +80,7 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                 // make FlowActivityListener silently drop the span.
                 var orphanedStepException = caughtException ?? context.Features.Get<IExceptionHandlerFeature>()?.Error;
                 context.RequestServices?.GetService<FlowAuthorizationFilterListener>()?.CloseOrphanedSteps(traceId, orphanedStepException);
+                CloseImplicitEndpointStep(context, orphanedStepException);
 
                 var routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
                 if (routeTemplate is not null)
@@ -106,11 +102,31 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         }
     }
 
-    private static void RestoreTraceIdHeaderClearedByExceptionHandler(HttpContext context, string traceId)
+    private static void CloseImplicitEndpointStep(HttpContext context, Exception? failure)
     {
-        if (!context.Response.HasStarted)
+        if (!context.Items.Remove(FlowHttpContextItems.ImplicitEndpointStep, out var opened) || opened is not FlowStep step)
         {
-            context.Response.Headers[TraceIdHeaderName] = traceId;
+            return;
         }
+
+        failure ??= context.Items.TryGetValue(FlowHttpContextItems.SwallowedException, out var swallowed) ? swallowed as Exception : null;
+
+        if (failure is not null)
+        {
+            step.MarkError(failure);
+        }
+        else if (context.Response.StatusCode >= StatusCodes.Status500InternalServerError)
+        {
+            step.MarkFailedWithoutException();
+        }
+
+        step.Dispose();
+    }
+
+    private static Task WriteTraceIdHeader(object state)
+    {
+        var (response, traceId) = ((HttpResponse, string))state;
+        response.Headers[TraceIdHeaderName] = traceId;
+        return Task.CompletedTask;
     }
 }

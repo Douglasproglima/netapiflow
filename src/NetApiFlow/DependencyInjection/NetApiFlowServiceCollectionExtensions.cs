@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,8 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddSingleton<PersistenceWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<PersistenceWriter>());
         services.AddSingleton(RetentionInterval.Default);
+        services.AddSingleton(PersistenceRetryInterval.Default);
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();
 
@@ -60,6 +63,10 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddSingleton<IConfigureOptions<MvcOptions>, FlowResourceFilterMvcOptionsSetup>();
         services.AddSingleton<FlowAuthorizationFilterListener>();
         services.AddHostedService<FlowAuthorizationFilterListenerWarmupHostedService>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IDeveloperPageExceptionFilter, FlowDeveloperPageExceptionFilter>());
+        services.AddSingleton<EndpointMatchedListener>();
+        services.AddHostedService<EndpointMatchedListenerWarmupHostedService>();
 
         return services;
     }

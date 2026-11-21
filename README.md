@@ -52,17 +52,21 @@ builder.Services.AddNetApiFlowDashboard();
 var app = builder.Build();
 app.UseNetApiFlowDashboard(); // mounted at /flow by default
 
-app.MapGet("/hello", () => "Hello")
-    .WithNetApiFlowTracking();
+app.MapGet("/hello", () => "Hello");
 
 app.Run();
 ```
 
-MVC controllers become a step on their own. A Minimal API endpoint only becomes one with
-`.WithNetApiFlowTracking()`, on the endpoint or on a whole group
-(`app.MapGroup("/api").WithNetApiFlowTracking()`). The default `dotnet new webapi` template uses
-Minimal API, so add the call to its `MapGet`. Without it the request is still recorded and listed,
-but with zero steps. The dashboard says so and shows how to mark one, instead of drawing a graph.
+MVC controllers and Minimal API endpoints become a step on their own, with nothing to mark. That
+includes the default `dotnet new webapi` template. A Minimal API endpoint gets one `Endpoint` step
+for each traced request, from the moment routing picks it to the end of the request, so the step
+also counts the middleware that runs in between, such as authentication. A request that matches
+no route, a 404 or a static file for example, is still recorded and listed, with zero steps.
+
+To turn the automatic step off, set `CaptureMinimalApiEndpoints = false`. A Minimal API endpoint
+then becomes a step only with `.WithNetApiFlowTracking()`, on the endpoint or on a whole group
+(`app.MapGroup("/api").WithNetApiFlowTracking()`). Marking an endpoint while the option is on does
+no harm: it never gets two steps.
 
 Open `http://localhost:<port>/flow` and send a request to the endpoint. See
 [Dashboard security in production](#dashboard-security-in-production) before deploying this
@@ -75,7 +79,7 @@ layer. They compose freely in the same request.
 
 | Form | What it does | When to use it |
 |---|---|---|
-| `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Minimal API apps. MVC controllers don't need it |
+| `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Only with `CaptureMinimalApiEndpoints = false`. Otherwise every Minimal API endpoint already gets the step, and MVC controllers always do |
 | `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
 | `TrackFlowByConvention()` | Wraps the `*Service`, `*Repository` and `*Handler` interfaces of your own code in steps, each with its component type | A layered app: one line after your registrations |
@@ -468,6 +472,7 @@ builder.Services.AddNetApiFlow(options =>
     options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
     options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; default is None
     options.CapturePrePipelineSteps = true; // opt-in; default is false, see below
+    options.CaptureMinimalApiEndpoints = true; // default shown; false asks for WithNetApiFlowTracking()
     options.TailSampling.Enabled = true; // opt-in; see Tail sampling below
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
     options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
@@ -491,6 +496,14 @@ duplicating. That's the answer to "the request took 400 ms but my controller onl
 20 ms, where did the rest go" when the time went to authorization or to a resource filter such as
 output caching. It is off by default and changes nothing for anyone who hasn't turned it on.
 Minimal API routes have no MVC filter stage, so they see no new step either way.
+
+`CaptureMinimalApiEndpoints` opens the `Endpoint` step of a Minimal API endpoint with no marking. It
+listens to the routing's `Microsoft.AspNetCore.Routing.EndpointMatched` diagnostic event, which the
+framework writes and does not document as an API, so a future framework version could rename it.
+A test in the repository fails when it stops firing, and `.WithNetApiFlowTracking()` keeps
+working either way. The step is marked as failed when the endpoint throws and also when the
+response is a 5xx with no exception, which `.WithNetApiFlowTracking()` does not do. `MapHealthChecks`
+and static files get no step.
 
 `ExternalSources` ingests the `Activity` instances the .NET runtime and the common database
 drivers already produce, with no code change in your services.
@@ -565,6 +578,14 @@ installed (`https://github.com/Douglasproglima/netapiflow/tree/v<version>/src`).
 upgrades tables written by an earlier version, and it is safe to run again. The SQL Server script
 separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Studio.
 
+Until the tables exist, the traces your application produces cannot be saved. A save that fails
+logs a warning with the type and the message of the exception, and the next trace is tried
+normally. After three failures in a row, the storage discards the traces that arrive for 30
+seconds and tries again, with one warning for each attempt that fails. The traces that were not
+saved are counted in `netapiflow.persistence.failures`. When a save works again it logs one line
+with how many traces were not saved. The same happens when the database is unreachable. The full
+exception is logged at `Debug`.
+
 ## Dashboard security in production
 
 > **The dashboard shows internal implementation details of your API: component names, operation
@@ -637,20 +658,33 @@ A proxy that ends TLS needs nothing for the scheme, because it is not compared.
 
 ### The trace id header
 
-NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request, in every
-environment. It carries the trace id, the same value the W3C `traceparent` header already carries,
-and it is how `NetApiFlow.Testing` finds the trace of a response. Knowing a trace id does not open
-the dashboard: its routes stay behind the rules above.
+NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request in Development. It
+carries the trace id, the same value the W3C `traceparent` header already carries. It is how
+`NetApiFlow.Testing` finds the trace of a response and how the dashboard's Runner opens the graph of
+the request it sent. Knowing a trace id does not open the dashboard: its routes stay behind the
+rules above.
 
-To keep the trace id out of your responses, turn the header off:
+**From 0.6.0 the header is sent only in Development by default. To keep it in Production, set
+`EmitTraceIdHeader = true`.**
 
 ```csharp
-builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = true);
 ```
 
-Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. Requests are still
-traced. `GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is
-off.
+Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": true }`. Set it to `false` to keep
+the trace id out of your responses in Development too. Requests are traced either way.
+`GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is off. A
+test host built with `WebApplicationFactory` runs in Development and needs nothing. If your tests run
+in another environment, such as `Testing` or `Staging`, set `EmitTraceIdHeader = true` in the test
+host.
+
+One response does not carry it even with the header on. In Production with no exception handler,
+an exception that nothing handles reaches the server, and the server builds the 500 itself and
+drops the headers set before. That 500 has no `X-NetApiFlow-TraceId`, although the trace is
+recorded. Measured on Kestrel, on
+`net8.0` and `net10.0`. NetApiFlow does not change that response. Add `UseExceptionHandler` and the
+500 is answered inside your pipeline, so it carries the header. In Development the developer
+exception page does that for you.
 
 ### Security headers
 
@@ -913,7 +947,8 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
   stays safe under Native AOT and trimming is `NetApiFlow.Step(...)`: a host calling only
   `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
-  net10.0, and there is a check in the repository that proves it.
+  net10.0, and there is a check in the repository that proves it. The same check proves that a
+  Minimal API endpoint becomes an `Endpoint` step in the native binary.
 - The `NetApiFlow.EntityFrameworkCore` interceptor is a separate question from the one above. The
   interceptor itself emits no warning, but EF Core states it is not fully compatible with Native
   AOT, and a published host using it reports that: `IL2026`/`IL3050` on the `DbContext`

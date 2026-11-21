@@ -53,6 +53,7 @@ public class PrePipelineStepsIntegrationTests
                     services.AddNetApiFlow(o =>
                     {
                         o.IncludePaths("/api/**");
+                        o.EmitTraceIdHeader = true;
                         o.CapturePrePipelineSteps = capturePrePipelineSteps;
                     });
                     services.AddNetApiFlowEntityFrameworkCore();

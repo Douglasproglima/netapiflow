@@ -47,6 +47,17 @@ public readonly struct FlowStep : IDisposable
         _activity.SetStatus(ActivityStatusCode.Error);
     }
 
+    internal void MarkFailedWithoutException()
+    {
+        if (_activity is null)
+        {
+            return;
+        }
+
+        _activity.SetTag(FlowTagNames.ErrorOrigin, bool.TrueString);
+        _activity.SetStatus(ActivityStatusCode.Error);
+    }
+
     /// <summary>Closes the step.</summary>
     public void Dispose() => _activity?.Dispose();
 }
