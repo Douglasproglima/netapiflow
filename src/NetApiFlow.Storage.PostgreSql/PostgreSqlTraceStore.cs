@@ -322,19 +322,32 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         return BuildArchitectureMap(totalExecutions, rows);
     }
 
-    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before: null, cancellationToken);
+
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, TruncatedToMicroseconds(before), cancellationToken);
+
+    private static DateTime TruncatedToMicroseconds(DateTime value) => value.AddTicks(-(value.Ticks % 10));
+
+    private async ValueTask<FlowTraceDetail?> FindLastSuccessfulAsync(string method, string routeKey, DateTime? before, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
+        var startedBefore = before is null ? string.Empty : "AND started_at < @before";
         await using var command = new NpgsqlCommand($"""
             SELECT trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE method ILIKE @method AND route_key = @routeKey AND status = 'Success'
+            WHERE method ILIKE @method AND route_key = @routeKey AND status = 'Success' {startedBefore}
             ORDER BY started_at DESC
             LIMIT 1
             """, connection);
         command.Parameters.AddWithValue("method", method);
         command.Parameters.AddWithValue("routeKey", routeKey);
+        if (before is not null)
+        {
+            command.Parameters.AddWithValue("before", NpgsqlDbType.TimestampTz, before.Value);
+        }
 
         FlowTrace? trace;
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))

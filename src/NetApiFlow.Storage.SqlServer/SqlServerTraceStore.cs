@@ -284,18 +284,29 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         return BuildArchitectureMap(totalExecutions, rows);
     }
 
-    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before: null, cancellationToken);
+
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before, cancellationToken);
+
+    private async ValueTask<FlowTraceDetail?> FindLastSuccessfulAsync(string method, string routeKey, DateTime? before, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
+        var startedBefore = before is null ? string.Empty : "AND started_at < @before";
         await using var command = new SqlCommand($"""
             SELECT TOP (1) trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE UPPER(method) = UPPER(@method) AND route_key = @routeKey AND status = 'Success'
+            WHERE UPPER(method) = UPPER(@method) AND route_key = @routeKey AND status = 'Success' {startedBefore}
             ORDER BY started_at DESC
             """, connection);
         command.Parameters.AddWithValue("method", method);
         command.Parameters.AddWithValue("routeKey", routeKey);
+        if (before is not null)
+        {
+            command.Parameters.Add("before", SqlDbType.DateTime2).Value = before.Value;
+        }
 
         FlowTrace? trace;
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
