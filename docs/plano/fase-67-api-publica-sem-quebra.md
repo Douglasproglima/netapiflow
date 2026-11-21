@@ -22,7 +22,7 @@ uma vez só.
 
 A classe passa a se chamar **`Flow`**. É curta, vive no namespace `NetApiFlow`, e se lê `Flow.Step("OrderRepository", "Find")`,
 como `Log.Information(...)` do Serilog. **Antes de fixar o nome**, a Tarefa 67.0 mede se `Flow` colide com algo que um app
-comum importa. Se colidir, a Executora para e a Planejadora escolhe outro.
+comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A Planejadora avisa a auditoria do nome final antes da Tarefa 67.1.**
 
 ## Ponto de parada
 
@@ -30,18 +30,20 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro.
   Serilog ou OpenTelemetry: **para**. O nome é da Planejadora.
 - Se `[Obsolete]` com encaminhamento **quebrar** qualquer usuário do nome antigo (o código antigo precisa compilar e rodar
   igual, só com aviso), para.
-- A mudança das tools do MCP para `internal` **é uma quebra** em relação à `0.5.2` (a validação de pacote vai acusar). Está
-  autorizada pela auditoria, e vai com `CompatibilitySuppressions.xml` explícito e `### Changed` no CHANGELOG. **Qualquer
-  outra quebra** acusada pela validação: para.
+- **As tools do MCP só viram `internal` se o SDK do MCP aceitar** (D-238). Ele pode exigir tipo público para descobrir as
+  tools pelo atributo. A Executora **mede antes de mudar a visibilidade** (Tarefa 67.0, item 4). **Qualquer outra quebra**
+  acusada pela validação de pacote: para.
 
 ## Tarefa 67.0: medir, antes de mexer
 
 1. **Colisão do nome `Flow`.** Um app novo (`dotnet new webapi`) com `using NetApiFlow;` e os `using` de EF Core, MediatR,
    Serilog e OpenTelemetry: `Flow.Step(...)` compila? Dizer o que mediu.
-2. **O que a validação de pacote acusaria** contra a `0.5.2` com os nomes novos e os antigos `[Obsolete]`: nada além das tools do
-   MCP.
+2. **O que a validação de pacote acusaria** contra a `0.5.2` com os nomes novos e os antigos `[Obsolete]`: nada, fora o que o
+   item 4 decidir.
 3. **Os pontos de entrada públicos** sem validação de argumento: a lista, por pacote, incluindo as `connection string` dos
    storages.
+4. **O SDK do MCP aceita tool `internal`?** Com o `ModelContextProtocol.AspNetCore` que o pacote usa, o `tools/list` e o
+   `tools/call` funcionam com as três tools como `internal`, descobertas pelo atributo? A saída real, nos dois TFMs.
 
 ## Tarefa 67.1: os nomes novos, com o antigo encaminhando (B8)
 
@@ -58,7 +60,10 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro.
 - `ArgumentNullException.ThrowIfNull` e `ArgumentException.ThrowIfNullOrEmpty` nos pontos de entrada públicos, inclusive a
   `connection string` dos storages, com mensagem acionável.
 - `CompositeEndpointConventionBuilder`: implementar o `Finally`.
-- As tools do MCP viram `internal`, sem o `= null!`.
+- **As tools do MCP, sem o `= null!`**, conforme o item 4 da 67.0:
+  - **o SDK exige tipo público:** as tools **ficam públicas**, com `[EditorBrowsable(EditorBrowsableState.Never)]`. Sem quebra, e a
+    validação de pacote não acusa;
+  - **o SDK aceita `internal`:** viram `internal`, com `CompatibilitySuppressions.xml` explícito e `### Changed` no CHANGELOG.
 - O `serverInfo.name` do MCP passa a ser `"NetApiFlow"`.
 - `EnablePackageValidation` com baseline `0.5.2`, e `IsAotCompatible` no núcleo (liga com a Tarefa 50.12).
 
@@ -67,8 +72,8 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro.
 - `contratos.md` atualizado pela Planejadora com os nomes novos quando a 67.0 fecha.
 - Testes: o nome antigo compila e roda igual, com o aviso; o novo faz o mesmo; a `Tag` com cada tipo; cada validação de
   argumento; o `Finally`; a validação de pacote passa só com a supressão das tools do MCP.
-- `CHANGELOG.md`, em inglês: `### Added` (nomes novos, sobrecargas), `### Deprecated` (os antigos), `### Changed` (as tools do MCP
-  internas e o `serverInfo.name`).
+- `CHANGELOG.md`, em inglês: `### Added` (nomes novos, sobrecargas), `### Deprecated` (os antigos), `### Changed` (o `serverInfo.name`, e as tools
+  do MCP internas, **só se** o item 4 da 67.0 permitir).
 
 ## Fora de escopo
 

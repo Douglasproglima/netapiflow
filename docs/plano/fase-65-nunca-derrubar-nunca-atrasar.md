@@ -17,7 +17,7 @@ porque as três mexem no middleware e no listener de atividades.
 ## Ponto de parada
 
 - Se o B5c, medido, **não** atrasar a requisição com um listener lento, a Executora **não implementa o canal**: relata, e a
-  decisão é da Planejadora e da auditoria.
+  decisão é da Planejadora e da auditoria. O critério da auditoria: **um listener que leva 200 ms atrasa a resposta?** Se não atrasa, a frase "never blocks" do XML doc do `FlowEventPublisher` é conferida, ou corrigida se for mais forte do que o código (D-238).
 - Se o canal mudar a **ordem** dos eventos por trace, ou perder evento no uso normal, para.
 - Se o B5b pedir que a validação **derrube o app na partida** onde hoje ele sobe, a regra é: configuração **explicitamente
   inválida** (um padrão nulo ou vazio) falha na partida com mensagem acionável, como o validador já faz com as outras. Qualquer
