@@ -57,7 +57,10 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    conferência do passo 10.
 9. Pare aqui e peça confirmação explícita antes de `git push` e `gh pr create --base main`. Push,
    PR e tag são ações públicas (ver `.claude/rules/git-workflow.md`).
-10. Depois do merge em `main` (squash): criar a tag `v<versao>` (**só com confirmação explícita**),
+10. Depois do merge em `main` (squash): **só na `0.6.0`, a `AUDITORIA-16-11` torna `real-package / real-package` check obrigatório
+    na `main`** (D-261). O check já é obrigatório no `develop`. A `main` ficou de fora até aqui de propósito: o `ci.yml` dela ainda é o
+    antigo, sem o job, e um `hotfix/*` nasce da `main` e nunca produziria o check, então torná-lo obrigatório antes travaria qualquer
+    `0.5.x`. A configuração é da auditoria, com a autorização do dono. Depois disso, criar a tag `v<versao>` (**só com confirmação explícita**),
     que dispara `release.yml` (Trusted Publishing, sem API key guardada). Confirme antes de criar
     a tag que a política de Trusted Publishing já foi configurada no nuget.org (tarefa 7.7 em
     `docs/plano/fase-7-documentacao.md`); se for a primeira release, esse passo manual precisa ter
