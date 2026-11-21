@@ -348,6 +348,12 @@ black-and-white printout.
 | ✕ Error | Finished with an exception, or a descendant step failed |
 | ∅ Not executed | The blueprint expected this step, but the request finished without reaching it (e.g. an early return, a short-circuited branch) |
 
+The blueprint of a trace is the last successful execution of the same method and route that started
+before it. A trace is never drawn with steps that only a later execution ran, so an old trace looks
+the same today as it did when it ended. The first execution of an endpoint has no blueprint, so it
+shows no Waiting or Not executed node. If retention already removed the execution that would have
+been the blueprint, the trace is drawn from the one before it, or with none.
+
 A `Database` node also shows an N+1 badge, e.g. `⚠ ×12`, when 3 or more `Database` steps in the
 same trace share the same component and operation, even under different parents. That shape is
 what a classic N+1 loop produces: one query per loop iteration, same SQL format, different

@@ -351,6 +351,12 @@ impressão em preto e branco.
 | ✕ Erro | Terminou com exceção, ou uma etapa descendente falhou |
 | ∅ Não executado | O blueprint esperava esta etapa, mas a requisição terminou sem alcançá-la (ex.: um retorno antecipado, um ramo que nunca foi seguido) |
 
+O blueprint de um trace é a última execução bem-sucedida do mesmo método e da mesma rota que
+começou antes dele. Um trace nunca é desenhado com etapas que só uma execução posterior rodou,
+então um trace antigo continua igual ao que era quando terminou. A primeira execução de um endpoint
+não tem blueprint, então não mostra nó Aguardando nem Não executado. Se a retenção já removeu a
+execução que seria o blueprint, o trace é desenhado a partir da anterior a ela, ou sem nenhuma.
+
 Um nó `Database` também mostra um selo de N+1, por exemplo `⚠ ×12`, quando 3 ou mais etapas
 `Database` do mesmo trace compartilham o mesmo componente e a mesma operação, mesmo sob pais
 diferentes. É essa a forma que um N+1 clássico produz. Uma consulta por iteração do laço, mesmo

@@ -39,6 +39,9 @@ jobs:
       - name: Run the app in Development and in Production and walk the HTTP script
         run: node scripts/package-scenarios.mjs --dll "$USER_APP/bin/Release/net10.0/UserApp.dll"
 
+      - name: Open the panel in a real browser while a request runs and after it ended
+        run: node scripts/verify-live-panel.mjs --dll "$USER_APP/bin/Release/net10.0/UserApp.dll"
+
       - name: Stop any app left running
         if: always()
         run: pkill -f UserApp.dll || true
