@@ -48,6 +48,23 @@ This repository follows a classic Gitflow with SemVer, documented in
 - Keep the core package (`NetApiFlow`) free of third-party dependencies beyond
   `Microsoft.AspNetCore.App`.
 
+## Public API
+
+Each package lists its public surface in two files next to its `.csproj`:
+`PublicAPI.Shipped.txt`, what the last release published, and `PublicAPI.Unshipped.txt`, what the next
+release adds. The build fails with `RS0016` when a public type or member is in no file, and with `RS0017`
+when a listed one is gone or no longer public. That is how a change to the public API becomes a diff of a
+file in the pull request.
+
+- **To add a public member**, copy the symbol that the error prints to `PublicAPI.Unshipped.txt`, or use
+  the quick fix of your IDE. `dotnet format` does not apply it.
+- **To rename or remove one**, write the old line again with `*REMOVED*` in front of it in
+  `PublicAPI.Unshipped.txt`, and add the new line if there is one.
+- **At a release**, the lines of `Unshipped` move into `Shipped`.
+
+Do not add a public member to the surface just to make the build pass. Make it `internal`, or say why it has
+to be public in the pull request.
+
 ## Reporting a security issue
 
 Do not open a public issue. See [SECURITY.md](SECURITY.md).

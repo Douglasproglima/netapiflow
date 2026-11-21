@@ -1,0 +1,26 @@
+#nullable enable
+NetApiFlow.Mcp.Endpoints.NetApiFlowMcpEndpointRouteBuilderExtensions
+NetApiFlow.Mcp.NetApiFlowMcpServiceCollectionExtensions
+NetApiFlow.Mcp.Tools.GetComponentStatsTool
+NetApiFlow.Mcp.Tools.GetTraceTool
+NetApiFlow.Mcp.Tools.ListRecentTracesTool
+NetApiFlow.Mcp.Tools.TraceLookupResult
+NetApiFlow.Mcp.Tools.TraceLookupResult.<Clone>$() -> NetApiFlow.Mcp.Tools.TraceLookupResult!
+NetApiFlow.Mcp.Tools.TraceLookupResult.Equals(NetApiFlow.Mcp.Tools.TraceLookupResult? other) -> bool
+NetApiFlow.Mcp.Tools.TraceLookupResult.Found.get -> bool
+NetApiFlow.Mcp.Tools.TraceLookupResult.Found.init -> void
+NetApiFlow.Mcp.Tools.TraceLookupResult.Message.get -> string?
+NetApiFlow.Mcp.Tools.TraceLookupResult.Message.init -> void
+NetApiFlow.Mcp.Tools.TraceLookupResult.Trace.get -> NetApiFlow.FlowTraceDetail?
+NetApiFlow.Mcp.Tools.TraceLookupResult.Trace.init -> void
+NetApiFlow.Mcp.Tools.TraceLookupResult.TraceLookupResult() -> void
+override NetApiFlow.Mcp.Tools.TraceLookupResult.Equals(object? obj) -> bool
+override NetApiFlow.Mcp.Tools.TraceLookupResult.GetHashCode() -> int
+override NetApiFlow.Mcp.Tools.TraceLookupResult.ToString() -> string!
+static NetApiFlow.Mcp.Endpoints.NetApiFlowMcpEndpointRouteBuilderExtensions.UseNetApiFlowMcp(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! basePath = "/flow/mcp") -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+static NetApiFlow.Mcp.NetApiFlowMcpServiceCollectionExtensions.AddNetApiFlowMcp(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.Mcp.Tools.GetComponentStatsTool.GetComponentStats(System.DateTime? from = null, System.DateTime? to = null, NetApiFlow.ITraceStore! store = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<NetApiFlow.ComponentStat!>!>!
+static NetApiFlow.Mcp.Tools.GetTraceTool.GetTrace(string! traceId, NetApiFlow.ITraceStore! store = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<NetApiFlow.Mcp.Tools.TraceLookupResult!>!
+static NetApiFlow.Mcp.Tools.ListRecentTracesTool.ListRecentTraces(string? status = null, string? method = null, string? route = null, int? limit = null, NetApiFlow.ITraceStore! store = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<NetApiFlow.FlowTraceSummary!>!>!
+static NetApiFlow.Mcp.Tools.TraceLookupResult.operator !=(NetApiFlow.Mcp.Tools.TraceLookupResult? left, NetApiFlow.Mcp.Tools.TraceLookupResult? right) -> bool
+static NetApiFlow.Mcp.Tools.TraceLookupResult.operator ==(NetApiFlow.Mcp.Tools.TraceLookupResult? left, NetApiFlow.Mcp.Tools.TraceLookupResult? right) -> bool

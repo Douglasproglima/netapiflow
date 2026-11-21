@@ -1,0 +1,9 @@
+#nullable enable
+NetApiFlow.OpenTelemetry.NetApiFlowOpenTelemetryServiceCollectionExtensions
+NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions
+NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.ConfigureOtlpExporter.get -> System.Action<OpenTelemetry.Exporter.OtlpExporterOptions!>?
+NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.ConfigureOtlpExporter.set -> void
+NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.IncludeHttpClientSource.get -> bool
+NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.IncludeHttpClientSource.set -> void
+NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.NetApiFlowOtlpExportOptions() -> void
+static NetApiFlow.OpenTelemetry.NetApiFlowOpenTelemetryServiceCollectionExtensions.AddNetApiFlowOtlpExport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

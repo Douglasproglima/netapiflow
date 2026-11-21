@@ -1,0 +1,3 @@
+#nullable enable
+NetApiFlow.Storage.SqlServer.SqlServerStorageOptions.AutoCreateSchema.get -> bool
+NetApiFlow.Storage.SqlServer.SqlServerStorageOptions.AutoCreateSchema.set -> void

@@ -1,0 +1,3 @@
+#nullable enable
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.AutoCreateSchema.get -> bool
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.AutoCreateSchema.set -> void
