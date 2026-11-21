@@ -69,6 +69,7 @@ public interface ITraceStore
     ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken);
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken);
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
@@ -823,10 +824,19 @@ Spans da última execução bem-sucedida do endpoint, usados pelo frontend para 
 "não executadas" (seção 7.2 do prompt).
 
 Query string: `method` (obrigatório), `route` (obrigatório, route template exato, normalizado
-antes de comparar, D-124).
+antes de comparar, D-124), `before` (opcional, data e hora em ISO 8601, normalmente o `startedAt`
+da trace que o painel desenha).
+
+Com `before`, a resposta é a última execução bem-sucedida que começou **estritamente antes** dele,
+então uma trace nunca é o blueprint dela mesma e uma execução posterior não muda o desenho de uma
+anterior. Sem `before`, a mais recente, como antes. O membro `GetLastSuccessfulAsync(method,
+routeKey, before, cancellationToken)` do `ITraceStore` é de interface com implementação padrão,
+para um storage de um release anterior continuar carregando (D-246, D-248). O `before` do store é
+UTC.
 
 Resposta `200`, mesma forma de `/traces/{traceId}` (trace + spans). `204` sem corpo se não
-houver execução bem-sucedida anterior daquele método/rota. `400` se faltar `method` ou `route`.
+houver execução bem-sucedida anterior daquele método/rota (e, com `before`, anterior a ele).
+`400` se faltar `method` ou `route`, ou se `before` não for uma data e hora válidas.
 
 ### GET `/endpoints`
 
