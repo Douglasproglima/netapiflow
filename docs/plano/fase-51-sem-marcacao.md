@@ -238,6 +238,8 @@ aceita e vai para a documentação.
 
 ### Tarefa 51.4: o erro tem de se comportar como hoje
 
+**Um terceiro caso, medido pela Executora e decidido na D-243:** em Development, com a `DeveloperExceptionPage`, a página engole a exceção dentro do pipeline, o middleware do NetApiFlow não a vê e o `IExceptionHandlerFeature` não é preenchido, então a etapa `Endpoint` implícita fecharia em `Success` num request que respondeu 500. É o caso mais comum do produto. **O piso obrigatório:** a etapa implícita fecha como `Error` também quando a resposta final é maior ou igual a 500 e nenhuma exceção é conhecida, o mesmo critério do status do trace. A etapa implícita fica assim mais vermelha que a marcada para um handler que devolve `Results.StatusCode(500)` sem exceção, diferença registrada na PR. **A medição, que rodou nas 16 combinações:** o `IDeveloperPageExceptionFilter` (público e documentado) recebe a exceção no `ErrorContext` com `Accept` `text/html`, `application/json`, `*/*` e ausente, com e sem `AddProblemDetails()`, em `net8.0` e `net10.0`. Foi usado, registrado dentro do `AddNetApiFlow`, e a etapa recebe `ErrorType`, mensagem e `IsErrorOrigin`. No piso (resposta 500 sem exceção conhecida) o `IsErrorOrigin` é verdadeiro, porque o endpoint é de fato onde o 5xx aconteceu e o listener de span só mapeia `Error` pela tag de origem. Reflexão sobre o evento `UnhandledException` está descartada.
+
 O `FlowEndpointFilter` marca erro quando o handler lança, porque está dentro do endpoint. A etapa
 implícita é fechada de fora, então a Executora precisa reproduzir isso:
 
