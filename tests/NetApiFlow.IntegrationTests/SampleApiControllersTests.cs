@@ -47,7 +47,11 @@ public class SampleApiControllersTests
                     services.AddControllers().AddApplicationPart(typeof(Sample.Controllers.OrdersController).Assembly);
                     services.AddHttpClient();
 
-                    services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/api/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                     services.AddNetApiFlowEntityFrameworkCore();
 
                     // Registered directly here (not via the sample's Program.cs, which wires Npgsql)

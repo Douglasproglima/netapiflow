@@ -237,18 +237,16 @@ para e relata, e a decisão é da Planejadora e da auditoria.
 ## Tarefa 53.2: o mecanismo A
 
 - **A extensão pública `WithoutNetApiFlowTracking<TBuilder>() where TBuilder : IEndpointConventionBuilder`**, no
-  núcleo, que grava o metadado. O tipo do metadado é `internal`. O painel (REST, SSE, arquivos estáticos) e o MCP a
+  núcleo, que grava o metadado, na classe `NetApiFlowEndpointConventionExtensions` (o nome do `contratos.md`: a mesma classe receberá a `WithNetApiFlowTracking<TBuilder>` genérica da Fase 67). O tipo do metadado é `internal`. O painel (REST, SSE, arquivos estáticos) e o MCP a
   chamam nos grupos deles. Nenhum `InternalsVisibleTo` novo (requisito 6).
 - **O metadado de exclusão vence** `ExcludePaths`, `IncludePaths` e `WithNetApiFlowTracking()` no mesmo endpoint.
-- **Middleware no início:** só guarda a hora, gera o id (ADR-0028) e registra o `Response.OnStarting` do cabeçalho.
-  Não publica nada.
+- **Middleware no início (D-245):** guarda a hora, gera o id (ADR-0028), **reserva uma trace não publicada no recorder** (o buffer da 53.1: reservar, publicar e descartar sem evento, com os eventos de span retidos e reemitidos na ordem), calcula **UMA vez** a decisão do "sem endpoint" pelo caminho **cheio**, dentro de `try/catch` com o padrão de não rastrear, e a guarda no `HttpContext` num **único objeto de estado**, não em três chaves de `Items`. Registra o `Response.OnStarting` do cabeçalho. Não publica nada.
 - **Listener do `EndpointMatched`**, o da Fase 51: endpoint com o metadado do NetApiFlow não é rastreado. Nos outros,
   a política (`ExcludePaths`, `IncludePaths`, `OpenApiDocumentPath`) é avaliada contra o caminho **relativo** ao
-  `PathBase`, e, se aceita, a trace abre com a hora real e a rota já conhecida.
-- **Sem endpoint casado:** a decisão acontece no fim, pelo caminho cheio, como hoje.
-- **O cabeçalho** sai só para a trace que será gravada, pelo mecanismo da Tarefa 50.13. Os dois ficam num lugar
-  só, e não divergem.
-- **As etapas anteriores à abertura** seguem a forma escolhida na 53.1.
+  `PathBase`, e, se aceita, a trace abre com a hora real e a rota já conhecida. O listener passa a ser **sempre ligado** (a abertura da etapa de endpoint continua respeitando `CaptureMinimalApiEndpoints`), a mensagem de log da falha da decisão é própria, e, se o listener não se inscrever (R-32), o mecanismo degrada para decidir no fim pelo caminho cheio, que é o comportamento de hoje, sem perder trace.
+- **Sem endpoint casado:** vale a decisão calculada no início, pelo caminho cheio. O `Request.Path` dentro do `OnStarting` ou no fim **não** é lido, porque ele varia por tipo de resposta sob `UsePathBase` (D-245).
+- **O cabeçalho** sai só para a trace que será gravada, pelo mecanismo da Tarefa 50.13. O `OnStarting` consulta a mesma decisão guardada, então o cabeçalho e a trace não divergem.
+- **As etapas anteriores à abertura** seguem o buffer escolhido na 53.1. A reserva nunca vaza: requisição excluída, sem endpoint e com exceção antes do roteamento fecham com `ActiveTraceCount` 0.
 - **Falha da decisão** é logada e engolida, e o padrão é **não rastrear**.
 - **Os padrões de rota são compilados uma vez**, na configuração, e não a cada requisição (D-236, varredura final). É a única otimização do caminho quente que entra na `0.6.0`.
 - **Sem `PathBase`**, nenhum teste do `develop` muda de resultado e nenhum precisa de edição.
@@ -287,6 +285,18 @@ A matriz da 53.0 vira teste de host real, **visto falhando antes** no `develop`,
 
 Para cada requisito de 1 a 7: o teste, a saída dele falhando antes e passando depois, e o número do custo da 53.1.
 O que mudou de comportamento. Se algum requisito ficou como limite dito, onde o README o diz.
+
+## Resultado da 53.1, medido pela Executora (21/11/2026)
+
+Sonda descartável em cima da branch da #408, nada foi a PR (o patch de referência fica no scratchpad da Executora). Nenhuma das sete respostas foi "não dá".
+
+- **Etapas anteriores à abertura:** só o **buffer** mantém o que funciona hoje (idêntico ao baseline: mesmos spans, mesmos pais, 28 eventos SSE contra 28). O descarte faz o passo do usuário sumir e achata a hierarquia.
+- **Pai da Activity de entrada, início e duração:** não mudam (mediana dentro do ruído do `Task.Delay`).
+- **Requisito 7:** violado hoje (`IncludePaths(new string[] { null })` dá `NullReferenceException` em toda requisição). Com o buffer, 9 de 9 testes passam nos dois TFMs (o baseline, 5 de 9).
+- **Custo (`net10.0`, `MemoryDiagnoser`):** o tempo não distingue os modos. Alocação do buffer: +1,1% numa rota rastreada, +0,07 KB no `Nested`, **+0,54 KB (+8,4%) numa rota excluída**. Aceito com a condição de um objeto de estado único e uma medida nova abaixo de 0,6 KB.
+- **Limite do requisito 5, com a decisão calculada uma vez no início:** cabeçalho e trace coincidem em todas as requisições (sem e sob `/api`, com e sem `MapStaticAssets`). Com endpoint casado (inclusive `MapStaticAssets`), `ExcludePaths` vale pelo caminho relativo. Sem endpoint casado (`UseStaticFiles` e 404), vale pelo cheio: `ExcludePaths("/excluded-static.css")` não exclui `/api/excluded-static.css`, e quem serve estático por middleware sob `PathBase` escreve o padrão com o prefixo.
+- **API pública:** só `WithoutNetApiFlowTracking<TBuilder>` e a classe que a contém. O painel e o MCP não mudam, e nenhum `InternalsVisibleTo` muda.
+- **Achado de ambiente:** com `WebApplication` e `UsePathBase`, o roteamento roda antes do middleware que o usuário declara antes do `UseRouting`, então o buffer só importa sem `PathBase`, o caminho comum.
 
 ## Veículo e ordem (D-205)
 

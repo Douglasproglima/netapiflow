@@ -34,7 +34,11 @@ public class MarkingIntegrationTests
                 {
                     services.AddRouting();
                     services.AddControllers().AddApplicationPart(typeof(MarkingIntegrationTests).Assembly);
-                    services.AddNetApiFlow(o => o.IncludePaths("/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                 });
                 webBuilder.Configure(app =>
                 {

@@ -30,7 +30,9 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class DashboardSseTests
 {
-    private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync(RecordingLoggerProvider? loggerProvider = null)
+    private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync(
+        RecordingLoggerProvider? loggerProvider = null,
+        TaskCompletionSource? requestCompleted = null)
     {
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -51,10 +53,24 @@ public class DashboardSseTests
                 });
                 webBuilder.Configure(app =>
                 {
+                    if (requestCompleted is not null)
+                    {
+                        app.Use((context, next) =>
+                        {
+                            context.Response.OnCompleted(() =>
+                            {
+                                requestCompleted.TrySetResult();
+                                return Task.CompletedTask;
+                            });
+                            return next(context);
+                        });
+                    }
+
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
                         endpoints.MapGet("/api/ping", () => "pong").WithNetApiFlowTracking();
+                        endpoints.MapGet("/api/throws", string () => throw new InvalidOperationException("boom"));
                         endpoints.MapNetApiFlowDashboardApi();
                     });
                 });
@@ -336,29 +352,40 @@ public class DashboardSseTests
     [Fact]
     public async Task Stream_ClientDisconnects_NeverLogsAnUnhandledException()
     {
-        // D-31: cancellation (closing the tab, navigating away, EventSource reconnecting) is the
-        // normal end of an SSE connection, not a failure. Before the fix, the net10.0 writer let
-        // the resulting OperationCanceledException propagate out of the request, surfacing as an
-        // "unhandled exception" error log and a dev-mode error response.
         using var loggerProvider = new RecordingLoggerProvider();
-        var (host, client) = await CreateHostAsync(loggerProvider);
+        var requestCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (host, client) = await CreateHostAsync(loggerProvider, requestCompleted);
         using var _host = host;
         using var _client = client;
 
         var (response, reader) = await ConnectAsync(client);
         reader.ShouldNotBeNull();
 
-        response.Dispose(); // the client disconnects mid-stream, cancelling the server's request
+        response.Dispose();
+        await requestCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
-        // Give the server a moment to observe the cancellation and wind the request down.
-        await Task.Delay(TimeSpan.FromSeconds(3));
-
-        // Scoped to "unhandled exception" (the hosting layer's own wording for exactly this
-        // symptom), not every Error-level entry: an unrelated BackgroundService can log its own
-        // cancellation noise during host teardown, which isn't what this test is about.
-        loggerProvider.Entries.ShouldNotContain(entry =>
-            entry.Level >= LogLevel.Error && entry.Message.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase));
+        ErrorsAboutAnUnhandledException(loggerProvider).ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task RequestCompletionSignal_AfterAnUnhandledException_ComesAfterTheErrorWasLogged()
+    {
+        using var loggerProvider = new RecordingLoggerProvider();
+        var requestCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (host, client) = await CreateHostAsync(loggerProvider, requestCompleted);
+        using var _host = host;
+        using var _client = client;
+
+        using var response = await client.GetAsync("/api/throws");
+        await requestCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        ErrorsAboutAnUnhandledException(loggerProvider).ShouldNotBeEmpty();
+    }
+
+    private static List<(LogLevel Level, string Message)> ErrorsAboutAnUnhandledException(RecordingLoggerProvider loggerProvider) =>
+        loggerProvider.Entries
+            .Where(entry => entry.Level >= LogLevel.Error && entry.Message.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     private sealed class RecordingLoggerProvider : ILoggerProvider
     {

@@ -22,9 +22,10 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class CancellationClassificationIntegrationTests
 {
-    private static async Task<(IHost Host, HttpClient Client, CompletedTraces Completed)> CreateHostAsync()
+    private static async Task<(IHost Host, HttpClient Client, CompletedTraces Completed, TaskCompletionSource ClientCancelHandlerWaiting)> CreateHostAsync()
     {
         var completed = new CompletedTraces();
+        var clientCancelHandlerWaiting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -43,6 +44,7 @@ public class CancellationClassificationIntegrationTests
                     {
                         endpoints.MapGet("/client-cancel", async (HttpContext context) =>
                         {
+                            clientCancelHandlerWaiting.TrySetResult();
                             await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted);
                             return Results.Ok();
                         });
@@ -64,7 +66,7 @@ public class CancellationClassificationIntegrationTests
 
         var addresses = host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses;
         var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
-        return (host, client, completed);
+        return (host, client, completed, clientCancelHandlerWaiting);
     }
 
     /// <summary>
@@ -93,14 +95,14 @@ public class CancellationClassificationIntegrationTests
     [Fact]
     public async Task ClientDisconnectingMidRequest_CompletesTraceAsCancelled()
     {
-        var (host, client, completed) = await CreateHostAsync();
+        var (host, client, completed, clientCancelHandlerWaiting) = await CreateHostAsync();
         using var _host = host;
         using var _client = client;
 
         using var clientSideCancellation = new CancellationTokenSource();
         var pendingRequest = client.GetAsync("/client-cancel", clientSideCancellation.Token);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(300));
+        await clientCancelHandlerWaiting.Task.WaitAsync(TimeSpan.FromSeconds(30));
         clientSideCancellation.Cancel();
 
         await Should.ThrowAsync<Exception>(() => pendingRequest);
@@ -112,7 +114,7 @@ public class CancellationClassificationIntegrationTests
     [Fact]
     public async Task InternalCancellationWithClientStillConnected_CompletesTraceAsTimeout()
     {
-        var (host, client, completed) = await CreateHostAsync();
+        var (host, client, completed, _) = await CreateHostAsync();
         using var _host = host;
         using var _client = client;
 
