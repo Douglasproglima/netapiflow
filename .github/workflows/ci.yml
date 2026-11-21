@@ -168,7 +168,6 @@ jobs:
         if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
         shell: bash
         env:
-          DOTNET_ROLL_FORWARD: LatestMajor
           NETAPIFLOW_EXPECT_RUNTIME_MAJOR: "11"
         run: |
           set -e
