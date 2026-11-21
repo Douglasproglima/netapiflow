@@ -117,6 +117,22 @@ public sealed class FlowConventionTests
         }
     }
 
+    [Fact]
+    public void DecorateFlowTracked_WithAPredicateThatMatchesAnOpenGenericRegistration_LeavesItAsItWasAndDoesNotThrow()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(typeof(ISampleOpenGeneric<>), typeof(SampleOpenGeneric<>));
+        var registered = services.Single();
+
+        services.DecorateFlowTracked(type => type == typeof(SampleOpenGeneric<>));
+
+        services.ShouldHaveSingleItem().ShouldBeSameAs(registered);
+    }
+
+    public interface ISampleOpenGeneric<T>;
+
+    public sealed class SampleOpenGeneric<T> : ISampleOpenGeneric<T>;
+
     public interface ISampleGreetingService
     {
         string Greet();

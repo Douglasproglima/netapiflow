@@ -63,7 +63,9 @@ public static class FlowTrackedServiceCollectionExtensions
         var toDecorate = services
             .Select(descriptor => (descriptor, implementationType: GetImplementationType(descriptor)))
             .Where(entry => entry.descriptor.ServiceType.IsInterface
+                            && !entry.descriptor.ServiceType.ContainsGenericParameters
                             && entry.implementationType is not null
+                            && !entry.implementationType.ContainsGenericParameters
                             && !NetApiFlowOwnTypes.Is(entry.implementationType)
                             && predicate(entry.descriptor, entry.implementationType))
             .ToList();
