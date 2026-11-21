@@ -55,8 +55,8 @@ internal sealed class NetApiFlowMiddleware(
 
     private FlowRequestState StartRequest(HttpContext context, NetApiFlowOptions flowOptions)
     {
-        var traceId = ActivityTraceId.CreateRandom().ToHexString();
         var serverActivity = Activity.Current;
+        var traceId = serverActivity is null ? ActivityTraceId.CreateRandom().ToHexString() : serverActivity.TraceId.ToHexString();
         var startedAtUtc = DateTime.UtcNow;
         var reserved = recorder.TryReserveTrace(traceId, context.Request.Method, startedAtUtc);
         var traceByFullPath = decider.ShouldTraceFullPath(context.Request.Path.Value ?? "/");
