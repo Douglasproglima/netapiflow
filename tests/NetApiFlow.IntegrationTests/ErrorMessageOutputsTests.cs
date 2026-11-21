@@ -150,6 +150,7 @@ public sealed record OutputsOfOneCase(
 public sealed partial class ErrorMessagesOnEveryOutput : IAsyncLifetime, IDisposable
 {
     private const string ErrorMessageTag = "netapiflow.error.message";
+    private const string TraceIdTag = "netapiflow.trace_id";
     private const string TraceIdHeader = "X-NetApiFlow-TraceId";
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(10);
 
@@ -269,7 +270,7 @@ public sealed partial class ErrorMessagesOnEveryOutput : IAsyncLifetime, IDispos
                 {
                     lock (_gate)
                     {
-                        var traceId = activity.TraceId.ToString();
+                        var traceId = (string)activity.GetTagItem(TraceIdTag)!;
                         if (!_activityMessagesByTrace.TryGetValue(traceId, out var messages))
                         {
                             _activityMessagesByTrace[traceId] = messages = [];

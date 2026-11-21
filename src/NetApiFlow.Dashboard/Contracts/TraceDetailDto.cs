@@ -50,12 +50,10 @@ internal sealed record TraceDetailDto
             SpanCount = spans.Count,
             Truncated = activeTrace.Truncated,
             ErrorMessage = null,
-            Tags = EmptyTags,
+            Tags = activeTrace.Tags,
             Spans = [.. spans.OrderBy(s => s.Sequence).Select(SpanDto.From)],
         };
     }
-
-    private static readonly IReadOnlyDictionary<string, string> EmptyTags = new Dictionary<string, string>();
 
     private static TraceDetailDto From(FlowTrace trace, IReadOnlyList<FlowSpan> spans) => new()
     {

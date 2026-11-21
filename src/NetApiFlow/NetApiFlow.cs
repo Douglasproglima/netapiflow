@@ -31,8 +31,9 @@ public static class NetApiFlow
         return new FlowStep(activity);
     }
 
-    /// <summary>Trace id of the request currently executing, or <see langword="null"/> when tracing is disabled or there is no ambient trace.</summary>
-    public static string? CurrentTraceId => Activity.Current?.TraceId.ToString();
+    /// <summary>NetApiFlow id of the trace of the request currently executing, or <see langword="null"/> when that request has no trace in progress (tracing is disabled, the request is not traced, or there is no ambient request).
+    /// It is not the W3C trace id: read that one from <c>Activity.Current.TraceId</c>.</summary>
+    public static string? CurrentTraceId => FlowTraceResolver.ForCurrentActivity() is { IsRecording: true } state ? state.TraceId : null;
 
     /// <summary>A trace that finished recently, read straight from memory, without waiting for the persistence
     /// queue. Meant for an integration test that just awaited its own HTTP call and needs the result immediately:

@@ -69,5 +69,19 @@
     "new": false,
     "reason": "The trace id header is sent only in Development by default from 0.6.0.",
     "changelog": "from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by default."
+  },
+  {
+    "scenario": "requests-that-share-a-traceparent",
+    "aspect": "traces after",
+    "old": [
+      "GET /orders/{id:int} 200"
+    ],
+    "new": [
+      "GET /items/{id:int} 200",
+      "GET /orders/{id:int} 200",
+      "GET /orders/{id:int} 200"
+    ],
+    "reason": "The published package used the W3C trace id of the request as the id of its trace, so requests that carry the same traceparent replaced one another in the store. Each request has its own id now, so each one is a trace.",
+    "changelog": "Each request is now its own trace"
   }
 ]

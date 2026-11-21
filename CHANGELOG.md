@@ -53,6 +53,23 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **`NetApiFlow`: each request gets its own trace id, and the id of a trace is no longer the W3C trace
+  id of the request.** The id is random and has the same format as before, 32 hexadecimal
+  characters. `X-NetApiFlow-TraceId`, `NetApiFlow.GetRecentTrace`, `NetApiFlow.Testing`, the REST API,
+  the stream and the MCP tools use it. `NetApiFlow.CurrentTraceId` now returns it, and `null` when the
+  request has no trace in progress, including a request that is not traced, where it used to return
+  the W3C trace id. The W3C trace id is in the tag `w3c.trace_id` of the trace and in
+  `Activity.Current.TraceId`, and the details of a trace in the dashboard show both with their
+  labels. The `TraceStarted` event of the stream and the detail of a trace that is still running
+  carry `w3c.trace_id` and the tenant from the start, which they did not carry before, so a consumer
+  of the stream can match the first event with OpenTelemetry. Every NetApiFlow activity carries the
+  tag `netapiflow.trace_id`, so a span in an OTLP
+  backend leads to its trace, and the exported spans keep the W3C trace id. A trace saved before
+  stays readable. If a test or a log line compared `CurrentTraceId` or the header with
+  `Activity.Current.TraceId`, read the W3C trace id from the tag.
+- `NetApiFlow`: a step started with an explicit `ActivityContext` as its parent, in a thread that does
+  not carry the `ExecutionContext` of the request, is not recorded any more. It used to be, because
+  it shared the W3C trace id of the request. The README lists it next to `ExecutionContext.SuppressFlow()`.
 - `NetApiFlow`: the trace of a request that matches an endpoint now opens when routing picks the
   endpoint, with its route already known. The `TraceStarted` event, the live list and the REST list
   show `/orders/{id}` where they used to show `(unmatched)` until the request ended. The start time is
@@ -103,6 +120,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: requests that carry the same `traceparent`, which is what happens when a service calls
+  your API more than once, lost traces and mixed their steps. In sequence, the in-memory store kept
+  only the last trace, and PostgreSQL and SQL Server kept only the first and logged a primary key
+  violation for the others. At the same time, the steps of both requests went into one trace and the
+  second request got no `X-NetApiFlow-TraceId`. A client could also pick the id of a trace and
+  overwrite a stored one in the in-memory store. Each request is now its own trace, and the client
+  controls only the tag `w3c.trace_id`. This is a defect of correctness and not a vulnerability: a
+  client can only collide with an id it chose itself, and it cannot read or delete the trace of
+  someone else.
 - `NetApiFlow.Dashboard`: a request that was still running was drawn without the steps it was
   expected to run, so the Waiting state never showed. The panel asked for the blueprint of a running
   request under the route `(unmatched)`, because the route was only known at the end. The route is

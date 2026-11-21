@@ -37,6 +37,7 @@ public class ErrorMessageExportTests(ErrorMessagesExportedForEveryCase exported)
 public sealed class ErrorMessagesExportedForEveryCase : IAsyncLifetime
 {
     private const string ErrorMessageTag = "netapiflow.error.message";
+    private const string TraceIdTag = "netapiflow.trace_id";
     private const string TraceIdHeader = "X-NetApiFlow-TraceId";
 
     private readonly Dictionary<int, IReadOnlyList<string>> _messagesByCase = [];
@@ -62,7 +63,7 @@ public sealed class ErrorMessagesExportedForEveryCase : IAsyncLifetime
         foreach (var (id, traceId) in traceIdByCase)
         {
             _messagesByCase[id] = exported
-                .Where(activity => activity.TraceId.ToString() == traceId)
+                .Where(activity => activity.GetTagItem(TraceIdTag) as string == traceId)
                 .Select(activity => activity.GetTagItem(ErrorMessageTag) as string)
                 .OfType<string>()
                 .ToList();

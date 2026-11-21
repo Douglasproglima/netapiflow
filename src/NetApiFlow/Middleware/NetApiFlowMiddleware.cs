@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -47,22 +48,27 @@ internal sealed class NetApiFlowMiddleware(
         }
         finally
         {
-            FinishRequest(context, state, caughtException);
+            try
+            {
+                FinishRequest(context, state, caughtException);
+            }
+            finally
+            {
+                FlowTraceResolver.Detach();
+            }
         }
     }
 
     private FlowRequestState StartRequest(HttpContext context, NetApiFlowOptions flowOptions)
     {
-        var traceId = context.TraceIdentifier;
-        if (System.Diagnostics.Activity.Current is { } activity)
-        {
-            traceId = activity.TraceId.ToString();
-        }
-
+        var traceId = ActivityTraceId.CreateRandom().ToHexString();
+        var serverActivity = Activity.Current;
         var startedAtUtc = DateTime.UtcNow;
         var reserved = recorder.TryReserveTrace(traceId, context.Request.Method, startedAtUtc);
         var traceByFullPath = decider.ShouldTraceFullPath(context.Request.Path.Value ?? "/");
-        var state = new FlowRequestState(recorder, decider, flowOptions, context.Response, traceId, startedAtUtc, reserved, traceByFullPath);
+        var state = new FlowRequestState(
+            recorder, decider, flowOptions, context.Response, traceId, serverActivity?.TraceId ?? default, startedAtUtc, reserved, traceByFullPath);
+        FlowTraceResolver.Attach(serverActivity, state);
         context.Items[FlowHttpContextItems.RequestState] = state;
         if (flowOptions.EmitTraceIdHeader)
         {
@@ -74,11 +80,18 @@ internal sealed class NetApiFlowMiddleware(
 
     private void FinishRequest(HttpContext context, FlowRequestState state, Exception? caughtException)
     {
-        state.OpenWhenNoEndpointWasMatched(context);
-        state.ReleaseReservation();
-        if (state.Opened)
+        try
         {
-            CompleteTrace(context, state.TraceId, caughtException);
+            state.OpenWhenNoEndpointWasMatched(context);
+            state.ReleaseReservation();
+            if (state.Opened)
+            {
+                CompleteTrace(context, state.TraceId, caughtException);
+            }
+        }
+        finally
+        {
+            state.MarkFinished();
         }
     }
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Marking;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
 
@@ -79,8 +80,7 @@ public class FlowInterceptorProxyTests
 
         var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, listener, traceId, root);
     }

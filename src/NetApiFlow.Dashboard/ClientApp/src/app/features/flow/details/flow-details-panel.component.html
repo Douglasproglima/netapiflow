@@ -206,6 +206,12 @@
         <dd>
           <span>{{ trace().traceId }}</span>
         </dd>
+        @if (w3cTraceId(); as w3cTraceId) {
+          <dt>{{ 'details.summary.w3cTraceId' | t }}</dt>
+          <dd>
+            <span>{{ w3cTraceId }}</span>
+          </dd>
+        }
         <dt>{{ 'details.summary.started' | t }}</dt>
         <dd [attr.title]="trace().startedAt">{{ formatLocalTime(trace().startedAt) }}</dd>
         <dt>{{ 'details.summary.finished' | t }}</dt>

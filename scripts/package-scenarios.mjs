@@ -169,6 +169,42 @@ export const SCENARIOS = [
       expectSecurityHeaders(foreignHost, `the 403 of /flow/mcp for Host: ${HOSTILE_NAME}`);
     },
   },
+  {
+    id: 'i',
+    variant: 'development',
+    title: 'requests that carry the same traceparent are one trace each, with ids that differ from the W3C trace id, which stays in a tag',
+    run: async (app) => {
+      const w3cTraceId = 'e'.repeat(32);
+      const traceparent = `00-${w3cTraceId}-${'f'.repeat(16)}-01`;
+
+      const inSequence = [];
+      for (const path of ['/orders/1', '/orders/2', '/orders/1']) {
+        const response = await app.get(path, { traceparent });
+        expectStatus(response, 200, `GET ${path} with the shared traceparent`);
+        inSequence.push(response.headers[TRACE_ID_HEADER]);
+      }
+
+      const atTheSameTime = (await Promise.all([app.get('/orders/1', { traceparent }), app.get('/orders/2', { traceparent })])).map(
+        (response) => response.headers[TRACE_ID_HEADER],
+      );
+
+      const traceIds = [...inSequence, ...atTheSameTime];
+      expect(
+        traceIds.every((traceId) => TRACE_ID_PATTERN.test(traceId ?? '')),
+        `a request that carried the shared traceparent was answered without a valid ${TRACE_ID_HEADER} header: ${traceIds.join(', ')}`,
+      );
+      expect(new Set(traceIds).size === traceIds.length, `five requests with one traceparent gave repeated trace ids: ${traceIds.join(', ')}`);
+      expect(!traceIds.includes(w3cTraceId), 'a request was given the W3C trace id of its traceparent as the id of its trace');
+
+      for (const traceId of traceIds) {
+        const detail = await untilStored(app, `/flow/api/traces/${traceId}`);
+        expect(
+          detail.tags?.['w3c.trace_id'] === w3cTraceId,
+          `the trace ${traceId} does not carry the W3C trace id in the tag w3c.trace_id (its tags: ${JSON.stringify(detail.tags)})`,
+        );
+      }
+    },
+  },
 ];
 
 class ScenarioFailure extends Error {}

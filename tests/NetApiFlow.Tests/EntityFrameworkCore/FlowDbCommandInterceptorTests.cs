@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
 
@@ -47,8 +48,7 @@ public class FlowDbCommandInterceptorTests
 
         using var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         using var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
@@ -83,8 +83,7 @@ public class FlowDbCommandInterceptorTests
 
         using var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         using var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
@@ -131,8 +130,7 @@ public class FlowDbCommandInterceptorTests
 
         using var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         using var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();

@@ -68,6 +68,25 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
         }
     }
 
+    public void SetTags(IReadOnlyDictionary<string, string> tags)
+    {
+        if (tags.Count == 0)
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            var merged = new Dictionary<string, string>(_tags);
+            foreach (var (key, value) in tags)
+            {
+                merged[key] = value;
+            }
+
+            _tags = merged;
+        }
+    }
+
     public IReadOnlyList<FlowSpan> Spans
     {
         get

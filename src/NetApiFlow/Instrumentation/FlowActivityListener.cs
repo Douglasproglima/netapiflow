@@ -62,8 +62,8 @@ internal sealed class FlowActivityListener : IDisposable
             return ActivitySamplingResult.None;
         }
 
-        var traceId = options.TraceId.ToString();
-        return _recorder.GetActiveTrace(traceId) is null
+        var traceId = FlowTraceResolver.ForSampling(options.TraceId)?.TraceId;
+        return traceId is null || _recorder.GetActiveTrace(traceId) is null
             ? ActivitySamplingResult.None
             : ActivitySamplingResult.AllDataAndRecorded;
     }
@@ -81,9 +81,9 @@ internal sealed class FlowActivityListener : IDisposable
             return;
         }
 
-        var traceId = activity.TraceId.ToString();
-        var trace = _recorder.GetActiveTrace(traceId);
-        if (trace is null)
+        var traceId = FlowTraceResolver.ForActivity(activity)?.TraceId;
+        var trace = traceId is null ? null : _recorder.GetActiveTrace(traceId);
+        if (traceId is null || trace is null)
         {
             return;
         }
@@ -96,6 +96,11 @@ internal sealed class FlowActivityListener : IDisposable
         };
 
         _recorder.TryAddSpan(traceId, span);
+
+        if (activity.Source.Name == FlowActivitySource.Name)
+        {
+            activity.SetTag(FlowTagNames.TraceId, traceId);
+        }
     }
 
     private static FlowSpan BuildFlowSpan(Activity activity, string traceId, ActiveTrace trace)
@@ -159,9 +164,9 @@ internal sealed class FlowActivityListener : IDisposable
 
     private void OnActivityStopped(Activity activity)
     {
-        var traceId = activity.TraceId.ToString();
-        var trace = _recorder.GetActiveTrace(traceId);
-        if (trace is null)
+        var traceId = FlowTraceResolver.ForActivity(activity)?.TraceId;
+        var trace = traceId is null ? null : _recorder.GetActiveTrace(traceId);
+        if (traceId is null || trace is null)
         {
             return;
         }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using NetApiFlow.Domain;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 
 namespace NetApiFlow.SqlClient.IntegrationTests;
@@ -86,8 +87,7 @@ public sealed class SqlClientHostRegistrationTests(SqlServerContainerFixture fix
 
         using var root = new Activity("SqlClientHostRegistrationRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         await using var connection = new SqlConnection(fixture.ConnectionString);
         await connection.OpenAsync();

@@ -614,5 +614,244 @@
       "scenario": "live-panel:old-trace"
     },
     "job": "real-package"
+  },
+  {
+    "id": "F1-not-executed-after-the-end-in-the-real-panel",
+    "defect": "A request that ended without running steps the blueprint expected was not drawn with them as not executed in the real panel",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:ended"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S3-sequence-in-memory",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sequence-postgresql",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sequence-sqlserver",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-in-memory",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-postgresql",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-sqlserver",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-in-memory",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-postgresql",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-sqlserver",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-in-a-new-app",
+    "defect": "Requests that carry the same traceparent were not one trace each in an app made from the README and the published package",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "i"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S3-against-the-published-package",
+    "defect": "Requests that share a traceparent are one trace each now, and the published package keeps one trace for all of them",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "requests-that-share-a-traceparent"
+    },
+    "job": "comparison"
+  },
+  {
+    "id": "S3-trace-started-tags",
+    "defect": "The TraceStarted event came without the W3C trace id and the tenant, so a consumer of the stream lost the match with OpenTelemetry on the first event",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSseTests.Stream_TraceStartedOfATracedRequest_CarriesTheW3CTraceIdAndTheTenantInItsTags"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-no-endpoint",
+    "defect": "The TraceStarted event of a request that matches no endpoint, published when it ends, came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSseTests.Stream_TraceStartedOfARequestWithoutAMatchedEndpoint_CarriesTheW3CTraceIdAndTheTenantInItsTags"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-running-trace-detail-tags",
+    "defect": "The detail of a trace that is still running came with no tags, so the panel could not show the W3C trace id until the request ended",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RunningTraceDetailTests.TraceLookupOfThePanel_WhileTheRequestStillRuns_CarriesTheW3CTraceIdTag"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sampling-of-a-foreign-activity",
+    "defect": "An activity with another W3C trace id, started inside a traced request, was forced into recording although NetApiFlow then dropped it, over the sampler of the user",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TraceResolutionCasesTests.Activity_WithAnotherW3CTraceIdStartedInsideATracedRequest_IsNotForcedIntoRecording"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-released-at-the-end",
+    "defect": "The state of a request stayed reachable from an ExecutionContext captured during the request, and so did the HttpContext behind it, after the request ended",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TraceResolutionCasesTests.ExecutionContext_CapturedDuringTheRequest_NoLongerSeesTheRequestOnceItEnded"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-finished-when-completing-throws",
+    "defect": "When completing the trace threw, the request was not marked as finished and CurrentTraceId kept answering in a task that outlived it",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-tenant-resolver-failure",
+    "defect": "A tenant resolver that threw discarded the whole trace, because the opening tags are resolved before the trace is published",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.OpeningTagsTests.Trace_WhenTheTenantResolverThrows_IsStillRecordedWithTheW3CTraceIdAndWithoutTheTenant"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-released-when-completing-throws",
+    "defect": "When completing the trace threw, the request stayed reachable from a context captured during it, because the release ran after the completion in the same block",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_ReleasesTheRequestFromAContextCapturedDuringIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-reserved-path",
+    "defect": "The TraceStarted event of a trace opened from a reservation came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.PublishReserved_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-unreserved-path",
+    "defect": "The TraceStarted event of a trace opened without a reservation came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.TryStartTrace_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
+    },
+    "job": "build-test"
   }
 ]

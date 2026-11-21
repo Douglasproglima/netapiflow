@@ -6,6 +6,7 @@ using NetApiFlow.Domain;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Npgsql;
 using Shouldly;
 using Xunit.Abstractions;
@@ -138,8 +139,7 @@ public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture
 
         var root = new Activity("NpgsqlInteropRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, listener, traceId, root);
     }
@@ -153,8 +153,7 @@ public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture
 
         using var root = new Activity($"NpgsqlConcurrentRoot{index}");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         await QueryUserWithEntityFrameworkCoreAsync(options, index);
 

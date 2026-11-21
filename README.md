@@ -724,10 +724,16 @@ A proxy that ends TLS needs nothing for the scheme, because it is not compared.
 ### The trace id header
 
 NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request in Development. It
-carries the trace id, the same value the W3C `traceparent` header already carries. It is how
+carries the id of the trace, a random id the server makes for each request. It is not the W3C trace
+id of the `traceparent` header: that one is in the tag `w3c.trace_id` of the trace and in
+`Activity.Current.TraceId`, and the details of a trace in the dashboard show both. It is how
 `NetApiFlow.Testing` finds the trace of a response and how the dashboard's Runner opens the graph of
 the request it sent. Knowing a trace id does not open the dashboard: its routes stay behind the
 rules above.
+
+**Before 0.6.0 the id of the trace was the W3C trace id.** Two requests with the same `traceparent`
+shared one id and lost a trace. If a test or a log line compared `NetApiFlow.CurrentTraceId` or this
+header with `Activity.Current.TraceId`, read the W3C trace id from the tag instead.
 
 **From 0.6.0 the header is sent only in Development by default. To keep it in Production, set
 `EmitTraceIdHeader = true`.**
@@ -1016,8 +1022,12 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 ## Known limitations
 
 - `Activity.Current` (and therefore step nesting) is lost across `ExecutionContext.SuppressFlow()`
-  or a custom, non-flowing thread pool. Spans created after such a boundary record correctly, but
-  as a new root rather than nested under the request's trace.
+  or a custom, non-flowing thread pool. Spans created after such a boundary start a new root
+  activity, and NetApiFlow does not attach them to the trace of the request.
+- A step started with an explicit `ActivityContext` as its parent, in a thread that does not carry
+  the `ExecutionContext` of the request, is not part of any trace. Before 0.6.0 it was recorded,
+  because it shared the W3C trace id of the request. Start it inside the flow of the request, or set
+  `Activity.Current` to an activity of the request first.
 - Automatic tracking (`AddFlowTracked`, `DecorateFlowTracked` and `TrackFlowByConvention`) does not support `IAsyncEnumerable<T>`
   return types in this version.
 - Automatic tracking does not work under Native AOT either. `AddFlowTracked`,

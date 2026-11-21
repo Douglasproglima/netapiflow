@@ -37,6 +37,12 @@ export const SCENARIOS = [
   { id: 'exclude-paths-under-a-path-base', variant: 'pathbase', requests: ['/health', '/orders/1'] },
   { id: 'trace-id-header-in-production', variant: 'production', requests: ['/orders/1'] },
   { id: 'slow-request-in-a-terminal-middleware', variant: 'default', hold: '/terminal' },
+  {
+    id: 'requests-that-share-a-traceparent',
+    variant: 'default',
+    requests: ['/orders/1', '/items/1', '/orders/2'],
+    headers: { traceparent: `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01` },
+  },
 ];
 
 function hasTraceIdHeader(response) {
@@ -55,7 +61,7 @@ function siteFor(baseUrl, variant) {
   const client = clientFor(baseUrl);
   return {
     variant,
-    get: (path) => client.get(variant.pathBase + path),
+    get: (path, headers) => client.get(variant.pathBase + path, headers),
     send: (options) => client.send({ ...options, path: variant.pathBase + options.path }),
   };
 }
@@ -122,7 +128,7 @@ async function observeRequests(site, scenario) {
   }
 
   for (const path of scenario.requests) {
-    observeResponse(observation, path, await site.get(path));
+    observeResponse(observation, path, await site.get(path, scenario.headers));
   }
 
   if (site.variant.dashboard !== false) {
