@@ -58,8 +58,8 @@ ao rebinding. Só o `Host` barra, porque ele chega como `evil.example`.
 | Em Development, `Host` de loopback (`localhost`, `127.0.0.1`, `[::1]`) ou **declarado explicitamente** | Segue para a checagem de `Origin` |
 | Em Development, qualquer outro `Host` | **403**, com uma mensagem que diz como declarar o host. `"AllowedHosts": "*"`, o padrão do `appsettings.json` do `dotnet new`, **não** conta como declarado |
 | `Origin` ausente (um cliente que não é navegador, ou um `GET` de mesma origem) | Passa, desde que o `Host` já tenha passado |
-| `Origin` presente e igual à origem da própria requisição (esquema mais `Host`) | Passa |
-| Em Development, `Origin` presente cujo host é de loopback, em qualquer porta | Passa. É o caso de uma ferramenta local em outra porta, por exemplo o servidor de desenvolvimento do painel, **se** ele fala com a API desse jeito (a confirmar, ver abaixo) |
+| `Origin` presente com o host e a porta do `Host` que o app enxerga, **sem comparar o esquema** (D-240) | Passa |
+| ~~Em Development, `Origin` de loopback em qualquer porta~~ | **Removida (D-240).** A Executora mediu: o `npm start` do painel não fala com a API (as chamadas relativas voltam para a porta 4200, sem `Origin`), e o MCP Inspector e o cliente C# não mandam `Origin`. Mantê-la deixaria qualquer app web local, em outra porta, apagar os traces. Vira caso de teste recusado |
 | `Origin` presente de qualquer outro host | **403**, com a causa na mensagem |
 | Fora de Development | A mesma regra de `Origin`. O `Host` segue o que o `AllowedHosts` e o `UseForwardedHeaders` do usuário já decidem |
 
@@ -99,6 +99,8 @@ Em **toda** resposta das rotas do painel e do MCP, inclusive as de `403` e `404`
   que não se negocia), abre o painel num navegador de verdade com os relatos de violação ligados, e registra o que
   precisou ceder e por quê. Se o `'unsafe-inline'` em `style-src` for necessário, ela o mede e o registra. Se só dá
   para o `script-src` ficar estrito desligando uma otimização do build (`inlineCritical`), ela relata.
+
+**Medido e decidido (D-240).** O `index.html` de produção embutia um `<style>` e um `<script>` inline (o CSS crítico e o `data-beasties-media`). Com `script-src 'self'` e o build de então, o painel saía sem estilo. **Saída escolhida: desligar `optimization.styles.inlineCritical` no `angular.json`**, e o `script-src 'self'` literal, sem hash. A política é `default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'` (o `object-src 'none'` foi acrescentado pela auditoria). O `'unsafe-inline'` em `style-src` fica **de propósito**: o Angular injeta o CSS de cada componente como `<style>` em tempo de execução, e hashes que mudam a cada build não se mantêm. Condições: o `DashboardIndexHtmlCache` reescreve o `<base>` de forma robusta (o build passou a serializar `<base href="/"/>`, e a reescrita por texto exato deixava o painel sem renderizar, sem nenhuma violação no log), um teste afirma que o `index.html` embutido não tem script nem style inline, e o painel é medido no navegador com 0 violações nos dois temas.
 
 **Onde:** um ponto só, que cobre as respostas dos dois, incluindo as que o servidor monta. Teste de host real: cada
 classe de rota (API, SSE, estático, `index.html`, MCP, e a resposta de `403` e de `404`) traz os cabeçalhos. E uma

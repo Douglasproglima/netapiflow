@@ -1,6 +1,6 @@
 # Fase 59: o README e os textos dizem só o que o produto faz (D-210, nível 2)
 
-A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e cinco afirmações como falsas ou
+A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e seis afirmações como falsas ou
 imprecisas. Ninguém quebra por causa de uma frase, mas é no README que o usuário decide se confia no produto, e uma
 frase falsa vale mais que um bug que ele nunca vê. Esta fase deixa o texto verdadeiro.
 
@@ -52,6 +52,7 @@ reproduz uma a uma antes de mexer no texto.
 | 23 | Os limites fixos | Na `0.6.0` o README só **documenta os valores** (virar `LimitsOptions` é da `0.7.0`) |
 | 24 | `DELETE` e `POST /deploys` | Usam a mesma política da leitura, sem papel só leitura. Dizer |
 | 25 | `NetApiFlow.Storage.SqlServer` e o MediatR | O pacote traz o `Microsoft.Data.SqlClient` `5.2.2`, que não grava comandos. O README não fala da licença do MediatR 13 ou superior |
+| 26 | "Toda rota do MCP responde 404" fora de Development | `GET` e `DELETE` em `/flow/mcp` respondem **405** em `Production`, o que revela que a rota existe. O README não pode dizer que toda rota responde 404 sem essa ressalva (D-240) |
 
 
 Mais itens que não são frases, e que a mesma fase leva:
@@ -71,7 +72,7 @@ e a classificação:
 - **Verdadeira hoje, e uma fase anterior a tornou falsa ou a corrigiu.** O texto fica como está ou muda com o código novo.
 - **Não reproduzida.** Para a Tarefa e pede o comando à auditoria.
 
-A tabela preenchida vai no relatório da 59.0. **Pronto quando:** as 25 linhas classificadas com saída real.
+A tabela preenchida vai no relatório da 59.0. **Pronto quando:** as 26 linhas classificadas com saída real.
 
 ## Tarefa 59.1: o texto, nos dois idiomas
 
@@ -152,5 +153,5 @@ saída real e o diff do README, e **não** declara a fase pronta antes disso.
 
 ## Relatório final
 
-A tabela de 25 linhas com a classificação e a saída real. Os 28 comentários, antes e depois. A saída da checagem de
+A tabela de 26 linhas com a classificação e a saída real. Os 28 comentários, antes e depois. A saída da checagem de
 citação, vermelha e verde. O relatório de performance e o hardware.

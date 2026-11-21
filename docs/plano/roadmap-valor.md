@@ -59,6 +59,7 @@ divulgação orgânica (projeto ainda sem lançamento público divulgado, D-70).
 | 41 | Papel só leitura para `DELETE /flow/api/traces` e `POST /flow/api/deploys`, que usam a mesma política da leitura. **Proposto pela Planejadora, a auditoria confirma.** A Fase 59 só documenta | D-236, nível 3 da auditoria de base | 🟡 Médio | Não planejada, `0.7.0` |
 | 42 | O atributo `sql` do OTLP virar `db.query.text`, o nome da convenção do OpenTelemetry. Muda o que quem consome vê. **Proposto pela Planejadora, a auditoria confirma** | D-236, nível 3 da auditoria de base | 🟢 Baixo | Não planejada, `0.7.0` |
 | 43 | No `net8.0`, o `HttpClientActivityTagBackfill` usa reflexão (`GetProperty(...).GetValue(...)`) a cada evento de `HttpClient`, que é caminho quente. Achado pela Executora ao verificar o princípio "sem reflexão no caminho crítico" do site na Fase 62. O texto do site já só afirma o que o código sustenta. **Proposto pela Planejadora, a auditoria confirma** | D-239, Fase 62 | 🟢 Baixo | Não planejada, `0.7.0` (D-236) |
+| 44 | Impressão digital do MCP em `Production`: `GET` e `DELETE` em `/flow/mcp` respondem 405 (a rota existe), quando o resto do NetApiFlow responde 404. Achado pelo revisor F e aceito sem bloquear a Fase 56. A Fase 59 só corrige o texto do README | D-240, varredura final | 🟢 Baixo | Não planejada, `0.7.0` (D-236) |
 
 > Os itens 9 a 14 foram acrescentados pela auditoria externa, a pedido do usuário, por estarem
 > levantados em conversa e não registrados em lugar nenhum. Entraram no fim da tabela, não na
