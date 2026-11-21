@@ -31,6 +31,7 @@ jobs:
           dotnet-version: |
             8.0.x
             10.0.x
+            11.0.x
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -81,6 +82,28 @@ jobs:
           dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build
           dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build
+
+      - name: Run the same tests on the .NET 11 runtime, against the build of net10.0
+        shell: bash
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+          NETAPIFLOW_EXPECT_RUNTIME_MAJOR: "11"
+        run: |
+          set -e
+          dotnet --version
+          dotnet --list-runtimes
+          run_tests() {
+            dotnet test "tests/$1" -c Release --no-build -f net10.0
+          }
+          run_tests NetApiFlow.Tests
+          run_tests NetApiFlow.IntegrationTests
+          run_tests NetApiFlow.EntityFrameworkCore.Ef8Tests
+          run_tests NetApiFlow.Mcp.Tests
+          run_tests NetApiFlow.OpenTelemetry.Tests
+          run_tests NetApiFlow.PrePipelineInteropSpike
+          run_tests NetApiFlow.Storage.Tests
+          run_tests NetApiFlow.Npgsql.IntegrationTests
+          run_tests NetApiFlow.SqlClient.IntegrationTests
 
       - name: Create the local package folders the verification projects list
         run: mkdir -p tests/manual-verification/local-nuget-feed tests/manual-verification/local-packages
