@@ -80,6 +80,23 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetAsync_ForATraceSavedBeforeTheOwnTraceIdWithTheW3CTraceIdAsKey_ReadsItWithoutTheNewTag()
+    {
+        var store = CreateStore();
+        const string w3cTraceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        await store.SaveAsync(MakeTrace(w3cTraceId), [MakeSpan(w3cTraceId, "span-root", null, 0)], CancellationToken.None);
+
+        var detail = await store.GetAsync(w3cTraceId, CancellationToken.None);
+        var listed = await store.QueryAsync(new TraceQuery { RouteTemplate = "/api/orders/{id}" }, CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+        detail.Trace.TraceId.ShouldBe(w3cTraceId);
+        detail.Trace.Tags.ContainsKey("w3c.trace_id").ShouldBeFalse();
+        detail.Spans.Single().TraceId.ShouldBe(w3cTraceId);
+        listed.Items.Select(item => item.TraceId).ShouldContain(w3cTraceId);
+    }
+
+    [Fact]
     public async Task SaveAsync_ThenGetAsync_RoundTripsCancelledAndTimeoutStatus()
     {
         var store = CreateStore();
