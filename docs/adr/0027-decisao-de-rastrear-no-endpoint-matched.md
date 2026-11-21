@@ -110,3 +110,7 @@ Opção A, com uma emenda da auditoria (20/11/2026): o metadado de identidade é
   MCP de um núcleo atualizado sozinho.
 - **O README diz o que foi medido e o que não foi:** Kestrel, IIS Express com o ANCM v2 e o nginx da Tarefa 53.0, e
   não o IIS completo nem o YARP. Não promete o que não se mediu.
+
+## Emenda da Tarefa 53.1 (D-245)
+
+A medição mudou **o momento** de uma decisão, não a semântica. O texto acima diz que, sem endpoint casado, "a decisão acontece no fim do pipeline, pelo caminho cheio". A Executora mediu que o `Request.Path` dentro do `OnStarting` varia por tipo de resposta sob `UsePathBase`, e decidir lá ou no fim faria o cabeçalho e a trace divergirem. A decisão do "sem endpoint" passa a ser **calculada uma vez, no início do middleware, pelo caminho cheio**, guardada no `HttpContext` e usada pelo cabeçalho e pelo fim. O caminho que vale é o mesmo (o cheio) e o limite do requisito 5 não muda. A forma das etapas anteriores à abertura é o **buffer**: o middleware reserva uma trace não publicada no recorder, e o `EndpointMatched` a publica ou a descarta sem evento. O custo medido e o resto estão em `docs/plano/fase-53-pathbase.md`.
