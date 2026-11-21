@@ -13,6 +13,7 @@ using Xunit;
 
 namespace NetApiFlow.Tests.Instrumentation;
 
+[Collection("FlowMetrics")]
 public class FlowMetricsTests
 {
     private static MeterListener CreateListener(ConcurrentDictionary<string, long> totals)

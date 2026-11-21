@@ -535,6 +535,14 @@ troque `netapiflow_` no script antes. O script cria o que falta e atualiza tabel
 versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server separa os lotes com
 `GO`, então rode com `sqlcmd`, SSMS ou Azure Data Studio.
 
+Enquanto as tabelas não existem, os traces que a sua aplicação produz não podem ser gravados. Uma
+gravação que falha registra um aviso com o tipo e a mensagem da exceção, e o trace seguinte é
+tentado normalmente. Depois de três falhas seguidas, o storage descarta por 30 segundos os traces
+que chegam e tenta de novo, com um aviso para cada tentativa que falha. Os traces que não foram
+gravados são contados em `netapiflow.persistence.failures`. Quando uma gravação volta a funcionar,
+ele registra uma linha com quantos traces não foram gravados. O mesmo acontece quando o banco está
+inalcançável. A exceção completa é registrada em `Debug`.
+
 ## Segurança do dashboard em produção
 
 > **O dashboard mostra detalhe interno de implementação da sua API: nome de componente, nome de
@@ -608,20 +616,32 @@ Um proxy que termina o TLS não precisa de nada para o esquema, porque ele não 
 
 ### O cabeçalho com o trace id
 
-O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada, em qualquer
-ambiente. Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega, e é
-por ele que o `NetApiFlow.Testing` acha o trace de uma resposta. Saber um trace id não abre o
-dashboard: as rotas dele continuam atrás das regras acima.
+O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada em Development.
+Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega. É por ele que
+o `NetApiFlow.Testing` acha o trace de uma resposta e que o Runner do dashboard abre o grafo da
+requisição que enviou. Saber um trace id não abre o dashboard: as rotas dele continuam atrás das
+regras acima.
 
-Para manter o trace id fora das suas respostas, desligue o cabeçalho:
+**A partir da 0.6.0, o cabeçalho só sai em Development por padrão. Para mantê-lo em Production,
+defina `EmitTraceIdHeader = true`.**
 
 ```csharp
-builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = true);
 ```
 
-Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. As requisições continuam
-rastreadas. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção
-enquanto o cabeçalho estiver desligado.
+Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": true }`. Defina `false` para manter o
+trace id fora das suas respostas também em Development. As requisições são rastreadas de qualquer
+forma. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção enquanto o
+cabeçalho estiver desligado. Um host de teste montado com `WebApplicationFactory` roda em Development
+e não precisa de nada. Se os seus testes rodam em outro ambiente, como `Testing` ou `Staging`,
+defina `EmitTraceIdHeader = true` no host de teste.
+
+Uma resposta não o carrega, mesmo com o cabeçalho ligado. Em Production sem tratador de exceção,
+uma exceção que ninguém trata chega ao servidor, e o servidor monta o 500 sozinho e descarta os
+cabeçalhos postos antes. Esse 500 não tem `X-NetApiFlow-TraceId`, embora o trace seja gravado. Medido no Kestrel, no `net8.0` e no
+`net10.0`. O NetApiFlow não altera essa resposta. Adicione `UseExceptionHandler` e o 500 é respondido
+dentro do seu pipeline, então ele carrega o cabeçalho. Em Development a página de exceção do
+desenvolvedor faz isso por você.
 
 ### Cabeçalhos de segurança
 

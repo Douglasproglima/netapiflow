@@ -1,5 +1,7 @@
 # Fase 56: a superfície HTTP do painel e do MCP (D-210, S6 e S7)
 
+**Estado (21/11/2026):** S6, o guarda de `Host` e `Origin` nos dois portões (#398), e S7, os cabeçalhos de segurança e a CSP do painel (#401); e a matriz de autorização em teste de host real, com a correção do `POST /flow/api/deploys`, que lia o corpo antes do portão (#404). S6 e S7 estão em `develop`, e a matriz está aprovada na #404, aguardando o merge. O advisory 3 (DNS rebinding e iframe) é publicado pela auditoria no release.
+
 O painel tem um botão que apaga todos os traces, e o MCP entrega os dados de quem está desenvolvendo. Em
 Development os dois ficam abertos de propósito (ADR-0006). A auditoria de base achou que, aberto, **qualquer página da
 web** consegue falar com eles, e que o painel pode ser carregado num iframe. Esta fase fecha os dois furos, e

@@ -49,6 +49,8 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddSingleton<PersistenceWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<PersistenceWriter>());
         services.AddSingleton(RetentionInterval.Default);
+        services.AddSingleton(PersistenceRetryInterval.Default);
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();
 

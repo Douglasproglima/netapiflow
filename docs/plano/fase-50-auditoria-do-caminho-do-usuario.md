@@ -361,6 +361,8 @@ de falha vistos vermelhos no CI, e a PR de volta ao verde com o `ClientApp` limp
 
 ### Tarefa 50.12: o CI publica o núcleo em AOT e falha com qualquer aviso (D-209)
 
+**Entregue** (20/11/2026): PR #363, mergeada em `develop`. O `ci.yml` (perna ubuntu) e o `release.yml` publicam o `AotCoreVerification` com `-p:TreatWarningsAsErrors=true`, o `AotCoreVerificationNet8` lê `warning IL[0-9]+` da saída, e o binário nativo roda com `--verify-http-backfill`. A Executora reconferiu em worktree limpo de `develop` em 21/11/2026: `net10.0` e `net8.0` publicam com exit 0 e zero aviso.
+
 Achado da auditoria de base (mapa de cobertura do CI, `develop` em `35bcf2d`), conferido pela Planejadora
 nos arquivos: **nenhum workflow roda** `tests/manual-verification/AotCoreVerification`. O README promete,
 em `README.md:739`, que "a host calling only `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or
@@ -506,6 +508,8 @@ Fase 58, e depende desta.
 
 **Pronto quando:** os testes dos requisitos passam e o 500 sem tratamento foi visto sem o cabeçalho antes da
 correção, nos dois TFMs, em Development e em Production.
+
+**Decisão medida e aceita pela auditoria (D-241): o limite em Production sem tratador.** `Response.OnStarting` resolve o 500 do Development (o `DeveloperExceptionPage`) e tudo o que o pipeline produz, em Kestrel real, nos dois TFMs. Em **Production sem nenhum tratador de exceção** o 500 é montado pelo Kestrel e o cabeçalho **não** chega ao cliente por nenhum mecanismo do middleware que deixe a exceção propagar (medido: o cabeçalho posto no início, no `catch` ou no `finally` some, e a callback do `OnStarting` roda mas o que ela escreve não sai). A única forma é o middleware fechar o 500 no `catch` e relançar, e **isso não se faz**: a instrumentação não muda a resposta do usuário, e o IIS in-process e o HTTP.sys não foram medidos. O limite fica **documentado** no README (inglês e português), no XML doc de `EmitTraceIdHeader`, no CHANGELOG e na mensagem do `GetFlowTrace`, com um teste de Kestrel real, de nome de limite conhecido, que afirma que a resposta continua sendo o 500 do servidor, sem alteração. Com a 50.15 o cabeçalho já sai desligado por padrão em Production, então o limite só alcança quem o liga lá e não tem `UseExceptionHandler`. No requisito acima, "em Development e em Production" vale para tudo o que o pipeline produz, e o Production sem tratador é o limite.
 
 ### Tarefa 50.14: sem schema, a persistência avisa uma vez, não a cada trace (D-226)
 

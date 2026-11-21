@@ -26,6 +26,7 @@
   (`src/Directory.Build.props`, `BeforeTargets="Pack"`) falha o `pack` quando `Description` está
   vazio ou é o literal "Package Description", ou quando `PackageTags` está vazio. Pacote novo
   sem os dois nunca chega a gerar `.nupkg`.
+- **Pacote novo entra em `NetApiFlowOwnTypes`** (`src/NetApiFlow/Marking/NetApiFlowOwnTypes.cs`, D-244), a lista de nomes de assembly cujos tipos o `DecorateFlowTracked` e o `TrackFlowByConvention` nunca decoram. É lista de nomes e não prefixo `NetApiFlow`, porque o prefixo pegaria o `NetApiFlow.Tests`, cujos tipos os testes decoram de propósito. Um teste de guarda compara a lista com os `PackageId` de `src/`, então um décimo pacote que ficar de fora falha o CI.
 
 ## SourceLink e símbolos
 
