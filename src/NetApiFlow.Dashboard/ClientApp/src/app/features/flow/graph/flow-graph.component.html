@@ -32,6 +32,9 @@
         (keydown.enter)="onNodeClick(node)"
         (keydown.space)="onNodeKeydownSpace($event, node)"
       >
+        @if (operationTooltip(node); as tooltip) {
+          <title>{{ tooltip }}</title>
+        }
         <rect
           class="flow-graph__node-ring"
           x="-4"

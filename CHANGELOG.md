@@ -24,6 +24,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
   how to fix it.
 
+### Changed
+
+- `NetApiFlow`: the step that `.WithNetApiFlowTracking()` records for a Minimal API endpoint is named
+  from the handler, no longer from the framework's display name. It used to read
+  `HTTP: GET /hello./hello` in the dashboard. A handler that is a named method is shown as its type
+  and method (`Handlers.StaticGet`). A lambda or a local function is shown as `Minimal API` with its
+  endpoint name when it has `WithName(...)`, or with its verbs and route (`GET /hello`) when it does
+  not. Traces already stored in PostgreSQL or SQL Server keep the old names, so the architecture map
+  and the diff show two nodes for the same endpoint until the old history ages out. If you assert on
+  the step name with `NetApiFlow.Testing` or read it through the MCP tools, update the name you expect.
+
 ### Fixed
 
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
@@ -42,6 +53,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow.Dashboard`: the details panel no longer says that 100% of the time is uncovered for a
   trace whose steps last microseconds, and the waterfall bars of such a trace no longer all start at
   the same point. Both are now measured in microseconds, the precision the timestamps already carry.
+- `NetApiFlow.Dashboard`: a step name cut with an ellipsis now shows its full text in a tooltip, on the
+  graph node and on the waterfall label of the details panel. Before, two routes of the same group
+  looked alike once the end of the name was cut. A node whose operation fits shows no tooltip.
 
 ### Security
 

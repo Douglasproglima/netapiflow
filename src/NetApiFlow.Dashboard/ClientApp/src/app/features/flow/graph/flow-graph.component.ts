@@ -300,6 +300,10 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
       : `${node.operation.slice(0, maxChars - 1)}…`;
   }
 
+  operationTooltip(node: GraphNode): string | null {
+    return this.nodeOperationLabel(node) === node.operation ? null : node.operation;
+  }
+
   /** Edge color follows the target node's state (guide seção 6.4: "cor do estado do nó de destino"). */
   nodeStateOf(nodeId: string): string {
     return this.nodes().find((node) => node.id === nodeId)?.state ?? 'waiting';
