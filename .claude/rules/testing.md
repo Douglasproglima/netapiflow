@@ -151,6 +151,12 @@ quem chega ao produto pela primeira vez:
 A auditoria do dono achou sete problemas (D-185) que as rodadas anteriores deixaram passar por conferir
 só diff, CI e status HTTP.
 
+## Mudança numa rota do painel passa pela demo (D-251)
+
+A demo estática (`npm run build:demo`) responde cada chamada da API do painel por um arquivo de `demo-fixtures/`, achado pela URL com a query. Um parâmetro novo, uma rota nova ou uma forma de resposta nova muda a chave, e a demo dá 404 sem que nenhum teste do painel perceba, porque esses testes mockam a API.
+
+Toda tarefa que muda o que o painel pede à API, ou o que ela responde, abre a demo construída e prova que as traces dela carregam sem erro no console. O número de traces conferidas vai dito (zero erros em N de N), e a demo responde com a semântica nova, não ignorando o parâmetro. Aconteceu na 57.3: o `before` do blueprint deu 404 em 26 de 26 traces da demo.
+
 ## Clone ou worktree novo: construir o Angular antes
 
 Todo teste cujo host usa o Dashboard ou os samples (o `IntegrationTests` e o `PrePipelineInteropSpike`,
