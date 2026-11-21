@@ -185,8 +185,16 @@ job do mesmo workflow, em paralelo, para não somar ao tempo do primeiro.
   uma diferença que não anunciou.
 - **O "ao vivo" espera um sinal do app, não um tempo.** Um endpoint que segura a requisição até o roteiro liberar, como os testes da
   63 fazem com `TaskCompletionSource`. Nada de `Delay` para esperar a visão ao vivo.
-- **No `/release`, a lista é esvaziada no mesmo passo que troca a versão publicada anterior,** porque depois do release as diferenças
-  passam a ser a base, e a regra "linha que não aparece mais falha" a derrubaria.
+- **A ordem no `/release` importa (D-260, da auditoria).** O job da comparação faz parte do `real-package.yml`, então o `needs` do
+  `release.yml` o cobre, e ele roda também na tag. **A tag publica comparando com a versão anterior e com a lista de diferenças
+  esperadas CHEIA.** Só no back-merge para o `develop`, **depois da publicação**, a lista é esvaziada e o arquivo da versão publicada
+  anterior passa a apontar para a versão nova. Esvaziar antes da tag faria o job do release acusar as diferenças e travar a
+  publicação. A regra "linha que não aparece mais falha" é o que obriga a esvaziar logo depois, para o primeiro CI da versão
+  seguinte não cair.
+- **Hotfix (acréscimo da Planejadora, para a auditoria contestar).** A base do hotfix é a `main`, cujo arquivo ainda aponta para a
+  versão anterior ao último release e traz a lista cheia daquele release. O primeiro commit do branch do hotfix aponta o arquivo
+  para a última versão publicada e esvazia a lista, e as diferenças do próprio hotfix entram nela, com a entrada do CHANGELOG. Assim
+  o hotfix é comparado com o que está em produção, que é a regressão que importa num PATCH (D-205).
 
 **Os cenários.** A Planejadora lista os que o "como hoje" exige, e a Executora acrescenta os que achar:
 
