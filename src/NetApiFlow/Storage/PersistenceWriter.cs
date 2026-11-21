@@ -76,7 +76,7 @@ internal sealed partial class PersistenceWriter : BackgroundService
                 await _store.SaveAsync(trace, spans, stoppingToken);
                 TraceSaved?.Invoke(trace);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 Interlocked.Increment(ref _failureCount);
                 FlowMetrics.PersistenceFailures.Add(1);
