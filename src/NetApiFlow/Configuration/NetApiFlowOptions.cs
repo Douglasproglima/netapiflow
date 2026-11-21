@@ -43,6 +43,13 @@ public sealed class NetApiFlowOptions
     /// </summary>
     public bool EmitTraceIdHeader { get; set; } = true;
 
+    /// <summary>
+    /// Opens a <see cref="ComponentType.Endpoint"/> step for every Minimal API endpoint of a traced request,
+    /// without marking it. Set it to <see langword="false"/> to get a step only for the endpoints marked with
+    /// <c>WithNetApiFlowTracking()</c>. Default: <see langword="true"/>.
+    /// </summary>
+    public bool CaptureMinimalApiEndpoints { get; set; } = true;
+
     /// <summary>Retention policy for persisted traces.</summary>
     public RetentionOptions Retention { get; } = new();
 

@@ -108,12 +108,14 @@ public class TracingIntegrationTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
         var spans = spansByTrace[traceId];
-        spans.Count.ShouldBe(3);
+        spans.Count.ShouldBe(4);
 
+        var endpointSpan = spans.Single(s => s.Type == ComponentType.Endpoint);
         var controllerSpan = spans.Single(s => s.Component == "OrdersController");
         var serviceSpan = spans.Single(s => s.Component == "OrderService");
         var repositorySpan = spans.Single(s => s.Component == "OrderRepository");
 
+        controllerSpan.ParentSpanId.ShouldBe(endpointSpan.SpanId);
         serviceSpan.ParentSpanId.ShouldBe(controllerSpan.SpanId);
         repositorySpan.ParentSpanId.ShouldBe(serviceSpan.SpanId);
     }

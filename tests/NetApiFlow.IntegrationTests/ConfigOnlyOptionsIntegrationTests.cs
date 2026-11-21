@@ -81,7 +81,7 @@ public class ConfigOnlyOptionsIntegrationTests
         var response = await client.GetAsync("/api/warn");
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        spans.Single().Logs.Count.ShouldBe(1);
+        spans.Single(span => span.Component == "WarnController").Logs.Count.ShouldBe(1);
     }
 
     [Fact]

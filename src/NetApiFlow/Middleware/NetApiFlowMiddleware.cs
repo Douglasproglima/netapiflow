@@ -43,6 +43,7 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         var started = recorder.TryStartTrace(traceId, context.Request.Method, UnmatchedRouteTemplate, DateTime.UtcNow);
         if (started)
         {
+            context.Items[FlowHttpContextItems.TraceStarted] = true;
             if (flowOptions.EmitTraceIdHeader)
             {
                 context.Response.Headers[TraceIdHeaderName] = traceId;
@@ -85,6 +86,7 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                 // make FlowActivityListener silently drop the span.
                 var orphanedStepException = caughtException ?? context.Features.Get<IExceptionHandlerFeature>()?.Error;
                 context.RequestServices?.GetService<FlowAuthorizationFilterListener>()?.CloseOrphanedSteps(traceId, orphanedStepException);
+                CloseImplicitEndpointStep(context, orphanedStepException);
 
                 var routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
                 if (routeTemplate is not null)
@@ -104,6 +106,27 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
                 recorder.CompleteTrace(traceId, context.Response.StatusCode, status, caughtException?.Message);
             }
         }
+    }
+
+    private static void CloseImplicitEndpointStep(HttpContext context, Exception? failure)
+    {
+        if (!context.Items.Remove(FlowHttpContextItems.ImplicitEndpointStep, out var opened) || opened is not FlowStep step)
+        {
+            return;
+        }
+
+        failure ??= context.Items.TryGetValue(FlowHttpContextItems.SwallowedException, out var swallowed) ? swallowed as Exception : null;
+
+        if (failure is not null)
+        {
+            step.MarkError(failure);
+        }
+        else if (context.Response.StatusCode >= StatusCodes.Status500InternalServerError)
+        {
+            step.MarkFailedWithoutException();
+        }
+
+        step.Dispose();
     }
 
     private static void RestoreTraceIdHeaderClearedByExceptionHandler(HttpContext context, string traceId)
