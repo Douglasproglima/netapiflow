@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,7 +34,8 @@ public class DashboardSseTests
 {
     private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync(
         RecordingLoggerProvider? loggerProvider = null,
-        TaskCompletionSource? requestCompleted = null)
+        TaskCompletionSource? requestCompleted = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -50,6 +53,7 @@ public class DashboardSseTests
                     services.AddRouting();
                     services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
                     services.AddNetApiFlowDashboard();
+                    configureServices?.Invoke(services);
                 });
                 webBuilder.Configure(app =>
                 {
@@ -188,6 +192,57 @@ public class DashboardSseTests
         second.EventId!.Value.ShouldBeGreaterThan(first.EventId!.Value);
         third.EventId!.Value.ShouldBeGreaterThan(second.EventId!.Value);
         fourth.EventId!.Value.ShouldBeGreaterThan(third.EventId!.Value);
+    }
+
+    [Fact]
+    public async Task Stream_TraceStartedOfATracedRequest_CarriesTheW3CTraceIdAndTheTenantInItsTags()
+    {
+        var (host, client) = await CreateHostAsync(configureServices: services => services.AddSingleton<IFlowTenantResolver, FixedTenantResolver>());
+        using var _host = host;
+        using var _client = client;
+        var (response, reader) = await ConnectAsync(client);
+        using var _ = response;
+        reader.ShouldNotBeNull();
+        var w3cTraceId = ActivityTraceId.CreateRandom().ToHexString();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/ping");
+        request.Headers.Add("traceparent", $"00-{w3cTraceId}-{ActivitySpanId.CreateRandom().ToHexString()}-01");
+        var traceId = (await client.SendAsync(request)).Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var started = await ReadEventAsync(reader);
+
+        started.EventType.ShouldBe("TraceStarted");
+        started.Data.RootElement.GetProperty("traceId").GetString().ShouldBe(traceId);
+        var tags = started.Data.RootElement.GetProperty("trace").GetProperty("tags");
+        tags.GetProperty("w3c.trace_id").GetString().ShouldBe(w3cTraceId);
+        tags.GetProperty("tenant").GetString().ShouldBe("acme");
+    }
+
+    [Fact]
+    public async Task Stream_TraceStartedOfARequestWithoutAMatchedEndpoint_CarriesTheW3CTraceIdAndTheTenantInItsTags()
+    {
+        var (host, client) = await CreateHostAsync(configureServices: services => services.AddSingleton<IFlowTenantResolver, FixedTenantResolver>());
+        using var _host = host;
+        using var _client = client;
+        var (response, reader) = await ConnectAsync(client);
+        using var _ = response;
+        reader.ShouldNotBeNull();
+        var w3cTraceId = ActivityTraceId.CreateRandom().ToHexString();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/nothing-matches-this");
+        request.Headers.Add("traceparent", $"00-{w3cTraceId}-{ActivitySpanId.CreateRandom().ToHexString()}-01");
+        await client.SendAsync(request);
+        var started = await ReadEventAsync(reader);
+
+        started.EventType.ShouldBe("TraceStarted");
+        started.Data.RootElement.GetProperty("trace").GetProperty("routeTemplate").GetString().ShouldBe("(unmatched)");
+        var tags = started.Data.RootElement.GetProperty("trace").GetProperty("tags");
+        tags.GetProperty("w3c.trace_id").GetString().ShouldBe(w3cTraceId);
+        tags.GetProperty("tenant").GetString().ShouldBe("acme");
+    }
+
+    private sealed class FixedTenantResolver : IFlowTenantResolver
+    {
+        public string? Resolve(HttpContext context) => "acme";
     }
 
     [Fact]

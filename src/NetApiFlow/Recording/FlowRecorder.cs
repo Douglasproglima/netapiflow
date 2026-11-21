@@ -55,7 +55,8 @@ internal sealed class FlowRecorder
     /// <summary>Raised when a trace closes, with its final state and spans, for the persistence writer.</summary>
     public event Action<FlowTrace, IReadOnlyList<FlowSpan>>? TraceReadyForPersistence;
 
-    public bool TryStartTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc)
+    public bool TryStartTrace(
+        string traceId, string method, string routeTemplate, DateTime startedAtUtc, IReadOnlyDictionary<string, string>? tags = null)
     {
         if (_activeTraces.Count >= MaxActiveTraces)
         {
@@ -64,7 +65,13 @@ internal sealed class FlowRecorder
             return false;
         }
 
-        if (!_activeTraces.TryAdd(traceId, new ActiveTrace(traceId, method, routeTemplate, startedAtUtc)))
+        var trace = new ActiveTrace(traceId, method, routeTemplate, startedAtUtc);
+        if (tags is not null)
+        {
+            trace.SetTags(tags);
+        }
+
+        if (!_activeTraces.TryAdd(traceId, trace))
         {
             return false;
         }
@@ -76,6 +83,7 @@ internal sealed class FlowRecorder
             RouteTemplate = routeTemplate,
             Status = FlowStatus.Running,
             StartedAt = startedAtUtc,
+            Tags = trace.Tags,
         });
 
         return true;
@@ -93,11 +101,16 @@ internal sealed class FlowRecorder
             new ActiveTrace(traceId, method, NetApiFlowMiddleware.UnmatchedRouteTemplate, startedAtUtc, published: false));
     }
 
-    public bool PublishReserved(string traceId, string routeTemplate)
+    public bool PublishReserved(string traceId, string routeTemplate, IReadOnlyDictionary<string, string>? tags = null)
     {
         if (!_activeTraces.TryGetValue(traceId, out var trace) || trace.Published)
         {
             return false;
+        }
+
+        if (tags is not null)
+        {
+            trace.SetTags(tags);
         }
 
         TraceStarted?.Invoke(new FlowTrace
@@ -107,6 +120,7 @@ internal sealed class FlowRecorder
             RouteTemplate = routeTemplate,
             Status = FlowStatus.Running,
             StartedAt = trace.StartedAtUtc,
+            Tags = trace.Tags,
         });
 
         var heldSpans = trace.Publish(routeTemplate);

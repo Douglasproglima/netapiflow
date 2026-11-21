@@ -12,6 +12,7 @@ internal sealed class FlowRequestState
 {
     private const string TraceIdHeaderName = "X-NetApiFlow-TraceId";
     private const string W3CTraceIdTagName = "w3c.trace_id";
+    private const string TenantTagName = "tenant";
 
     private readonly FlowRecorder _recorder;
     private readonly RequestTracingDecider _decider;
@@ -135,9 +136,10 @@ internal sealed class FlowRequestState
 
     private void Open(HttpContext context, string routeTemplate)
     {
+        var tags = OpeningTags(context);
         var published = _reservationHeld
-            ? _recorder.PublishReserved(TraceId, routeTemplate)
-            : _recorder.TryStartTrace(TraceId, context.Request.Method, routeTemplate, _startedAtUtc);
+            ? _recorder.PublishReserved(TraceId, routeTemplate, tags)
+            : _recorder.TryStartTrace(TraceId, context.Request.Method, routeTemplate, _startedAtUtc, tags);
         if (!published)
         {
             return;
@@ -151,16 +153,23 @@ internal sealed class FlowRequestState
             RegisterHeader();
         }
 
+    }
+
+    private Dictionary<string, string> OpeningTags(HttpContext context)
+    {
+        var tags = new Dictionary<string, string>(StringComparer.Ordinal);
         if (HasW3CTraceId)
         {
-            _recorder.SetTraceTag(TraceId, W3CTraceIdTagName, W3CTraceId.ToHexString());
+            tags[W3CTraceIdTagName] = W3CTraceId.ToHexString();
         }
 
         var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
         if (!string.IsNullOrEmpty(tenant))
         {
-            _recorder.SetTraceTag(TraceId, "tenant", tenant);
+            tags[TenantTagName] = tenant;
         }
+
+        return tags;
     }
 
     private void RegisterHeader()
