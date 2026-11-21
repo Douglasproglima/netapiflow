@@ -39,6 +39,9 @@ O CI precisa passar antes do merge.
 5. Criar a tag `v<versao>` no commit de `main`. A tag dispara `release.yml`: empacota todos os
    pacotes de `src/` e publica no nuget.org via Trusted Publishing (OIDC, sem API key guardada).
 6. Fazer merge de `main` de volta em `develop`.
+7. **Depois da publicação, nunca antes da tag (D-260):** num PR de `chore/*` no `develop`, apontar
+   `tests/real-package/previous-published-version.txt` para a versão nova e esvaziar
+   `tests/real-package/expected-differences.json` (`[]`). A tag publica com a lista cheia, porque o job `comparison` roda nela.
 
 Metadados e regras de empacotamento NuGet em [.claude/rules/packaging.md](../.claude/rules/packaging.md).
 A skill `/release` do Claude Code guia esse processo.
@@ -64,6 +67,15 @@ A skill `/release` do Claude Code guia esse processo.
    `gh release create v<versao> --title v<versao> --notes-file <corpo> --target main`, corpo
    sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
 6. Merge de `main` de volta em `develop`.
+
+**A comparação com o pacote publicado, no hotfix (D-260, D-262).** O primeiro commit do branch do hotfix aponta
+`tests/real-package/previous-published-version.txt` para a versão que está **na última tag da `main`** naquele momento
+(`git describe --tags --abbrev=0 main`), e não para a última lida no nuget.org na hora, para o hotfix não depender de rede nem de um publish
+paralelo, e esvazia `tests/real-package/expected-differences.json`. As diferenças do próprio hotfix entram na lista, com a entrada do
+CHANGELOG que as anuncia. Assim o hotfix é comparado com o que está em produção. **No back-merge para o `develop`,** a versão anterior
+passa a ser a do hotfix, e a lista fica com a do `develop` (as diferenças do ciclo dele) sem as linhas que só o hotfix acrescentou:
+esvaziá-la por inteiro derrubaria o primeiro CI do `develop`, porque ela tem as diferenças do ciclo seguinte. O conflito de merge em
+`expected-differences.json` se resolve ficando com a lista do `develop`.
 
 **Se o `develop` mudou o `.gitleaks.toml` depois da última release, o hotfix leva a mesma mudança (D-239).** O `secret-scan` do CI varre o histórico de **todas as refs**, o `develop` incluído, com a config da branch que está sendo testada. Uma `[allowlist]` que só existe no `develop` faz o scan da `main` falhar com achados do histórico do `develop`. Copiar o arquivo inteiro do `develop` evita o conflito no back-merge.
 

@@ -198,4 +198,10 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   quando o PR não é só de documentação ou mexe no README), e o job do workflow chamado tem `if: inputs.run`: assim o check
   `real-package / real-package` existe também num PR só de docs, como Skipped. Um `if` no job chamador faria o check não nascer, e um
   check obrigatório que não nasce trava o PR. No `release.yml` o job é pré-requisito da publicação (`needs`).
+  O workflow tem dois jobs, `real-package` e `comparison`, e os dois são checks obrigatórios no `develop` (`real-package / real-package`
+  e `real-package / comparison`). As etapas de pack ficam numa ação composta, `.github/actions/pack-packages`, usada pelos dois. O
+  `comparison` roda o mesmo roteiro contra o build e contra o último pacote publicado
+  (`tests/real-package/previous-published-version.txt`), e uma diferença só passa se estiver em
+  `tests/real-package/expected-differences.json` com o texto da entrada do CHANGELOG que a anuncia. PR que muda comportamento
+  visível do caminho quente acrescenta a linha, e diferença que ninguém planejou é regressão (D-257, D-262).
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
