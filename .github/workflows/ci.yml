@@ -190,8 +190,9 @@ jobs:
   real-package:
     name: real-package
     needs: detect-changes
-    if: needs.detect-changes.outputs.docs_only != 'true' || needs.detect-changes.outputs.readme_changed == 'true'
     uses: ./.github/workflows/real-package.yml
+    with:
+      run: ${{ needs.detect-changes.outputs.docs_only != 'true' || needs.detect-changes.outputs.readme_changed == 'true' }}
 
   # D-76: visual-quality findings never fail this job (`|| true` below). The detector runs in
   # warn-only mode for a full cycle before the Planejadora decides whether it should block.

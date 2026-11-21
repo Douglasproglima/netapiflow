@@ -2,6 +2,10 @@ name: Real package
 
 on:
   workflow_call:
+    inputs:
+      run:
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -9,6 +13,7 @@ permissions:
 jobs:
   real-package:
     name: real-package
+    if: inputs.run
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
