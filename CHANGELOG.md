@@ -44,7 +44,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: `DecorateFlowTracked` no longer leaves the services it decorates undisposed. It built
   the original with `ActivatorUtilities`, so a decorated service that implements `IDisposable` was
   never disposed. The container now owns the original and disposes it with the lifetime the service
-  was registered with.
+  was registered with. The original is registered with a private key, so the container has to
+  support keyed services. The default container does, from .NET 8.
 - `NetApiFlow`: a call through a tracked interface (`AddFlowTracked` or `DecorateFlowTracked`) that
   returns a cancelled `Task` or `ValueTask` now hands the caller a cancelled task. It used to hand
   back a faulted one, and the span closed as a success. The span now closes as failed with the

@@ -35,7 +35,9 @@ public static class FlowTrackedServiceCollectionExtensions
     /// <paramref name="predicate"/> with a tracking proxy, preserving the original lifetime.
     /// Only <see cref="ServiceDescriptor"/> entries with a known implementation type (registered by
     /// type or by instance) can be matched; factory-based registrations are left untouched, since
-    /// their concrete type is not known without invoking the factory.
+    /// their concrete type is not known without invoking the factory. The original is registered
+    /// with a private key, so the container owns and disposes it, and for that reason the
+    /// container has to support keyed services.
     /// </summary>
     [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection, so trimming can remove a type that would otherwise be decorated, silently dropping its steps.")]
