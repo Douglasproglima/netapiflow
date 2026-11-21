@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { FlowDetailsPanelComponent } from './flow-details-panel.component';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { FlowSpan, FlowTraceDetail, SpanDetail } from '../../../core/models';
 
 function makeTrace(): FlowTraceDetail {
@@ -257,6 +258,53 @@ describe('FlowDetailsPanelComponent', () => {
       await fixture.whenStable();
 
       expect(fixture.nativeElement.querySelector('.flow-details__warnbox')).toBeNull();
+    });
+  });
+
+  describe('trace identity (S3)', () => {
+    const OWN_ID = 'a'.repeat(32);
+    const W3C_ID = 'b'.repeat(32);
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    async function renderSummary(tags: Record<string, string>, language: 'pt-BR' | 'en') {
+      TestBed.inject(LanguageService).setLanguage(language);
+      const trace = makeTrace();
+      trace.traceId = OWN_ID;
+      trace.tags = tags;
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', trace);
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      await fixture.whenStable();
+
+      const read = (selector: string): string[] =>
+        Array.from(fixture.nativeElement.querySelectorAll(selector)).map(
+          (element) => (element as HTMLElement).textContent?.trim() ?? '',
+        );
+      return {
+        labels: read('.flow-details__meta-dl dt'),
+        values: read('.flow-details__meta-dl dd'),
+      };
+    }
+
+    it.each(['pt-BR', 'en'] as const)(
+      'shows the id of the trace and the W3C trace id, each with its own label, in %s',
+      async (language) => {
+        const { labels, values } = await renderSummary({ 'w3c.trace_id': W3C_ID }, language);
+
+        expect(labels.slice(0, 2)).toEqual(['Trace', 'W3C trace']);
+        expect(values.slice(0, 2)).toEqual([OWN_ID, W3C_ID]);
+      },
+    );
+
+    it('shows only the id of the trace when the trace has no W3C trace id', async () => {
+      const { labels, values } = await renderSummary({}, 'en');
+
+      expect(labels).not.toContain('W3C trace');
+      expect(values).not.toContain(W3C_ID);
+      expect(values[0]).toBe(OWN_ID);
     });
   });
 });

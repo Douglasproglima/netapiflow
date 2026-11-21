@@ -6,6 +6,8 @@ import { buildWaterfall, computeUnexplainedTime } from './waterfall';
 import { findNPlusOneGroup } from '../graph/graph-builder';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
+const W3C_TRACE_ID_TAG = 'w3c.trace_id';
+
 /**
  * No span selected: request summary + waterfall (guide seção 6.6). A span selected: its full
  * detail, including ancestors, children and the delta from the normal median duration of that
@@ -27,6 +29,8 @@ export class FlowDetailsPanelComponent {
   readonly jumpToSpan = output<string>();
 
   readonly waterfall = computed(() => buildWaterfall(this.trace(), this.slowThresholdMicros()));
+
+  readonly w3cTraceId = computed(() => this.trace().tags[W3C_TRACE_ID_TAG] ?? null);
 
   readonly unexplainedTimeValues = computed(() => {
     const unexplained = computeUnexplainedTime(this.trace());
