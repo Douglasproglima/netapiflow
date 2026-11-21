@@ -194,6 +194,34 @@ jobs:
     with:
       run: ${{ needs.detect-changes.outputs.docs_only != 'true' || needs.detect-changes.outputs.readme_changed == 'true' }}
 
+  built-demo:
+    name: built-demo
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+          cache: npm
+          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+      - name: Test the script that checks the demo
+        run: node --test scripts/verify-built-demo.test.mjs
+
+      - name: Build the demo
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npm ci
+          npm run build:demo
+
+      - name: Open every trace and screen of the built demo in a headless browser
+        run: node scripts/verify-built-demo.mjs --directory src/NetApiFlow.Dashboard/ClientApp/dist/demo/browser
+
   # D-76: visual-quality findings never fail this job (`|| true` below). The detector runs in
   # warn-only mode for a full cycle before the Planejadora decides whether it should block.
   # R-15: the GitHub-hosted runner doesn't run as root, so the detector's Chromium shouldn't need

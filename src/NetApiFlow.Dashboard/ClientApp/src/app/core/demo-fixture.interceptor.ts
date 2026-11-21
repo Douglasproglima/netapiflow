@@ -90,6 +90,7 @@ function isDashboardApiRequest(request: HttpRequest<unknown>): boolean {
 }
 
 function notFound(request: HttpRequest<unknown>): HttpErrorResponse {
+  console.error(`The demo has no recording for ${request.urlWithParams}.`);
   return new HttpErrorResponse({
     status: 404,
     statusText: 'Not Found',

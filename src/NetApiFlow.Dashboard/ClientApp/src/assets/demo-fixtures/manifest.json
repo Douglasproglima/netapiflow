@@ -7,6 +7,7 @@
     "api/metrics/routes": "metrics_routes.json",
     "api/traces": "traces.json",
     "api/traces/live": "traces_live.json",
+    "api/deploys": "deploys.json",
     "api/traces/571b83462c505f154553babd02d9923f": "traces_571b83462c505f154553babd02d9923f.json",
     "api/traces/b82b555b8d280b7c9999fcbe55fc9eba": "traces_b82b555b8d280b7c9999fcbe55fc9eba.json",
     "api/traces/97306fb5dc552c960820971679b69155": "traces_97306fb5dc552c960820971679b69155.json",

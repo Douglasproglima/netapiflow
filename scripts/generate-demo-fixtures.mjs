@@ -46,6 +46,7 @@ async function main() {
   await capture(manifest, 'api/metrics/routes');
   await capture(manifest, 'api/traces');
   await capture(manifest, 'api/traces/live');
+  await capture(manifest, 'api/deploys');
 
   const traces = await getJson('api/traces');
   const summaries = traces?.items ?? [];
