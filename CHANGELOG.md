@@ -109,6 +109,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   dashboard build no longer inlines its critical CSS, so the page loads one stylesheet file instead,
   and `index.html` went from about 14 KB to under 1 KB. If your middleware sets a
   `Content-Security-Policy` on the dashboard or MCP routes, the one of the package replaces it.
+- `NetApiFlow.Dashboard`: `POST /flow/api/deploys` now reads and validates its body after the access
+  check. Before, a body that failed to bind (`{}`, broken JSON, or a content type that is not JSON)
+  was answered with 400 or 415 before the check ran, so a caller without access learned that the
+  route exists and what it expects, instead of the 404 or 403 every other route gives, and the
+  README said every dashboard route answers 404 by default. A caller without access now gets the
+  404 or the 403 whatever the body is. With access, a bad body is still a 400 and a wrong content
+  type a 415. The other routes only take optional query values, and a malformed one was already
+  answered by the check first.
 
 ## [0.5.3] - 2026-11-20
 
