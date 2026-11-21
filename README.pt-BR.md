@@ -596,6 +596,10 @@ pelo endereço da sua máquina na rede local, ou `host.docker.internal`, declare
 { "AllowedHosts": "localhost;192.168.1.13" }
 ```
 
+Uma entrada é um nome sem porta, e `*.example.com` casa subdomínios. O ASP.NET Core lê a mesma
+configuração no próprio filtro de hosts, então, depois que a lista nomeia hosts específicos, mantenha
+`localhost` nela, senão a aplicação responde 400 ao próprio `localhost`.
+
 Atrás de um proxy reverso a aplicação precisa enxergar o `Host` original. Senão a `Origin` que o
 navegador manda não casa com ele e um `DELETE` recebe 403. Mantenha o `Host` no proxy
 (`proxy_set_header Host $http_host;` no nginx), ou chame o `UseForwardedHeaders` com
