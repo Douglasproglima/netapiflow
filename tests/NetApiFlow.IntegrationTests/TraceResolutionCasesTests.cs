@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using NetApiFlow.Domain;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Recording;
+using NetApiFlow.Testing;
 using Shouldly;
 using Xunit;
 
@@ -19,6 +20,7 @@ namespace NetApiFlow.IntegrationTests;
 public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
 {
     private const string CaseComponent = "Case";
+    private const string TraceIdHeader = "X-NetApiFlow-TraceId";
     private static readonly ActivitySource ExplicitParentSource = new("NetApiFlow");
 
     private readonly SqliteConnection _sqlite = new("DataSource=:memory:");
@@ -159,11 +161,82 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
         _host.Services.GetRequiredService<FlowRecorder>().ActiveTraceCount.ShouldBe(0);
     }
 
-    private async Task<IReadOnlyList<FlowSpan>> SpansOfTheRequestAsync(string path)
+    [Fact]
+    public async Task Trace_OfARequestWithATraceparent_HasItsOwnIdAndCarriesTheW3CTraceIdAsATag()
     {
-        var response = await _client.GetAsync(path);
+        var w3cTraceId = ActivityTraceId.CreateRandom().ToHexString();
+
+        var detail = await TraceOfTheRequestAsync("/cases/task-run", $"00-{w3cTraceId}-{ActivitySpanId.CreateRandom().ToHexString()}-01");
+
+        detail.Trace.TraceId.ShouldMatch("^[0-9a-f]{32}$");
+        detail.Trace.TraceId.ShouldNotBe(w3cTraceId);
+        detail.Trace.Tags["w3c.trace_id"].ShouldBe(w3cTraceId);
+        detail.Spans.ShouldAllBe(span => span.TraceId == detail.Trace.TraceId);
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_ForARequestWithATraceparent_FindsTheTraceByItsOwnId()
+    {
+        var w3cTraceId = ActivityTraceId.CreateRandom().ToHexString();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/cases/task-run");
+        request.Headers.Add("traceparent", $"00-{w3cTraceId}-{ActivitySpanId.CreateRandom().ToHexString()}-01");
+
+        var response = await _client.SendAsync(request);
+        var trace = response.GetFlowTrace(_host.Services);
+
+        trace.Trace.TraceId.ShouldBe(response.Headers.GetValues(TraceIdHeader).Single());
+        trace.Trace.TraceId.ShouldNotBe(w3cTraceId);
+    }
+
+    [Fact]
+    public async Task CurrentTraceId_InsideATracedRequest_IsTheIdOfTheResponseHeader()
+    {
+        var response = await _client.GetAsync("/cases/current-trace-id");
+
+        (await response.Content.ReadAsStringAsync()).ShouldBe(response.Headers.GetValues(TraceIdHeader).Single());
+    }
+
+    [Fact]
+    public async Task CurrentTraceId_InsideARequestThatIsNotTraced_IsNullAfterTracedRequestsRanOnTheSamePoolThreads()
+    {
+        for (var attempt = 0; attempt < 25; attempt++)
+        {
+            (await _client.GetAsync("/cases/current-trace-id")).EnsureSuccessStatusCode();
+
+            (await _client.GetStringAsync("/cases/untraced-current-trace-id")).ShouldBe("none");
+        }
+    }
+
+    [Fact]
+    public async Task CurrentTraceId_OutsideAnyRequest_IsNullAfterARequestRan()
+    {
+        (await _client.GetAsync("/cases/current-trace-id")).EnsureSuccessStatusCode();
+
+        NetApiFlow.CurrentTraceId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Activity_WithAnotherW3CTraceIdStartedInAFlowCapturedFromTheRequest_IsNotAttachedToTheTrace()
+    {
+        var spans = await SpansOfTheRequestAsync("/cases/foreign-activity-in-captured-flow");
+
+        spans.ShouldNotContain(span => span.Operation == "foreign-activity");
+    }
+
+    private async Task<IReadOnlyList<FlowSpan>> SpansOfTheRequestAsync(string path) =>
+        (await TraceOfTheRequestAsync(path)).Spans;
+
+    private async Task<FlowTraceDetail> TraceOfTheRequestAsync(string path, string? traceparent = null)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        if (traceparent is not null)
+        {
+            request.Headers.Add("traceparent", traceparent);
+        }
+
+        var response = await _client.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var traceId = response.Headers.GetValues(TraceIdHeader).Single();
 
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
         FlowTraceDetail? detail = null;
@@ -177,7 +250,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
         }
 
         detail.ShouldNotBeNull();
-        return detail.Spans;
+        return detail;
     }
 
     private void MapCases(IEndpointRouteBuilder endpoints, string upstreamUrl)
@@ -275,6 +348,21 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
             }
 
             await work;
+            return "ok";
+        });
+
+        endpoints.MapGet("/cases/current-trace-id", () => NetApiFlow.CurrentTraceId);
+
+        endpoints.MapGet("/cases/untraced-current-trace-id", () => NetApiFlow.CurrentTraceId ?? "none").WithoutNetApiFlowTracking();
+
+        endpoints.MapGet("/cases/foreign-activity-in-captured-flow", () =>
+        {
+            var captured = ExecutionContext.Capture()!;
+            var foreign = new ActivityContext(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded);
+            ExecutionContext.Run(captured, _ =>
+            {
+                using var activity = ExplicitParentSource.StartActivity("foreign-activity", ActivityKind.Internal, foreign);
+            }, null);
             return "ok";
         });
 
