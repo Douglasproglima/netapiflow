@@ -25,6 +25,34 @@ with `-p:Version=<base>-ci.<run number>` into a folder outside the repository, m
   variant against an app that is already standing, which is how to check that a scenario is stable.
   A new scenario goes in the `SCENARIOS` list, with the promise it comes from in its title.
 
+## The built demo in a browser
+
+The job `built-demo` of `ci.yml` builds the static demo (`npm run build:demo`) and opens it in a headless
+Chrome, the one the runner already has, so no browser is downloaded and the scripts need no dependency.
+`verify-built-demo.mjs` serves `dist/demo/browser` with `Cache-Control: no-store`, so the browser cannot show
+an old build, opens the trace of **every** `api/traces/<id>` the manifest lists, and the screens `/history`,
+`/components` and `/runner`, and fails on any console error, any uncaught exception, any response with an
+error status, any request that never gets an answer and any page that does not draw what marks it as ready
+(the graph for a trace, the table, the cards or the form for a screen). It prints
+`0 errors in N of N` for the traces and for the screens, and it also fails when it visited fewer traces than
+the manifest lists, so a loop that skips some cannot pass.
+
+`browser-session.mjs` talks to the browser over the Chrome DevTools Protocol with the `WebSocket` of Node. It
+looks for `google-chrome`, `chromium` or Edge, or uses `CHROME_PATH`, and passes `--no-sandbox` unless you pass
+`--sandbox`. It removes the profile folder it created and never one that you gave with `--profile-directory`.
+
+```bash
+cd src/NetApiFlow.Dashboard/ClientApp && npm run build:demo && cd -
+node scripts/verify-built-demo.mjs --directory src/NetApiFlow.Dashboard/ClientApp/dist/demo/browser
+```
+
+The demo answers a dashboard call that it has no recording for with a 404 that never leaves the browser, so
+it is silent unless the demo says so. It does: `demo-fixture.interceptor.ts` writes
+`The demo has no recording for <url>` to the console, which is what the check reads. The `Vitest` spec
+`demo-fixture-coverage.spec.ts` covers the manifest itself: every file it cites exists, and each blueprint key
+points at the last successful trace of the same method and route that started strictly before it, or, for a key
+in `noContent`, there is none.
+
 ## The comparison with the published package
 
 The second job of `real-package.yml`, `comparison`, runs the same scenarios against two builds of the same
