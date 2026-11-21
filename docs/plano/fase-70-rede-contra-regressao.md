@@ -36,8 +36,9 @@ Consultado no nuget.org em 21/11/2026: `Microsoft.CodeAnalysis.PublicApiAnalyzer
 - **Dependência nova** (biblioteca de navegador, `PublicApiAnalyzers`): licença, manutenção e vulnerabilidade conferidas como em
   `.claude/rules/dependencies.md`, versão exata fixada, só em `devDependencies` ou `PrivateAssets=all`. Se qualquer uma entrar no
   `.nupkg`, no `.nuspec` ou no `dist/`, para.
-- **Instável é pior que ausente.** Cada cenário novo roda 20 vezes seguidas, localmente ou no CI, sem falhar, antes do merge. Nenhum
-  `continue-on-error`, nenhum `if: always()` que esconda falha, nenhum teste com `Skip`.
+- **Instável é pior que ausente.** O roteiro HTTP roda 20 vezes seguidas contra um app de pé, local ou num passo do CI, sem falhar,
+  e o job fica verde em **3 execuções seguidas no CI** antes do merge (rodar o job inteiro 20 vezes seria caro demais). Nenhum
+  `continue-on-error`, nenhum `if: always()` que esconda falha (o que derruba o app no fim pode rodar sempre), nenhum teste com `Skip`.
 - **Tempo.** Se o job do pacote real, sozinho, passar de 15 minutos, para e pergunta. A Executora mede e diz o número.
 - Se um cenário só passar mudando um bloco de código do README, **para**: o README é a fonte, e o job tem de provar o que está nele.
 
@@ -71,6 +72,14 @@ em vez de construir o Angular de novo, se a Executora medir que compensa.
    `builder.Build()`. O GitHub usa só a primeira palavra da linha de abertura para o realce, e a Executora confere isso na
    pré-visualização da PR. O script **falha** se um marcador sumir, para uma edição do README quebrar o CI e não desligar o teste
    em silêncio. Os `dotnet add package` do bloco `bash` do Quick start também saem do README, com `--version` e `--source` do feed.
+   **O MCP também** (ajuste da auditoria): o bloco da seção "MCP server" tem os seus marcadores, `csharp mcp:registration` e
+   `bash mcp:package`. Esse bloco atravessa a linha `var app = builder.Build();` (o `AddNetApiFlowMcp()` vem antes e o
+   `UseNetApiFlowMcp()` depois), então o script o **divide nessa linha**: o que vem antes entra com os registros do Quick start, e o
+   que vem depois entra depois do `Build`. O job instala também o `NetApiFlow.Mcp` do feed.
+   **O `README.pt-BR.md` também** (ajuste da auditoria): o script lê os mesmos marcadores no `README.pt-BR.md` e **falha se o código
+   de algum bloco divergir do inglês**, para um dos dois não apodrecer sem ninguém ver. Antes de comparar, tira o comentário de fim
+   de linha (`\s+//.*$`): hoje a única diferença entre os dois é `// mounted at /flow by default` contra `// montado em /flow por
+   padrão`. Se algum bloco tiver ` //` dentro de um texto entre aspas, a Executora ajusta a normalização e diz.
 4. O que o README deixa por conta do usuário (as interfaces `IOrderService` e `IOrderRepository` com as classes, um endpoint que as
    chame, um endpoint que lance exceção) o job acrescenta em **arquivos separados**, como o usuário faria.
 5. `dotnet build -c Release`: **0 avisos e 0 erros**.
@@ -88,16 +97,23 @@ prometem. Se um valor não bater, é achado, e a Executora para e relata.
 | d | Development | `GET /flow/api/config` com `Host: evil.example` dá **403**; com `Origin: http://evil.example` dá **403**; com o host do app dá 200 | O DNS rebinding (S6, #398) |
 | e | Development | A página `/flow/` e as respostas da API trazem `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` e uma `Content-Security-Policy` com `frame-ancestors 'none'`. A da página tem `script-src 'self'` **sem** `'unsafe-inline'`. A própria resposta `403` do cenário d também traz os três | O iframe e a CSP (S7, #401) |
 | f | Dev e Production | O cabeçalho `X-NetApiFlow-TraceId`: presente em Development; **ausente** em Production por padrão; presente em Production com `EmitTraceIdHeader=true` e `UseExceptionHandler`, também no 500; ausente no 500 de Production com a opção e **sem** tratador (o README diz isso) | O cabeçalho sem opção (50.6), no 500 (50.13, D-241) e o padrão só em Development (50.15) |
-| g | Production | Sem `AllowAnonymous` nem autorização, o painel responde **404** (`/flow/` e `/flow/api/traces`), como o README promete | O painel aberto em Production |
+| g | Production | Sem `AllowAnonymous` nem autorização, o painel responde **404** (`/flow/` e `/flow/api/traces`) e o MCP também (`/flow/mcp`), como o README promete. **Um `Origin` alheio dá 403, não 404**, porque o guarda roda antes do portão de autorização | O painel aberto em Production, e a promessa do advisory nos dois ambientes |
+| h | Development | No MCP, em `/flow/mcp`: `Origin` alheio dá **403**; `Host` alheio dá **403**; e a resposta traz os três cabeçalhos do cenário e | O `Origin` do MCP (S6 e S7, #398 e #401), que o advisory 3 promete |
+
+**O que a auditoria conferiu no código do `develop`**, para os valores dos cenários d, e, g e h não serem chute: o
+`SecurityHeaders.Apply` roda antes da recusa, então a resposta `403` leva os três cabeçalhos; o `RequestOriginGuard` recusa o `Host`
+só em Development, e o `*` do `AllowedHosts` do modelo `webapi` não conta como declarado, então `evil.example` dá `403`; o `Origin`
+diferente dá `403` em todo ambiente; e Production sem `IAuthorizeData` responde `Results.NotFound`. O Quick start atual já tem o
+`TrackFlowByConvention` no bloco de registros, então o cenário b vale.
 
 Regra permanente: **todo achado da auditoria que dá para reproduzir de fora vira um cenário aqui**, de forma permanente (70.6).
 
-**Prova vermelha, no branch de prova, vista no CI.** Obrigatórias, as duas que a auditoria pediu: (1) o `using NetApiFlow.Marking;`
-no meio do Quick start dá vermelho no cenário a; (2) tirar o portão de `Host` dá vermelho no cenário d. Além delas, a Executora
-mostra o vermelho de um cenário de cabeçalho (e ou f).
+**Prova vermelha, no branch de prova, vista no CI.** Obrigatórias: (1) o `using NetApiFlow.Marking;` no meio do Quick start dá
+vermelho no cenário a; (2) tirar o portão de `Host` dá vermelho no cenário d; (3) tirar o guarda de `Origin` do MCP dá vermelho no
+cenário h. Além delas, a Executora mostra o vermelho de um cenário de cabeçalho (e ou f).
 
-**Fora do job:** o MCP, o OpenTelemetry e os storages num app novo. O job cobre o que o Quick start instala (`NetApiFlow` e
-`NetApiFlow.Dashboard`). Os outros pacotes num app novo ficam para a `0.7.0`, salvo se a auditoria decidir outra coisa.
+**Fora do job:** o OpenTelemetry e os storages num app novo. O job cobre o que o Quick start instala (`NetApiFlow` e
+`NetApiFlow.Dashboard`) e o MCP. Os outros pacotes num app novo ficam para a `0.7.0`, salvo se a auditoria decidir outra coisa.
 
 ## Tarefa 70.2: o snapshot dos `.nuspec`
 
@@ -164,9 +180,12 @@ Executora não escreve em `docs/plano/`. Em inglês. Cada linha: `id`, `defect` 
 
 Um passo do CI, num script em `scripts/`, **falha** se:
 
-- um teste `dotnet` listado não for encontrado (roda `dotnet test --no-build --filter "FullyQualifiedName=<nome>" --logger trx` e
-  exige ao menos 1 teste e o resultado `Passed`: teste apagado ou renomeado dá 0, e `Skip` dá `NotExecuted`);
-- um teste `vitest` listado sumir ou estiver pulado;
+- um teste `dotnet` listado não estiver no resultado da execução, ou não estiver `Passed`. **Uma execução só, não uma por linha**
+  (ajuste da auditoria: com dezenas de linhas, um `dotnet test` por linha deixaria o job lento). O passo lê o `.trx` que o
+  `build-test` já gera (`--logger trx`, reaproveitado como artefato) ou roda a suíte uma vez com `--logger trx`, e confere cada nome
+  listado: teste apagado ou renomeado fica **ausente**, e `Skip` fica `NotExecuted`, e os dois dão falha;
+- um teste `vitest` listado sumir ou estiver pulado, conferido da mesma forma no resultado da execução do `test:ci` com o reporter
+  JSON;
 - um cenário `ci-scenario` listado não existir na lista de cenários do job do pacote real ou da demo.
 
 **As linhas de partida** são os defeitos desta rodada: S1 a S8 (ver D-210, D-216, D-218, D-221 e as Fases 50, 54 e 56), B1 a B3
@@ -183,7 +202,7 @@ pressa:** vai para uma lista de lacunas no relatório, e a auditoria decide quai
 
 ## Fora de escopo
 
-- O MCP, o OpenTelemetry e os storages num app novo (ver a 70.1). O orçamento de performance no CI (item 21 do roadmap). O runtime
+- O OpenTelemetry e os storages num app novo (ver a 70.1). O orçamento de performance no CI (item 21 do roadmap). O runtime
   .NET 11 (Fase 69). O Windows no job do pacote real.
 - Reescrever o que já tem teste. A fase **acrescenta** as redes que faltam e **registra** as que existem.
 
@@ -191,8 +210,9 @@ pressa:** vai para uma lista de lacunas no relatório, e a auditoria decide quai
 
 - **Cada guarda vista falhando contra o defeito antigo, reintroduzido de propósito num branch de prova, e verde no `develop`.** O
   relatório cola, por guarda, o link da execução vermelha no CI.
-- As vermelhas obrigatórias: o `using` no meio do Quick start; o portão de `Host` tirado; o piso do EF Core subido; o manifest sem
-  a chave `before`; um membro público sem o arquivo; um teste registrado apagado.
+- As vermelhas obrigatórias: o `using` no meio do Quick start; o portão de `Host` tirado; o guarda de `Origin` do MCP tirado; o piso
+  do EF Core subido; o manifest sem a chave `before`; um membro público sem o arquivo; um teste registrado apagado.
+- O job do pacote real verde em 3 execuções seguidas no CI, e o roteiro HTTP 20 vezes seguidas contra um app de pé sem falhar.
 - Build, testes, formato e lint limpos nos dois TFMs. `AotCoreVerification` com zero aviso.
 - O tempo de cada job novo, medido, no relatório.
 
