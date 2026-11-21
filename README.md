@@ -113,6 +113,7 @@ The `using NetApiFlow;` covers `.WithNetApiFlowTracking()` and `ComponentType`.
 |---|---|---|
 | `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Only with `CaptureMinimalApiEndpoints = false`. Otherwise every Minimal API endpoint already gets the step, and MVC controllers always do |
 | `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
+| `.WithoutNetApiFlowTracking()` | Keeps an endpoint, a group, `MapControllers()` or `MapHealthChecks()` out of tracing | A health check, a metrics route, any route that must never show up in history, also under a `PathBase` |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
 | `TrackFlowByConvention()` | Wraps the `*Service`, `*Repository` and `*Handler` interfaces of your own code in steps, each with its component type | A layered app: one line after your registrations |
 | `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention you choose yourself |
@@ -512,7 +513,8 @@ builder.Services.AddNetApiFlow(options =>
 its OpenAPI document. The default is what `MapOpenApi()` serves. Point it at
 `/swagger/v1/swagger.json` for Swashbuckle, or wherever else you serve it. The panel lists your
 endpoints from that document, so a wrong path leaves it with nothing to show. Requests to that path
-are never traced, so the document the dashboard fetches does not show up in your traces.
+are never traced, so the document the dashboard fetches does not show up in your traces. Under a
+`PathBase` see [Paths under `UsePathBase`](#paths-under-usepathbase).
 
 `CapturePrePipelineSteps` records what runs before your controller is even called, on MVC
 Controller routes: one step per Authorization filter, under the component `AuthorizationFilters`
@@ -582,6 +584,36 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 ```
 
 `NetApiFlow.Storage.SqlServer` mirrors the same shape (`AddNetApiFlowSqlServerStorage`).
+
+### Paths under `UsePathBase`
+
+`ExcludePaths`, `IncludePaths` and `OpenApiDocumentPath` value the path you see, relative to the
+`PathBase`, whenever the request matches an endpoint. With `app.UsePathBase("/api")`,
+`ExcludePaths("/health")` keeps `GET /api/health` out of tracing. NetApiFlow decides it when routing
+picks the endpoint, which is where the path is already relative.
+
+A request that matches no endpoint, a static file served by `UseStaticFiles` or a 404, is decided by
+the full path, `PathBase` included, because there is no endpoint to read it from. Write the pattern
+with the prefix: `ExcludePaths("/api/site.css")`. A static file served as an endpoint, with
+`MapStaticAssets()`, is an endpoint and follows the first rule.
+
+The routes of the dashboard (its pages, its REST API and its stream) and of the MCP server are never
+traced, with or without a `PathBase`. They are told apart by what they are, not by their text. Mark
+your own routes the same way, whatever the patterns say:
+
+```csharp
+app.MapHealthChecks("/healthz").WithoutNetApiFlowTracking();
+app.MapGroup("/internal").WithoutNetApiFlowTracking();
+```
+
+`WithoutNetApiFlowTracking()` works on a Minimal API endpoint, on a group, on `MapControllers()` and
+on `MapHealthChecks()`, and it wins over `ExcludePaths`, `IncludePaths` and `WithNetApiFlowTracking()`
+on the same endpoint. A controller marked by attribute has no equivalent.
+
+What was measured: Kestrel with and without `UsePathBase`, IIS Express with the ASP.NET Core Module
+v2, in-process and out-of-process, and nginx in front of Kestrel. Where the framework sets the
+`PathBase` before NetApiFlow runs (IIS) or the proxy cuts the prefix, the problem never existed: it
+came from `UsePathBase` called in your own code. What was not measured: the full IIS and YARP.
 
 ### Running without DDL permission
 

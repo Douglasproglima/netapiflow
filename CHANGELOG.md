@@ -9,6 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: `WithoutNetApiFlowTracking()` keeps an endpoint, a group, `MapControllers()` or
+  `MapHealthChecks()` out of tracing, for a health check, a metrics route or anything that must never
+  show up in history. It is read from the matched endpoint, so it holds under `UsePathBase`, and it
+  wins over `ExcludePaths`, `IncludePaths` and `WithNetApiFlowTracking()` on the same endpoint. The
+  dashboard and the MCP server mark their own routes with it.
 - `NetApiFlow`: `TrackFlowByConvention()` tracks the application's own services, repositories and
   handlers with one line, called after the registrations. `*Service` becomes a `Service` step,
   `*Repository` a `Repository` step and `*Handler` a `UseCase` step, for the types of the entry
@@ -48,6 +53,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow`: the trace of a request that matches an endpoint now opens when routing picks the
+  endpoint, with its route already known. The `TraceStarted` event, the live list and the REST list
+  show `/orders/{id}` where they used to show `(unmatched)` until the request ended. The start time is
+  still the start of the request, and a step created before routing is kept. A request that matches
+  no endpoint is still recorded as `(unmatched)`, when it ends.
 - `NetApiFlow`: `DecorateFlowTracked` no longer decorates a type of NetApiFlow's own packages,
   whatever the predicate says. A predicate such as `type.Name.EndsWith("Service")` used to put a
   proxy on NetApiFlow's own hosted services, so their `StartAsync` and `StopAsync` went through it.
@@ -79,6 +89,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: under `app.UsePathBase("/api")`, `ExcludePaths`, `IncludePaths` and
+  `OpenApiDocumentPath` compared the full path, `/api/health`, with patterns written for `/health`,
+  so none of them matched. Now, whenever the request matches an endpoint, they value the path your
+  application sees. The dashboard (pages, REST API and stream) and the MCP server were traced as if
+  they were your traffic, and in Production, where they answer 404, they were traced too. A second
+  dashboard client saw the stream of the first one as a trace that stayed `Running` for the whole
+  connection. They are now never traced, with or without a `PathBase`. A request that matches no
+  endpoint, a static file served by `UseStaticFiles` or a 404, is still decided by the full path, and
+  the pattern has to carry the prefix. The README says so.
+- `NetApiFlow`: `IncludePaths("/orders")` under `UsePathBase` left your own route out of the store,
+  because the filter compared `/api/orders`. The route is kept now.
+- `NetApiFlow`: a path pattern that cannot be read, such as a `null` in `IncludePaths`, no longer
+  makes every request fail with a `NullReferenceException`. The request is answered and not traced,
+  and a warning is logged at most once every 30 seconds.
 - `NetApiFlow.EntityFrameworkCore`: a query cancelled by its `CancellationToken` no longer leaves its
   step open. The interceptor did not handle the cancellation event, so the step stayed in its
   internal table for good and the span kept showing as running. The span now closes as failed with
