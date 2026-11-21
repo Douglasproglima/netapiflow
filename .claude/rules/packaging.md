@@ -84,6 +84,14 @@ isolação do teste vem do `nuget.config` da própria pasta. Teste com o pacote 
 não tem esse `nuget.config` e volta a ter o risco da D-153: usa `-p:Version=<próxima>-verify.<n>`
 mais `--source` com o caminho literal da pasta, nunca um nome registrado por `nuget add source -n`.
 
+## Os satélites pedem o núcleo na versão exata (D-231)
+
+A partir da `0.6.0`, todo pacote que depende de outro pacote do NetApiFlow o pede na faixa **exata** do mesmo release (`[0.6.0]`), nunca `>= 0.6.0`. O `pack` de uma `ProjectReference` gera `>=` por padrão, então a faixa exata é configurada e **conferida por um teste que lê o `.nuspec` empacotado**. Pacote novo que nascer com `>=` falha o teste.
+
+Por quê: os pacotes são publicados juntos (D-01, ADR-0001), e o núcleo dá `InternalsVisibleTo` ao painel e aos dois storages. Com `>=`, quem atualiza só o núcleo pode cair em `MissingMethodException` com o satélite antigo, a mesma classe do D-140. Com a versão exata, o erro vira um erro de `restore`, claro.
+
+Isto trava o nosso próprio núcleo ao mesmo release. **Não** sobe piso de dependência de terceiro (D-181). O README diz, na instalação, que os pacotes NetApiFlow se atualizam juntos.
+
 ## Release (ver também `docs/gitflow.md`)
 
 - Os pacotes (9 atuais: `NetApiFlow`, `NetApiFlow.Dashboard`,
