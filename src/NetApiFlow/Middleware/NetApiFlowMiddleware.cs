@@ -48,8 +48,14 @@ internal sealed class NetApiFlowMiddleware(
         }
         finally
         {
-            FinishRequest(context, state, caughtException);
-            FlowTraceResolver.Detach();
+            try
+            {
+                FinishRequest(context, state, caughtException);
+            }
+            finally
+            {
+                FlowTraceResolver.Detach();
+            }
         }
     }
 

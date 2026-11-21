@@ -152,7 +152,6 @@ internal sealed class FlowRequestState
         {
             RegisterHeader();
         }
-
     }
 
     private Dictionary<string, string> OpeningTags(HttpContext context)
@@ -163,10 +162,17 @@ internal sealed class FlowRequestState
             tags[W3CTraceIdTagName] = W3CTraceId.ToHexString();
         }
 
-        var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
-        if (!string.IsNullOrEmpty(tenant))
+        try
         {
-            tags[TenantTagName] = tenant;
+            var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
+            if (!string.IsNullOrEmpty(tenant))
+            {
+                tags[TenantTagName] = tenant;
+            }
+        }
+        catch (Exception exception)
+        {
+            _decider.LogFailure(exception);
         }
 
         return tags;
