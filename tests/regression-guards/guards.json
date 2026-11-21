@@ -624,5 +624,124 @@
       "scenario": "live-panel:ended"
     },
     "job": "real-package"
+  },
+  {
+    "id": "S3-sequence-in-memory",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sequence-postgresql",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sequence-sqlserver",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-in-memory",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-postgresql",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-sqlserver",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-in-memory",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-postgresql",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-sqlserver",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-in-a-new-app",
+    "defect": "Requests that carry the same traceparent were not one trace each in an app made from the README and the published package",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "i"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S3-against-the-published-package",
+    "defect": "Requests that share a traceparent are one trace each now, and the published package keeps one trace for all of them",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "requests-that-share-a-traceparent"
+    },
+    "job": "comparison"
   }
 ]
