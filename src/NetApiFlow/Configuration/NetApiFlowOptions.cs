@@ -58,7 +58,7 @@ public sealed class NetApiFlowOptions
     public bool CaptureMinimalApiEndpoints { get; set; } = true;
 
     /// <summary>Retention policy for persisted traces.</summary>
-    public RetentionOptions Retention { get; } = new();
+    public RetentionSettings Retention { get; } = new();
 
     /// <summary>In-process limits for tracing overhead.</summary>
     public LimitsOptions Limits { get; } = new();

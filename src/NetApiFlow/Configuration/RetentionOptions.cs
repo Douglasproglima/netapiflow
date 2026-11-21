@@ -1,7 +1,7 @@
 namespace NetApiFlow;
 
 /// <summary>Retention policy for persisted traces.</summary>
-public sealed class RetentionOptions
+public sealed class RetentionSettings
 {
     /// <summary>Maximum number of traces kept in the store. Default: 1000.</summary>
     public int MaxTraces { get; set; } = 1000;
