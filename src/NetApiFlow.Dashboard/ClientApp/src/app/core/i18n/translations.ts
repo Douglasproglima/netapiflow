@@ -107,9 +107,13 @@ const en = {
   'graph.notFound.title': 'Trace not found.',
   'graph.notFound.hint':
     'It may have expired from the in-memory buffer, or the id in the URL is invalid.',
+  'graph.unmatched.title': 'The request was recorded, but it matched no route.',
+  'graph.unmatched.hint':
+    'There is no endpoint to mark. A 404, a static file or a path nothing answers has no step to draw.',
   'graph.noSteps.title': 'The request was recorded, but no step was marked.',
   'graph.noSteps.mvc': 'MVC controllers become a step on their own',
-  'graph.noSteps.minimalApi': 'A Minimal API endpoint needs',
+  'graph.noSteps.minimalApi':
+    'A Minimal API endpoint becomes a step on its own, unless CaptureMinimalApiEndpoints is false. Then it needs',
   'graph.noSteps.otherCode': 'Any other code can use',
   'graph.noSteps.or': 'or',
   'graph.loading': 'Loading…',
@@ -441,9 +445,13 @@ const ptBr: Record<keyof typeof en, string> = {
     'Envie uma requisição usando "Testar um endpoint" ou chame sua API diretamente.',
   'graph.notFound.title': 'Trace não encontrada.',
   'graph.notFound.hint': 'Ela pode ter expirado do buffer em memória, ou o id na URL é inválido.',
+  'graph.unmatched.title': 'A requisição foi gravada, mas não casou com nenhuma rota.',
+  'graph.unmatched.hint':
+    'Não há endpoint para marcar. Um 404, um arquivo estático ou um caminho que nada responde não tem etapa para desenhar.',
   'graph.noSteps.title': 'A requisição foi gravada, mas nenhuma etapa foi marcada.',
   'graph.noSteps.mvc': 'Controllers MVC viram etapa sozinhos',
-  'graph.noSteps.minimalApi': 'Um endpoint de Minimal API precisa de',
+  'graph.noSteps.minimalApi':
+    'Um endpoint de Minimal API vira etapa sozinho, a menos que CaptureMinimalApiEndpoints seja false. Aí ele precisa de',
   'graph.noSteps.otherCode': 'Qualquer outro código pode usar',
   'graph.noSteps.or': 'ou',
   'graph.loading': 'Carregando…',

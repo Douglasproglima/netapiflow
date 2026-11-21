@@ -290,8 +290,68 @@ describe('FlowPageComponent', () => {
       expect(emptyState?.textContent).toContain(
         'The request was recorded, but no step was marked.',
       );
-      expect(emptyState?.textContent).toContain('A Minimal API endpoint needs');
       expect(emptyState?.textContent).toContain('.WithNetApiFlowTracking()');
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it('says a Minimal API endpoint becomes a step on its own, and needs the call only with the capture turned off', async () => {
+    const fixture = await openTraceWithoutSteps('plain');
+
+    const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.flow-workspace__empty--no-steps',
+    );
+    expect(emptyState?.textContent).toContain('vira etapa sozinho');
+    expect(emptyState?.textContent).toContain('CaptureMinimalApiEndpoints');
+    expect(emptyState?.textContent).not.toContain('Um endpoint de Minimal API precisa de');
+  });
+
+  it('says the same about the Minimal API endpoint in English', async () => {
+    try {
+      const fixture = await openTraceWithoutSteps('plain', {}, 'en');
+
+      const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+        '.flow-workspace__empty--no-steps',
+      );
+      expect(emptyState?.textContent).toContain('becomes a step on its own');
+      expect(emptyState?.textContent).toContain('CaptureMinimalApiEndpoints');
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it('says there is no endpoint to mark when the request matched no route, instead of asking to mark one', async () => {
+    const fixture = await openTraceWithoutSteps('missing-route', {
+      routeTemplate: '(unmatched)',
+      httpStatus: 404,
+    });
+
+    const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.flow-workspace__empty--no-steps',
+    );
+    expect(emptyState).not.toBeNull();
+    expect(emptyState?.textContent).toContain('não casou com nenhuma rota');
+    expect(emptyState?.textContent).not.toContain('.WithNetApiFlowTracking()');
+    expect(emptyState?.textContent).not.toContain('nenhuma etapa foi marcada');
+    expect(emptyState?.querySelector('svg')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).toBeNull();
+  });
+
+  it('says the same about a request that matched no route in English', async () => {
+    try {
+      const fixture = await openTraceWithoutSteps(
+        'missing-route',
+        { routeTemplate: '(unmatched)', httpStatus: 404 },
+        'en',
+      );
+
+      const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+        '.flow-workspace__empty--no-steps',
+      );
+      expect(emptyState?.textContent).toContain('matched no route');
+      expect(emptyState?.textContent).not.toContain('.WithNetApiFlowTracking()');
+      expect(emptyState?.textContent).not.toContain('no step was marked');
     } finally {
       localStorage.clear();
     }
