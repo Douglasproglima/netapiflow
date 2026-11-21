@@ -535,11 +535,13 @@ troque `netapiflow_` no script antes. O script cria o que falta e atualiza tabel
 versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server separa os lotes com
 `GO`, então rode com `sqlcmd`, SSMS ou Azure Data Studio.
 
-Enquanto as tabelas não existem, os traces que a sua aplicação produz não podem ser gravados. O
-storage registra um aviso com o tipo e a mensagem da exceção, descarta por 30 segundos os traces que
-chegam e tenta de novo. Os traces descartados são contados em `netapiflow.persistence.failures`.
-Quando uma gravação volta a funcionar, ele registra uma linha com quantos traces não foram gravados.
-O mesmo acontece quando o banco está inalcançável. A exceção completa é registrada em `Debug`.
+Enquanto as tabelas não existem, os traces que a sua aplicação produz não podem ser gravados. Uma
+gravação que falha registra um aviso com o tipo e a mensagem da exceção, e o trace seguinte é
+tentado normalmente. Depois de três falhas seguidas, o storage descarta por 30 segundos os traces
+que chegam e tenta de novo, com um aviso para cada tentativa que falha. Os traces que não foram
+gravados são contados em `netapiflow.persistence.failures`. Quando uma gravação volta a funcionar,
+ele registra uma linha com quantos traces não foram gravados. O mesmo acontece quando o banco está
+inalcançável. A exceção completa é registrada em `Debug`.
 
 ## Segurança do dashboard em produção
 

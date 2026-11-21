@@ -18,18 +18,48 @@ public class PersistenceWriterFailureTests
     private static readonly TimeSpan RetryInterval = TimeSpan.FromSeconds(30);
 
     [Fact]
-    public async Task ExecuteAsync_WhenTheStoreKeepsFailing_TriesOnceDiscardsTheRestAndWarnsOnce()
+    public async Task ExecuteAsync_WhenTheStoreKeepsFailing_TriesThreeTimesThenDiscardsAndCountsTheRest()
     {
         await using var harness = await Harness.StartAsync();
 
         harness.Complete("t1", "t2", "t3", "t4", "t5", "t6", "t7");
         await harness.WaitForFailuresAsync(7);
 
-        harness.SaveCalls.ShouldBe(1);
+        harness.SaveCalls.ShouldBe(3);
         harness.Writer.FailureCount.ShouldBe(7);
         harness.PersistenceFailureMeasurements.ShouldBe(7);
-        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(1);
+        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(3);
         harness.Logs.Where(line => line.Level >= LogLevel.Warning && line.HasException).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithOneFailureAmongSuccesses_NeverOpensTheCircuit()
+    {
+        await using var harness = await Harness.StartAsync();
+        harness.StoreFailsOnCalls(1);
+
+        harness.Complete("t1", "t2", "t3");
+        await harness.WaitForSavedAsync(2);
+
+        harness.SaveCalls.ShouldBe(3);
+        harness.Writer.FailureCount.ShouldBe(1);
+        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(1);
+        harness.Logs.Count(line => line.Level == LogLevel.Information).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenASuccessInterruptsTheFailures_StartsCountingAgain()
+    {
+        await using var harness = await Harness.StartAsync();
+        harness.StoreFailsOnCalls(1, 2, 4, 5);
+
+        harness.Complete("t1", "t2", "t3", "t4", "t5", "t6");
+        await harness.WaitForSavedAsync(2);
+
+        harness.SaveCalls.ShouldBe(6);
+        harness.Writer.FailureCount.ShouldBe(4);
+        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(4);
+        harness.Logs.Count(line => line.Level == LogLevel.Information).ShouldBe(0);
     }
 
     [Fact]
@@ -42,15 +72,15 @@ public class PersistenceWriterFailureTests
 
         harness.Complete("t4");
         await harness.WaitForFailuresAsync(4);
-        harness.SaveCalls.ShouldBe(1);
+        harness.SaveCalls.ShouldBe(3);
 
         harness.Clock.Advance(RetryInterval + TimeSpan.FromSeconds(1));
         harness.Complete("t5", "t6", "t7");
         await harness.WaitForSavedAsync(3);
 
-        harness.SaveCalls.ShouldBe(4);
+        harness.SaveCalls.ShouldBe(6);
         harness.Writer.FailureCount.ShouldBe(4);
-        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(1);
+        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(3);
         harness.Logs.Count(line => line.Level == LogLevel.Information && line.Message.Contains("4 traces", StringComparison.Ordinal)).ShouldBe(1);
     }
 
@@ -65,8 +95,8 @@ public class PersistenceWriterFailureTests
         harness.Complete("t4", "t5", "t6");
         await harness.WaitForFailuresAsync(6);
 
-        harness.SaveCalls.ShouldBe(2);
-        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(2);
+        harness.SaveCalls.ShouldBe(4);
+        harness.Logs.Count(line => line.Level == LogLevel.Warning).ShouldBe(4);
         harness.Logs.Where(line => line.Level >= LogLevel.Warning && line.HasException).ShouldBeEmpty();
     }
 
@@ -90,7 +120,7 @@ public class PersistenceWriterFailureTests
         private readonly ConcurrentQueue<string> _saved = new();
         private long _persistenceFailureMeasurements;
         private int _saveCalls;
-        private volatile bool _storeFails = true;
+        private volatile Func<int, bool> _failsOnCall = _ => true;
 
         private Harness(NetApiFlowOptions flowOptions)
         {
@@ -121,7 +151,9 @@ public class PersistenceWriterFailureTests
             return harness;
         }
 
-        public void StoreRecovers() => _storeFails = false;
+        public void StoreRecovers() => _failsOnCall = _ => false;
+
+        public void StoreFailsOnCalls(params int[] calls) => _failsOnCall = call => calls.Contains(call);
 
         public void Complete(params string[] traceIds)
         {
@@ -145,8 +177,8 @@ public class PersistenceWriterFailureTests
 
         private ValueTask Save(FlowTrace trace)
         {
-            Interlocked.Increment(ref _saveCalls);
-            if (_storeFails)
+            var call = Interlocked.Increment(ref _saveCalls);
+            if (_failsOnCall(call))
             {
                 return ValueTask.FromException(new InvalidOperationException("relation \"netapiflow_traces\" does not exist"));
             }

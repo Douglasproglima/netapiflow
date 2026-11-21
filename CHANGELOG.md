@@ -38,11 +38,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - `NetApiFlow`: a store that fails to save no longer fills the log with one error and a stack trace
-  per trace. After a failure the writer logs one warning with the type and the message of the
-  exception, discards the traces that arrive for 30 seconds while counting them in
-  `netapiflow.persistence.failures`, then tries again, and logs one line when saving works again.
-  You see it with `AutoCreateSchema = false` before the tables exist, and when the database is down.
-  The full exception is still logged at `Debug`.
+  per trace. A failed save logs a warning with the type and the message of the exception, and the
+  next trace is tried normally. After three failures in a row the writer discards the traces that
+  arrive for 30 seconds while counting them in `netapiflow.persistence.failures`, then tries again
+  with one warning for each attempt that fails, and logs one line when saving works again. You see
+  it with `AutoCreateSchema = false` before the tables exist, and when the database is down. The
+  full exception is still logged at `Debug`.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: with `AutoCreateSchema = false`,
   a schema check that failed on a transient error, such as a dropped connection, was marked as done
   for good and never ran again. It now runs again on the next call until it completes, and logs the

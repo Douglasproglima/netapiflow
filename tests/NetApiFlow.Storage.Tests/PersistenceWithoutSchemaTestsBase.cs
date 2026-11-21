@@ -19,7 +19,7 @@ public abstract class PersistenceWithoutSchemaTestsBase
     protected abstract Task<long> CountTablesAsync(string tablePrefix);
 
     [Fact]
-    public async Task Writer_WithoutAutoCreateSchemaOnAnEmptyDatabase_WarnsOncePerIntervalAndSavesAgainOnceTheScriptRan()
+    public async Task Writer_WithoutAutoCreateSchemaOnAnEmptyDatabase_WarnsThreeTimesThenOncePerIntervalAndSavesAgainOnceTheScriptRan()
     {
         var tablePrefix = $"w{Guid.NewGuid():N}_";
         var logs = new CapturingLoggerProvider();
@@ -40,7 +40,7 @@ public abstract class PersistenceWithoutSchemaTestsBase
             await WaitUntilAsync(() => Task.FromResult(writer.FailureCount == 6));
 
             (await CountTablesAsync(tablePrefix)).ShouldBe(0);
-            logs.Lines.Count(line => line.Category == typeof(PersistenceWriter).FullName && line.Level == LogLevel.Warning).ShouldBe(1);
+            logs.Lines.Count(line => line.Category == typeof(PersistenceWriter).FullName && line.Level == LogLevel.Warning).ShouldBe(3);
             logs.Lines.Count(line => line.Level == LogLevel.Error && line.Message.Contains("schema.sql", StringComparison.Ordinal)).ShouldBe(1);
             logs.Lines.Where(line => line.Level >= LogLevel.Warning && line.HasException).ShouldBeEmpty();
 
