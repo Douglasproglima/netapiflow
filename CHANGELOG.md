@@ -100,6 +100,18 @@ adheres to [Semantic Versioning](https://semver.org/).
   scheme is not compared. Behind a reverse proxy that rewrites the `Host`, keep the original `Host`
   or call `UseForwardedHeaders` with `XForwardedHost`, otherwise a `DELETE` from the browser gets 403.
 
+## [0.5.3] - 2026-11-20
+
+### Fixed
+
+- `NetApiFlow`: a failure of the trace store no longer stops your application. When the store threw
+  while the retention service applied the retention policy, for example with PostgreSQL unreachable,
+  the exception left the background service on its next five-minute tick, and the host's default for
+  a failed background service (`StopHost`) ended the process. The service now logs a warning and
+  tries again at the next interval. The writer that saves traces had the same flaw with a
+  cancellation the store threw on its own outside a shutdown, such as a command timeout: it now
+  counts a failed save and goes on with the next trace.
+
 ## [0.5.2] - 2026-11-20
 
 ### Fixed

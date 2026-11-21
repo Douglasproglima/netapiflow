@@ -4,7 +4,9 @@ O site (`netapiflow-site`, repositório à parte) **já está público**, e a va
 produto não faz e que o quick start não compila. Por isso esta fase vem **logo depois do hotfix 0.5.3** (Fase 61), antes de
 qualquer outra coisa da `0.6.0`.
 
-A Executora **prepara e para**. A auditoria audita e publica (D-198). Nenhum push no site sem a auditoria.
+A Executora empurra a branch e abre a PR no repositório do site, e **para**. A auditoria audita, faz o merge e publica (D-198).
+
+**Entregue** (21/11/2026): `netapiflow-site#1` mergeada e publicada pela auditoria (`090bd75`). O quick start foi conferido num app novo, compila e mostra uma etapa. O site não cita mais o filtro por tenant, e o repositório do site tem a licença MIT. **Pendente:** a Tarefa 62.4, no release.
 
 ## O que a varredura achou
 
@@ -22,7 +24,7 @@ A Executora **prepara e para**. A auditoria audita e publica (D-198). Nenhum pus
 - Se a Executora não reproduzir um achado, **não mexe nele**: relata e pede o comando à auditoria.
 - Se corrigir o texto exigir uma decisão de posicionamento (o que o produto promete), para e pergunta. Posicionamento é do
   dono (D-232), e a Planejadora leva a ele.
-- Nenhum `push` para o repositório do site.
+- Nenhum merge no repositório do site: o merge e a publicação são da auditoria.
 
 ## Tarefa 62.0: reproduzir
 
@@ -65,8 +67,8 @@ site atualizado no mesmo dia. Entra no passo 0 da skill `/release` para o `0.6.0
 
 ## Versionamento e fluxo
 
-- Repositório `netapiflow-site`. Branch e commits no padrão do próprio repositório do site. A Executora abre a PR e para.
-  A auditoria audita e publica.
+- Repositório `netapiflow-site`. Branch e commits no padrão do próprio repositório do site. A Executora empurra a branch, abre a PR e para.
+  A auditoria audita, faz o merge e publica.
 
 ## Relatório final
 
