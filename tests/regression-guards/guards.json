@@ -831,5 +831,27 @@
       "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_ReleasesTheRequestFromAContextCapturedDuringIt"
     },
     "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-reserved-path",
+    "defect": "The TraceStarted event of a trace opened from a reservation came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.PublishReserved_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-unreserved-path",
+    "defect": "The TraceStarted event of a trace opened without a reservation came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.TryStartTrace_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
+    },
+    "job": "build-test"
   }
 ]

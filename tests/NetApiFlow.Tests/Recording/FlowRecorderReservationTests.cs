@@ -35,6 +35,33 @@ public class FlowRecorderReservationTests
     };
 
     [Fact]
+    public void PublishReserved_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace()
+    {
+        var started = new List<FlowTrace>();
+        _subject.TraceStarted += started.Add;
+        var tags = new Dictionary<string, string> { ["w3c.trace_id"] = TraceId, ["tenant"] = "acme" };
+        _subject.TryReserveTrace(TraceId, "GET", DateTime.UtcNow);
+
+        _subject.PublishReserved(TraceId, "/orders", tags);
+
+        started.Single().Tags.ShouldBe(tags);
+        _subject.GetActiveTrace(TraceId)!.Tags.ShouldBe(tags);
+    }
+
+    [Fact]
+    public void TryStartTrace_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace()
+    {
+        var started = new List<FlowTrace>();
+        _subject.TraceStarted += started.Add;
+        var tags = new Dictionary<string, string> { ["w3c.trace_id"] = TraceId, ["tenant"] = "acme" };
+
+        _subject.TryStartTrace(TraceId, "GET", "/orders", DateTime.UtcNow, tags);
+
+        started.Single().Tags.ShouldBe(tags);
+        _subject.GetActiveTrace(TraceId)!.Tags.ShouldBe(tags);
+    }
+
+    [Fact]
     public void TryReserveTrace_PublishesNothing_ButCountsAsActive()
     {
         var reserved = _subject.TryReserveTrace(TraceId, "GET", DateTime.UtcNow);
