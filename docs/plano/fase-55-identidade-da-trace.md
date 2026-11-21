@@ -5,8 +5,8 @@ auditoria de base achou (S3) e a Planejadora mediu nos dois bancos: o mesmo `tra
 perde uma trace, duas requisições ao mesmo tempo misturam as etapas numa trace só, e um cliente anônimo
 sobrescreve uma trace guardada. O ADR-0028 decide o desenho: um id próprio, aleatório, e o W3C trace id como tag.
 
-O ADR-0028 está **aceito** (D-228). **Nenhum código desta fase começa antes de ele ser coerente com o ADR-0027**
-(`PathBase`), porque os dois decidem em que momento a trace abre. O ADR-0027 está escrito, Proposto (D-229): o id
+O ADR-0028 está **aceito** (D-228). **Nenhum código desta fase começa antes da Tarefa 53.1**, que mede o destino
+das etapas anteriores à abertura da trace. O ADR-0027 (`PathBase`) está aceito (D-230) e é coerente com este: o id
 nasce no início do middleware e a trace abre no `EndpointMatched`. Vai no `0.6.0` (D-210, D-212). É defeito
 antigo e não regressão, então não é hotfix (D-205).
 
@@ -114,7 +114,7 @@ traces em chamadas distribuídas legítimas. Vai em `### Fixed`, bem explicado.
 ## Versionamento e fluxo
 
 - `0.6.0`. Branch `bugfix/55-identidade-da-trace` a partir de `develop` atualizado, **depois** do ADR-0028 aceito e
-  coerente com o ADR-0027.
+  coerente com o ADR-0027 (aceito), e **depois** da Tarefa 53.1.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor. Abrir a PR e parar.
 
 ## Relatório final

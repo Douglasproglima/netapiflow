@@ -256,6 +256,14 @@ public static class NetApiFlowEndpointFilterExtensions
     public static RouteHandlerBuilder WithNetApiFlowTracking(this RouteHandlerBuilder builder);
     public static RouteGroupBuilder WithNetApiFlowTracking(this RouteGroupBuilder builder);
 }
+
+public static class NetApiFlowEndpointConventionExtensions
+{
+    /// <summary>Marks the endpoint, or every endpoint of a group, as never traced. Read from the matched endpoint's
+    /// metadata, so it holds under <c>UsePathBase</c>.</summary>
+    public static TBuilder WithoutNetApiFlowTracking<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder;
+}
 ```
 
 `NetApiFlow.MediatR` expõe `AddNetApiFlowMediatR(this IServiceCollection)` (registra o
@@ -272,6 +280,8 @@ do prompt já descrevesse essa forma de configuração em código).
 trace, e toda atividade do NetApiFlow carrega a tag `netapiflow.trace_id`. O cabeçalho `X-NetApiFlow-TraceId`, o
 REST, o SSE, o MCP, `NetApiFlow.CurrentTraceId` e o `traceId` de `NetApiFlow.GetRecentTrace` usam o id do
 NetApiFlow. Duas requisições com o mesmo W3C trace id são duas traces.
+
+**Exclusão por metadado (ADR-0027, Fase 53).** `WithoutNetApiFlowTracking()` grava um metadado interno no endpoint, e o núcleo decide no `EndpointMatched`, que é onde o `Request.Path` já é relativo ao `PathBase`. O painel (REST, SSE, estáticos) e o MCP a chamam nos grupos deles, e é por isso que as rotas do NetApiFlow nunca são rastreadas. A extensão é genérica sobre `IEndpointConventionBuilder` (cobre `MapGet`, grupo, `MapControllers()` e `MapHealthChecks()`), o tipo do metadado é `internal`, e o metadado **vence** `ExcludePaths`, `IncludePaths` e `WithNetApiFlowTracking()` no mesmo endpoint. Controller por atributo não existe.
 
 **Nome da etapa `Endpoint` de um Minimal API (Tarefa 51.9).** O par `(component, operation)` sai de
 metadados do endpoint, nunca do `DisplayName`, e é o mesmo para a etapa de `WithNetApiFlowTracking()` e

@@ -1,10 +1,10 @@
 # ADR-0027: a decisão de rastrear passa para o `EndpointMatched`, e as rotas do NetApiFlow se identificam pelo endpoint
 
 ## Status
-Proposto
+Aceito
 
 ## Discussion
-A criar quando o ADR for aceito, como o índice manda.
+[#386](https://github.com/Douglasproglima/netapiflow/discussions/386)
 
 ## Contexto
 
@@ -55,11 +55,22 @@ Opções, cada uma com um spike descartável, na mesma matriz:
 
 ## Decisão
 
-Opção A.
+Opção A, com uma emenda da auditoria (20/11/2026): o metadado de identidade é gravado por uma extensão pública, e não por um tipo `internal` lido com `InternalsVisibleTo`.
 
-- **As rotas do NetApiFlow se identificam pelo endpoint.** Os endpoints do painel (API REST, stream SSE, arquivos
-  estáticos) e do MCP carregam um metadado interno de identidade, e **nunca** são rastreados, com ou sem `PathBase`. O
-  tipo do metadado é `internal`. O painel já tem `InternalsVisibleTo`, e o pacote do MCP passa a precisar.
+- **As rotas do NetApiFlow se identificam pelo endpoint, por um metadado que uma extensão pública grava.** O núcleo
+  ganha `WithoutNetApiFlowTracking<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder`,
+  simétrica à `WithNetApiFlowTracking()`. O painel (API REST, stream SSE, arquivos estáticos) e o MCP a chamam nos
+  grupos deles, e esses endpoints **nunca** são rastreados, com ou sem `PathBase`.
+- **O tipo do metadado fica `internal` no núcleo, e o pacote do MCP não ganha `InternalsVisibleTo`.** O `.nuspec` do
+  painel e do MCP pede o núcleo `>=` a uma versão, então um tipo interno que mudasse num núcleo atualizado sozinho
+  quebraria o pacote antigo, em tempo de execução, com `MissingMethodException`. É a mesma classe do D-140
+  (MediatR). `InternalsVisibleTo` só é seguro com pacotes de versão travada igual, e os nossos não travam. Um método
+  público só muda por SemVer.
+- **A extensão é genérica sobre `IEndpointConventionBuilder`**, e não sobre `RouteHandlerBuilder` e `RouteGroupBuilder`
+  como a `WithNetApiFlowTracking()`, porque assim cobre `MapGet`, grupo, `MapControllers()` e `MapHealthChecks()`.
+- **O usuário ganha a exclusão por metadado.** A mesma extensão serve às rotas dele (health check, métricas), vale
+  sob `PathBase` e **vence** `ExcludePaths`, `IncludePaths` e `WithNetApiFlowTracking()` no mesmo endpoint. Controller
+  por atributo fica fora.
 - **A trace abre no `EndpointMatched`**, o mesmo evento do roteamento que a Fase 51 já usa para a etapa `Endpoint`
   (ADR-0026). Ali o `Request.Path` é relativo ao `PathBase`, o endpoint é conhecido, e a política (`ExcludePaths`,
   `IncludePaths`, `OpenApiDocumentPath`) é avaliada contra esse caminho relativo.
@@ -93,4 +104,9 @@ Opção A.
 - **O README e o XML doc** de `OpenApiDocumentPath`, `ExcludePaths` e `IncludePaths` passam a dizer o que vale sob
   `PathBase`, nos dois idiomas. A frase "never traced" do `OpenApiDocumentPath` passa a ser verdadeira para requisição
   com endpoint casado, e o limite do estático é dito ao lado.
-- Sem API pública nova, desde que o metadado fique `internal`.
+- **API pública nova: `WithoutNetApiFlowTracking()`.** Entra em `contratos.md`, no README e em `### Added` do
+  `CHANGELOG.md`, com teste de que uma rota do usuário marcada, sob `PathBase`, não é rastreada. O requisito 6 da
+  Fase 53 ("sem API pública nova") cai por decisão da auditoria, e o método público é o que protege o painel e o
+  MCP de um núcleo atualizado sozinho.
+- **O README diz o que foi medido e o que não foi:** Kestrel, IIS Express com o ANCM v2 e o nginx da Tarefa 53.0, e
+  não o IIS completo nem o YARP. Não promete o que não se mediu.
