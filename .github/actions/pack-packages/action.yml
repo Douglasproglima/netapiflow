@@ -1,0 +1,46 @@
+name: Pack the packages
+description: Builds the dashboard UI and packs every package with a version that is never the real one, into a folder outside the repository
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        global-json-file: global.json
+        dotnet-version: |
+          8.0.x
+          10.0.x
+
+    - name: Setup Node
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+        cache: npm
+        cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+    - name: Choose the version and the folders, all outside the repository
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)
+        echo "PACKAGE_VERSION=${BASE_VERSION}-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+        echo "FEED=$RUNNER_TEMP/feed" >> "$GITHUB_ENV"
+        echo "USER_APP=$RUNNER_TEMP/user-app" >> "$GITHUB_ENV"
+        echo "COMPARISON_APPS=$RUNNER_TEMP/comparison" >> "$GITHUB_ENV"
+        echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-packages" >> "$GITHUB_ENV"
+
+    - name: Build dashboard UI
+      shell: bash
+      working-directory: src/NetApiFlow.Dashboard/ClientApp
+      run: |
+        npm ci
+        npm run build
+
+    - name: Pack the packages with a version that is never the real one
+      shell: bash
+      run: |
+        set -euo pipefail
+        for project in src/*/*.csproj; do
+          dotnet pack "$project" -c Release -p:Version="$PACKAGE_VERSION" -o "$FEED"
+        done
