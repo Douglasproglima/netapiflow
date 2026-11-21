@@ -83,6 +83,8 @@ frase 9, "there is a check in the repository that proves it", só entra verdadei
 
 A linha 17 padroniza o gênero de "trace" no masculino, em todo o `README.pt-BR.md`, como a UI.
 
+**Chamadas de registro de pacote sem o `using` (D-255, a mesma classe do item 12 e do D-247).** A varredura da Planejadora achou que o README mostra a chamada e não diz de qual namespace ela vem. Os blocos de PostgreSQL (`AddNetApiFlowPostgreSqlStorage`, `NetApiFlow.Storage.PostgreSql`, dois blocos) e de OTLP (`AddNetApiFlowOtlpExport`, `NetApiFlow.OpenTelemetry`, dois blocos) chamam métodos que o `using NetApiFlow;` do Quick start não cobre. O SQL Server aparece só numa frase (`AddNetApiFlowSqlServerStorage`, `NetApiFlow.Storage.SqlServer`) e o MediatR (`AddNetApiFlowMediatR`, `NetApiFlow.MediatR`) pode estar só em prosa ou em tabela: a Executora confere o que o README mostra de fato. Cada chamada de registro de pacote que o README mostrar ganha o `using` do namespace dela, num bloco marcado ou numa frase, nos dois idiomas, no molde da #414 e da seção do MCP da Fase 70. **Critério:** cada bloco, colado num `dotnet new webapi` novo, compila. A Fase 70 não os cobre (os pacotes de storage, OTLP e MediatR num app novo ficaram para a `0.7.0`), então a prova aqui é a colagem, e a Executora diz se a fez à mão ou com um script igual ao do job.
+
 ## Tarefa 59.6: os arquivos de comunidade
 
 - **`CONTRIBUTING`:** os pré-requisitos (a versão do Node da `.nvmrc` e o Docker), o `npm run format:check`, e tirar o "Phase 4".

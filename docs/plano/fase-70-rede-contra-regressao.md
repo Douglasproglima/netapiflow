@@ -1,0 +1,289 @@
+# Fase 70: a rede contra regressão (D-253, decisão do dono)
+
+Palavras do dono, relatadas pela auditoria em 21/11/2026: "Temos criar mecanismo que impedem de voltar bugs e colaterais já
+ajustado em fases passadas, do contrário o backlog só aumenta". À pergunta "fazer agora ou deixar para a 0.7.0", a resposta
+literal foi "Fazer agoea".
+
+Entra na `0.6.0`, **logo depois da Fase 53 e antes de todas as outras que faltam**, por decisão do dono. A lista da `0.6.0`
+continua congelada (D-232): esta fase entrou porque o dono decidiu, não porque o congelamento abriu.
+
+## O diagnóstico, medido
+
+| Afirmação | Conferi |
+|---|---|
+| Nenhum job do CI usa o pacote como o usuário | **Confirmado.** O `ci.yml` tem quatro jobs: `detect-changes`, `build-test`, `visual-quality` e `secret-scan`. O único passo que empacota é `Pack (verification only)`, e ele só roda `dotnet pack`: nada instala o `.nupkg` num app novo. O `release.yml` tem um job, `release` |
+| Nenhum job compila o README | **Confirmado.** O Quick start só era compilado pela passada manual da auditoria |
+| Nenhum job abre a demo construída | **Confirmado.** O `visual-quality` constrói o painel e roda o **sample vivo** com o Impeccable em modo de aviso. O `npm run build:demo` não roda em workflow nenhum |
+| Nada trava a API pública | **Confirmado.** Não há `PublicApiAnalyzers` nem teste de snapshot da superfície |
+| Quatro regressões desta rodada passaram por essas lacunas | O Quick start da #409 (`CS1529`, achado pelo teste integrado da auditoria), a demo da #416 (404 em 26 de 26 traces), o piso do EF Core da `0.5.1` (R-30, D-181) e as opções da Fase 47 (D-176) |
+| Não há biblioteca de navegador no front | **Confirmado.** O `ClientApp/package.json` tem só `impeccable`, `jsdom` e `vitest` |
+| Já existe um template de PR | `.github/pull_request_template.md`. Não existe regra de "quem consome o contrato" |
+
+Hoje quem pega essas regressões é a passada manual da auditoria, e isso não escala. A fase troca a passada manual por passos de CI
+que ficam vermelhos.
+
+## O que a Planejadora conferiu sobre o `PublicApiAnalyzers`
+
+Consultado no nuget.org em 21/11/2026: `Microsoft.CodeAnalysis.PublicApiAnalyzers`, autor Microsoft, licença **MIT**, marcado como
+`developmentDependency`, última estável `5.6.0` publicada em 2026-07-02, fonte `github.com/dotnet/roslyn`. Cumpre os itens 2 e 3 de
+`.claude/rules/dependencies.md`. **Não medido:** se uma versão `5.x` carrega no compilador do SDK do `global.json` (`10.0.100` com
+`latestFeature`) e se convive com `net8.0;net10.0`. A Tarefa 70.4 mede.
+
+## Ponto de parada
+
+- **Uma guarda que não foi vista falhando contra o defeito antigo não é guarda.** Se não der para reintroduzir o defeito num
+  branch de prova e ver o passo ficar vermelho, para e relata.
+- **Dependência nova** (biblioteca de navegador, `PublicApiAnalyzers`): licença, manutenção e vulnerabilidade conferidas como em
+  `.claude/rules/dependencies.md`, versão exata fixada, só em `devDependencies` ou `PrivateAssets=all`. Se qualquer uma entrar no
+  `.nupkg`, no `.nuspec` ou no `dist/`, para.
+- **Instável é pior que ausente.** O roteiro HTTP roda 20 vezes seguidas contra um app de pé, local ou num passo do CI, sem falhar,
+  e o job fica verde em **3 execuções seguidas no CI** antes do merge (rodar o job inteiro 20 vezes seria caro demais). Nenhum
+  `continue-on-error`, nenhum `if: always()` que esconda falha (o que derruba o app no fim pode rodar sempre), nenhum teste com `Skip`.
+- **Tempo.** Se o job do pacote real, sozinho, passar de 15 minutos, para e pergunta. A Executora mede e diz o número.
+- Se um cenário só passar mudando um bloco de código do README, **para**: o README é a fonte, e o job tem de provar o que está nele.
+
+## Como a fase entrega
+
+Seis PRs, uma por parte, nesta ordem (a comparação da 70.7 vem logo depois da PR 1, D-257). Cada uma traz as suas provas vermelhas. A parte 6 é da Planejadora e já está escrita.
+
+| PR | Tarefas | O que entra |
+|---|---|---|
+| 1 | 70.1 e 70.2 | O job do pacote real e o snapshot dos `.nuspec` |
+| 2 | 70.7 | A comparação com o pacote publicado anterior |
+| 3 | 70.3 | A demo construída no CI |
+| 4 | 70.4 | A linha de base da API pública |
+| 5 | 70.5 | O registro de guardas |
+| (Planejadora) | 70.6 | A regra dos consumidores do contrato |
+
+## Tarefa 70.1: o job do pacote real
+
+Uma definição só, em `.github/workflows/real-package.yml` (`workflow_call`), chamada pelo `ci.yml` e pelo `release.yml` (D-254): a
+paridade do D-183 passa de duas listas iguais a uma estrutura só. No `release.yml` o job chamado é pré-requisito da publicação
+(`needs`), para o porteiro da publicação ficar igual ao do CI. A condição de `docs_only` fica no `if` do job chamador, e o
+`permissions` do workflow chamado é só `contents: read`. O check aparece na proteção de branch como `<id do job chamador> / <nome do
+job chamado>`, e quem o torna obrigatório é o dono, depois da primeira execução: a PR diz o nome exato. Só no `ubuntu-latest`. Pode usar `needs: build-test` e baixar o `dist` já construído
+em vez de construir o Angular de novo, se a Executora medir que compensa.
+
+**Montagem.**
+
+1. `dotnet pack` com `-p:Version=<versão base>-ci.<run_number>` (nunca o número real e nunca `-p:VersionSuffix`, D-153 e D-174),
+   para uma pasta fora do repositório, usada como feed local. O restore do app usa um `NUGET_PACKAGES` próprio do job, para o
+   cache não se contaminar.
+2. `dotnet new webapi -f net10.0` numa pasta limpa fora do repositório (o `Directory.Build.props` da raiz não pode herdar no app).
+3. **O Quick start sai do README por script, na ordem, sem editar nenhum bloco.** Um script em `scripts/` (Node, sem dependência,
+   como os outros `.mjs`) lê o `README.md`. Os blocos são marcados na **linha de abertura da cerca**, sem HTML e sem texto visível:
+   `csharp quickstart:program` para o arquivo inteiro e `csharp quickstart:registrations` para os comandos que entram antes de
+   `builder.Build()`. O GitHub usa só a primeira palavra da linha de abertura para o realce, e a Executora confere isso na
+   pré-visualização da PR. O script **falha** se um marcador sumir, para uma edição do README quebrar o CI e não desligar o teste
+   em silêncio. Os ids dos `dotnet add package` do bloco `bash` do Quick start também saem do README, e o job roda `dotnet add package <id>
+   --version <exata> --no-restore` para cada um (o comando aceita um único `--source`, e com só o feed o restore dos pacotes
+   transitivos de terceiros falha). O restore fica com o `nuget.config` do app, que começa com `<clear />` e lista o feed do job e o
+   nuget.org. A versão é sempre exata, para um `0.6.0-ci.N` que não esteja no feed falhar alto, em vez de cair num pacote antigo do
+   nuget.org (D-254).
+   **O MCP também** (ajuste da auditoria): o bloco da seção "MCP server" tem os seus marcadores, `csharp mcp:registration` e
+   `bash mcp:package`. Esse bloco atravessa a linha `var app = builder.Build();` (o `AddNetApiFlowMcp()` vem antes e o
+   `UseNetApiFlowMcp()` depois), então o script o **divide nessa linha**: o que vem antes entra com os registros do Quick start, e o
+   que vem depois entra depois do `Build`. O job instala também o `NetApiFlow.Mcp` do feed.
+   **O bloco do MCP não trazia os `using`**, e o cenário a achou isso na PR 1: `AddNetApiFlowMcp` está em `NetApiFlow.Mcp` e
+   `UseNetApiFlowMcp` em `NetApiFlow.Mcp.Endpoints`, e sem eles a seção dá `CS1061`. O README ganha um bloco `csharp mcp:usings` com
+   as duas linhas e uma frase no texto da seção, nos dois idiomas, no molde da #414. O job o cola no topo do `Program.cs`, antes da
+   primeira linha que não é `using`, e o bloco `mcp:registration` não muda. Entra na PR 1, num commit separado (D-254).
+   **O `README.pt-BR.md` também** (ajuste da auditoria): o script lê os mesmos marcadores no `README.pt-BR.md` e **falha se o código
+   de algum bloco divergir do inglês**, para um dos dois não apodrecer sem ninguém ver. Antes de comparar, tira o comentário de fim
+   de linha (`\s+//.*$`): hoje a única diferença entre os dois é `// mounted at /flow by default` contra `// montado em /flow por
+   padrão`. Se algum bloco tiver ` //` dentro de um texto entre aspas, a Executora ajusta a normalização e diz.
+4. O que o README deixa por conta do usuário (as interfaces `IOrderService` e `IOrderRepository` com as classes, um endpoint que as
+   chame, um endpoint que lance exceção) o job acrescenta em **arquivos separados**, como o usuário faria.
+5. `dotnet build -c Release`: **0 avisos e 0 erros**.
+6. Sobe o app em Development e em Production (`ASPNETCORE_ENVIRONMENT`), em `127.0.0.1`, espera a prontidão, roda o roteiro HTTP
+   (`scripts/`, Node, `fetch`) e derruba o app num passo que sempre roda.
+
+**O roteiro.** Cada cenário cita a promessa de onde sai e o defeito que guarda. Os valores são os que o README e a Fase 56 já
+prometem. Se um valor não bater, é achado, e a Executora para e relata.
+
+| # | Ambiente | Afirma | Guarda |
+|---|---|---|---|
+| a | | O Quick start compila (`dotnet build`, 0 avisos) com os blocos colados na ordem | `CS1529` do Quick start (D-247) |
+| b | Development | Uma requisição ao endpoint do app grava uma trace, e `GET /flow/api/traces` e `GET /flow/api/traces/{id}` a devolvem com a etapa `Endpoint` e as etapas de Service e Repository pela convenção | O grafo vazio (50.2), a etapa sem marcação (51) |
+| c | Development | `GET /openapi/v1.json` não tem nenhum caminho que comece com `/flow` | As rotas do painel no OpenAPI do app (Fase 52) |
+| d | Development | `GET /flow/api/config` com `Host: evil.example` dá **403**; com `Origin: http://evil.example` dá **403**; com o host do app dá 200 | O DNS rebinding (S6, #398) |
+| e | Development | A página `/flow/` e as respostas da API trazem `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` e uma `Content-Security-Policy` com `frame-ancestors 'none'`. A da página tem `script-src 'self'` **sem** `'unsafe-inline'`. A própria resposta `403` do cenário d também traz os três | O iframe e a CSP (S7, #401) |
+| f | Dev e Production | O cabeçalho `X-NetApiFlow-TraceId`: presente em Development; **ausente** em Production por padrão; presente em Production com `EmitTraceIdHeader=true` e `UseExceptionHandler`, também no 500; ausente no 500 de Production com a opção e **sem** tratador (o README diz isso) | O cabeçalho sem opção (50.6), no 500 (50.13, D-241) e o padrão só em Development (50.15) |
+| g | Production | Sem `AllowAnonymous` nem autorização, o painel responde **404** (`/flow/` e `/flow/api/traces`) e o MCP também (`POST /flow/mcp` com um corpo JSON-RPC `initialize`), como o README promete. **Um `Origin` alheio dá 403, não 404**, porque o guarda roda antes do portão de autorização | O painel aberto em Production, e a promessa do advisory nos dois ambientes |
+| h | Development | No MCP, em `POST /flow/mcp` com um corpo JSON-RPC `initialize`: `Origin` alheio dá **403**; `Host` alheio dá **403**; e a resposta traz os três cabeçalhos do cenário e | O `Origin` do MCP (S6 e S7, #398 e #401), que o advisory 3 promete |
+
+**O que a auditoria conferiu no código do `develop`**, para os valores dos cenários d, e, g e h não serem chute: o
+`SecurityHeaders.Apply` roda antes da recusa, então a resposta `403` leva os três cabeçalhos; o `RequestOriginGuard` recusa o `Host`
+só em Development, e o `*` do `AllowedHosts` do modelo `webapi` não conta como declarado, então `evil.example` dá `403`; o `Origin`
+diferente dá `403` em todo ambiente; e Production sem `IAuthorizeData` responde `Results.NotFound`. O Quick start atual já tem o
+`TrackFlowByConvention` no bloco de registros, então o cenário b vale. **As requisições ao MCP têm de ser `POST` com corpo JSON-RPC
+de `initialize`:** o `McpAccessGate` é um endpoint filter do grupo do `MapMcp`, e com `GET` ou `DELETE` o roteamento responde 405
+antes do filtro (item 44 do roadmap), então o 404 do cenário g e o 403 do h nunca acontecem com esses métodos.
+
+Regra permanente: **todo achado da auditoria que dá para reproduzir de fora vira um cenário aqui**, de forma permanente (70.6).
+
+**Prova vermelha, no branch de prova, vista no CI.** Obrigatórias: (1) o `using NetApiFlow.Marking;` no meio do Quick start dá
+vermelho no cenário a; (2) tirar o portão de `Host` dá vermelho no cenário d; (3) tirar o guarda de `Origin` do MCP dá vermelho no
+cenário h. Além delas, a Executora mostra o vermelho de um cenário de cabeçalho (e ou f).
+
+**Fora do job:** o OpenTelemetry e os storages num app novo. O job cobre o que o Quick start instala (`NetApiFlow` e
+`NetApiFlow.Dashboard`) e o MCP. Os outros pacotes num app novo ficam para a `0.7.0`, salvo se a auditoria decidir outra coisa.
+
+## Tarefa 70.2: o snapshot dos `.nuspec`
+
+No mesmo job, depois do `dotnet pack`. Um script em `scripts/` abre cada `.nupkg` do feed (um zip), lê o `.nuspec` e escreve uma
+forma normalizada: o id, e, por grupo de `targetFramework`, cada dependência com a faixa de versão (`[8.0.10, )` e parecidas),
+mais as `frameworkReferences`. A versão do próprio pacote sai, e a versão exata do núcleo nos satélites (D-231) vira `{version}`,
+para só a mudança real aparecer. Compara com um arquivo aprovado por pacote, em `tests/nuspec-snapshot/<PackageId>.txt`, nos **9
+pacotes** (`NetApiFlow`, `.Dashboard`, `.EntityFrameworkCore`, `.MediatR`, `.Mcp`, `.OpenTelemetry`, `.Storage.PostgreSql`,
+`.Storage.SqlServer` e `.Testing`). Se difere, o job falha mostrando o diff e diz como atualizar (`--update`). Quem sobe um piso
+passa a ver o diff do arquivo na própria PR.
+
+**Prova vermelha:** subir o piso do EF Core em `Directory.Packages.props` (o erro da `0.5.1`, que fez o pacote exigir o EF Core
+`9.0.22`) dá vermelho.
+
+## Tarefa 70.7: a comparação com o pacote publicado anterior (PR 2, D-257)
+
+Foi este método que a auditoria fez à mão, o mesmo roteiro contra a `0.5.3` do nuget.org e contra o build da PR, e que pegou as
+duas regressões da #420 que o vermelho e o verde da própria PR, o AOT e a revisão por diff não pegaram. É a rede que o dono pediu
+para regressão de **comportamento**. Reaproveita o roteiro HTTP, o feed local e o `real-package.yml` da PR 1: roda como um segundo
+job do mesmo workflow, em paralelo, para não somar ao tempo do primeiro.
+
+**Os requisitos, da auditoria:**
+
+1. **Dois apps, o mesmo roteiro.** Um compilado contra o build da PR (o feed local do job) e outro contra o último publicado, do
+   nuget.org (hoje a `0.5.3`). O que o pacote antigo não tem (`TrackFlowByConvention`, `WithoutNetApiFlowTracking`) sai por
+   compilação condicional, com um símbolo definido por uma propriedade do app, e a comparação vale **só para os cenários comuns
+   aos dois**.
+2. **O que se compara por cenário:** o status HTTP, a presença do cabeçalho `X-NetApiFlow-TraceId` e o conjunto de traces gravadas
+   (método, rota e status), **ao vivo** (durante a requisição, em `/flow/api/traces/live`) e **depois** (em `/flow/api/traces`).
+3. **A lista de diferenças esperadas**, versionada em `tests/real-package/expected-differences.json`. Cada linha traz o cenário, a
+   diferença, a razão e a entrada do CHANGELOG que a anuncia. **Diferença fora da lista falha, e linha da lista que não aparece
+   mais também falha**, para a lista não apodrecer.
+4. **A vermelha obrigatória:** reintroduzir a regressão 1 da #420 (a reexecução abrindo a trace de um 404 que o `ExcludePaths`
+   excluía) dá vermelho. Além dela, apagar uma linha da lista dá vermelho, e deixar uma linha que não aparece mais também.
+5. **O publicado anterior vem do nuget.org**, com a versão fixada num arquivo (`tests/real-package/previous-published-version.txt`)
+   que a skill `/release` atualiza. A Planejadora escreve o passo na skill quando esta tarefa entrar, como na 70.4.
+
+**Acréscimos de desenho da Planejadora, para a auditoria contestar:**
+
+- **O app da comparação é um `Program.cs` fixo**, separado do app montado do README: o Quick start usa `TrackFlowByConvention`, que a
+  `0.5.3` não tem, então não compila contra o pacote antigo.
+- **A entrada do CHANGELOG citada em cada linha tem de existir no `[Unreleased]`.** O script confere o texto. Assim ninguém lista
+  uma diferença que não anunciou.
+- **O "ao vivo" espera um sinal do app, não um tempo.** Um endpoint que segura a requisição até o roteiro liberar, como os testes da
+  63 fazem com `TaskCompletionSource`. Nada de `Delay` para esperar a visão ao vivo.
+- **No `/release`, a lista é esvaziada no mesmo passo que troca a versão publicada anterior,** porque depois do release as diferenças
+  passam a ser a base, e a regra "linha que não aparece mais falha" a derrubaria.
+
+**Os cenários.** A Planejadora lista os que o "como hoje" exige, e a Executora acrescenta os que achar:
+
+- Uma rota excluída por `ExcludePaths` que dá 404 com `UseStatusCodePagesWithReExecute`, e o mesmo com `UseExceptionHandler` (a R1 da #420).
+- Uma requisição lenta num `app.Map` terminal, ao vivo e depois, com um span de `HttpClient` dentro dela (a R2 da #420). Na `0.6.0`
+  essa diferença é **esperada** (D-256), com a entrada do CHANGELOG, e é o primeiro exemplo da lista.
+- Um arquivo estático e um 404 sem rota.
+- Um endpoint de controller e um de Minimal API, com o template de rota gravado.
+- `ExcludePaths` e `IncludePaths` sem `PathBase`, e com `UsePathBase`: sob `PathBase` a diferença é a correção da Fase 53, esperada.
+- O cabeçalho de trace por ambiente: o padrão em Production mudou na `0.6.0` (50.15), então a diferença é esperada.
+
+**Ponto de parada:** se a comparação precisar de mais de uma diferença esperada **sem** entrada de CHANGELOG para fechar, para e
+relata: é regressão, não diferença. O tempo do job entra na régua dos 15 minutos da fase.
+
+## Tarefa 70.3: a demo construída no CI
+
+Um job (ou passos no `ci.yml`, à escolha da Executora), em todo PR que não seja só documentação. Se a Executora medir que o custo
+pede um filtro de caminho, o filtro inclui `ClientApp/`, `scripts/generate-demo-fixtures.mjs`, o `demo-fixtures/` **e**
+`src/NetApiFlow.Dashboard/Endpoints/`, porque a #416 nasceu de uma mudança de parâmetro na API.
+
+1. `npm ci` e `npm run build:demo`.
+2. Servir `dist/demo/browser` com um servidor estático de Node **com `Cache-Control: no-store`** (o `python -m http.server` não manda
+   o cabeçalho, e o navegador pode mostrar o build antigo, `.claude/rules/design-quality.md`).
+3. Abrir, num **navegador de verdade e sem janela**, a trace de cada entrada `api/traces/<id>` do manifest, e as telas
+   `/history`, `/components` e `/runner`. Falha com qualquer erro de console, `pageerror`, pedido sem resposta ou resposta com status
+   de erro. **O número de traces visitadas tem de ser igual ao do manifest**, e o job o imprime (`0 erros em N de N`), para um laço
+   que visite menos não passar verde.
+4. Biblioteca de navegador: `playwright-core` ou `puppeteer-core`, ambas Apache 2.0, usando o Chrome que o `ubuntu-latest` já traz,
+   sem baixar navegador. A Executora mede qual cabe, aplica `.claude/rules/dependencies.md` e registra o motivo no resumo. Só em
+   `devDependencies`, versão exata, nunca no `dist/`.
+5. **A semântica, não só o carregamento.** Estender o `demo-fixture-coverage.spec.ts` (ou um teste novo) para, para cada chave de
+   blueprint do manifest, conferir que o arquivo apontado é a última trace `Success` do mesmo método e da mesma rota normalizada
+   que começou **estritamente antes**, e que cada chave em `noContent` não tem nenhuma. É a mesma regra do
+   `scripts/generate-demo-fixtures.mjs` e da API, e é o que o D-251 pede.
+
+**Prova vermelha:** voltar o manifest ao estado antes da #416 (blueprint sem a chave com `before`) dá vermelho com o 404 e o erro de
+console; apagar um arquivo de fixture que o manifest cita dá vermelho.
+
+## Tarefa 70.4: a linha de base da API pública
+
+Entra **depois da 53** (para a extensão pública `WithoutNetApiFlowTracking` já estar na linha de base) e **antes da 55, da 64 a 66
+e da 67**, para essas mostrarem o diff.
+
+- **Escolha, por medição.** Primeiro, `Microsoft.CodeAnalysis.PublicApiAnalyzers`: dependência só de build, `PrivateAssets=all`,
+  versão central em `Directory.Packages.props`, fora do `.nuspec`, então sem piso (D-181). A Executora mede a **menor** versão que
+  restaura, compila **sem** `CS8032` e sem aviso com o SDK do `global.json` e com `net8.0;net10.0`. Se a diferença entre os dois
+  TFMs der mais atrito do que um arquivo por TFM resolve, ou se nenhuma versão carregar, o plano B é um **teste de snapshot da
+  superfície pública** por reflexão, sem dependência, com o arquivo aprovado por pacote em `tests/public-api/`. Qual dos dois, e
+  por quê, vai no resumo.
+- **Os arquivos.** `PublicAPI.Shipped.txt` é a superfície da última versão publicada (`v0.5.3`), gerada do tag. `PublicAPI.Unshipped.txt`
+  é o que a `0.6.0` acrescentou até agora. As regras de adição e de remoção (`RS0016` e `RS0017` e as vizinhas) valem como **erro**
+  (o repositório já usa `TreatWarningsAsErrors`).
+- **No release.** A skill `/release` ganha um passo: mover o `Unshipped` para o `Shipped`. A Planejadora escreve o passo quando esta
+  tarefa entrar.
+
+**Prova vermelha:** acrescentar um membro público sem atualizar o arquivo dá vermelho; renomear um tipo público (o que a Fase 67
+fará) dá vermelho.
+
+## Tarefa 70.5: o registro de guardas
+
+Uma tabela em `tests/regression-guards/guards.json`, **fora de `docs/plano/`**, porque toda PR que corrige um defeito a edita, e a
+Executora não escreve em `docs/plano/`. Em inglês. Cada linha: `id`, `defect` (uma linha), `fixedIn` (PR ou versão), `guard`
+(`kind` = `dotnet`, `vitest` ou `ci-scenario`; e o projeto ou arquivo e o nome do teste ou o id do cenário) e `job` (o job que o roda).
+
+Um passo do CI, num script em `scripts/`, **falha** se:
+
+- um teste `dotnet` listado não estiver no resultado da execução, ou não estiver `Passed`. **Uma execução só, não uma por linha**
+  (ajuste da auditoria: com dezenas de linhas, um `dotnet test` por linha deixaria o job lento). O passo lê o `.trx` que o
+  `build-test` já gera (`--logger trx`, reaproveitado como artefato) ou roda a suíte uma vez com `--logger trx`, e confere cada nome
+  listado: teste apagado ou renomeado fica **ausente**, e `Skip` fica `NotExecuted`, e os dois dão falha;
+- um teste `vitest` listado sumir ou estiver pulado, conferido da mesma forma no resultado da execução do `test:ci` com o reporter
+  JSON;
+- um cenário `ci-scenario` listado não existir na lista de cenários do job do pacote real ou da demo.
+
+**As linhas de partida** são os defeitos desta rodada: S1 a S8 (ver D-210, D-216, D-218, D-221 e as Fases 50, 54 e 56), B1 a B3
+(Fase 63), F1 (Fase 57), o Quick start da #409, a demo da #416, o piso do EF da `0.5.1` e as opções da Fase 47 (D-176). A Executora
+mapeia cada defeito à guarda que existe e **mostra o mapa**. **Defeito sem guarda não entra na tabela e não se inventa teste na
+pressa:** vai para uma lista de lacunas no relatório, e a auditoria decide quais fecham na `0.6.0`.
+
+**Prova vermelha:** apagar (e, em outro branch, marcar com `Skip`) um teste registrado dá vermelho no passo.
+
+## Tarefa 70.6: a regra dos consumidores do contrato (Planejadora, já escrita)
+
+`.claude/rules/contratos-e-consumidores.md`, que generaliza o D-251. A Executora acrescenta, na PR 1 da fase, **uma linha** ao
+`.github/pull_request_template.md` apontando para essa regra.
+
+## Fora de escopo
+
+- O OpenTelemetry e os storages num app novo (ver a 70.1). O orçamento de performance no CI (item 21 do roadmap). O runtime
+  .NET 11 (Fase 69). O Windows no job do pacote real.
+- Reescrever o que já tem teste. A fase **acrescenta** as redes que faltam e **registra** as que existem.
+
+## Critério que vale para a fase inteira
+
+- **Cada guarda vista falhando contra o defeito antigo, reintroduzido de propósito num branch de prova, e verde no `develop`.** O
+  relatório cola, por guarda, o link da execução vermelha no CI.
+- As vermelhas obrigatórias: o `using` no meio do Quick start; o portão de `Host` tirado; o guarda de `Origin` do MCP tirado; o piso
+  do EF Core subido; o manifest sem a chave `before`; um membro público sem o arquivo; um teste registrado apagado; a regressão 1 da #420 reintroduzida, na comparação com o pacote publicado.
+- O job do pacote real verde em 3 execuções seguidas no CI, e o roteiro HTTP 20 vezes seguidas contra um app de pé sem falhar.
+- Build, testes, formato e lint limpos nos dois TFMs. `AotCoreVerification` com zero aviso.
+- O tempo de cada job novo, medido, no relatório.
+
+## Versionamento e fluxo
+
+- `0.6.0`, logo depois da Fase 53. Branches `chore/ci-pacote-real`, `chore/ci-comparacao-publicada`, `chore/ci-demo-construida`, `chore/ci-api-publica` e
+  `chore/guardas-de-regressao`, a partir de `develop` atualizado. Commits pequenos, em inglês, uma linha, sem linha de coautor.
+- Tem workflow e código: abrir a PR e parar, o merge é da auditoria.
+
+## Relatório final
+
+Por PR: as provas vermelhas com o link da execução do CI, o tempo de cada job, e a lista do que não coube. Na 70.4, qual das duas
+formas foi escolhida e a medição que decidiu. Na 70.5, o mapa defeito para guarda e a lista de lacunas.

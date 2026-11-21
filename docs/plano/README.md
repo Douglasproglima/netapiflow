@@ -89,7 +89,8 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 66 | Registro idempotente e o exportador OTLP | **Planejada, `0.6.0`, depois da Fase 55** (2026-11-20) | D-236, B6 e B7. Chamar `Add*` duas vezes dá resultado errado, e o `AddNetApiFlowOtlpExport` muda o que o app inteiro exporta. Plano em `fase-66-registro-idempotente-e-otlp.md`. |
 | 67 | A API pública com os nomes certos, sem quebrar ninguém | **Planejada, `0.6.0`, depois da Fase 66 e antes da 58 e da 59** (2026-11-20) | D-236 e D-237, B8 e B9. A classe passa a se chamar `Flow` (a medir), `Map*` no lugar de `Use*`, `WithNetApiFlowTracking` genérica, `Tag` com mais tipos, e os pequenos. O nome antigo fica `[Obsolete]` e encaminha. Plano em `fase-67-api-publica-sem-quebra.md`. |
 | 68 | O essencial de acessibilidade por teclado | **Planejada, `0.6.0`, depois da Fase 57** (2026-11-20) | D-236, B13. Foco visível dos botões, a gaveta "Testar um endpoint" como diálogo, e o foco que cai no `body`. Plano em `fase-68-acessibilidade.md`. |
-| 69 | A suíte no runtime .NET 11, e o README sobre o `net8.0` e o `net11.0` | **Planejada, `0.6.0`, depois da Tarefa 53.2** (2026-11-21) | D-250, item 16 do roadmap e ADR-0025. A suíte passa a rodar também no runtime .NET 11 contra a build de `net10.0` (só no `ubuntu-latest`), com um guarda que prova no log que rodou no 11, e o README e o CHANGELOG anunciam a saída do `net8.0` em 10/05/2027. Plano em `fase-69-runtime-net11.md`. |
+| 69 | A suíte no runtime .NET 11, e o README sobre o `net8.0` e o `net11.0` | **Planejada, `0.6.0`, depois da Fase 70** (2026-11-21) | D-250, item 16 do roadmap e ADR-0025. A suíte passa a rodar também no runtime .NET 11 contra a build de `net10.0` (só no `ubuntu-latest`), com um guarda que prova no log que rodou no 11, e o README e o CHANGELOG anunciam a saída do `net8.0` em 10/05/2027. Plano em `fase-69-runtime-net11.md`. |
+| 70 | A rede contra regressão | **Planejada, `0.6.0`, logo depois da Fase 53 e antes de todas as outras que faltam; decisão do dono** (2026-11-21) | D-253, R-35. Quatro regressões desta rodada passaram por CI verde: o Quick start da #409, a demo da #416, o piso do EF da `0.5.1` e as opções da Fase 47. A fase põe isso em passos de CI que ficam vermelhos: um job que instala o pacote num app novo e cola o Quick start do README na ordem, o snapshot dos `.nuspec`, a demo construída aberta num navegador, a linha de base da API pública, um registro de guardas que falha se um teste listado sumir e o mesmo roteiro rodado contra o pacote publicado anterior, com uma lista de diferenças esperadas. A regra dos consumidores do contrato já está escrita. Plano em `fase-70-rede-contra-regressao.md`. |
 
 `0.3.0` publicada (D-120, MINOR por causa do `OpenApiDocumentPath` da Fase 29,
 `FlowStatus.Cancelled`/`Timeout` da Fase 27 e `IDeployAnnotationStore` da Fase 28). Fases 8 a 30
@@ -169,7 +170,7 @@ nenhum pacote.
 
 ## Ordem de execução da `0.6.0` (D-236)
 
-O escopo da `0.6.0` está **congelado** desde 20/11/2026 (D-232 e D-236). Achado novo vai para a `0.7.0`, salvo segurança ou regressão de uma PR da própria `0.6.0`. A ordem abaixo é a da Executora. A numeração das fases não é a ordem.
+**A `0.6.0` tem fim.** O escopo está **congelado** desde 20/11/2026 (D-232 e D-236): só entra segurança, regressão de uma PR da própria `0.6.0` e o que o dono decidir de forma explícita (a Fase 70 entrou assim, D-253). O que cresce é a `0.7.0`, e isso não atrasa a `0.6.0`. Achado novo vai para a `0.7.0`, salvo segurança ou regressão de uma PR da própria `0.6.0`. A ordem abaixo é a da Executora. A numeração das fases não é a ordem.
 
 | Passo | Fase | O que |
 |---|---|---|
@@ -179,7 +180,8 @@ O escopo da `0.6.0` está **congelado** desde 20/11/2026 (D-232 e D-236). Achado
 | 4 | 50.13, 50.15, 50.14 | O cabeçalho no 500 e o padrão do `EmitTraceIdHeader`, a persistência sem schema (a 50.12, o AOT no CI, já está entregue, #363) |
 | 5 | 63 | O ciclo de vida dos steps e os testes estáveis |
 | 6 | 51, 53 | A etapa de endpoint sem marcação, depois o `PathBase` (53.0 e 53.1 primeiro) |
-| 6b | 69 | O teste no runtime .NET 11 e o anúncio da saída do `net8.0`. Curta e independente: entra depois que a 53.2 abrir a PR |
+| 6a | 70 | **A rede contra regressão** (decisão do dono, D-253). Logo depois da 53 e antes de todas as outras que faltam |
+| 6b | 69 | O teste no runtime .NET 11 e o anúncio da saída do `net8.0`. Curta e independente: entra depois da 70, porque as duas mexem no `ci.yml` e no `release.yml` |
 | 7 | 57, 55 | A visão ao vivo (depois da 53.2) e a identidade da trace (depois da 53.1) |
 | 8 | 64, 65, 66 | Transação nos storages, nunca derrubar e nunca atrasar, e o registro idempotente. Todas depois da 55 |
 | 9 | 67 | A API pública com os nomes certos, antes do README |
