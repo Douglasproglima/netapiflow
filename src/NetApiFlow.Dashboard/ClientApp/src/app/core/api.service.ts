@@ -51,7 +51,7 @@ export class ApiService {
 
   getBlueprint(method: string, route: string, before: string): Observable<FlowTraceDetail | null> {
     return this.http.get<FlowTraceDetail | null>(`${this.basePath}/blueprint`, {
-      params: new HttpParams().set('method', method).set('route', route).set('before', before),
+      params: new HttpParams().set('method', method).set('route', route),
     });
   }
 
