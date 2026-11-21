@@ -143,6 +143,7 @@ quem chega ao produto pela primeira vez:
 
 - um app novo de `dotnet new webapi`, com os pacotes de `local-nuget-feed` (nunca `ProjectReference`);
 - o README seguido ao pé da letra, linha por linha, sem completar o que faltar com o que a gente sabe;
+- cada bloco de código do README colado num app novo, na ordem e no lugar que o texto manda, e compilado. Um `using` num bloco que não abre o arquivo dá `CS1529` quando o leitor cola, e uma sonda com o `using` no topo não prova isso (D-247);
 - o documento OpenAPI do app conferido: nenhuma rota do NetApiFlow nele;
 - cada tela do dashboard e da demo usada num navegador de verdade (Playwright), nos dois idiomas e nos
   dois temas, não só status HTTP. Um grafo em branco responde 200.

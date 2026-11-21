@@ -59,6 +59,16 @@ app.MapGet("/orders/{id:int}", async (int id, bool cached) => {
 
 **Pronto quando:** os quatro pontos respondidos com saída real e captura de tela.
 
+## Resultado da 57.0, medido pela Executora (21/11/2026)
+
+Host real (Kestrel, `net10.0`) com o endpoint de exemplo da auditoria e o painel de verdade no Edge por CDP. Nenhum ponto de parada disparou.
+
+- **F1a reproduzido.** Com a requisição lenta em execução, `GET /flow/api/traces/live`, o detalhe da trace e o evento SSE `TraceStarted` trazem `routeTemplate` `(unmatched)`. O painel ao vivo mostra os nós em execução e concluído, nenhum nó "Aguardando" e "Não executadas 0".
+- **F1b reproduzido.** `GET /blueprint` sem âncora devolve a trace B, que começou depois da A, e `/flow/?trace=A` mostra `OrderRepository.Find` como "Não executado" por causa de uma execução posterior. Antes de a B existir, o blueprint da A era a própria A, o que a definição "estritamente antes" também corrige.
+- **Custo da consulta com âncora**, com 110 050 traces e os índices que os `schema.sql` dos pacotes distribuem: **não precisa de índice novo, nos dois bancos**. No PostgreSQL 16, a rota principal fica entre 0,09 e 0,44 ms com a âncora (0,15 ms hoje), e a rota rara cai de 2,4 a 6,2 ms para 1,2 a 2,4 ms. No SQL Server 2022, a rota principal usa 7 leituras lógicas nos dois casos, e a rota rara cai de 6766 para 3500 leituras. A âncora não piora nenhum caso e melhora o pior.
+- **Quem chama `GetLastSuccessfulAsync`:** em produção só o `GetBlueprint` do painel. Os três `ITraceStore` de mentira dos testes (`FlowEventPublisherTests`, `FlowMetricsTests`, `PersistenceWriterTests`) implementam o membro, o que confirma que o membro novo precisa ser de interface com implementação padrão.
+- **Dívida anterior, fora desta fase:** a condição de método (`ILIKE` no PostgreSQL, `UPPER` no SQL Server) impede o índice `(method, route_key)`, e a rota rara varre o índice por data. Roadmap, item 48.
+
 ## Tarefa 57.1: a âncora no store
 
 `ITraceStore` ganha
@@ -82,10 +92,18 @@ DESC` com uma linha. Só trace com `Success` entra, e a rota é comparada normal
 comportamento de hoje (a mais recente). `before` que não é data válida dá `400` (`ProblemDetails`). A `contratos.md` é
 atualizada pela Planejadora quando a 57.0 fecha.
 
+## Resultado da 57.1 e da 57.2 (#412, 21/11/2026)
+
+Entregues em `develop` (`67029a5`). A Planejadora reproduziu os vermelhos num worktree limpo, nos dois TFMs e com PostgreSQL 16 e SQL Server 2022 reais: a implementação padrão falha 3 de 6, o REST 7 dos 41 testes, e cada store 2 testes.
+
+- **`DateTime2` explícito no SQL Server é necessário.** Com `AddWithValue`, ao menos um teste falhou em 4 de 4 rodadas. A coluna `started_at` é `datetimeoffset`.
+- **O truncamento da âncora a microssegundo no PostgreSQL saiu.** Sem ele o teste dos ticks extras passou 8 de 8, e uma sonda com 1, 3, 5, 7 e 9 ticks extras passou 5 de 5: o Npgsql converte o parâmetro como converte o valor gravado.
+- **O `before` é UTC.** O store do PostgreSQL lança `ArgumentException` para `Kind` `Local` ou `Unspecified`, e os outros dois aceitam. O XML doc diz isso, e o endpoint sempre manda `UtcDateTime`.
+
 ## Tarefa 57.3: o frontend
 
 - `getBlueprint(method, route, before)`, e o painel manda o `startedAt` da trace que está vendo.
-- **Trace com a rota `(unmatched)` não pede blueprint.** O literal vira constante com nome.
+- **Trace com a rota `(unmatched)` não pede blueprint.** A constante `UNMATCHED_ROUTE_TEMPLATE` já existe em `core/models.ts`, desde a Tarefa 51.8 (#411). A 57.3 a reaproveita e não cria outra.
 - A chave do efeito continua sendo o id da trace.
 
 ## Tarefa 57.4: "Aguardando" ao vivo (depende da 53.2)
