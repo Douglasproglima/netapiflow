@@ -7,10 +7,6 @@ using NetApiFlow.Routing;
 
 namespace NetApiFlow.Storage.SqlServer;
 
-/// <summary>
-/// <see cref="ITraceStore"/> backed by SQL Server via raw ADO.NET (D-05). <see cref="SaveAsync"/>
-/// uses <see cref="SqlBulkCopy"/> for the batch write of a trace and its spans.
-/// </summary>
 internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 {
     private readonly string _connectionString;
@@ -19,14 +15,22 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
     private readonly bool _autoCreateSchema;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly IntervalLogLimiter _verificationFailureLog = new(PersistenceRetryInterval.Default.Value);
+    private readonly Func<SqlConnection, CancellationToken, Task<bool>> _verifySchema;
     private bool _schemaReady;
 
-    public SqlServerTraceStore(string connectionString, SqlServerStorageOptions options, ILogger logger)
+    public SqlServerTraceStore(
+        string connectionString,
+        SqlServerStorageOptions options,
+        ILogger logger,
+        Func<SqlConnection, CancellationToken, Task<bool>>? verifySchema = null)
     {
         _connectionString = connectionString;
         _autoCreateSchema = options.AutoCreateSchema;
         _logger = logger;
         (_tracesTable, _spansTable) = SqlServerTableNames.Resolve(options.TablePrefix);
+        _verifySchema = verifySchema ?? ((connection, token) =>
+            SqlServerSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, _verificationFailureLog, token));
     }
 
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
@@ -437,9 +441,9 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
                 await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
                 await SqlServerSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
             }
-            else
+            else if (!await _verifySchema(connection, cancellationToken))
             {
-                await SqlServerSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, cancellationToken);
+                return;
             }
 
             _schemaReady = true;
