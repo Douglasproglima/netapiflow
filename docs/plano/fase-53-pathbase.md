@@ -192,13 +192,91 @@ diagnóstico, não API formal), que funcionou nos dois TFMs. O ADR-0027 é escri
   `ExcludePaths` continua valendo só contra o caminho cheio.
 - O marcador de identidade é um tipo `internal`, e o MCP precisa de `InternalsVisibleTo` (o painel já tem).
 
-## Depois da 53.0
+## Estado depois da 53.0
 
-A Planejadora escreve o ADR-0027 e as tarefas de correção (53.1 em diante) **depois da Fase 51**, porque o
-mecanismo A vive no mesmo listener do `EndpointMatched` que a Fase 51 cria, e a Fase 57 (a rota da trace
-ao vivo) depende do mesmo ponto. Os testes de host real da matriz passam a provar a correção e são vistos
-falhando antes. O README e o XML doc do `OpenApiDocumentPath`,
-`ExcludePaths` e `IncludePaths` passam a dizer o que vale sob `PathBase`, nos dois idiomas.
+A 53.0 está entregue e o mecanismo é o **A** (D-211). O **ADR-0027** está escrito, **Proposto** (D-229), e a
+auditoria o aceita ou devolve. **Nenhum código da correção começa antes de o ADR estar aceito e de a Fase 51
+estar em `develop`**, porque o mecanismo A vive no mesmo listener do `EndpointMatched` que a Fase 51 cria.
+
+## Coerência com as Fases 51, 55 e 57 (ADR-0027, ADR-0028)
+
+A trace passa a abrir no `EndpointMatched`, o evento que a Fase 51 já usa para a etapa `Endpoint`.
+
+- **A Fase 51 vem antes.** O listener é um só: a 51 o cria para abrir a etapa, e a 53 passa a abrir a trace nele.
+- **A Fase 55 gera o id no início** (ADR-0028), e a trace abre depois. A forma de a etapa achar a trace (a cadeia
+  de pais ou o `AsyncLocal`) só se fecha depois da Tarefa 53.1, que mede o destino das etapas anteriores à abertura.
+- **A Fase 57 vem junto.** A rota já é conhecida na abertura, e o estado "Aguardando" deixa de ser `(unmatched)`.
+
+## Tarefa 53.1: medir o que o ADR deixou aberto, antes de qualquer código
+
+Host real, sem corrigir. O relatório vai à Planejadora e à auditoria. **Se alguma resposta for "não dá"**, a Executora
+para e relata, e a decisão é da Planejadora e da auditoria.
+
+1. **`CapturePrePipelineSteps`.** Com a opção ligada, uma etapa criada por um middleware que roda **antes** do
+   `EndpointMatched` (um middleware do usuário com `ActivitySource` próprio, antes do `UseRouting`) aparece na trace
+   hoje? Com a abertura adiada, para onde ela vai? Medir as duas formas: guardá-las no recorder pelo id e descarregar
+   na abertura, ou descartá-las. A escolhida mantém o que funciona hoje e **não publica nada** para a requisição
+   excluída. Se nenhuma mantém, para e relata.
+2. **O pai da `Activity` de entrada.** Com a abertura adiada, a atividade do servidor continua sendo o pai do que o
+   NetApiFlow cria? A hierarquia de spans (`.claude/rules/tracing.md`) muda?
+3. **Hora de início e duração.** A trace aberta no `EndpointMatched` carrega a hora de início do middleware, e a
+   duração inclui os middlewares anteriores, como hoje. Medir a diferença contra o `develop`.
+4. **O requisito 7.** Uma política que lança é logada e engolida, a requisição responde normalmente e a trace não
+   abre. Prova por teste.
+5. **O custo**, com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`, `develop` contra o mecanismo A, **sem**
+   `PathBase` (requisito 4: o caminho comum não paga a mais) e com. A alocação por requisição entra no número.
+6. **O limite do requisito 5.** Sem endpoint casado sob `PathBase`, o que acontece com um arquivo estático e com um
+   404, para a frase do README sair exata.
+7. **A API pública.** O tipo do metadado é `internal`, o pacote do MCP ganha `InternalsVisibleTo`, e a lista de
+   tipos públicos de nenhum pacote muda. A Executora diz como conferiu.
+
+**Pronto quando:** os sete pontos respondidos com número ou saída real, e a forma escolhida para as etapas anteriores
+à abertura, com o motivo.
+
+## Tarefa 53.2: o mecanismo A
+
+- **Metadado interno de identidade** nos endpoints do painel (REST, SSE, arquivos estáticos) e do MCP. Tipo
+  `internal`. Nenhuma API pública nova (requisito 6).
+- **Middleware no início:** só guarda a hora, gera o id (ADR-0028) e registra o `Response.OnStarting` do cabeçalho.
+  Não publica nada.
+- **Listener do `EndpointMatched`**, o da Fase 51: endpoint com o metadado do NetApiFlow não é rastreado. Nos outros,
+  a política (`ExcludePaths`, `IncludePaths`, `OpenApiDocumentPath`) é avaliada contra o caminho **relativo** ao
+  `PathBase`, e, se aceita, a trace abre com a hora real e a rota já conhecida.
+- **Sem endpoint casado:** a decisão acontece no fim, pelo caminho cheio, como hoje.
+- **O cabeçalho** sai só para a trace que será gravada, pelo mecanismo da Tarefa 50.13. Os dois ficam num lugar
+  só, e não divergem.
+- **As etapas anteriores à abertura** seguem a forma escolhida na 53.1.
+- **Falha da decisão** é logada e engolida, e o padrão é **não rastrear**.
+- **Sem `PathBase`**, nenhum teste do `develop` muda de resultado e nenhum precisa de edição.
+
+## Tarefa 53.3: os testes
+
+A matriz da 53.0 vira teste de host real, **visto falhando antes** no `develop`, nos dois TFMs:
+
+- `ExcludePaths`, `IncludePaths`, `config` e `traces` do painel, o `stream`, o MCP (`initialize` e `tools/call`) e o
+  `OpenApiDocumentPath`, com e sem `UsePathBase("/api")`, em Development e em Production.
+- **`IncludePaths("/orders")` sob `UsePathBase` mantém a rota do usuário no store.** É o achado que apagava dado.
+- Requisição excluída: sem `X-NetApiFlow-TraceId`, sem linha no store e **sem evento num cliente SSE**.
+- O stream do painel nunca aparece como `Running`.
+- Sem endpoint casado sob `PathBase`: o comportamento que o README documenta.
+- Política que lança (requisito 7) e etapa anterior à abertura (a forma da 53.1).
+- **Teste com o pacote real** (D-176, D-186): um app novo, pacote empacotado com `-p:Version=<próxima>-verify.<n>`
+  (D-153, D-174), `UsePathBase("/api")`, e os quatro casos da tabela de "O fato".
+
+## Tarefa 53.4: README, XML doc e CHANGELOG
+
+- `README.md` e `README.pt-BR.md`: o que `ExcludePaths`, `IncludePaths` e `OpenApiDocumentPath` valem sob
+  `PathBase` (o caminho que o usuário enxerga, quando há endpoint casado), e o limite do requisito 5 com o que o
+  usuário faz.
+- XML doc de `OpenApiDocumentPath`, `ExcludePaths` e `IncludePaths`, em inglês, com a mesma frase.
+- `CHANGELOG.md`, em inglês, `### Fixed`: as rotas do NetApiFlow rastreadas e o `ExcludePaths` ignorado sob
+  `UsePathBase`, e o `IncludePaths` que deixava a rota do usuário fora do store. Defeito antigo, sem hotfix (D-205).
+- `riscos.md`, R-33: a Planejadora passa a `Mitigado` na revisão, com o arquivo de teste citado.
+
+## Relatório da correção
+
+Para cada requisito de 1 a 7: o teste, a saída dele falhando antes e passando depois, e o número do custo da 53.1.
+O que mudou de comportamento. Se algum requisito ficou como limite dito, onde o README o diz.
 
 ## Veículo e ordem (D-205)
 

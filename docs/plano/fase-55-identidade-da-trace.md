@@ -6,7 +6,8 @@ perde uma trace, duas requisições ao mesmo tempo misturam as etapas numa trace
 sobrescreve uma trace guardada. O ADR-0028 decide o desenho: um id próprio, aleatório, e o W3C trace id como tag.
 
 O ADR-0028 está **aceito** (D-228). **Nenhum código desta fase começa antes de ele ser coerente com o ADR-0027**
-(`PathBase`), porque os dois decidem em que momento a trace abre. Vai no `0.6.0` (D-210, D-212). É defeito
+(`PathBase`), porque os dois decidem em que momento a trace abre. O ADR-0027 está escrito, Proposto (D-229): o id
+nasce no início do middleware e a trace abre no `EndpointMatched`. Vai no `0.6.0` (D-210, D-212). É defeito
 antigo e não regressão, então não é hotfix (D-205).
 
 ## Os achados e o que a Planejadora conferiu
