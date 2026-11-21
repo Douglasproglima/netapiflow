@@ -75,6 +75,7 @@ public class HttpClientInteropIntegrationTests
                     services.AddNetApiFlow(o =>
                     {
                         o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
                         o.ExternalSources = ExternalActivitySource.HttpClient;
                     });
                 });

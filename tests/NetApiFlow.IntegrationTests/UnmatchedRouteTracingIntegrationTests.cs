@@ -25,7 +25,11 @@ public class UnmatchedRouteTracingIntegrationTests
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
-                    services.AddNetApiFlow(o => o.IncludePaths("/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                 });
                 webBuilder.Configure(app =>
                 {

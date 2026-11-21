@@ -79,6 +79,7 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
                     services.AddNetApiFlow(options =>
                     {
                         options.IncludePaths("/api/**", "/mini/**");
+                        options.EmitTraceIdHeader = true;
                         options.ExternalSources = externalSources;
                     });
                     services.AddNetApiFlowEntityFrameworkCore();

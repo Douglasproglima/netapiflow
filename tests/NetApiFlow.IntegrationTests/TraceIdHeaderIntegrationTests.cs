@@ -18,9 +18,9 @@ public class TraceIdHeaderIntegrationTests
     private const string FailingRoute = "/api/fails";
 
     [Fact]
-    public async Task Request_ByDefaultInProduction_CarriesTheTraceIdHeader()
+    public async Task Request_ByDefaultInDevelopment_CarriesTheTraceIdHeader()
     {
-        using var host = await StartHostAsync();
+        using var host = await StartHostAsync(environment: Environments.Development);
 
         var response = await host.GetTestServer().CreateClient().GetAsync(OkRoute);
 
@@ -29,9 +29,9 @@ public class TraceIdHeaderIntegrationTests
     }
 
     [Fact]
-    public async Task Request_WithEmitTraceIdHeaderOff_CarriesNoHeaderButTheTraceIsStillRecorded()
+    public async Task Request_ByDefaultInProduction_CarriesNoHeaderButTheTraceIsStillRecorded()
     {
-        using var host = await StartHostAsync(options => options.EmitTraceIdHeader = false);
+        using var host = await StartHostAsync(environment: Environments.Production);
 
         var response = await host.GetTestServer().CreateClient().GetAsync(OkRoute);
 
@@ -41,9 +41,45 @@ public class TraceIdHeaderIntegrationTests
     }
 
     [Fact]
-    public async Task Request_WithEmitTraceIdHeaderOffOnlyInConfiguration_CarriesNoHeader()
+    public async Task Request_InProductionWithTheOptionOn_CarriesTheTraceIdHeader()
+    {
+        using var host = await StartHostAsync(options => options.EmitTraceIdHeader = true, environment: Environments.Production);
+
+        var response = await host.GetTestServer().CreateClient().GetAsync(OkRoute);
+
+        response.Headers.TryGetValues(TraceIdHeader, out var values).ShouldBeTrue();
+        values!.Single().Length.ShouldBe(32);
+    }
+
+    [Fact]
+    public async Task Request_InProductionWithTheOptionOnOnlyInConfiguration_CarriesTheTraceIdHeader()
     {
         using var host = await StartHostAsync(
+            environment: Environments.Production,
+            configuration: new Dictionary<string, string?> { ["NetApiFlow:EmitTraceIdHeader"] = "true" });
+
+        var response = await host.GetTestServer().CreateClient().GetAsync(OkRoute);
+
+        response.Headers.Contains(TraceIdHeader).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Request_InDevelopmentWithTheOptionOff_CarriesNoHeaderButTheTraceIsStillRecorded()
+    {
+        using var host = await StartHostAsync(options => options.EmitTraceIdHeader = false, environment: Environments.Development);
+
+        var response = await host.GetTestServer().CreateClient().GetAsync(OkRoute);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Headers.Contains(TraceIdHeader).ShouldBeFalse();
+        (await WaitForRecordedRoutesAsync(host)).ShouldBe([OkRoute]);
+    }
+
+    [Fact]
+    public async Task Request_InDevelopmentWithTheOptionOffOnlyInConfiguration_CarriesNoHeader()
+    {
+        using var host = await StartHostAsync(
+            environment: Environments.Development,
             configuration: new Dictionary<string, string?> { ["NetApiFlow:EmitTraceIdHeader"] = "false" });
 
         var response = await host.GetTestServer().CreateClient().GetAsync(OkRoute);
@@ -53,9 +89,12 @@ public class TraceIdHeaderIntegrationTests
     }
 
     [Fact]
-    public async Task Request_HandledByAnExceptionHandlerThatClearsTheResponse_ByDefaultStillCarriesTheHeader()
+    public async Task Request_HandledByAnExceptionHandlerThatClearsTheResponse_WithTheOptionOnStillCarriesTheHeader()
     {
-        using var host = await StartHostAsync(useExceptionHandler: true);
+        using var host = await StartHostAsync(
+            options => options.EmitTraceIdHeader = true,
+            environment: Environments.Production,
+            useExceptionHandler: true);
 
         var response = await host.GetTestServer().CreateClient().GetAsync(FailingRoute);
 
@@ -64,9 +103,12 @@ public class TraceIdHeaderIntegrationTests
     }
 
     [Fact]
-    public async Task Request_HandledByAnExceptionHandlerThatClearsTheResponse_WithEmitTraceIdHeaderOffCarriesNoHeader()
+    public async Task Request_HandledByAnExceptionHandlerThatClearsTheResponse_InDevelopmentWithTheOptionOffCarriesNoHeader()
     {
-        using var host = await StartHostAsync(options => options.EmitTraceIdHeader = false, useExceptionHandler: true);
+        using var host = await StartHostAsync(
+            options => options.EmitTraceIdHeader = false,
+            environment: Environments.Development,
+            useExceptionHandler: true);
 
         var response = await host.GetTestServer().CreateClient().GetAsync(FailingRoute);
 
@@ -77,13 +119,14 @@ public class TraceIdHeaderIntegrationTests
     private static async Task<IHost> StartHostAsync(
         Action<NetApiFlowOptions>? configureOptions = null,
         Dictionary<string, string?>? configuration = null,
-        bool useExceptionHandler = false)
+        bool useExceptionHandler = false,
+        string environment = "Production")
     {
         return await Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseTestServer();
-                webBuilder.UseEnvironment(Environments.Production);
+                webBuilder.UseEnvironment(environment);
                 if (configuration is not null)
                 {
                     webBuilder.ConfigureAppConfiguration(builder => builder.AddInMemoryCollection(configuration));

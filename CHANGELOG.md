@@ -11,9 +11,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
   in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
-  want the trace id in its responses. The default is `true`, so nothing changes unless you set it.
-  Requests are still traced with it off, but `GetFlowTrace` from `NetApiFlow.Testing` reads that
-  header and throws, and its message now names the option.
+  want the trace id in its responses. It is on by default in Development and off elsewhere, see
+  Changed below. Requests are still traced with it off, but `GetFlowTrace` from `NetApiFlow.Testing`
+  reads that header and throws, and its message now names the option.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: the `AutoCreateSchema` option
   (default `true`, so nothing changes unless you set it). With `false` the storage runs no `CREATE`,
   `ALTER` or `UPDATE` on your database. On first use it only checks that the tables and the
@@ -26,6 +26,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **`NetApiFlow`: from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by
+  default. To keep it in Production, set `EmitTraceIdHeader = true`**, in code or in
+  `NetApiFlow:EmitTraceIdHeader`. In Production it is no longer sent and nothing warns you, so a
+  client, a log pipeline or a test that read it there stops finding it. The default is off there so a
+  response does not announce that the application runs NetApiFlow. `NetApiFlow.Testing` keeps working
+  under `WebApplicationFactory`, which runs in Development. If your tests run in another environment,
+  set the option in the test host. The dashboard's Runner reads this header too, so turn it on if you
+  use the Runner against a Production host.
 - `NetApiFlow`: the step that `.WithNetApiFlowTracking()` records for a Minimal API endpoint is named
   from the handler, no longer from the framework's display name. It used to read
   `HTTP: GET /hello./hello` in the dashboard. A handler that is a named method is shown as its type
@@ -48,6 +56,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   a schema check that failed on a transient error, such as a dropped connection, was marked as done
   for good and never ran again. It now runs again on the next call until it completes, and logs the
   failure at most once every 30 seconds.
+- `NetApiFlow`: a request that throws an exception nothing in your pipeline handled now keeps the
+  `X-NetApiFlow-TraceId` header in Development. The developer exception page rewrites the response
+  before NetApiFlow could write the header, so the 500 came back without it. The dashboard's Runner
+  then showed only "The request failed." and `GetFlowTrace` from `NetApiFlow.Testing` said NetApiFlow
+  did not track the request when it had. The header is now written at the moment the response starts.
+  One 500 still carries no header even with the option on: in Production with no exception handler,
+  the server builds the 500 itself and drops the headers set before, so add `UseExceptionHandler` if
+  you need it there. Measured on Kestrel, `net8.0` and `net10.0`. NetApiFlow does not change that
+  response.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
   schema. It was missing the `route_key` column and its index, so a database created by hand from the
   script was rejected by the code. It now also carries the four indexes and the deploy annotations
@@ -120,6 +137,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   dashboard build no longer inlines its critical CSS, so the page loads one stylesheet file instead,
   and `index.html` went from about 14 KB to under 1 KB. If your middleware sets a
   `Content-Security-Policy` on the dashboard or MCP routes, the one of the package replaces it.
+- `NetApiFlow.Dashboard`: `POST /flow/api/deploys` now reads and validates its body after the access
+  check. Before, a body that failed to bind (`{}`, broken JSON, or a content type that is not JSON)
+  was answered with 400 or 415 before the check ran, so a caller without access learned that the
+  route exists and what it expects, instead of the 404 or 403 every other route gives, and the
+  README said every dashboard route answers 404 by default. A caller without access now gets the
+  404 or the 403 whatever the body is. With access, a bad body is still a 400 and a wrong content
+  type a 415. The other routes only take optional query values, and a malformed one was already
+  answered by the check first.
 
 ## [0.5.3] - 2026-11-20
 

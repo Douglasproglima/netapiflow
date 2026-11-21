@@ -10,7 +10,6 @@ using NetApiFlow.Routing;
 
 namespace NetApiFlow.Middleware;
 
-/// <summary>Opens and closes a <see cref="FlowTrace"/> for each traced request.</summary>
 internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder recorder, IOptions<NetApiFlowOptions> options)
 {
     private const string TraceIdHeaderName = "X-NetApiFlow-TraceId";
@@ -45,7 +44,7 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         {
             if (flowOptions.EmitTraceIdHeader)
             {
-                context.Response.Headers[TraceIdHeaderName] = traceId;
+                context.Response.OnStarting(WriteTraceIdHeader, (context.Response, traceId));
             }
 
             var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
@@ -69,11 +68,6 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         {
             if (started)
             {
-                if (flowOptions.EmitTraceIdHeader)
-                {
-                    RestoreTraceIdHeaderClearedByExceptionHandler(context, traceId);
-                }
-
                 // An Authorization-filter step opened via DiagnosticListener can be left pending
                 // when its own filter throws: the matching "after" diagnostic event never fires.
                 // A downstream UseExceptionHandler middleware can also swallow the exception before
@@ -106,11 +100,10 @@ internal sealed class NetApiFlowMiddleware(RequestDelegate next, FlowRecorder re
         }
     }
 
-    private static void RestoreTraceIdHeaderClearedByExceptionHandler(HttpContext context, string traceId)
+    private static Task WriteTraceIdHeader(object state)
     {
-        if (!context.Response.HasStarted)
-        {
-            context.Response.Headers[TraceIdHeaderName] = traceId;
-        }
+        var (response, traceId) = ((HttpResponse, string))state;
+        response.Headers[TraceIdHeaderName] = traceId;
+        return Task.CompletedTask;
     }
 }
