@@ -142,6 +142,18 @@ passa a ver o diff do arquivo na própria PR.
 **Prova vermelha:** subir o piso do EF Core em `Directory.Packages.props` (o erro da `0.5.1`, que fez o pacote exigir o EF Core
 `9.0.22`) dá vermelho.
 
+## Resultado da PR 1, tarefas 70.1 e 70.2 (#422, 21/11/2026)
+
+Entregue em `develop` (`efaa818`).
+
+- **O job** vive em `.github/workflows/real-package.yml` (`workflow_call`), chamado pelo `ci.yml` e pelo `release.yml` (D-254). O check se chama `real-package / real-package`. O `ci.yml` sempre chama com `run`, e o job do workflow chamado tem `if: inputs.run`, para o check existir também num PR só de docs (a revisão da Planejadora achou o risco do `if` no job chamador). No `release.yml`, `id-token` e `packages: write` saíram do nível do workflow e ficam só no job de publicação, que depende do job do pacote real.
+- **O README** é a fonte: o Quick start e o bloco do MCP saem dele por marcadores na linha de abertura da cerca (`quickstart:packages`, `quickstart:program`, `quickstart:registrations`, `mcp:package`, `mcp:usings`, `mcp:registration`), nos dois idiomas, e o script falha se o código divergir do inglês. O defeito do MCP sem `using` foi consertado na mesma PR (D-254).
+- **O roteiro** tem os cenários a a h do plano, com controle positivo. O snapshot dos `.nuspec` cobre os 9 pacotes.
+- **Provas vermelhas**, lidas nos logs do CI pela Planejadora e pela auditoria: o `using` no meio do Quick start (`CS1529`), o portão de `Host` fora, o guarda de `Origin` do MCP fora, o `X-Frame-Options` fora e o piso do EF Core subido (snapshot).
+- **Medido pela Executora:** o job leva de 1m08s a 1m44s e foi verde 3 vezes seguidas; o roteiro rodou 20 vezes seguidas localmente.
+- **Acréscimos de desenho da Executora, aceitos** (D-259): `dotnet add package <id> --version "[<versão>]" --no-restore`, o `nuget.config` do app começando com `<clear />`, `NU1901` a `NU1904` fora do `TreatWarningsAsErrors` só no app de usuário, e `node:http` no roteiro para controlar o `Host`.
+- **Ainda não visto:** o check `real-package / real-package` como Skipped num PR só de docs, que só existe depois do merge. O nome só vai ao dono, para ser obrigatório, depois disso.
+
 ## Tarefa 70.7: a comparação com o pacote publicado anterior (PR 2, D-257)
 
 Foi este método que a auditoria fez à mão, o mesmo roteiro contra a `0.5.3` do nuget.org e contra o build da PR, e que pegou as
