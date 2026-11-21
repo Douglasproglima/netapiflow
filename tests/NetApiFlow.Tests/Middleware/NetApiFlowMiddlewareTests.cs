@@ -54,7 +54,8 @@ public class NetApiFlowMiddlewareTests
     public async Task InvokeAsync_WithEmitTraceIdHeaderOn_WritesTheHeaderOnlyWhenTheResponseStarts()
     {
         var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = true });
-        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, new FlowRecorder(options), options);
+        var recorder = new FlowRecorder(options);
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, recorder, options);
         var responseFeature = new StartingResponseFeature();
         var httpContext = TracedGetRequest(responseFeature);
 
@@ -62,7 +63,10 @@ public class NetApiFlowMiddlewareTests
 
         httpContext.Response.Headers.ContainsKey("X-NetApiFlow-TraceId").ShouldBeFalse();
         await responseFeature.RunOnStartingCallbacksAsync();
-        httpContext.Response.Headers["X-NetApiFlow-TraceId"].ToString().ShouldBe(httpContext.TraceIdentifier);
+        var traceId = httpContext.Response.Headers["X-NetApiFlow-TraceId"].ToString();
+        traceId.ShouldMatch("^[0-9a-f]{32}$");
+        traceId.ShouldNotBe(httpContext.TraceIdentifier);
+        recorder.GetRecentlyCompleted(traceId).ShouldNotBeNull();
     }
 
     [Fact]

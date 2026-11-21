@@ -25,12 +25,14 @@ public class UnpublishedReservationVisibilityTests
                 await release.Task;
             })),
         });
-        (await app.GetWithTraceIdAsync(PathBaseApp.ControlRoute, SharedTraceId)).EnsureSuccessStatusCode();
-        await app.StoredAsync(SharedTraceId);
+        var tracked = await app.GetWithTraceIdAsync(PathBaseApp.ControlRoute, SharedTraceId);
+        tracked.EnsureSuccessStatusCode();
+        var traceId = tracked.Headers.GetValues(PathBaseApp.TraceIdHeader).Single();
+        await app.StoredAsync(traceId);
 
         var excluded = app.GetWithTraceIdAsync("/internal/slow", SharedTraceId);
         await inside.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        var lookup = await app.GetAsync($"/flow/api/traces/{SharedTraceId}");
+        var lookup = await app.GetAsync($"/flow/api/traces/{traceId}");
         release.SetResult();
         await excluded;
 
@@ -62,13 +64,15 @@ public class UnpublishedReservationVisibilityTests
                 await release.Task;
             })),
         });
-        (await app.GetWithTraceIdAsync("/orders", SharedTraceId)).EnsureSuccessStatusCode();
-        var stored = await app.StoredAsync(SharedTraceId);
+        var tracked = await app.GetWithTraceIdAsync("/orders", SharedTraceId);
+        tracked.EnsureSuccessStatusCode();
+        var traceId = tracked.Headers.GetValues(PathBaseApp.TraceIdHeader).Single();
+        var stored = await app.StoredAsync(traceId);
         var spanId = stored.Spans.Single(span => span.Component == "OrderService").SpanId;
 
         var excluded = app.GetWithTraceIdAsync("/internal/slow", SharedTraceId);
         await inside.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        var lookup = await app.GetAsync($"/flow/api/traces/{SharedTraceId}/spans/{spanId}");
+        var lookup = await app.GetAsync($"/flow/api/traces/{traceId}/spans/{spanId}");
         release.SetResult();
         await excluded;
 

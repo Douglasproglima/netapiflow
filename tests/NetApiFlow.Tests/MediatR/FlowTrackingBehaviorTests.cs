@@ -8,6 +8,7 @@ using NetApiFlow.MediatR;
 using NetApiFlow.Recording;
 using Shouldly;
 using Xunit;
+using NetApiFlow.Tests.TestSupport;
 
 namespace NetApiFlow.Tests.MediatR;
 
@@ -29,8 +30,7 @@ public class FlowTrackingBehaviorTests
 
         using var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         var services = new ServiceCollection();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PingHandler>());

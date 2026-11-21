@@ -29,6 +29,11 @@ internal sealed class FlowLogger(FlowRecorder recorder, IOptions<NetApiFlowOptio
             return;
         }
 
+        if (FlowTraceResolver.ForActivity(activity)?.TraceId is not { } traceId)
+        {
+            return;
+        }
+
         var entry = new LogEntry
         {
             Timestamp = DateTime.UtcNow,
@@ -38,6 +43,6 @@ internal sealed class FlowLogger(FlowRecorder recorder, IOptions<NetApiFlowOptio
             ExceptionMessage = ErrorMessageSanitizer.Sanitize(exception?.Message),
         };
 
-        recorder.AddLogEntry(activity.TraceId.ToHexString(), activity.SpanId.ToHexString(), entry);
+        recorder.AddLogEntry(traceId, activity.SpanId.ToHexString(), entry);
     }
 }

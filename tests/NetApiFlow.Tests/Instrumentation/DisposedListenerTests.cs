@@ -12,6 +12,7 @@ using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using Shouldly;
 using Xunit;
+using NetApiFlow.Tests.TestSupport;
 
 namespace NetApiFlow.Tests.Instrumentation;
 
@@ -45,8 +46,7 @@ public class DisposedListenerTests
 
         var root = new Activity("DisposedListenerRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, listener, root, traceId);
     }

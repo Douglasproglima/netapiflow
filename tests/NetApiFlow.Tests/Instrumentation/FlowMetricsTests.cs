@@ -10,6 +10,7 @@ using NetApiFlow.Recording;
 using NetApiFlow.Storage;
 using Shouldly;
 using Xunit;
+using NetApiFlow.Tests.TestSupport;
 
 namespace NetApiFlow.Tests.Instrumentation;
 
@@ -93,8 +94,7 @@ public class FlowMetricsTests
 
         using var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/orders", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/orders");
 
         using (var step = NetApiFlow.Step("Component", "Operation"))
         {

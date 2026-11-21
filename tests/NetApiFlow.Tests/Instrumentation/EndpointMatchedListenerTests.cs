@@ -11,6 +11,7 @@ using NetApiFlow.Middleware;
 using NetApiFlow.Recording;
 using Shouldly;
 using Xunit;
+using NetApiFlow.Tests.TestSupport;
 
 namespace NetApiFlow.Tests.Instrumentation;
 
@@ -112,8 +113,7 @@ public sealed class EndpointMatchedListenerTests
             _activityListener = new FlowActivityListener(_recorder, options, NullLoggerFactory.Instance);
             _root = new Activity("TestRoot");
             _root.Start();
-            _traceId = _root.TraceId.ToString();
-            _recorder.TryStartTrace(_traceId, "GET", "/handler", DateTime.UtcNow);
+            _traceId = FlowTestRequest.Begin(_recorder, _root, "GET", "/handler");
 
             Source = new DiagnosticListener(ListenerName);
             Context = new DefaultHttpContext { RequestServices = new ServiceCollection().AddSingleton(owner).BuildServiceProvider() };

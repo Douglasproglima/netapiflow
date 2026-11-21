@@ -10,6 +10,7 @@ using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using Shouldly;
 using Xunit;
+using NetApiFlow.Tests.TestSupport;
 
 namespace NetApiFlow.Tests.EntityFrameworkCore;
 
@@ -39,8 +40,7 @@ public class FlowDbCommandInterceptorDuplicateAttachmentTests
             _listener = new FlowActivityListener(Recorder, options, NullLoggerFactory.Instance);
             _root = new Activity("TestRoot");
             _root.Start();
-            TraceId = _root.TraceId.ToString();
-            Recorder.TryStartTrace(TraceId, "GET", "/api/test", DateTime.UtcNow);
+            TraceId = FlowTestRequest.Begin(Recorder, _root, "GET", "/api/test");
         }
 
         public FlowRecorder Recorder { get; }

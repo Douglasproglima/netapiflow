@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -10,6 +11,7 @@ namespace NetApiFlow.Middleware;
 internal sealed class FlowRequestState
 {
     private const string TraceIdHeaderName = "X-NetApiFlow-TraceId";
+    private const string W3CTraceIdTagName = "w3c.trace_id";
 
     private readonly FlowRecorder _recorder;
     private readonly RequestTracingDecider _decider;
@@ -20,6 +22,7 @@ internal sealed class FlowRequestState
     private bool _reservationHeld;
     private bool _decided;
     private bool _headerRegistered;
+    private bool _finished;
 
     public FlowRequestState(
         FlowRecorder recorder,
@@ -27,6 +30,7 @@ internal sealed class FlowRequestState
         NetApiFlowOptions options,
         HttpResponse response,
         string traceId,
+        ActivityTraceId w3cTraceId,
         DateTime startedAtUtc,
         bool reserved,
         bool traceByFullPath)
@@ -36,6 +40,7 @@ internal sealed class FlowRequestState
         _options = options;
         _response = response;
         TraceId = traceId;
+        W3CTraceId = w3cTraceId;
         _startedAtUtc = startedAtUtc;
         _reservationHeld = reserved;
         _traceByFullPath = traceByFullPath;
@@ -43,7 +48,15 @@ internal sealed class FlowRequestState
 
     public string TraceId { get; }
 
+    public ActivityTraceId W3CTraceId { get; }
+
+    public bool HasW3CTraceId => W3CTraceId != default;
+
     public bool Opened { get; private set; }
+
+    public bool IsRecording => !_finished && (Opened || _reservationHeld);
+
+    public void MarkFinished() => _finished = true;
 
     public bool CaptureMinimalApiEndpoints => _options.CaptureMinimalApiEndpoints;
 
@@ -136,6 +149,11 @@ internal sealed class FlowRequestState
         if (_options.EmitTraceIdHeader)
         {
             RegisterHeader();
+        }
+
+        if (HasW3CTraceId)
+        {
+            _recorder.SetTraceTag(TraceId, W3CTraceIdTagName, W3CTraceId.ToHexString());
         }
 
         var tenant = context.RequestServices?.GetService<IFlowTenantResolver>()?.Resolve(context);
