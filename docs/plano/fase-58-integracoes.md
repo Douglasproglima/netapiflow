@@ -75,6 +75,10 @@ A linha que falta em `README.md`, `README.pt-BR.md` e `src/NetApiFlow.MediatR/RE
 fora e é o item 29 do roadmap ("Aviso de log quando o MediatR está registrado e o `AddNetApiFlowMediatR()` não foi
 chamado"). A auditoria roda de novo o roteiro do F4 e confere as três frases.
 
+## Tarefa 58.10: o rótulo do SqlClient pega a tabela, não o schema (B11, D-236)
+
+Com `dbo.Users`, o rótulo sai `SELECT dbo` (o schema, não a tabela). Isso mistura componentes diferentes num só e pode gerar um **N+1 falso**. Corrige junto do Npgsql (58.1). A Executora reproduz com o `Microsoft.Data.SqlClient` `6.1.8`, mede o texto bruto do comando, e o rótulo passa a usar a tabela, com e sem schema (`dbo.Users`, `[dbo].[Users]`, `Users`). Teste que **falha hoje** em `SqlClient.IntegrationTests`, e um teste de que duas tabelas de um mesmo schema **não** disparam o selo de N+1.
+
 # Parte B: os pacotes do NetApiFlow entre si (D-231)
 
 ## Tarefa 58.6: os satélites pedem o núcleo na versão exata

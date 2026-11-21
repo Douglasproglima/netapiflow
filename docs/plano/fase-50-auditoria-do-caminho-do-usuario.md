@@ -531,6 +531,15 @@ meio, porque evita também uma ida ao banco por trace. Mas quem mede é ela.
 controlável), **zero** erros com pilha, e o contador de descarte subindo. Depois o schema é criado pelo
 `schema.sql` e o trace seguinte grava. Vem depois da #373 mergeada, em branch própria, e vai no `0.6.0`.
 
+### Tarefa 50.15 (B10, D-236): `EmitTraceIdHeader` liga só em Development
+
+O padrão de `EmitTraceIdHeader` passa a ser **ligado só em `Development`**, como o `ExternalSources`. Seguro por padrão, e fecha a impressão digital que o cabeçalho `X-NetApiFlow-TraceId` dá em produção (achado (f)). Faz junto da Tarefa 50.13, porque as duas mexem no mesmo trecho do middleware.
+
+- **Mudança de comportamento para quem atualiza:** quem lê o cabeçalho em `Production` deixa de recebê-lo, em silêncio. Entra em `### Changed` do `CHANGELOG.md`, em destaque, e no README, dizendo como ligar (`EmitTraceIdHeader = true`).
+- **O `NetApiFlow.Testing` precisa continuar funcionando.** Ele roda em `Development` pelo `WebApplicationFactory`: **confirmar por teste**. Se o ambiente do teste do usuário for outro, o texto diz o que fazer.
+- O texto da #372 (a opção) é ajustado para o novo padrão.
+- Teste de host real em `Development` (cabeçalho presente), em `Production` (ausente), e em `Production` com a opção ligada (presente). Visto falhando antes.
+
 ## Critério que vale para a fase inteira
 
 - Build, testes, formato e lint limpos nos dois TFMs e no Angular. Os projetos de interop e o

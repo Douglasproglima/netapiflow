@@ -269,6 +269,8 @@ isso de olhos abertos.
 
 **Decisão do dono (D-232), 20/11/2026: entra tudo, a lista fecha e o escopo congela.** A opção de dividir a `0.6.0` foi oferecida e recusada. A auditoria faz agora uma última varredura nas áreas que a auditoria de base não cobriu (a API pública vista por um purista, os README de cada pacote e os metadados do nuget.org, o site, os samples, os arquivos de comunidade, as integrações que faltaram e a acessibilidade por teclado), e o resultado é uma lista única com prioridade. Depois dela, achado novo vai para a `0.7.0`, com duas exceções: segurança, ou regressão causada por uma PR da própria `0.6.0`.
 
+**Lista fechada da `0.6.0` (D-236), 20/11/2026.** A varredura final (três revisores, conferida pela auditoria) acrescentou os itens B1 a B15 (Fases 62 a 68 e emendas nas Fases 50, 53, 58, 59 e 60), os itens de documentação C (Fase 59) e o site D (Fase 62). O que fica para a `0.7.0` está no roadmap (itens 32 a 42). O escopo congelou: a ordem de execução está no `README.md` desta pasta.
+
 ## ADRs que precisam existir antes do código
 
 - **ADR-0027:** a decisão de rastrear e a rota da trace passam a vir do `EndpointMatched` (Fase 53 e Fase

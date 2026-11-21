@@ -10,7 +10,7 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
 "major" vira incremento de `MINOR`).
 
 0. **Para a `0.6.0`:** confirme com a `AUDITORIA-16-11` que a auditoria de base está fechada
-   (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate.
+   (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. Confirme também a Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia).
 1. Rode `git status` em `develop`. Working tree precisa estar limpo.
 2. Leia `CHANGELOG.md`, seção `[Unreleased]`, e `docs/plano/README.md` para confirmar quais fases
    foram concluídas desde a última tag (`git tag --sort=-v:refname | head -1`).
