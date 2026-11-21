@@ -89,6 +89,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 66 | Registro idempotente e o exportador OTLP | **Planejada, `0.6.0`, depois da Fase 55** (2026-11-20) | D-236, B6 e B7. Chamar `Add*` duas vezes dá resultado errado, e o `AddNetApiFlowOtlpExport` muda o que o app inteiro exporta. Plano em `fase-66-registro-idempotente-e-otlp.md`. |
 | 67 | A API pública com os nomes certos, sem quebrar ninguém | **Planejada, `0.6.0`, depois da Fase 66 e antes da 58 e da 59** (2026-11-20) | D-236 e D-237, B8 e B9. A classe passa a se chamar `Flow` (a medir), `Map*` no lugar de `Use*`, `WithNetApiFlowTracking` genérica, `Tag` com mais tipos, e os pequenos. O nome antigo fica `[Obsolete]` e encaminha. Plano em `fase-67-api-publica-sem-quebra.md`. |
 | 68 | O essencial de acessibilidade por teclado | **Planejada, `0.6.0`, depois da Fase 57** (2026-11-20) | D-236, B13. Foco visível dos botões, a gaveta "Testar um endpoint" como diálogo, e o foco que cai no `body`. Plano em `fase-68-acessibilidade.md`. |
+| 69 | A suíte no runtime .NET 11, e o README sobre o `net8.0` e o `net11.0` | **Planejada, `0.6.0`, depois da Tarefa 53.2** (2026-11-21) | D-250, item 16 do roadmap e ADR-0025. A suíte passa a rodar também no runtime .NET 11 contra a build de `net10.0` (só no `ubuntu-latest`), com um guarda que prova no log que rodou no 11, e o README e o CHANGELOG anunciam a saída do `net8.0` em 10/05/2027. Plano em `fase-69-runtime-net11.md`. |
 
 `0.3.0` publicada (D-120, MINOR por causa do `OpenApiDocumentPath` da Fase 29,
 `FlowStatus.Cancelled`/`Timeout` da Fase 27 e `IDeployAnnotationStore` da Fase 28). Fases 8 a 30
@@ -178,6 +179,7 @@ O escopo da `0.6.0` está **congelado** desde 20/11/2026 (D-232 e D-236). Achado
 | 4 | 50.13, 50.15, 50.14 | O cabeçalho no 500 e o padrão do `EmitTraceIdHeader`, a persistência sem schema (a 50.12, o AOT no CI, já está entregue, #363) |
 | 5 | 63 | O ciclo de vida dos steps e os testes estáveis |
 | 6 | 51, 53 | A etapa de endpoint sem marcação, depois o `PathBase` (53.0 e 53.1 primeiro) |
+| 6b | 69 | O teste no runtime .NET 11 e o anúncio da saída do `net8.0`. Curta e independente: entra depois que a 53.2 abrir a PR |
 | 7 | 57, 55 | A visão ao vivo (depois da 53.2) e a identidade da trace (depois da 53.1) |
 | 8 | 64, 65, 66 | Transação nos storages, nunca derrubar e nunca atrasar, e o registro idempotente. Todas depois da 55 |
 | 9 | 67 | A API pública com os nomes certos, antes do README |
