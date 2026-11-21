@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,7 +65,7 @@ internal sealed class FlowRequestState
         _decided = true;
         try
         {
-            if (!_decider.ShouldTraceMatchedEndpoint(context.GetEndpoint(), context.Request.Path.Value ?? "/"))
+            if (!AcceptsTheMatchedEndpoint(context))
             {
                 ReleaseReservation();
                 return;
@@ -81,6 +82,15 @@ internal sealed class FlowRequestState
             ReleaseReservation();
         }
     }
+
+    private static bool IsReExecution(HttpContext context) =>
+        context.Features.Get<IStatusCodeReExecuteFeature>() is not null
+        || context.Features.Get<IExceptionHandlerFeature>() is not null;
+
+    private bool AcceptsTheMatchedEndpoint(HttpContext context) =>
+        IsReExecution(context)
+            ? _traceByFullPath
+            : _decider.ShouldTraceMatchedEndpoint(context.GetEndpoint(), context.Request.Path.Value ?? "/");
 
     public void OpenWhenNoEndpointWasMatched(HttpContext context)
     {

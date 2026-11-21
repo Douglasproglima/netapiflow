@@ -138,6 +138,19 @@ internal sealed class PathBaseApp : IAsyncDisposable
 
     public Task<HttpResponseMessage> GetAsync(string path) => Client.GetAsync(PathBase + path);
 
+    public Task<HttpResponseMessage> GetWithTraceIdAsync(string path, string traceId)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, PathBase + path);
+        request.Headers.Add("traceparent", $"00-{traceId}-00f067aa0ba902b7-01");
+        return Client.SendAsync(request);
+    }
+
+    public Task<FlowTraceDetail> StoredAsync(string traceId) =>
+        _host.Services.GetRequiredService<ITraceStore>().WaitForPersistedTraceAsync(traceId);
+
+    public Task<FlowTraceDetail> StoredAsync(HttpResponseMessage response) =>
+        StoredAsync(response.Headers.GetValues(TraceIdHeader).Single());
+
     public async Task<IReadOnlyList<string>> RoutesInTheStoreAsync()
     {
         var control = await GetAsync(ControlRoute);
