@@ -37,7 +37,7 @@ It is **not**:
 
 In a project created with `dotnet new webapi`:
 
-```bash
+```bash quickstart:packages
 dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
@@ -47,7 +47,7 @@ Then add the NetApiFlow lines to the `Program.cs` the template generated. `AddOp
 from your app's OpenAPI document, which is `/openapi/v1.json` unless you set `OpenApiDocumentPath`.
 The `/hello` line stands for your own endpoints.
 
-```csharp
+```csharp quickstart:program
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
@@ -86,7 +86,7 @@ To draw the layers under the endpoint too, add these lines where you register yo
 before `builder.Build()`. The `using NetApiFlow.Marking;` at the top of the block above is for the
 last one:
 
-```csharp
+```csharp quickstart:registrations
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.TrackFlowByConvention();
@@ -734,11 +734,21 @@ the dashboard replaces it.
 
 ## MCP server
 
-```bash
+```bash mcp:package
 dotnet add package NetApiFlow.Mcp
 ```
 
-```csharp
+Add these two lines at the top of `Program.cs`, next to the `using NetApiFlow;` the Quick start
+already has:
+
+```csharp mcp:usings
+using NetApiFlow.Mcp;
+using NetApiFlow.Mcp.Endpoints;
+```
+
+Then register the server before `builder.Build()` and mount it right after:
+
+```csharp mcp:registration
 builder.Services.AddNetApiFlowMcp();
 
 var app = builder.Build();

@@ -38,7 +38,7 @@ Ele **não é**:
 
 Num projeto criado com `dotnet new webapi`:
 
-```bash
+```bash quickstart:packages
 dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
@@ -48,7 +48,7 @@ Depois acrescente as linhas do NetApiFlow ao `Program.cs` que o modelo gerou. `A
 endpoints a partir do documento OpenAPI da sua aplicação, que é `/openapi/v1.json` a menos que você
 defina `OpenApiDocumentPath`. A linha `/hello` representa os seus próprios endpoints.
 
-```csharp
+```csharp quickstart:program
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
@@ -88,7 +88,7 @@ Para desenhar também as camadas abaixo do endpoint, acrescente estas linhas ond
 seus próprios serviços, antes de `builder.Build()`. O `using NetApiFlow.Marking;` no topo do bloco
 acima é para a última delas:
 
-```csharp
+```csharp quickstart:registrations
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.TrackFlowByConvention();
@@ -740,11 +740,21 @@ rotas, o do dashboard o substitui.
 
 ## Servidor MCP
 
-```bash
+```bash mcp:package
 dotnet add package NetApiFlow.Mcp
 ```
 
-```csharp
+Acrescente estas duas linhas no topo do `Program.cs`, ao lado do `using NetApiFlow;` que o Início
+rápido já tem:
+
+```csharp mcp:usings
+using NetApiFlow.Mcp;
+using NetApiFlow.Mcp.Endpoints;
+```
+
+Depois registre o servidor antes de `builder.Build()` e monte-o logo depois:
+
+```csharp mcp:registration
 builder.Services.AddNetApiFlowMcp();
 
 var app = builder.Build();
