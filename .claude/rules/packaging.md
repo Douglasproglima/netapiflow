@@ -44,8 +44,7 @@
 ## Build determinístico
 
 - `Deterministic=true` (padrão do SDK), `ContinuousIntegrationBuild=true` só em CI (não em build
-  local, para não quebrar o PathMap em debug local; ver comentário equivalente em
-  `Directory.Build.props` do RajaDocs, que serviu de referência).
+  local, para não quebrar o PathMap em debug local).
 
 ## `dotnet pack` de verificação nunca usa o número de versão real (D-153)
 
