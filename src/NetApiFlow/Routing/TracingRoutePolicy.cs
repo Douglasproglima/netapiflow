@@ -1,31 +1,43 @@
 namespace NetApiFlow.Routing;
 
 /// <summary>Decides whether a route template should be traced, given <see cref="NetApiFlowOptions"/>.</summary>
-internal sealed class TracingRoutePolicy(NetApiFlowOptions options)
+internal sealed class TracingRoutePolicy
 {
+    private readonly string[] _dashboardPattern;
+    private readonly string _openApiDocumentPath;
+    private readonly string[][] _excludePatterns;
+    private readonly string[][] _includePatterns;
+
+    public TracingRoutePolicy(NetApiFlowOptions options)
+    {
+        _dashboardPattern = RouteGlobMatcher.Compile(options.DashboardBasePath.TrimEnd('/') + "/**");
+        _openApiDocumentPath = options.OpenApiDocumentPath;
+        _excludePatterns = [.. options.ExcludePatterns.Select(RouteGlobMatcher.Compile)];
+        _includePatterns = [.. options.IncludePatterns.Select(RouteGlobMatcher.Compile)];
+    }
+
     public bool ShouldTrace(string routeTemplate)
     {
-        var dashboardPattern = options.DashboardBasePath.TrimEnd('/') + "/**";
-        if (RouteGlobMatcher.Matches(dashboardPattern, routeTemplate))
+        if (RouteGlobMatcher.Matches(_dashboardPattern, routeTemplate))
         {
             return false;
         }
 
-        if (string.Equals(routeTemplate, options.OpenApiDocumentPath, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(routeTemplate, _openApiDocumentPath, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        if (options.ExcludePatterns.Any(pattern => RouteGlobMatcher.Matches(pattern, routeTemplate)))
+        if (_excludePatterns.Any(pattern => RouteGlobMatcher.Matches(pattern, routeTemplate)))
         {
             return false;
         }
 
-        if (options.IncludePatterns.Count == 0)
+        if (_includePatterns.Length == 0)
         {
             return true;
         }
 
-        return options.IncludePatterns.Any(pattern => RouteGlobMatcher.Matches(pattern, routeTemplate));
+        return _includePatterns.Any(pattern => RouteGlobMatcher.Matches(pattern, routeTemplate));
     }
 }

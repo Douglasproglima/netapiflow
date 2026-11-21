@@ -115,6 +115,7 @@ Início rápido já tem. O `using NetApiFlow;` cobre `.WithNetApiFlowTracking()`
 |---|---|---|
 | `.WithNetApiFlowTracking()` | Envolve um endpoint de Minimal API, ou todos os endpoints de um `MapGroup`, numa etapa `Endpoint` | Só com `CaptureMinimalApiEndpoints = false`. Fora isso todo endpoint de Minimal API já ganha a etapa, e os controllers MVC sempre ganham |
 | `NetApiFlow.Step(...)` | Abre e fecha uma etapa manualmente em volta de um trecho de código | Qualquer código, sem depender de DI |
+| `.WithoutNetApiFlowTracking()` | Tira um endpoint, um grupo, o `MapControllers()` ou o `MapHealthChecks()` do rastreamento | Um health check, uma rota de métricas, qualquer rota que nunca deve aparecer no histórico, também sob um `PathBase` |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Envolve toda chamada à implementação de uma interface numa etapa, via proxy dinâmico | Uma interface de repositório/serviço já registrada no DI |
 | `TrackFlowByConvention()` | Envolve em etapas as interfaces `*Service`, `*Repository` e `*Handler` do seu código, cada uma com o seu tipo de componente | Um app em camadas: uma linha depois dos seus registros |
 | `DecorateFlowTracked(predicate, ...)` | O mesmo de cima, aplicado em lote a todo registro que bater com um predicado | Muitas interfaces que seguem uma convenção de nome que você mesmo escolhe |
@@ -517,7 +518,7 @@ o documento OpenAPI. O padrão é o que o `MapOpenApi()` serve. Aponte para
 `/swagger/v1/swagger.json` no Swashbuckle, ou para onde você servir o documento. O painel lista os
 seus endpoints a partir desse documento, então um caminho errado deixa o painel sem nada a mostrar.
 As requisições a esse caminho nunca são rastreadas, então o documento que o dashboard busca não
-aparece nos seus traces.
+aparece nos seus traces. Sob um `PathBase`, veja [Caminhos sob `UsePathBase`](#caminhos-sob-usepathbase).
 
 `CapturePrePipelineSteps` grava o que roda antes do seu controller ser chamado, em rotas de MVC
 Controller: uma etapa por filtro de autorização, no componente `AuthorizationFilters`, com o nome
@@ -588,6 +589,36 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 ```
 
 `NetApiFlow.Storage.SqlServer` espelha a mesma forma (`AddNetApiFlowSqlServerStorage`).
+
+### Caminhos sob `UsePathBase`
+
+`ExcludePaths`, `IncludePaths` e `OpenApiDocumentPath` valem para o caminho que você enxerga,
+relativo ao `PathBase`, sempre que a requisição casa com um endpoint. Com
+`app.UsePathBase("/api")`, `ExcludePaths("/health")` tira `GET /api/health` do rastreamento. O
+NetApiFlow decide isso quando o roteamento escolhe o endpoint, que é onde o caminho já é relativo.
+
+Uma requisição que não casa com nenhum endpoint, um arquivo estático servido por `UseStaticFiles` ou
+um 404, é decidida pelo caminho cheio, `PathBase` incluído, porque não há endpoint de onde ler. Escreva
+o padrão com o prefixo: `ExcludePaths("/api/site.css")`. Um arquivo estático servido como endpoint,
+com `MapStaticAssets()`, é um endpoint e segue a primeira regra.
+
+As rotas do dashboard (as páginas, a API REST e o stream) e do servidor MCP nunca são rastreadas, com
+ou sem `PathBase`. Elas são reconhecidas pelo que são, não pelo texto. Marque as suas rotas do mesmo
+jeito, valham os padrões que valerem:
+
+```csharp
+app.MapHealthChecks("/healthz").WithoutNetApiFlowTracking();
+app.MapGroup("/internal").WithoutNetApiFlowTracking();
+```
+
+`WithoutNetApiFlowTracking()` funciona num endpoint de Minimal API, num grupo, no `MapControllers()` e
+no `MapHealthChecks()`, e vence `ExcludePaths`, `IncludePaths` e `WithNetApiFlowTracking()` no mesmo
+endpoint. Controller marcado por atributo não tem equivalente.
+
+O que foi medido: Kestrel com e sem `UsePathBase`, IIS Express com o ASP.NET Core Module v2, in-process
+e out-of-process, e nginx na frente do Kestrel. Onde o framework define o `PathBase` antes de o
+NetApiFlow rodar (IIS) ou o proxy corta o prefixo, o problema nunca existiu: ele vinha do `UsePathBase`
+chamado no seu próprio código. O que não foi medido: o IIS completo e o YARP.
 
 ### Rodando sem permissão de DDL
 
@@ -901,6 +932,12 @@ O NetApiFlow nunca captura, em nenhuma configuração:
 > template acima, só que pro caso em que ainda não existe template nenhum. Se arquivo estático ou
 > o próprio documento OpenAPI estiverem poluindo o histórico com ruído de `(unmatched)`,
 > `ExcludePaths` tira os dois do rastreamento de vez.
+>
+> Uma requisição que não casa com nenhuma rota só é gravada quando termina. Enquanto está em
+> andamento ela não aparece como em execução, e nada do que ela faz aparece antes disso, como uma
+> chamada de EF Core ou de `HttpClient` dentro de um middleware terminal ou de um tratador de
+> WebSocket. Uma requisição que casa um endpoint aparece como em execução desde o momento em que o
+> roteamento o escolhe.
 
 Mensagem de erro é sanitizada e depois truncada em 300 caracteres, em toda saída: o dashboard, as
 ferramentas do MCP, o trace gravado, o log correlacionado e a tag `netapiflow.error.message` da

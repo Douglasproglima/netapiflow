@@ -38,6 +38,7 @@ public static class NetApiFlowServiceCollectionExtensions
         }
 
         services.AddSingleton<FlowRecorder>();
+        services.AddSingleton<RequestTracingDecider>();
         services.AddSingleton<FlowEventPublisher>();
         services.AddSingleton<FlowActivityListener>();
         services.AddSingleton<InMemoryTraceStore>();

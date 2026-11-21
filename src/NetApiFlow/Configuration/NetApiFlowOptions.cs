@@ -33,6 +33,9 @@ public sealed class NetApiFlowOptions
     /// list your endpoints. Set it to wherever your host serves its document, for example
     /// <c>/swagger/v1/swagger.json</c> under Swashbuckle. Default: <c>/openapi/v1.json</c>, what
     /// <c>MapOpenApi()</c> serves. Requests to this path are never traced.
+    /// Under <c>UsePathBase</c> the pattern is compared with the path relative to the <c>PathBase</c>
+    /// when the request matches an endpoint, and with the full path when it does not, such as a
+    /// static file or a 404.
     /// </summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
 
@@ -72,14 +75,24 @@ public sealed class NetApiFlowOptions
     /// <summary>Route glob patterns excluded from tracing even when they match an include pattern.</summary>
     public IReadOnlyList<string> ExcludePatterns => _excludePatterns;
 
-    /// <summary>Adds route glob patterns that must match for a request to be traced.</summary>
+    /// <summary>
+    /// Adds route glob patterns that must match for a request to be traced.
+    /// Under <c>UsePathBase</c> the pattern is compared with the path relative to the <c>PathBase</c>
+    /// when the request matches an endpoint, and with the full path when it does not, such as a
+    /// static file or a 404.
+    /// </summary>
     public NetApiFlowOptions IncludePaths(params string[] patterns)
     {
         _includePatterns.AddRange(patterns);
         return this;
     }
 
-    /// <summary>Adds route glob patterns that are always excluded from tracing, even when they match an include pattern.</summary>
+    /// <summary>
+    /// Adds route glob patterns that are always excluded from tracing, even when they match an include pattern.
+    /// Under <c>UsePathBase</c> the pattern is compared with the path relative to the <c>PathBase</c>
+    /// when the request matches an endpoint, and with the full path when it does not, such as a
+    /// static file or a 404.
+    /// </summary>
     public NetApiFlowOptions ExcludePaths(params string[] patterns)
     {
         _excludePatterns.AddRange(patterns);

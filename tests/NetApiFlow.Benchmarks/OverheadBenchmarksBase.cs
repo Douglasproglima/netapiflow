@@ -23,12 +23,15 @@ namespace NetApiFlow.Benchmarks;
 /// periodically evicts old ones, producing legitimate latency spikes that trip the in-process
 /// toolchain's own execution watchdog.
 /// </summary>
+[MemoryDiagnoser]
 public abstract class OverheadBenchmarksBase
 {
     private TestServer _server = null!;
 
     /// <summary><see langword="null"/> for the "absent" scenario: <c>AddNetApiFlow</c> is never called.</summary>
     protected abstract Action<NetApiFlowOptions>? ConfigureNetApiFlow { get; }
+
+    protected virtual string PathBase => string.Empty;
 
     [GlobalSetup]
     public void Setup()
@@ -51,10 +54,16 @@ public abstract class OverheadBenchmarksBase
                 });
                 webBuilder.Configure(app =>
                 {
+                    if (PathBase.Length > 0)
+                    {
+                        app.UsePathBase(PathBase);
+                    }
+
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
                         endpoints.MapGet("/simple", () => Results.Ok());
+                        endpoints.MapGet("/excluded", () => Results.Ok());
                         endpoints.MapGet("/nested", async () =>
                         {
                             using var controller = NetApiFlow.Step("OrdersController", "Get", ComponentType.Controller);
@@ -72,19 +81,17 @@ public abstract class OverheadBenchmarksBase
         _server = host.GetTestServer();
     }
 
-    /// <summary>One endpoint, no manually marked step: isolates the middleware's own per-request cost.</summary>
-    [Benchmark]
-    public Task Simple() => _server.SendAsync(context =>
+    protected Task Send(string path) => _server.SendAsync(context =>
     {
         context.Request.Method = "GET";
-        context.Request.Path = "/simple";
+        context.Request.Path = PathBase + path;
     });
+
+    /// <summary>One endpoint, no manually marked step: isolates the middleware's own per-request cost.</summary>
+    [Benchmark]
+    public Task Simple() => Send("/simple");
 
     /// <summary>Four nested <see cref="NetApiFlow.Step"/> calls, as a Controller→Service→Repository→Database request would look.</summary>
     [Benchmark]
-    public Task Nested() => _server.SendAsync(context =>
-    {
-        context.Request.Method = "GET";
-        context.Request.Path = "/nested";
-    });
+    public Task Nested() => Send("/nested");
 }

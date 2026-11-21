@@ -29,6 +29,7 @@ internal static class DashboardApiEndpoints
         var group = endpoints.MapGroup(basePath + "/api");
         group.AddEndpointFilter(DashboardAccessGate.EnforceAsync);
         group.ExcludeFromDescription();
+        group.WithoutNetApiFlowTracking();
 
         group.MapGet("/traces", GetTraces);
         group.MapGet("/traces/live", GetLiveTraces);
@@ -144,7 +145,7 @@ internal static class DashboardApiEndpoints
 
     private static async Task<IResult> GetTraceDetail(string traceId, FlowRecorder recorder, ITraceStore store, CancellationToken cancellationToken)
     {
-        var active = recorder.GetActiveTrace(traceId);
+        var active = recorder.GetPublishedActiveTrace(traceId);
         if (active is not null)
         {
             return Results.Json(TraceDetailDto.From(active), DashboardJsonOptions.Rest);
@@ -162,7 +163,7 @@ internal static class DashboardApiEndpoints
 
     private static async Task<IResult> GetSpanDetail(string traceId, string spanId, FlowRecorder recorder, ITraceStore store, CancellationToken cancellationToken)
     {
-        var spans = recorder.GetActiveTrace(traceId)?.Spans
+        var spans = recorder.GetPublishedActiveTrace(traceId)?.Spans
             ?? recorder.GetRecentlyCompleted(traceId)?.Spans;
 
         if (spans is null)
