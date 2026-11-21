@@ -48,8 +48,13 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
 
 ## Correlação e hierarquia
 
-- `TraceId` do NetApiFlow é o `TraceId` da `Activity` HTTP que o ASP.NET Core já cria por
-  requisição (W3C `traceparent`).
+- `TraceId` do NetApiFlow é um id próprio, aleatório e único por requisição (32 caracteres hexadecimais), gerado pelo
+  middleware. **Não** é o `TraceId` da `Activity` HTTP: o W3C trace id vai na tag `w3c.trace_id` da trace, e toda atividade
+  do NetApiFlow leva a tag `netapiflow.trace_id` (ADR-0028).
+- **Uma função só acha a trace de uma `Activity`, o `FlowTraceResolver`:** o `AsyncLocal` do middleware, quando o W3C trace id
+  da atividade é o da requisição; senão a subida por `Activity.Parent`; senão nenhuma trace (D-269). Código novo não lê
+  `activity.TraceId` para achar trace. No fim da requisição o holder do `AsyncLocal` é zerado e a propriedade da atividade do
+  servidor é limpa, para um `ExecutionContext` capturado por `Timer` ou `Task.Run` longo não segurar o `HttpContext`.
 - Hierarquia de spans vem de `Activity.Parent`, que flui por `AsyncLocal`. Todo código que abre
   um span precisa continuar funcionando corretamente dentro de `async`/`await`, `Task.Run` e
   `Task.WhenAll`. Isso é testado explicitamente na Fase 1 (tarefa 1.13) e não pode regredir
@@ -69,7 +74,7 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
 
 ## Risco latente do `net11.0` (ADR-0025)
 
-A partir do ASP.NET Core 11, a `Activity` HTTP nativa (a mesma cujo `TraceId` o NetApiFlow reusa)
+A partir do ASP.NET Core 11, a `Activity` HTTP nativa (a mesma de que o NetApiFlow lê o `TraceId`, para a tag `w3c.trace_id`)
 passa a carregar doze tags de semantic convention do OpenTelemetry por padrão, incluindo
 `url.query` e `url.path`. O `FlowActivityListener` nunca escuta a fonte `Microsoft.AspNetCore`,
 então isso não viola o ADR-0007 hoje. Qualquer código novo que um dia precise ler alguma coisa
