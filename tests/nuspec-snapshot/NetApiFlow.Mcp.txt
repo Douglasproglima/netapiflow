@@ -1,0 +1,13 @@
+id: NetApiFlow.Mcp
+dependencies:
+  net10.0:
+    ModelContextProtocol.AspNetCore 2.3.1 (exclude=Build,Analyzers)
+    NetApiFlow {version} (exclude=Build,Analyzers)
+  net8.0:
+    ModelContextProtocol.AspNetCore 2.3.1 (exclude=Build,Analyzers)
+    NetApiFlow {version} (exclude=Build,Analyzers)
+frameworkReferences:
+  net10.0:
+    Microsoft.AspNetCore.App
+  net8.0:
+    Microsoft.AspNetCore.App

@@ -17,3 +17,4 @@
 - [ ] Tests added or updated for the change
 - [ ] `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes` pass locally
 - [ ] `npm run lint`, `npm run test:ci`, `npm run build` pass locally (if `ClientApp/` changed)
+- [ ] If the PR changes a contract, its body has a "Consumidores do contrato" section that says affected or not affected, with the proof, for each consumer in `.claude/rules/contratos-e-consumidores.md`

@@ -11,8 +11,13 @@ permissions:
   packages: write
 
 jobs:
+  real-package:
+    name: real-package
+    uses: ./.github/workflows/real-package.yml
+
   release:
     name: pack-and-publish
+    needs: real-package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
