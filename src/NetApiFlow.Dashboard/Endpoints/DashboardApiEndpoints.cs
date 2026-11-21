@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -304,9 +305,15 @@ internal static class DashboardApiEndpoints
         return Results.Json(config, DashboardJsonOptions.Rest);
     }
 
-    private static async Task<IResult> CreateDeploy(CreateDeployAnnotationRequest request, IDeployAnnotationStore store, CancellationToken cancellationToken)
+    private static async Task<IResult> CreateDeploy(HttpRequest httpRequest, IDeployAnnotationStore store, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Label))
+        if (!httpRequest.HasJsonContentType())
+        {
+            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        var request = await ReadDeployRequestAsync(httpRequest, cancellationToken);
+        if (request is null || string.IsNullOrWhiteSpace(request.Label))
         {
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
@@ -320,6 +327,18 @@ internal static class DashboardApiEndpoints
 
         await store.SaveAsync(annotation, cancellationToken);
         return Results.Json(annotation, DashboardJsonOptions.Rest, statusCode: StatusCodes.Status201Created);
+    }
+
+    private static async Task<CreateDeployAnnotationRequest?> ReadDeployRequestAsync(HttpRequest httpRequest, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await httpRequest.ReadFromJsonAsync<CreateDeployAnnotationRequest>(cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static async Task<IResult> GetDeploys(DateTime? from, DateTime? to, IDeployAnnotationStore store, CancellationToken cancellationToken)

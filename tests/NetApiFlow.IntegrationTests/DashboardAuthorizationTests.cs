@@ -182,7 +182,7 @@ public class DashboardAuthorizationTests
     {
         TraceId = traceId,
         Method = "GET",
-        RouteTemplate = "/api/orders/1",
+        RouteTemplate = "/api/orders/{id}",
         HttpStatus = 200,
         Status = FlowStatus.Success,
         StartedAt = DateTime.UtcNow,

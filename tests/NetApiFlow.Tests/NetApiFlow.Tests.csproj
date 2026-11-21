@@ -27,5 +27,6 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\SecretLeakCases.cs" Link="Shared\SecretLeakCases.cs" />
+    <Compile Include="..\Shared\ManualTimeProvider.cs" Link="Shared\ManualTimeProvider.cs" />
   </ItemGroup>
 </Project>

@@ -40,7 +40,11 @@ public class SampleApiMinimalMediatRTests
                 {
                     services.AddRouting();
 
-                    services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/api/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                     services.AddNetApiFlowEntityFrameworkCore();
 
                     services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Sample.Application.GetOrderQuery>());

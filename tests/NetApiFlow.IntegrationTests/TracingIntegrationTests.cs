@@ -31,7 +31,11 @@ public class TracingIntegrationTests
                 {
                     services.AddRouting();
                     services.AddSingleton<IFlowEventListener, ThrowingFlowEventListener>();
-                    services.AddNetApiFlow(o => o.IncludePaths("/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                 });
                 webBuilder.Configure(app =>
                 {

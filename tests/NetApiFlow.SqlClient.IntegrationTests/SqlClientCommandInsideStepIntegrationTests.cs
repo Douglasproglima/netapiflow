@@ -89,6 +89,7 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
                     services.AddNetApiFlow(options =>
                     {
                         options.IncludePaths("/api/**", "/mini/**");
+                        options.EmitTraceIdHeader = true;
                         options.ExternalSources = externalSources;
                     });
                     services.AddNetApiFlowEntityFrameworkCore();

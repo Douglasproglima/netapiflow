@@ -66,8 +66,8 @@ piso de pacote publicado muda.
 
 O Runner lê o id do cabeçalho `X-NetApiFlow-TraceId` (`endpoint-form.component.ts`, `onDispatched`). Sem o cabeçalho
 numa resposta de sucesso ele não navega e não diz nada. Isso vale para `EmitTraceIdHeader = false` e para uma rota fora
-do rastreamento. O Runner passa a dizer, nomeando as causas possíveis, nos dois idiomas do painel. Medido no navegador,
-nas duas causas. Um teste de componente por causa.
+do rastreamento, e (D-241) para um 500 de servidor em Production sem tratador de exceção. O Runner passa a dizer, nomeando as
+causas possíveis, nos dois idiomas do painel. Medido no navegador, nas três causas. Um teste de componente por causa.
 
 ## Tarefa 58.5: o `AddNetApiFlowMediatR()` nos três READMEs
 

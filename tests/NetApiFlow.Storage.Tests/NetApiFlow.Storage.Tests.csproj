@@ -21,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\ManualTimeProvider.cs" Link="Shared\ManualTimeProvider.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Storage.PostgreSql\NetApiFlow.Storage.PostgreSql.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Storage.SqlServer\NetApiFlow.Storage.SqlServer.csproj" />

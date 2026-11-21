@@ -9,15 +9,15 @@ internal sealed class CapturingLoggerProvider : ILoggerProvider
 
     public IReadOnlyList<LogLine> Lines => _lines.ToArray();
 
-    public ILogger CreateLogger(string categoryName) => new CapturingLogger(_lines);
+    public ILogger CreateLogger(string categoryName) => new CapturingLogger(_lines, categoryName);
 
     public void Dispose()
     {
     }
 
-    internal readonly record struct LogLine(LogLevel Level, string Message);
+    internal readonly record struct LogLine(LogLevel Level, string Message, string Category = "", bool HasException = false);
 
-    private sealed class CapturingLogger(ConcurrentQueue<LogLine> lines) : ILogger
+    private sealed class CapturingLogger(ConcurrentQueue<LogLine> lines, string category) : ILogger
     {
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull => null;
@@ -25,6 +25,6 @@ internal sealed class CapturingLoggerProvider : ILoggerProvider
         public bool IsEnabled(LogLevel logLevel) => true;
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
-            lines.Enqueue(new LogLine(logLevel, formatter(state, exception)));
+            lines.Enqueue(new LogLine(logLevel, formatter(state, exception), category, exception is not null));
     }
 }
