@@ -203,7 +203,7 @@ que cabe**, dizendo no relatório. O que ficar de fora vira item de roadmap, com
   valor e a regra do `Bearer` solto já não acha a palavra. É um vazamento **dentro da regra do próprio plano**
   (o `Bearer` faz parte do valor). A correção provável é rodar a regra do `Bearer` solto antes da de chave, com
   teste. É o primeiro item a reproduzir.
-- `Basic <base64>` solto, userinfo em URL (`postgres://user:pw@host/db`), `private_key`, `passphrase`, `pass=`,
+- `Basic <base64>` solto, userinfo em URL (`postgres://user:pw@host/db`), `private_key`, `passphrase`, `pass=` (só com `=`, nunca com `:`, D-234),
   `credentials`. O revisor lembra, **de memória e sem verificar**, que exceções do Microsoft.IdentityModel trazem
   o JWT na mensagem (`IDX12741: JWT: 'eyJ...'`). A Executora confere antes de contar com isso.
 

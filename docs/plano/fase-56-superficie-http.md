@@ -43,7 +43,7 @@ leitura dos cabeçalhos de `GET /flow/`. **Mais um caso, o que o rebinding produ
 **Onde roda a checagem.** No portão (`DashboardAccessGate` e `McpAccessGate`), que é um filtro de endpoint e portanto
 roda **depois** do pipeline do usuário, quando o `Request.Host` já é o que o app enxerga (depois do
 `UseForwardedHeaders`, se o usuário o configurou). Uma checagem no middleware inicial do NetApiFlow veria o `Host` de
-antes do proxy. A checagem fica **num lugar só**, usada pelos dois portões, e roda antes da decisão de autorização
+antes do proxy. A checagem tem **duas cópias**, uma em cada portão, e **uma tabela única de casos** rodada contra o painel e contra o MCP (um arquivo de teste compartilhado, incluído por link nos dois projetos de teste), de modo que uma cópia que divirja derruba um teste (D-234). Ela roda antes da decisão de autorização
 (é barata e não depende de estado).
 
 **O `Host` é a defesa principal, e a `Origin` a secundária (a auditoria mudou a regra).** Depois do rebinding, a

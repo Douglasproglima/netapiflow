@@ -36,6 +36,7 @@ antes de corrigir.
 | F2 | O Npgsql 10 sai sempre como "SQL command", sem SQL, porque o código só lê `db.statement` e o Npgsql 10 manda `db.query.text`. A suíte testa só o Npgsql do EF 9.0.4 | **Código:** `NpgsqlActivityTagNames.Statement = "db.statement"`. **Reproduzido pela auditoria** com o Npgsql 10.0.0 em `net10.0` (ver abaixo): são três defeitos, não um. Não reproduzi de novo eu mesma | 58 |
 | F3 | Uma resposta 500 de exceção não tratada sai sem `X-NetApiFlow-TraceId`, embora a trace exista. O Runner mostra só "A requisição falhou.", o `NetApiFlow.Testing` diz "did not track this request", e o primeiro bloco de "Asserting" do README quebra | **Reproduzi no `0.5.2`**: 500 sem o cabeçalho em Development e em Production, e em Development a trace existe no store (`Error`, 500) | 50.13, junto do (f) |
 | F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()`. Sem a chamada, nada aparece e nada avisa | **Reproduzido pela auditoria** no `0.5.2` (ver abaixo). Não reproduzi de novo eu mesma | 58 |
+| S8 | Os pacotes satélites pedem o núcleo `>=` a uma versão, e o núcleo dá `InternalsVisibleTo` ao painel e aos dois storages: atualizar só o núcleo pode quebrar o satélite antigo com `MissingMethodException`, a classe do D-140 | **Código:** li `src/NetApiFlow/AssemblyInfo.cs`: `InternalsVisibleTo` para `NetApiFlow.Dashboard`, `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`. **Auditoria:** os `.nuspec` publicados da `0.5.2` do painel, do MCP, do EF Core e do Testing dizem `<dependency id="NetApiFlow" version="0.5.2"/>`, que no NuGet é `>= 0.5.2`. Os outros satélites a Tarefa 58.6 confere. **Ninguém reproduziu a quebra ainda:** a Tarefa 58.8 mede | 58 |
 
 ## Nível 2: correção do README nos dois idiomas, e do código quando o texto não puder ficar verdadeiro sem ele
 
@@ -249,9 +250,9 @@ Já na fila, pela ordem decidida antes: **50.10** (S4), **50.12** (AOT no CI), *
 6. **Fase 51** (a 51.9 primeiro). Ela introduz o `EndpointMatched`.
 7. **Correção da Fase 53 e Fase 57 (F1), desenhadas juntas.** As duas dependem do mesmo ponto: a decisão e a
    rota da trace passam a vir do `EndpointMatched`. Um desenho só, um ADR (ADR-0027).
-8. **Fase 58 (F2, F4, e o F3 se não entrou no passo 5).**
+8. **Fase 58 (F2, F4, e o F3 se não entrou no passo 5).** Mais o S8, os pacotes de um release só (D-231), na Parte B.
 9. **Fase 59** (nível 2), perto do fim, porque muitas frases dependem do código das fases anteriores.
-10. **Fase 60** (nível 3), se couber.
+10. **Fase 60** (nível 3): o necessário a um purista, e o resto vai para a `0.7.0`, decidido pela auditoria (D-232).
 11. **A segunda passada da auditoria de base**, e só então o release.
 
 **Por que esta ordem.** Segurança primeiro e barata (54, 56) porque exposição de dado não deve esperar a
@@ -265,6 +266,8 @@ README (59) fica para o fim para não ser reescrito duas vezes.
 couber. A `0.6.0` sai quando o nível 1 e o nível 2 estiverem fechados e a segunda passada da auditoria
 passar, limpa nos dois níveis. A `0.6.0` deixou de ser as Fases 50 e 51 e ficou maior, e o dono escolheu
 isso de olhos abertos.
+
+**Decisão do dono (D-232), 20/11/2026: entra tudo, a lista fecha e o escopo congela.** A opção de dividir a `0.6.0` foi oferecida e recusada. A auditoria faz agora uma última varredura nas áreas que a auditoria de base não cobriu (a API pública vista por um purista, os README de cada pacote e os metadados do nuget.org, o site, os samples, os arquivos de comunidade, as integrações que faltaram e a acessibilidade por teclado), e o resultado é uma lista única com prioridade. Depois dela, achado novo vai para a `0.7.0`, com duas exceções: segurança, ou regressão causada por uma PR da própria `0.6.0`.
 
 ## ADRs que precisam existir antes do código
 
