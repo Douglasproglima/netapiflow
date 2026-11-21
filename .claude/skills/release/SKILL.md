@@ -83,6 +83,10 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
     (`[]`). A tag publica com a lista cheia, porque o job `comparison` roda na tag e faz parte do `needs` da publicação: esvaziar
     antes travaria o release. Esvaziar logo depois é o que impede o primeiro CI do ciclo seguinte de cair, porque a regra "linha que
     não aparece mais falha" acusaria cada linha velha.
+    **Na mesma PR, a API pública (D-265):** mover para `PublicAPI.Shipped.txt`, em cada pacote, as linhas que estavam em
+    `PublicAPI.Unshipped.txt` **na tag** (`git show v<versao>:src/<Pacote>/PublicAPI.Unshipped.txt`), deixando no `Unshipped` só o
+    que entrou no `develop` depois do corte. Uma linha `*REMOVED*` tira a linha dela do `Shipped` e some. O registro de guardas
+    não tem passo no release.
 
 Nunca criar a tag nem publicar sem confirmação explícita de quem pediu, mesmo que os passos
 anteriores já tenham sido aprovados.

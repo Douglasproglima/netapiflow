@@ -130,6 +130,8 @@ O resultado, nos três, vai no relatório com a saída real.
 
 - Build, testes, lint e formato limpos nos dois TFMs. `AotCoreVerification` com zero aviso.
 - Cada achado com código tem teste **visto falhando antes**.
+- A correção do S8 e cada achado com código entram com a sua linha em `tests/regression-guards/guards.json` (D-266), e a auditoria o
+  cobra na PR. O snapshot dos `.nuspec` já mostra a mudança do S8.
 - A auditoria reconfere cada frase de README tocada e refaz F2, F3, F4 e S8 com o pacote real.
 
 ## Versionamento e fluxo
