@@ -166,6 +166,36 @@ Entregue em `develop` (`a974ed7`).
 - **Dois desvios do texto da 70.7, ditos na PR e aceitos** (D-262): não há símbolo de compilação para o que a `0.5.3` não tem, porque nenhum cenário comparado usa `TrackFlowByConvention` nem `WithoutNetApiFlowTracking` (quando um precisar, o símbolo entra por propriedade do build); e a requisição presa tem um `NetApiFlow.Step` dentro (um step ao vivo na `0.5.3`), não uma chamada `HttpClient`.
 - **Os checks:** `real-package / real-package` e `real-package / comparison` são obrigatórios no `develop` (D-261, D-262). A `main` os recebe depois do merge do `release/0.6.0` (passo 10 da skill `/release`).
 
+## Resultado da PR 3, tarefa 70.3 (#440, 21/11/2026)
+
+Entregue em `develop` (`ccfee25`).
+
+- **O job `built-demo`** é um job comum do `ci.yml`, com `if` no próprio job, e roda `scripts/verify-built-demo.mjs`: cada trace do manifest mais `/history`, `/components` e `/runner` num Chrome sem janela, por CDP, com falha em qualquer erro de console, exceção, HTTP 400 ou mais, falha de rede ou pedido sem resposta, e se o número de traces visitadas não for o do manifest.
+- **Provas vermelhas,** lidas nos logs: o manifest no formato anterior à #416 dá `console.error: The demo has no recording for api/blueprint?...` em cada trace, e uma fixture apagada dá `HTTP 404` e "only 25 of 26 are clean".
+- **Três desvios, aceitos** (D-264): sem biblioteca de navegador (156 linhas de CDP); o interceptor da demo escreve no console quando não há gravação; e o `deploys.json` com `[]` gravado à mão, porque `/history` pedia uma rota que a demo nunca gravou.
+- **O check `built-demo`** ainda não é obrigatório: a auditoria espera a confirmação do dono.
+
+## Resultado da PR 4, tarefa 70.4 (#443, 21/11/2026)
+
+Entregue em `develop` (`cb218b6`).
+
+- **`Microsoft.CodeAnalysis.PublicApiAnalyzers` `4.14.0`**, dependência só de build, e não o plano B. A `2.9.8` não lê os arquivos, a `3.3.4` vê 252 símbolos, e da `4.14.0` à `5.6.0` o analisador vê os mesmos 491. Os dois TFMs têm a mesma superfície, então é um arquivo por projeto (D-265).
+- **`PublicAPI.Shipped.txt`** é a `v0.5.3`, e **`PublicAPI.Unshipped.txt`** é o que a `0.6.0` acrescentou: 12 no núcleo, 2 no EF Core e 2 em cada storage. A Planejadora conferiu cada linha do `Unshipped` contra o CHANGELOG, e todas têm entrada nele.
+- **Provas vermelhas,** lidas nos logs: um membro novo de enum que nenhum arquivo lista dá `RS0016`, e um tipo renomeado dá `RS0016` para o nome novo.
+- **O `CONTRIBUTING.md`** ganhou a seção "Public API". A skill `/release` ganhou o passo de mover o `Unshipped` para o `Shipped`.
+
+## Resultado da PR 5, tarefa 70.5 (#446, 21/11/2026)
+
+Entregue em `develop` (`ae19464`).
+
+- **O registro** `tests/regression-guards/guards.json` tem 54 linhas, e o passo `Check that every regression guard still exists and passes`, do `build-test` no Linux, confere os nomes numa execução só, com um `.trx` por projeto e o JSON do Vitest.
+- **Provas vermelhas,** lidas nos logs: teste apagado ("54 regression guards, 53 found and passing"), `Skip` ("is NotExecuted, not Passed") e `it.skip` ("is skipped, not passed").
+- **As lacunas** (S3, S8 e o "Aguardando" ao vivo da 57.4) são correções por fazer, e a guarda nasce com elas: o critério entrou nos planos das Fases 55, 57 e 58 (D-266).
+
+## A Fase 70 está entregue (21/11/2026)
+
+As cinco PRs (#422, #432, #440, #443 e #446) e a regra dos consumidores do contrato estão em `develop`. As sete vermelhas obrigatórias do critério da fase foram vistas no CI (o `using` no meio do Quick start, o portão de `Host`, o guarda de `Origin` do MCP, o piso do EF Core, o manifest sem `before`, o membro público sem o arquivo e o teste registrado apagado), mais a regressão 1 da #420 na comparação. O R-35 muda para `Mitigado`. **Ressalva:** o `release.yml`, com o `real-package` e o `comparison` como `needs` da publicação, só se exercita na tag `v0.6.0`, que a auditoria acompanha.
+
 ## Tarefa 70.7: a comparação com o pacote publicado anterior (PR 2, D-257)
 
 Foi este método que a auditoria fez à mão, o mesmo roteiro contra a `0.5.3` do nuget.org e contra o build da PR, e que pegou as

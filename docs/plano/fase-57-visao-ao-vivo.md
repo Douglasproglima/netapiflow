@@ -121,7 +121,8 @@ Entregue em `develop` (`6f88e2a`). A primeira versão foi **devolvida pela audit
 Com a rota conhecida na abertura, o blueprint chega com a trace ainda `Running`. Os passos que ele prevê e que ainda
 não aconteceram aparecem como "Aguardando", e viram "Não executado" quando a trace termina sem passar por eles. O
 `graph-builder` já tem as duas regras (`inProgress`). A tarefa é provar no navegador que o fluxo todo funciona, e
-corrigir o que a 57.0 mostrar que ainda falta.
+corrigir o que a 57.0 mostrar que ainda falta. A correção entra com a sua linha em `tests/regression-guards/guards.json` (D-266), e
+a auditoria o cobra na PR.
 
 ## Tarefa 57.5: testes, README e CHANGELOG
 

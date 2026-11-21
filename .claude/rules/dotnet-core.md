@@ -45,7 +45,8 @@ de quem consome o pacote.
 ## Visibilidade e API pública
 
 - A superfície pública de cada pacote é a definida em `docs/plano/contratos.md`. Nada além
-  disso nasce `public` sem avisar a Planejadora.
+  disso nasce `public` sem avisar a Planejadora. Toda mudança pública aparece também como um diff do `PublicAPI.Unshipped.txt` do
+  pacote na PR, e o build falha com `RS0016` ou `RS0017` quando a PR não o traz (D-265).
 - Tudo que não precisa ser público é `internal`. Preferir `sealed` por padrão em classe que não
   foi desenhada para herança.
 - Todo membro `public` tem comentário XML (`<summary>`, `<param>`, `<returns>`, `<exception>`

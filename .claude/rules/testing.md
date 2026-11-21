@@ -157,6 +157,8 @@ A demo estática (`npm run build:demo`) responde cada chamada da API do painel p
 
 Toda tarefa que muda o que o painel pede à API, ou o que ela responde, abre a demo construída e prova que as traces dela carregam sem erro no console. O número de traces conferidas vai dito (zero erros em N de N), e a demo responde com a semântica nova, não ignorando o parâmetro. Aconteceu na 57.3: o `before` do blueprint deu 404 em 26 de 26 traces da demo.
 
+**Um 404 sintético da demo é barulhento (D-264).** O interceptor escreve `The demo has no recording for <url>` no console quando não há gravação. Sem isso a demo respondia 404 calada, o painel seguia mudo e uma demo quebrada passava verde. O job `built-demo` do `ci.yml` abre cada trace do manifest e as telas `/history`, `/components` e `/runner` num Chrome sem janela, em todo PR que não é só de documentação, e falha com qualquer erro de console, HTTP 400 ou mais ou pedido sem resposta.
+
 ## Clone ou worktree novo: construir o Angular antes
 
 Todo teste cujo host usa o Dashboard ou os samples (o `IntegrationTests` e o `PrePipelineInteropSpike`,
@@ -204,4 +206,7 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   (`tests/real-package/previous-published-version.txt`), e uma diferença só passa se estiver em
   `tests/real-package/expected-differences.json` com o texto da entrada do CHANGELOG que a anuncia. PR que muda comportamento
   visível do caminho quente acrescenta a linha, e diferença que ninguém planejou é regressão (D-257, D-262).
+- Toda PR que corrige um defeito acrescenta a sua linha em `tests/regression-guards/guards.json`, ou diz na descrição que o defeito
+  não tem guarda e por quê (D-266). O passo `Check that every regression guard still exists and passes`, do `build-test`, falha se um
+  teste listado sumir, for renomeado ou estiver pulado. Uma linha cujo teste é renomeado muda no mesmo commit do rename.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
