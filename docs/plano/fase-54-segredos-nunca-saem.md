@@ -173,6 +173,66 @@ Visto falhando antes onde falha hoje (o OTLP), e passando depois.
 `Microsoft.AspNetCore.Mvc.Testing` a esse projeto, na versão central que os outros projetos de teste já
 usam, e registra isso no resumo. Nada disso entra no `.nuspec`.
 
+## Tarefa 54.5: as formas que o sanitizador ainda deixa vazar (D-223)
+
+Decisão da auditoria: as lacunas do sanitizador que a Planejadora leu e o revisor independente confirmou
+**não vão para o roadmap**. Entram **antes do `0.6.0`**, numa PR própria **depois da #371**. O motivo: o README
+vai prometer que os segredos não saem, e um purista testa primeiro exatamente essas formas.
+
+**O rito:** cada forma é **reproduzida antes**, contra o código da #371 já mergeada, e tem caso de teste. O
+README diz a verdade: o sanitizador é por padrão, cobre as formas listadas, e a tag do usuário é a exceção. Se
+alguma forma for inviável com `NonBacktracking` e sem lookaround, a Executora relata e a auditoria decide.
+
+**Escopo, da auditoria:**
+
+| Forma | Exemplo | O que acontece hoje (por leitura do código, ainda não reproduzido) |
+|---|---|---|
+| `Authorization` com valor de mais de dois tokens (`Digest`, AWS SigV4) | `Authorization: AWS4-HMAC-SHA256 Credential=..., SignedHeaders=..., Signature=...` | O valor para no segundo token, e o resto fica. O valor inteiro some até o fim da linha ou até o próximo par `chave=valor` |
+| `;` dentro de um valor sem aspas | `password=ab;cd` | **Aceito e documentado num teste, não corrigido** (decisão da auditoria): o valor termina no `;` e `;cd` fica |
+| Aspa escapada dentro de valor entre aspas | `password="p\"w"` e `{\"password\":\"x\"}` | O valor termina na aspa escapada, e `w"` fica |
+| Chave com colchetes | `config[password]=x` | A chave não casa, o valor fica |
+| Cookies | `Cookie: sid=...` e `Set-Cookie: sid=...` | Nenhuma regra |
+| Chaves de connection string do Azure | `AccountKey=...`, `SharedAccessKey=...`, `SharedAccessSignature=...` (e `sig=`) | Nenhuma regra |
+| JWT solto | Três segmentos base64url começando por `eyJ`, sem a palavra `Bearer` | Nenhuma regra |
+| JSON com chave entre aspas, **a estrutura** | `{"password":"x"}` | Sai `{"password=[redacted]}`: o segredo some, mas o JSON quebra. O esperado é `{"password":"[redacted]"}` |
+
+**Do revisor independente, que a auditoria não pôs na lista dela.** A Executora reproduz cada uma e **decide o
+que cabe**, dizendo no relatório. O que ficar de fora vira item de roadmap, com a forma e o motivo:
+
+- `token: Bearer abc.def` vira `token=[redacted] abc.def`, porque a regra de chave consome só `Bearer` como
+  valor e a regra do `Bearer` solto já não acha a palavra. É um vazamento **dentro da regra do próprio plano**
+  (o `Bearer` faz parte do valor). A correção provável é rodar a regra do `Bearer` solto antes da de chave, com
+  teste. É o primeiro item a reproduzir.
+- `Basic <base64>` solto, userinfo em URL (`postgres://user:pw@host/db`), `private_key`, `passphrase`, `pass=`,
+  `credentials`. O revisor lembra, **de memória e sem verificar**, que exceções do Microsoft.IdentityModel trazem
+  o JWT na mensagem (`IDX12741: JWT: 'eyJ...'`). A Executora confere antes de contar com isso.
+
+**A tensão do `;`, decidida pela auditoria.** "`;` dentro de um valor sem aspas" contradizia a decisão da 54.1 de
+que o valor de uma connection string vai até o `;`. A auditoria decidiu: **a connection string vai até o `;`**.
+Então `password=ab;cd` deixa `;cd`, e isso é **aceito e documentado num teste**. Um segredo sem aspas com `;`
+dentro é raro, e `Password=x;Server=db` precisa continuar legível.
+
+**O JSON precisa continuar JSON.** O caso `{"password":"x"}` sai `{"password=[redacted]}`, e o esperado é
+`{"password":"[redacted]"}`. A substituição do ramo de JSON preserva as aspas e o `:`, para a mensagem
+sanitizada continuar legível por quem a lê.
+
+**Também nesta tarefa, lacunas de teste da #371 que o revisor achou:**
+
+- Um teste que afirme que o `Server=db` **fica** depois do `;`, como a tabela da 54.1 pede.
+- Um teste do corte que não parte um par substituto, que é lógica nova sem teste.
+- A idempotência com uma mensagem **maior que 300 caracteres**, que o teste de hoje não cobre.
+- O README e o CHANGELOG da #371 dizem "values in quotes or with spaces". Um valor sem aspas e com espaços
+  ainda vaza, então o texto passa a dizer só "quoted values", e diz que o sanitizador é **por padrão**, não
+  exaustivo. O falso positivo `the bearer of ...`, que perde a palavra seguinte, entra na lista dos
+  conhecidos.
+- **Aceito, não é lacuna:** os testes de host por saída rodam os 13 casos literais, e as linhas da tabela da 54.1
+  rodam só no teste do sanitizador. Como a função é uma só, usada por todas as saídas, os 13 casos em cada saída
+  provam a ligação e as linhas provam a função.
+
+**Pronto quando:** cada forma da tabela foi vista vazando contra o código da #371 e passa a sair limpa em toda
+saída, com o caso de teste, ou foi relatada como inviável. As lacunas de teste acima fechadas. O README e o
+CHANGELOG corrigidos. Branch `bugfix/54-5-formas-restantes`.
+
 ## O advisory (D-221)
 
 O dono decidiu publicar um **segundo GitHub Security Advisory**, de severidade baixa, para este achado,
@@ -192,20 +252,14 @@ inglês, sem dado de app real. A Executora não publica nada.
   painel em 10 das 12 formas de segredo. As versões anteriores são afirmadas pela leitura do mesmo código.
   Eu não reproduzi de novo.
 
-**A conta do CVSS 3.1, feita por script** (a pedido da auditoria, com a regra "se não der Baixa com o texto
-verdadeiro, vale o texto verdadeiro"):
-
-| Vetor | Nota | Quando se aplica |
-|---|---|---|
-| `AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N` | **3,1, Baixa** | A confidencialidade perdida é limitada ao que a aplicação pôs numa mensagem de exceção |
-| `AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N` | 5,3, Média | O segredo vazado costuma ser uma credencial de alto valor |
-
-**A Planejadora recomenda a Baixa**, com este raciocínio: `AC:H`, porque o disparo (um segredo dentro de uma
-mensagem de exceção) não é controlado por quem lê; `PR:L`, porque ler o backend de telemetria ou o painel exige
-uma conta (em Production o painel responde 404 sem proteção); `C:L`, porque o que vaza é só o que a aplicação
-escolheu pôr na mensagem, e não dados que o NetApiFlow colete. A Média só vale se a auditoria e o dono entendem
-que a credencial vazada costuma ser de alto valor. O texto abaixo diz que a gravidade **depende do que a
-aplicação põe nas mensagens**, que é a parte verdadeira nos dois casos.
+**Severidade: Média, CVSS 3.1 de 5,3 (D-223, decisão do dono).** Vetor
+`CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N`. A conta, feita por script, dava 3,1 (Baixa) com `C:L` e 5,3
+(Média) com `C:H`. O dono escolheu a Média, com o texto (relatado pela auditoria): "O que vaza na prática são
+tokens, senhas e chaves de API, e uma credencial vazada costuma dar acesso a mais coisa. É a leitura que um
+revisor de segurança faria, e segue a mesma lógica do primeiro aviso: o texto verdadeiro decide o número."
+A Planejadora tinha recomendado a Baixa, e a decisão é dele. `AC:H`, porque o disparo (um segredo dentro de
+uma mensagem de exceção) não é controlado por quem lê; `PR:L`, porque ler o backend de telemetria ou o painel
+exige uma conta; `C:H`, porque o que vaza é uma credencial.
 
 **Texto (campos do formulário de advisory do GitHub):**
 
@@ -217,7 +271,7 @@ aplicação põe nas mensagens**, que é a parte verdadeira nos dois casos.
 >
 > **CWE:** CWE-532, Insertion of Sensitive Information into Log File.
 >
-> **Severity:** Low. CVSS 3.1 base score 3.1, `CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:N/A:N`.
+> **Severity:** Moderate. CVSS 3.1 base score 5.3, `CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N`.
 >
 > **Description:** NetApiFlow documents that it never captures request or response bodies, headers, query
 > strings, method arguments or SQL parameter values, and that error messages are truncated to 300 characters and
@@ -235,7 +289,8 @@ aplicação põe nas mensagens**, que é a parte verdadeira nos dois casos.
 >
 > **Impact:** The secret reaches the OTLP backend without any filtering and at any length, and it is shown in the
 > dashboard in most common secret shapes (10 of the 12 tested). The severity depends on what the application puts
-> in exception messages. NetApiFlow does not add secrets itself.
+> in exception messages. A leaked credential often gives access to more than the telemetry itself.
+> NetApiFlow does not add secrets itself.
 >
 > **Not affected:** Applications whose exception messages contain no secret. Step tags set explicitly by the
 > application are documented as stored without sanitization and are not part of this issue.

@@ -25,4 +25,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Shared\SecretLeakCases.cs" Link="Shared\SecretLeakCases.cs" />
+  </ItemGroup>
 </Project>

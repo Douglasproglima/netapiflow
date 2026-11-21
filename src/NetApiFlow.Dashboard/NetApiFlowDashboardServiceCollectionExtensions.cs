@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using NetApiFlow.Dashboard.Sse;
 
 namespace NetApiFlow.Dashboard;
@@ -11,6 +13,7 @@ public static class NetApiFlowDashboardServiceCollectionExtensions
     {
         services.AddSingleton<SseBroadcaster>();
         services.AddSingleton<IFlowEventListener>(sp => sp.GetRequiredService<SseBroadcaster>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, DashboardFallbackPolicyWarning>());
         return services;
     }
 }

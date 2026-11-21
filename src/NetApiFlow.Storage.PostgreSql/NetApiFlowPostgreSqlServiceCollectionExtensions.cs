@@ -1,11 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace NetApiFlow.Storage.PostgreSql;
 
 /// <summary>Registers <see cref="ITraceStore"/> backed by PostgreSQL.</summary>
 public static class NetApiFlowPostgreSqlServiceCollectionExtensions
 {
+    private const string LoggerCategory = "NetApiFlow.Storage.PostgreSql";
+
     /// <summary>
     /// Replaces the default in-memory <see cref="ITraceStore"/> and <see cref="IDeployAnnotationStore"/>
     /// with ones backed by PostgreSQL. Call after <c>AddNetApiFlow(...)</c>, since this overrides their
@@ -18,10 +22,13 @@ public static class NetApiFlowPostgreSqlServiceCollectionExtensions
         configure?.Invoke(options);
 
         services.Replace(ServiceDescriptor.Singleton<ITraceStore>(
-            _ => new PostgreSqlTraceStore(connectionString, options)));
+            provider => new PostgreSqlTraceStore(connectionString, options, LoggerFor(provider))));
         services.Replace(ServiceDescriptor.Singleton<IDeployAnnotationStore>(
-            _ => new PostgreSqlDeployAnnotationStore(connectionString, options)));
+            provider => new PostgreSqlDeployAnnotationStore(connectionString, options, LoggerFor(provider))));
 
         return services;
     }
+
+    private static ILogger LoggerFor(IServiceProvider provider) =>
+        provider.GetService<ILoggerFactory>()?.CreateLogger(LoggerCategory) ?? NullLogger.Instance;
 }

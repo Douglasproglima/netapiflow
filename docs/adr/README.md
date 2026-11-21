@@ -39,3 +39,4 @@ Discussion é o lugar certo pra uma conversa permanente.
 | [ADR-0024](0024-descarte-de-comando-sql-so-por-step-de-banco.md) | Comando SQL do driver só é descartado quando um step de banco já o cobre | Aceito | [#310](https://github.com/Douglasproglima/netapiflow/discussions/310) |
 | [ADR-0025](0025-manter-net8-e-net10-testar-no-runtime-11.md) | Manter `net8.0` e `net10.0`, testar no runtime .NET 11 e anunciar a saída do `net8.0` | Aceito | [#331](https://github.com/Douglasproglima/netapiflow/discussions/331) |
 | [ADR-0026](0026-etapa-de-endpoint-sem-marcacao-por-evento-do-roteamento.md) | Etapa de endpoint sem marcação, aberta pelo evento `EndpointMatched` do roteamento | Aceito | [#332](https://github.com/Douglasproglima/netapiflow/discussions/332) |
+| [ADR-0028](0028-identidade-propria-da-trace.md) | A trace do NetApiFlow tem identidade própria, e o W3C trace id vira uma tag | Aceito | [#383](https://github.com/Douglasproglima/netapiflow/discussions/383) |

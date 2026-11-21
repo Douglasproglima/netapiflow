@@ -36,6 +36,13 @@ public sealed class NetApiFlowOptions
     /// </summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
 
+    /// <summary>
+    /// Writes <c>X-NetApiFlow-TraceId</c> on the response of every traced request, so a caller can
+    /// find the trace and <c>NetApiFlow.Testing</c> can read it. Default: <see langword="true"/>.
+    /// Set it to <see langword="false"/> to keep the trace id out of responses.
+    /// </summary>
+    public bool EmitTraceIdHeader { get; set; } = true;
+
     /// <summary>Retention policy for persisted traces.</summary>
     public RetentionOptions Retention { get; } = new();
 
