@@ -221,6 +221,105 @@ describe('FlowPageComponent', () => {
     ).toBe('not-executed');
   });
 
+  async function openTraceWithBlueprint(
+    trace: FlowTraceDetail,
+    blueprint: FlowTraceDetail | null = null,
+  ): Promise<{ fixture: ComponentFixture<FlowPageComponent>; blueprintRequests: TestRequest[] }> {
+    configure(trace.traceId);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne(`api/traces/${trace.traceId}`).flush(trace);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    const blueprintRequests = await flushLiveBlueprint(fixture, blueprint);
+    return { fixture, blueprintRequests };
+  }
+
+  function withANotificationBranch(trace: FlowTraceDetail): FlowTraceDetail {
+    return {
+      ...trace,
+      spans: [
+        ...trace.spans,
+        {
+          ...trace.spans[0],
+          spanId: 'bp-notify',
+          parentSpanId: 's1',
+          sequence: 1,
+          component: 'NotificationService',
+          operation: 'SendAsync',
+          type: 'Service',
+          status: 'Success',
+          endedAt: '2026-01-01T00:00:00.000100Z',
+          durationMicros: 100,
+        },
+      ],
+    };
+  }
+
+  it('asks for the blueprint of a trace with the start of that trace as the anchor (F1b)', async () => {
+    const { blueprintRequests } = await openTraceWithBlueprint(makeTrace('t1'));
+
+    expect(blueprintRequests).toHaveLength(1);
+    expect(blueprintRequests[0].request.params.get('before')).toBe('2026-01-01T00:00:00.000000Z');
+  });
+
+  it('does not invent a not-executed step when no earlier execution exists', async () => {
+    const { fixture } = await openTraceWithBlueprint(makeTrace('t1'), null);
+
+    const states = fixture.componentInstance.graph().nodes.map((node) => node.state);
+    expect(states).not.toContain('not-executed');
+    expect(states).not.toContain('waiting');
+  });
+
+  it('does not ask for a blueprint for a trace whose route is unmatched', async () => {
+    const { blueprintRequests } = await openTraceWithBlueprint({
+      ...makeTrace('missing-route'),
+      routeTemplate: '(unmatched)',
+      httpStatus: 404,
+      spanCount: 0,
+      spans: [],
+    });
+
+    expect(blueprintRequests).toHaveLength(0);
+  });
+
+  it('shows a branch of the blueprint as waiting while the trace runs', async () => {
+    const running: FlowTraceDetail = {
+      ...makeTrace('running'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    };
+    running.spans = [
+      { ...running.spans[0], status: 'Running', endedAt: null, durationMicros: null },
+    ];
+
+    const { fixture } = await openTraceWithBlueprint(
+      running,
+      withANotificationBranch(makeTrace('running')),
+    );
+
+    const branch = fixture.componentInstance
+      .graph()
+      .nodes.find((node) => node.component === 'NotificationService');
+    expect(branch?.state).toBe('waiting');
+  });
+
+  it('shows the same branch as not executed once the trace has ended without it', async () => {
+    const { fixture } = await openTraceWithBlueprint(
+      makeTrace('ended'),
+      withANotificationBranch(makeTrace('ended')),
+    );
+
+    const branch = fixture.componentInstance
+      .graph()
+      .nodes.find((node) => node.component === 'NotificationService');
+    expect(branch?.state).toBe('not-executed');
+  });
+
   it('shows an explicit not-found state for a trace that expired or never existed (A3)', async () => {
     configure('missing');
     const fixture = TestBed.createComponent(FlowPageComponent);

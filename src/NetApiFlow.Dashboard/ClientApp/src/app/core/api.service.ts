@@ -49,10 +49,10 @@ export class ApiService {
     );
   }
 
-  /** Returns `null` when the API responds 204 (no previous successful execution). */
-  getBlueprint(method: string, route: string): Observable<FlowTraceDetail | null> {
+  /** Returns `null` when the API responds 204 (no successful execution that started before `before`). */
+  getBlueprint(method: string, route: string, before: string): Observable<FlowTraceDetail | null> {
     return this.http.get<FlowTraceDetail | null>(`${this.basePath}/blueprint`, {
-      params: new HttpParams().set('method', method).set('route', route),
+      params: new HttpParams().set('method', method).set('route', route).set('before', before),
     });
   }
 

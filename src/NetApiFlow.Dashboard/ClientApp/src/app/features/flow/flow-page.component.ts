@@ -242,8 +242,12 @@ export class FlowPageComponent {
       }
 
       this.liveBlueprintTraceId = trace.traceId;
+      if (trace.routeTemplate === UNMATCHED_ROUTE_TEMPLATE) {
+        return;
+      }
+
       this.api
-        .getBlueprint(trace.method, trace.routeTemplate)
+        .getBlueprint(trace.method, trace.routeTemplate, trace.startedAt)
         .subscribe((blueprint) => this.liveBlueprintSpans.set(blueprint?.spans ?? null));
     });
 

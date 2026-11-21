@@ -109,16 +109,19 @@ describe('ApiService', () => {
     req.flush(detail);
   });
 
-  it('getBlueprint sends method and route as query params and surfaces a 204 as null', () => {
-    service.getBlueprint('GET', '/api/orders/{id}').subscribe((result) => {
-      expect(result).toBeNull();
-    });
+  it('getBlueprint sends method, route and the anchor as query params and surfaces a 204 as null', () => {
+    service
+      .getBlueprint('GET', '/api/orders/{id}', '2026-01-01T00:00:00.000000Z')
+      .subscribe((result) => {
+        expect(result).toBeNull();
+      });
 
     const req = httpMock.expectOne(
       (request) =>
         request.url === 'api/blueprint' &&
         request.params.get('method') === 'GET' &&
-        request.params.get('route') === '/api/orders/{id}',
+        request.params.get('route') === '/api/orders/{id}' &&
+        request.params.get('before') === '2026-01-01T00:00:00.000000Z',
     );
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
