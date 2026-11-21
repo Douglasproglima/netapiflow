@@ -4,10 +4,6 @@ using System.Runtime.ExceptionServices;
 
 namespace NetApiFlow.Marking;
 
-/// <summary>
-/// Wraps an interface implementation so every method call becomes a tracked step. Closes the span
-/// when the underlying operation actually finishes, not when the method call returns (risco R-01).
-/// </summary>
 internal class FlowInterceptorProxy : DispatchProxy
 {
     private static readonly MethodInfo WrapTaskGenericMethod = typeof(FlowInterceptorProxy)
@@ -20,10 +16,8 @@ internal class FlowInterceptorProxy : DispatchProxy
     private string _component = null!;
     private ComponentType _componentType;
 
-    /// <summary>The decorated instance. Used by tests to verify DI lifetime identity across proxy instances.</summary>
     internal object Target => _target;
 
-    /// <summary>Creates a proxy of <typeparamref name="TInterface"/> that tracks every call against <paramref name="target"/>.</summary>
     public static TInterface Create<TInterface, TImplementation>(TImplementation target, ComponentType componentType)
         where TInterface : class
         where TImplementation : notnull, TInterface
@@ -103,37 +97,28 @@ internal class FlowInterceptorProxy : DispatchProxy
         return result;
     }
 
-    /// <summary>
-    /// Returns a continuation of <paramref name="task"/> that closes the span and only then
-    /// re-exposes the original outcome, so anyone awaiting the returned task always observes the
-    /// span as already closed (no race between this continuation and the caller's own await).
-    /// </summary>
-    private static Task WrapTask(Task task, FlowStep step)
+    private static async Task WrapTask(Task task, FlowStep step)
     {
-        return task.ContinueWith(
-            static (completed, state) =>
-            {
-                CloseSpan(completed, (FlowStep)state!);
-                completed.GetAwaiter().GetResult();
-            },
-            step,
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        finally
+        {
+            CloseSpan(task, step);
+        }
     }
 
-    private static Task<T> WrapTaskGeneric<T>(Task<T> task, FlowStep step)
+    private static async Task<T> WrapTaskGeneric<T>(Task<T> task, FlowStep step)
     {
-        return task.ContinueWith(
-            static (completed, state) =>
-            {
-                CloseSpan(completed, (FlowStep)state!);
-                return completed.GetAwaiter().GetResult();
-            },
-            step,
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        try
+        {
+            return await task.ConfigureAwait(false);
+        }
+        finally
+        {
+            CloseSpan(task, step);
+        }
     }
 
     private static ValueTask WrapValueTask(ValueTask valueTask, FlowStep step)
@@ -156,7 +141,25 @@ internal class FlowInterceptorProxy : DispatchProxy
         {
             step.MarkError(task.Exception.GetBaseException());
         }
+        else if (task.IsCanceled)
+        {
+            step.MarkError(CancellationOf(task));
+        }
 
         step.Dispose();
+    }
+
+    private static OperationCanceledException CancellationOf(Task canceled)
+    {
+        try
+        {
+            canceled.GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException cancellation)
+        {
+            return cancellation;
+        }
+
+        return new TaskCanceledException(canceled);
     }
 }
