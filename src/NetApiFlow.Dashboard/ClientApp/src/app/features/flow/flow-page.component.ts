@@ -242,7 +242,7 @@ export class FlowPageComponent {
       }
 
       this.liveBlueprintTraceId = trace.traceId;
-      if (trace.routeTemplate === UNMATCHED_ROUTE_TEMPLATE) {
+      if (trace.routeTemplate === UNMATCHED_ROUTE_TEMPLATE || trace.status === 'Running') {
         return;
       }
 
