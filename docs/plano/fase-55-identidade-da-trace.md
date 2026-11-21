@@ -5,8 +5,8 @@ auditoria de base achou (S3) e a Planejadora mediu nos dois bancos: o mesmo `tra
 perde uma trace, duas requisições ao mesmo tempo misturam as etapas numa trace só, e um cliente anônimo
 sobrescreve uma trace guardada. O ADR-0028 decide o desenho: um id próprio, aleatório, e o W3C trace id como tag.
 
-**Nenhum código desta fase começa antes de o ADR-0028 ser aceito** (a auditoria o aceita) **e de ele ser coerente com
-o ADR-0027** (`PathBase`), porque os dois decidem em que momento a trace abre. Vai no `0.6.0` (D-210, D-212). É defeito
+O ADR-0028 está **aceito** (D-228). **Nenhum código desta fase começa antes de ele ser coerente com o ADR-0027**
+(`PathBase`), porque os dois decidem em que momento a trace abre. Vai no `0.6.0` (D-210, D-212). É defeito
 antigo e não regressão, então não é hotfix (D-205).
 
 ## Os achados e o que a Planejadora conferiu
@@ -36,13 +36,16 @@ SQL Server, estes dois com Testcontainers, em `NetApiFlow.Storage.Tests`):
 
 **E mede, sem corrigir**, os cinco pontos que o ADR-0028 deixa para antes do código:
 
-1. **Os casos de cadeia de pais**, contra o comportamento de hoje: `Task.Run`, `Task.WhenAll`, `IAsyncEnumerable`,
-   `HttpClient` de saída, EF Core, SqlClient, Npgsql, `ExecutionContext.SuppressFlow` e uma atividade criada com um
-   `ActivityContext` explícito. Para cada um, a etapa é anexada hoje? E o seria com a propriedade na atividade do
-   servidor e o passeio pelos pais?
-2. **Em qual atividade a tag `netapiflow.trace.id` precisa ficar** para chegar ao backend OTLP (o
-   `NetApiFlow.OpenTelemetry` registra a fonte `NetApiFlow`, e a atividade do servidor é da fonte do ASP.NET Core).
-3. **O custo** do passeio pelos pais, com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`.
+1. **As duas formas de achar a trace, medidas lado a lado** (decisão da auditoria): (1) subir a cadeia de
+   `Activity.Parent` até a atividade do servidor, (2) um `AsyncLocal` com o id, gravado pelo middleware. Os casos:
+   `Task.Run`, `Task.WhenAll`, `IAsyncEnumerable`, `HttpClient` de saída, EF Core, SqlClient, Npgsql,
+   `ExecutionContext.SuppressFlow` e uma atividade criada com um `ActivityContext` explícito. Para cada um, a
+   etapa é anexada hoje? E seria com cada forma? A escolhida é a que passar em **todos** os casos com o menor custo
+   medido, e, se empatarem, a mais simples. Um pai remoto explícito quebra a subida pelos pais e não quebra o
+   `AsyncLocal`, e o `SuppressFlow` quebra os dois, como o README já diz.
+2. **A tag `netapiflow.trace_id` em toda atividade do NetApiFlow**: confirmar que um span exportado pelo
+   `NetApiFlow.OpenTelemetry` a carrega, e medir o custo de uma tag por atividade.
+3. **O custo de cada forma**, com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`.
 4. **Os cinco pontos que leem `activity.TraceId`** hoje (o middleware, três no `FlowActivityListener`, e o
    `NetApiFlow.CurrentTraceId`): confirmar a lista com `grep`, porque o ADR a diz pelo que a Planejadora leu.
 5. **O que a Fase 53 muda** no momento em que a trace abre, e se o id nascer no início da atividade do servidor
@@ -52,15 +55,19 @@ O relatório da 55.0 diz o que foi reproduzido, os números, e o que muda de com
 
 ## Tarefa 55.1: o id próprio e o mapeamento
 
-Conforme o ADR-0028: o middleware gera o id aleatório de 32 caracteres hexadecimais, grava a propriedade
-customizada na atividade do servidor, e **uma função só** resolve a trace de uma atividade subindo os pais. Os
-quatro pontos que leem `activity.TraceId` passam por ela. Sem API pública nova.
+Conforme o ADR-0028: o middleware gera o id aleatório de 32 caracteres hexadecimais, e **uma função só** resolve a
+trace de uma atividade pela forma que a 55.0 escolheu (a subida pelos pais, ou o `AsyncLocal`). Os quatro pontos
+que leem `activity.TraceId` passam por ela. Sem API pública nova.
 
-## Tarefa 55.2: a tag, o OTLP e o `CurrentTraceId`
+## Tarefa 55.2: as tags, o OTLP, o `CurrentTraceId` e os dois ids no detalhe
 
 - A tag `w3c.trace_id` da trace, quando há `Activity`.
-- A tag `netapiflow.trace.id` na atividade que a 55.0 apontar, para o backend OTLP ligar ao painel.
-- `NetApiFlow.CurrentTraceId` devolve o id próprio, e `null` quando não há trace da requisição em andamento.
+- **A tag `netapiflow.trace_id` em toda atividade do NetApiFlow**, para o backend OTLP chegar à trace do painel.
+- `NetApiFlow.CurrentTraceId` devolve o id do NetApiFlow, e `null` quando não há trace da requisição em andamento.
+  O XML doc diz em uma linha que **não** é o W3C trace id e onde achá-lo (`Activity.Current.TraceId`).
+- **O detalhe da trace mostra os dois ids rotulados**, "Trace" e "W3C trace" (e os dois idiomas do painel), lendo
+  o W3C da tag. Teste de componente. Os dois têm o mesmo formato, e sem o rótulo quem cola o id do painel no Jaeger
+  não acha nada.
 
 ## Tarefa 55.3: os testes
 
@@ -69,27 +76,30 @@ Os três testes da 55.0, agora **verdes** nos três storages, mais:
 - O cabeçalho `X-NetApiFlow-TraceId` é o id próprio, e `NetApiFlow.Testing.GetFlowTrace` e `GetRecentTrace` funcionam
   com ele.
 - O `traceparent` de entrada aparece na tag `w3c.trace_id` da trace.
+- **Um span exportado** (o exportador em memória do SDK) carrega o trace id W3C nativo e a tag `netapiflow.trace_id`.
+- O detalhe da trace mostra os dois ids com os rótulos "Trace" e "W3C trace".
 - Cada caso de cadeia de pais da 55.0 que funcionava hoje continua funcionando.
 - Uma trace gravada **antes** (com o id antigo, o W3C trace id) continua legível.
 
 ## Tarefa 55.4: README, contrato e CHANGELOG
 
-- `contratos.md` é atualizado **na aceitação do ADR**, pela Planejadora: o significado de `FlowTrace.TraceId`,
-  `NetApiFlow.CurrentTraceId` e `GetRecentTrace`.
-- `README.md` e `README.pt-BR.md`: o id da trace não é o W3C trace id, onde achar o W3C trace id (a tag), e o que mudou
-  para quem usava o id nos testes.
-- `CHANGELOG.md`: `### Changed` para o significado de `CurrentTraceId` e do id, e `### Security` para o cliente não
-  escolher mais a chave de uma trace, em inglês.
+- `contratos.md`: já atualizado pela Planejadora na aceitação do ADR (o significado de `FlowTrace.TraceId` e de
+  `NetApiFlow.CurrentTraceId`).
+- `README.md` e `README.pt-BR.md`: o id da trace não é o W3C trace id, **numa frase**, onde achar o W3C trace id (a
+  tag e `Activity.Current.TraceId`), e o que mudou para quem usava o id nos testes.
+- `CHANGELOG.md`, em inglês: `### Changed` para o significado de `CurrentTraceId` e do id, e `### Fixed` para a
+  perda e a mistura de traces em chamadas distribuídas. **Não** vai em `### Security` (D-228).
 
-## Pergunta em aberto, para a auditoria e o dono
+## Sem quarto advisory (D-228)
 
-O S3 (um cliente anônimo sobrescreve uma trace guardada, nos dados de quem está desenvolvendo) merece um quarto
-**GitHub Security Advisory**? O efeito medido é integridade dos traces, e o impacto é menor que o dos outros três:
-só afeta quem lê traces e as perde. É decisão de comunicação pública, do dono, e a Planejadora não a toma.
+A auditoria decidiu **não** publicar um quarto advisory, pela classificação técnica: o S3 é um defeito de correção e
+não uma vulnerabilidade. Um cliente só consegue colidir com um trace id que ele mesmo escolheu, e não lê nem apaga a
+trace de outra pessoa, porque não conhece os ids aleatórios dos outros. O dano real é a perda e a mistura de
+traces em chamadas distribuídas legítimas. Vai em `### Fixed`, bem explicado.
 
 ## Fora de escopo
 
-- Buscar uma trace pelo W3C trace id no painel.
+- Buscar uma trace pelo W3C trace id no painel: item 30 do roadmap.
 - Migrar as traces já gravadas.
 - Qualquer mudança na forma como o W3C trace id é propagado para fora (o `traceparent` de saída continua o do
   runtime).

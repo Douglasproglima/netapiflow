@@ -1,11 +1,10 @@
 # ADR-0028: a trace do NetApiFlow tem identidade própria, e o W3C trace id vira uma tag
 
 ## Status
-Proposto
+Aceito
 
 ## Discussion
-A criar quando o ADR for aceito, como o índice manda. O número `0027` está reservado para o ADR do `PathBase`
-(Fase 53), que ainda não foi escrito.
+[#383](https://github.com/Douglasproglima/netapiflow/discussions/383)
 
 ## Contexto
 
@@ -61,21 +60,33 @@ na store em memória.
 
 ## Decisão
 
-Opção A.
+Opção A, com quatro emendas da auditoria (20/11/2026).
 
 - O `NetApiFlowMiddleware` gera, no início de cada requisição rastreada, um id de 128 bits aleatório, do gerador do
   runtime, em 32 caracteres hexadecimais, que é o **formato de hoje**. É a `FlowTrace.TraceId`: a chave do recorder
   e das stores, o valor de `X-NetApiFlow-TraceId`, o que o REST, o SSE e o MCP mostram. Nada disso muda de formato.
-- O id é gravado na `Activity` do servidor como propriedade customizada (`SetCustomProperty`). A Tarefa 55.0 confirma
-  em **qual** atividade a tag `netapiflow.trace.id` precisa ficar para chegar ao backend OTLP: o
-  `NetApiFlow.OpenTelemetry` registra a fonte `NetApiFlow`, e a atividade do servidor é da fonte do ASP.NET Core.
-- Toda etapa acha a trace pelo mesmo caminho: sobe a cadeia de `Activity.Parent` até achar a propriedade. É o caminho
-  que a hierarquia de spans já segue (`.claude/rules/tracing.md`). Os quatro pontos que hoje leem `activity.TraceId`
-  (o middleware e três no `FlowActivityListener`) passam por uma função só.
+- **Como a etapa acha a trace: a Tarefa 55.0 mede duas formas e escolhe.** (1) Subir a cadeia de `Activity.Parent`
+  até a atividade do servidor, onde o middleware gravou o id como propriedade customizada (`SetCustomProperty`). É o
+  caminho que a hierarquia de spans já segue (`.claude/rules/tracing.md`), mas uma atividade criada com um
+  `ActivityContext` explícito como pai remoto quebra a subida. (2) Um `AsyncLocal` com o id, gravado pelo
+  middleware. Ele flui junto com o `ExecutionContext`, do mesmo jeito que o `Activity.Current`, é O(1), não depende de
+  a cadeia de pais estar inteira, e um pai remoto explícito não o quebra. A escolhida é a que passar em **todos** os
+  casos da 55.0 com o menor custo medido, e, se empatarem, a mais simples. Os quatro pontos que hoje leem
+  `activity.TraceId` (o middleware e três no `FlowActivityListener`) passam por uma função só.
 - O W3C trace id, quando a requisição tem `Activity`, vira a tag `w3c.trace_id` da trace. `FlowTrace` já tem tags,
   então **nenhum campo novo e nenhuma coluna nova**.
-- `NetApiFlow.CurrentTraceId` passa a devolver o id próprio quando há uma trace da requisição em andamento, e `null`
-  quando não há. Hoje devolve o W3C trace id da `Activity.Current`.
+- **A volta da correlação com o OTLP.** O SDK exporta as etapas com o W3C trace id, então quem acha um span num
+  backend como o Jaeger precisa chegar à trace do NetApiFlow. **Toda atividade do NetApiFlow ganha a tag
+  `netapiflow.trace_id`**, e a trace guarda `w3c.trace_id`. Um teste prova que um span exportado carrega o trace id
+  W3C nativo e a tag.
+- `NetApiFlow.CurrentTraceId` passa a devolver o **id do NetApiFlow**, porque é a identidade que toda a API usa
+  (`GetRecentTrace`, o cabeçalho, o REST, o MCP), e `null` quando não há trace da requisição em andamento. O W3C
+  continua acessível pelo caminho padrão, `Activity.Current.TraceId`. É uma mudança de significado de API pública
+  antes da `1.0`: entra em `### Changed` do `CHANGELOG.md`, com uma linha no XML doc e no README, escrita sem
+  ambiguidade.
+- **Os dois ids têm o mesmo formato, 32 caracteres hexadecimais, e isso engana o olho:** quem cola o id do painel
+  no Jaeger não acha nada. Os dois aparecem **rotulados** no detalhe da trace ("Trace" e "W3C trace"), e o README
+  explica a diferença numa frase. Buscar no painel pelo W3C trace id fica no roadmap, não nesta fase.
 - As traces já gravadas ficam como estão: o id antigo é uma string opaca válida, e não há migração.
 
 ## Consequências
@@ -87,15 +98,18 @@ Opção A.
   Quem copia o W3C trace id de um log para a URL do painel não acha mais a trace pelo id: acha pela tag, e a busca por
   essa tag no painel fica fora (item de roadmap, se alguém pedir). Antes da `1.0`, mas entra em `### Changed` do
   `CHANGELOG.md` e no README, porque afeta quem instala.
-- **Risco:** uma etapa cuja cadeia de pais não chega à atividade do servidor deixa de ser anexada à trace, e hoje é
-  anexada pelo W3C trace id. A Tarefa 55.0 mede os casos **antes** do código: `Task.Run`, `Task.WhenAll`,
-  `IAsyncEnumerable`, `HttpClient` de saída, EF Core, SqlClient, Npgsql, `ExecutionContext.SuppressFlow` (que o README
-  já diz perder a etapa) e uma atividade criada com um `ActivityContext` explícito. Se algum caso que funciona hoje
-  deixar de funcionar, para e relata.
-- **Custo:** um passeio pelos pais a cada atividade, medido com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`.
+- **Risco:** com a subida pelos pais, uma etapa cuja cadeia não chega à atividade do servidor deixaria de ser
+  anexada à trace, e hoje é anexada pelo W3C trace id. O `AsyncLocal` não quebra num pai remoto explícito, mas tem o
+  seu limite: um `ExecutionContext` suprimido. A Tarefa 55.0 mede os casos **antes** do código: `Task.Run`,
+  `Task.WhenAll`, `IAsyncEnumerable`, `HttpClient` de saída, EF Core, SqlClient, Npgsql,
+  `ExecutionContext.SuppressFlow` (que o README já diz perder a etapa) e uma atividade criada com um
+  `ActivityContext` explícito. Se algum caso que funciona hoje deixar de funcionar com a forma escolhida, para e
+  relata.
+- **Custo:** o da forma escolhida, medido com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`, mais uma tag
+  por atividade do NetApiFlow.
 - **Dependência do ADR-0027 (`PathBase`):** o mecanismo escolhido lá adia a abertura da trace até o
   `EndpointMatched`. O id e a propriedade nascem quando a atividade do servidor é vista pela primeira vez, e o
   ADR-0027 decide o que acontece com as etapas anteriores à abertura. Os dois precisam ser coerentes antes de
   qualquer código de qualquer um.
-- **OTLP:** os spans exportados continuam com o W3C trace id nativo, e ganham `netapiflow.trace.id`, que liga o
-  backend ao painel.
+- **OTLP:** os spans exportados continuam com o W3C trace id nativo, e cada atividade do NetApiFlow carrega
+  `netapiflow.trace_id`, que liga o backend ao painel.
