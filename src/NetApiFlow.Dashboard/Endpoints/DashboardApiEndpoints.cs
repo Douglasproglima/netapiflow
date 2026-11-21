@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -223,14 +224,28 @@ internal static class DashboardApiEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> GetBlueprint(string? method, string? route, ITraceStore store, CancellationToken cancellationToken)
+    private static async Task<IResult> GetBlueprint(string? method, string? route, string? before, ITraceStore store, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(route))
         {
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.NormalizeForComparison(route), cancellationToken);
+        var routeKey = RouteTemplateNormalizer.NormalizeForComparison(route);
+        FlowTraceDetail? detail;
+        if (before is null)
+        {
+            detail = await store.GetLastSuccessfulAsync(method, routeKey, cancellationToken);
+        }
+        else if (DateTimeOffset.TryParse(before, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var anchor))
+        {
+            detail = await store.GetLastSuccessfulAsync(method, routeKey, anchor.UtcDateTime, cancellationToken);
+        }
+        else
+        {
+            return Results.Problem(detail: "before must be an ISO 8601 date and time.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
         return detail is null ? Results.NoContent() : Results.Json(TraceDetailDto.From(detail), DashboardJsonOptions.Rest);
     }
 
