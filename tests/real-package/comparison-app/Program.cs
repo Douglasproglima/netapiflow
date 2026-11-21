@@ -83,6 +83,7 @@ app.MapControllers();
 app.MapGet("/hello", () => "Hello");
 app.MapGet("/control", () => "control");
 app.MapGet("/health", () => "ok");
+app.MapGet("/internal/ping", () => "pong");
 app.MapGet("/orders/{id:int}", (int id) => $"order-{id}");
 app.MapGet("/boom", string () => throw new InvalidOperationException("The endpoint failed on purpose."));
 app.MapGet("/error/{code}", (string code) => $"error {code}");

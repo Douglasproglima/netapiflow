@@ -22,47 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-          dotnet-version: |
-            8.0.x
-            10.0.x
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
-          cache: npm
-          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+      - uses: ./.github/actions/pack-packages
 
       - name: Test the scripts of this job
         run: node --test scripts/*.test.mjs
-
-      - name: Choose the version and the folders, all outside the repository
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE_VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)
-          echo "PACKAGE_VERSION=${BASE_VERSION}-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
-          echo "FEED=$RUNNER_TEMP/feed" >> "$GITHUB_ENV"
-          echo "USER_APP=$RUNNER_TEMP/user-app" >> "$GITHUB_ENV"
-          echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-packages" >> "$GITHUB_ENV"
-
-      - name: Build dashboard UI
-        working-directory: src/NetApiFlow.Dashboard/ClientApp
-        run: |
-          npm ci
-          npm run build
-
-      - name: Pack the packages with a version that is never the real one
-        shell: bash
-        run: |
-          set -euo pipefail
-          for project in src/*/*.csproj; do
-            dotnet pack "$project" -c Release -p:Version="$PACKAGE_VERSION" -o "$FEED"
-          done
 
       - name: What each package declares as a dependency matches its approved snapshot
         run: node scripts/nuspec-snapshot.mjs --feed "$FEED"
@@ -79,3 +42,29 @@ jobs:
       - name: Stop any app left running
         if: always()
         run: pkill -f UserApp.dll || true
+
+  comparison:
+    name: comparison
+    if: inputs.run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/pack-packages
+
+      - name: Build the same app against this build and against the last published package
+        run: node scripts/build-comparison-apps.mjs --out "$COMPARISON_APPS" --feed "$FEED" --version "$PACKAGE_VERSION"
+
+      - name: Walk the same scenarios against both and compare what they do
+        run: >
+          node scripts/compare-with-published.mjs
+          --new-dll "$COMPARISON_APPS/new/bin/Release/net10.0/ComparisonApp.dll"
+          --old-dll "$COMPARISON_APPS/old/bin/Release/net10.0/ComparisonApp.dll"
+
+      - name: Stop any app left running
+        if: always()
+        run: pkill -f ComparisonApp.dll || true

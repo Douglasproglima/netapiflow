@@ -25,6 +25,35 @@ with `-p:Version=<base>-ci.<run number>` into a folder outside the repository, m
   variant against an app that is already standing, which is how to check that a scenario is stable.
   A new scenario goes in the `SCENARIOS` list, with the promise it comes from in its title.
 
+## The comparison with the published package
+
+The second job of `real-package.yml`, `comparison`, runs the same scenarios against two builds of the same
+app, `tests/real-package/comparison-app/`: one compiled against the packages of the build (the feed of the
+job) and one against the last published version, which `tests/real-package/previous-published-version.txt`
+pins and the CI restores from nuget.org. It is how a regression of behavior shows, the kind a test written for
+the new code does not see.
+
+- `build-comparison-apps.mjs` copies the app twice outside the repository, adds `NetApiFlow` and
+  `NetApiFlow.Dashboard` with an exact version to each, and builds both.
+- `compare-with-published.mjs` starts both apps for each variant of configuration (no `PathBase`, with
+  `PathBase`, `ExcludePaths`, `IncludePaths`, an exception handler, a status code page, Production), sends the
+  same requests to both, and compares what each one answered and recorded: the status, whether the
+  `X-NetApiFlow-TraceId` header is there, and the traces (method, route and status), in the live list while a
+  request is held and in the list after. A request is held by a gate of the app (`/__probe/...`), never by a
+  sleep. It clears the traces before each scenario, after it waited for a trace of its own to be stored, so a
+  write that is late cannot leak into the first one.
+- `tests/real-package/expected-differences.json` lists each difference this build is known to have, with the
+  scenario, the aspect, the value of each side, the reason and the text of the CHANGELOG `[Unreleased]` entry
+  that announces it. **A difference that is not in the list fails. A line of the list that does not appear any
+  more fails too**, so the list cannot rot. A line whose CHANGELOG text is not in `[Unreleased]` fails as well.
+
+To see what the differences are now, for example when you add a scenario, run with `--print`. A difference
+without a CHANGELOG entry that can announce it is a regression, not a line for the list.
+
+```bash
+node scripts/compare-with-published.mjs --new-dll <new>/ComparisonApp.dll --old-dll <old>/ComparisonApp.dll --print
+```
+
 ## `nuspec-snapshot.mjs`
 
 Reads the `.nuspec` of every `.nupkg` in a folder and writes what matters about its dependencies in a
