@@ -68,6 +68,21 @@ then becomes a step only with `.WithNetApiFlowTracking()`, on the endpoint or on
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). Marking an endpoint while the option is on does
 no harm: it never gets two steps.
 
+To draw the layers under the endpoint too, add one line after your own registrations:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.TrackFlowByConvention();
+```
+
+Every interface of your own code whose implementation is named `*Service`, `*Repository` or
+`*Handler` then becomes a step, with the matching component type. Call it after the
+registrations: one made later is not tracked, and the host logs a warning that names it.
+[Marking forms](#marking-forms) has the other ways.
+
 Open `http://localhost:<port>/flow` and send a request to the endpoint. See
 [Dashboard security in production](#dashboard-security-in-production) before deploying this
 anywhere but your own machine.
@@ -82,7 +97,8 @@ layer. They compose freely in the same request.
 | `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Only with `CaptureMinimalApiEndpoints = false`. Otherwise every Minimal API endpoint already gets the step, and MVC controllers always do |
 | `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
-| `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention (e.g. `I*Repository`) |
+| `TrackFlowByConvention()` | Wraps the `*Service`, `*Repository` and `*Handler` interfaces of your own code in steps, each with its component type | A layered app: one line after your registrations |
+| `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention you choose yourself |
 | `NetApiFlow.MediatR` | A pipeline behavior that wraps every `IRequest` handled by MediatR | Projects already using MediatR for commands/queries |
 | `NetApiFlow.EntityFrameworkCore` | A `DbCommandInterceptor` that marks each SQL command as a `Database` step | Projects using EF Core |
 
@@ -114,19 +130,53 @@ builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
-`DecorateFlowTracked` does the same thing in bulk, for every interface already registered in DI
-whose implementation type matches a predicate. It scales to a real project with many repositories
-and services, by naming convention instead of one call per interface:
+One line covers the usual layers. Call `TrackFlowByConvention` after your own registrations:
 
 ```csharp
 using NetApiFlow.Marking;
 
-builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
-builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.TrackFlowByConvention(); // after the registrations above
+```
+
+It tracks `*Service` as a `Service`, `*Repository` as a `Repository` and `*Handler` as a `UseCase`,
+for the interfaces whose implementation is a type of your application's entry assembly. It never
+touches a type of the framework, of a third-party package or of NetApiFlow. When the repositories
+live in another assembly, name it, or a namespace:
+
+```csharp
+builder.Services.TrackFlowByConvention(options =>
+{
+    options.IncludeAssembly(typeof(OrderRepository).Assembly);
+    options.IncludeNamespacePrefix("MyCompany.Orders");
+});
+```
+
+Any of the two calls replaces the default scope, the entry assembly. Under `WebApplicationFactory`
+the entry assembly is the test host, so name yours with
+`options.IncludeAssembly(typeof(Program).Assembly)`, or the shortcut tracks none of your services
+in those tests. A MediatR handler is left out,
+because `NetApiFlow.MediatR` already opens its step. Two cases the shortcut cannot cover are
+logged as warnings when the host starts, naming the types: a registration made after the call,
+and a registration made by factory, for which `AddFlowTracked<TInterface, TImplementation>` is the
+way. It stays optional, `AddNetApiFlow()` never turns it on.
+
+`DecorateFlowTracked` is what it is built on: it decorates every interface already registered in DI
+whose implementation type matches a predicate you write. Add the assembly to the predicate, or it
+also matches types of the framework and of other packages:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.DecorateFlowTracked(
+    type => type.Assembly == typeof(Program).Assembly && type.Name.EndsWith("Repository"),
+    ComponentType.Repository);
 ```
 
 The predicate receives the concrete implementation type registered in DI, never the interface, so
-matching on an interface-only naming convention (`IOrderRepository`) will not work.
+matching on an interface-only naming convention (`IOrderRepository`) will not work. A type of
+NetApiFlow itself is never decorated, whatever the predicate says.
 
 ### EF Core database commands
 
@@ -903,13 +953,13 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 - `Activity.Current` (and therefore step nesting) is lost across `ExecutionContext.SuppressFlow()`
   or a custom, non-flowing thread pool. Spans created after such a boundary record correctly, but
   as a new root rather than nested under the request's trace.
-- Automatic tracking (`AddFlowTracked`/`DecorateFlowTracked`) does not support `IAsyncEnumerable<T>`
+- Automatic tracking (`AddFlowTracked`, `DecorateFlowTracked` and `TrackFlowByConvention`) does not support `IAsyncEnumerable<T>`
   return types in this version.
-- Automatic tracking does not work under Native AOT either. Both `AddFlowTracked` and
-  `DecorateFlowTracked` build their proxy with `DispatchProxy`, which emits a type at run time, and
-  `DecorateFlowTracked` also matches implementation types by reflection. Both carry
-  `[RequiresDynamicCode]` (and `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so you get
-  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
+- Automatic tracking does not work under Native AOT either. `AddFlowTracked`,
+  `DecorateFlowTracked` and `TrackFlowByConvention` build their proxy with `DispatchProxy`, which
+  emits a type at run time, and the last two also match implementation types by reflection. All
+  three carry `[RequiresDynamicCode]` (and the last two also `[RequiresUnreferencedCode]`), so you
+  get an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
   stays safe under Native AOT and trimming is `NetApiFlow.Step(...)`: a host calling only
   `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
   net10.0, and there is a check in the repository that proves it. The same check proves that a

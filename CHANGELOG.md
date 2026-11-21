@@ -9,6 +9,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: `TrackFlowByConvention()` tracks the application's own services, repositories and
+  handlers with one line, called after the registrations. `*Service` becomes a `Service` step,
+  `*Repository` a `Repository` step and `*Handler` a `UseCase` step, for the types of the entry
+  assembly, or of the assemblies and namespaces you name with `IncludeAssembly` and
+  `IncludeNamespacePrefix`. It never touches a type of the framework, of a third-party package or of
+  NetApiFlow, and it leaves MediatR handlers to `NetApiFlow.MediatR`. When the host starts it logs a
+  warning naming a registration made after the call and a registration made by factory, which
+  cannot be decorated. It is optional, `AddNetApiFlow()` never turns it on.
 - `NetApiFlow`: a Minimal API endpoint becomes an `Endpoint` step with no marking, so the graph of
   the default `dotnet new webapi` app is no longer empty. The `CaptureMinimalApiEndpoints` option
   (`NetApiFlowOptions`, or `NetApiFlow:CaptureMinimalApiEndpoints` in configuration, default `true`)
@@ -30,6 +38,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow`: `DecorateFlowTracked` no longer decorates a type of NetApiFlow's own packages,
+  whatever the predicate says. A predicate such as `type.Name.EndsWith("Service")` used to put a
+  proxy on NetApiFlow's own hosted services, so their `StartAsync` and `StopAsync` went through it.
 - **`NetApiFlow`: every Minimal API endpoint now gets one step per traced request by default.** A
   trace of an app that did not mark its endpoints goes from 0 steps to 1, so the span count, the
   architecture map and the limit of 300 steps per trace see one more step per request, and a step
