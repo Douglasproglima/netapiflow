@@ -36,21 +36,35 @@ Ele **não é**:
 
 ## Início rápido
 
+Num projeto criado com `dotnet new webapi`:
+
 ```bash
 dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
 
+Depois acrescente as linhas do NetApiFlow ao `Program.cs` que o modelo gerou. `AddOpenApi()` e
+`MapOpenApi()` são do próprio modelo, então mantenha as duas: o Runner do dashboard lista os seus
+endpoints a partir do documento OpenAPI da sua aplicação, que é `/openapi/v1.json` a menos que você
+defina `OpenApiDocumentPath`. A linha `/hello` representa os seus próprios endpoints.
+
 ```csharp
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
+using NetApiFlow.Marking;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOpenApi();
 builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
 app.UseNetApiFlowDashboard(); // montado em /flow por padrão
 
 app.MapGet("/hello", () => "Hello");
@@ -70,12 +84,11 @@ Minimal API então só vira etapa com `.WithNetApiFlowTracking()`, no endpoint o
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). Marcar um endpoint com a opção ligada não faz
 mal: ele nunca ganha duas etapas.
 
-Para desenhar também as camadas abaixo do endpoint, acrescente uma linha depois dos seus próprios
-registros:
+Para desenhar também as camadas abaixo do endpoint, acrescente estas linhas onde você registra os
+seus próprios serviços, antes de `builder.Build()`. O `using NetApiFlow.Marking;` no topo do bloco
+acima é para a última delas:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.TrackFlowByConvention();
@@ -93,7 +106,10 @@ em qualquer lugar além da sua própria máquina.
 ## Formas de marcar etapas
 
 O NetApiFlow precisa saber onde uma etapa termina e a próxima começa. Escolha a forma que couber
-em cada camada. Elas se combinam livremente na mesma requisição.
+em cada camada. Elas se combinam livremente na mesma requisição. Toda forma abaixo, menos o
+`NetApiFlow.Step`, fica no namespace `NetApiFlow.Marking`, então o `Program.cs` precisa de
+`using NetApiFlow.Marking;` no topo, ao lado do `using NetApiFlow;` que o Início rápido já tem
+(`ComponentType` fica em `NetApiFlow`).
 
 | Forma | O que faz | Quando usar |
 |---|---|---|
@@ -127,8 +143,6 @@ Forma automática, de `samples/SampleApi.Controllers/Program.cs`. `OrderService`
 não têm nenhum código do NetApiFlow. Toda chamada a eles é rastreada só por causa deste registro:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
@@ -136,8 +150,6 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 Uma linha cobre as camadas de sempre. Chame o `TrackFlowByConvention` depois dos seus registros:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.TrackFlowByConvention(); // depois dos registros acima
@@ -170,8 +182,6 @@ implementação bater com um predicado que você escreve. Acrescente o assembly 
 também casa com tipos do framework e de outros pacotes:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.DecorateFlowTracked(
     type => type.Assembly == typeof(Program).Assembly && type.Name.EndsWith("Repository"),
     ComponentType.Repository);
@@ -188,8 +198,6 @@ só registra o `FlowDbCommandInterceptor` no DI. Anexar o interceptor a cada `Db
 você, porque o EF Core não tem registro global de interceptor:
 
 ```csharp
-using NetApiFlow.EntityFrameworkCore;
-
 builder.Services.AddNetApiFlowEntityFrameworkCore();
 
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
@@ -198,6 +206,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.AddInterceptors(sp.GetRequiredService<FlowDbCommandInterceptor>());
 });
 ```
+
+O `FlowDbCommandInterceptor` fica em `NetApiFlow.EntityFrameworkCore`, então o `Program.cs` também
+precisa de `using NetApiFlow.EntityFrameworkCore;` no topo.
 
 O pacote funciona com EF Core 8.0.10 ou superior, no `net8.0` e no `net10.0`. Foi testado no
 EF Core 8, 9 e 10.

@@ -35,21 +35,35 @@ It is **not**:
 
 ## Quick start
 
+In a project created with `dotnet new webapi`:
+
 ```bash
 dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
 
+Then add the NetApiFlow lines to the `Program.cs` the template generated. `AddOpenApi()` and
+`MapOpenApi()` are the template's own, so keep them: the dashboard's Runner lists your endpoints
+from your app's OpenAPI document, which is `/openapi/v1.json` unless you set `OpenApiDocumentPath`.
+The `/hello` line stands for your own endpoints.
+
 ```csharp
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
+using NetApiFlow.Marking;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOpenApi();
 builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
 app.UseNetApiFlowDashboard(); // mounted at /flow by default
 
 app.MapGet("/hello", () => "Hello");
@@ -68,11 +82,11 @@ then becomes a step only with `.WithNetApiFlowTracking()`, on the endpoint or on
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). Marking an endpoint while the option is on does
 no harm: it never gets two steps.
 
-To draw the layers under the endpoint too, add one line after your own registrations:
+To draw the layers under the endpoint too, add these lines where you register your own services,
+before `builder.Build()`. The `using NetApiFlow.Marking;` at the top of the block above is for the
+last one:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.TrackFlowByConvention();
@@ -90,7 +104,9 @@ anywhere but your own machine.
 ## Marking forms
 
 NetApiFlow needs to know where one step ends and the next begins. Pick whichever form fits each
-layer. They compose freely in the same request.
+layer. They compose freely in the same request. Every form below except `NetApiFlow.Step` is in the
+`NetApiFlow.Marking` namespace, so `Program.cs` needs `using NetApiFlow.Marking;` at the top, next to
+the `using NetApiFlow;` the Quick start already has (`ComponentType` is in `NetApiFlow`).
 
 | Form | What it does | When to use it |
 |---|---|---|
@@ -124,8 +140,6 @@ Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
@@ -133,8 +147,6 @@ builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Servi
 One line covers the usual layers. Call `TrackFlowByConvention` after your own registrations:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.TrackFlowByConvention(); // after the registrations above
@@ -167,8 +179,6 @@ whose implementation type matches a predicate you write. Add the assembly to the
 also matches types of the framework and of other packages:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.DecorateFlowTracked(
     type => type.Assembly == typeof(Program).Assembly && type.Name.EndsWith("Repository"),
     ComponentType.Repository);
@@ -185,8 +195,6 @@ only registers `FlowDbCommandInterceptor` in DI. You attach it to each `DbContex
 because EF Core has no global interceptor registration:
 
 ```csharp
-using NetApiFlow.EntityFrameworkCore;
-
 builder.Services.AddNetApiFlowEntityFrameworkCore();
 
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
@@ -195,6 +203,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.AddInterceptors(sp.GetRequiredService<FlowDbCommandInterceptor>());
 });
 ```
+
+`FlowDbCommandInterceptor` is in `NetApiFlow.EntityFrameworkCore`, so `Program.cs` also needs
+`using NetApiFlow.EntityFrameworkCore;` at the top.
 
 The package works with EF Core 8.0.10 or later, on `net8.0` and on `net10.0`. It was tested on
 EF Core 8, 9 and 10.
