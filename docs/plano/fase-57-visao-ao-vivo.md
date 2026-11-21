@@ -107,6 +107,15 @@ Entregues em `develop` (`67029a5`). A Planejadora reproduziu os vermelhos num wo
 - A chave do efeito continua sendo o id da trace.
 - **A demo estática passa pela mudança (D-251).** O manifest da demo é indexado pela URL com a query, então o `before` novo muda a chave e dá 404. O `build:demo` tem de responder o blueprint respeitando a âncora (estritamente antes), o `subscribe` trata o erro, e a prova são as 26 traces da demo com 0 erros no console, vista falhando antes. A Planejadora não tinha escrito isso, e a auditoria devolveu a #416 por isso.
 
+## Resultado da 57.3 (#416, 21/11/2026)
+
+Entregue em `develop` (`6f88e2a`). A primeira versão foi **devolvida pela auditoria** por causa da demo estática: `GET api/blueprint` dava 404 e um erro no console em 26 de 26 traces da demo, contra 0 de 26 no `develop`. O plano não falava da demo (D-251).
+
+- **O painel.** `getBlueprint` manda o `before`, a página manda o `startedAt` da trace que mostra, uma trace com rota `(unmatched)` não pede blueprint, e a resposta de outra trace que chega atrasada é descartada. O `subscribe` trata o erro.
+- **A demo.** O manifest passou a gravar o blueprint de cada trace com a âncora (`api/blueprint?before=...`), apontando para a trace anterior, e a lista `noContent` responde 204 para a primeira trace de cada rota. O `scripts/generate-demo-fixtures.mjs` foi atualizado: a regeneração chama `anchorBlueprints`, com a mesma regra da API (só `Success`, mesmo método, mesma rota normalizada, início estritamente anterior). A regeneração do release (62.4) mantém o formato novo.
+- **Provas.** Navegador de verdade, host real do exemplo da auditoria: A dá 204, B devolve A, C devolve B, e C mostra `OrderRepository.Find` como "Não executado", nos temas claro e escuro e em 390x844. A demo construída dá 0 erros em 26 de 26 traces, e a auditoria conferiu na rede que o blueprint vem da execução anterior.
+- **Lacuna que fica.** A demo gravada não tem nenhuma execução que pule um passo, então o "Não executado" nunca aparece na demo pública. Roadmap, item 49.
+
 ## Tarefa 57.4: "Aguardando" ao vivo (depende da 53.2)
 
 Com a rota conhecida na abertura, o blueprint chega com a trace ainda `Running`. Os passos que ele prevê e que ainda
