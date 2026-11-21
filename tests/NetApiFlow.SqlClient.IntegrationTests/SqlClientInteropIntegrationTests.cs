@@ -7,6 +7,7 @@ using NetApiFlow.Domain;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 
 namespace NetApiFlow.SqlClient.IntegrationTests;
@@ -125,8 +126,7 @@ public sealed class SqlClientInteropIntegrationTests(SqlServerContainerFixture f
 
             using var root = new Activity($"SqlClientConcurrentRoot{index}");
             root.Start();
-            var traceId = root.TraceId.ToString();
-            recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+            var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
             await QueryUserWithRawCommandAsync();
             return traceId;
@@ -174,8 +174,7 @@ public sealed class SqlClientInteropIntegrationTests(SqlServerContainerFixture f
 
         var root = new Activity("SqlClientInteropRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return new Arrangement(recorder, listener, sqlClientListener, root, traceId);
     }

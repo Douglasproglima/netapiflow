@@ -4,9 +4,9 @@ using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Marking;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
-using NetApiFlow.Tests.TestSupport;
 
 namespace NetApiFlow.Tests.Marking;
 

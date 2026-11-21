@@ -6,7 +6,7 @@ using NetApiFlow.Instrumentation;
 using NetApiFlow.Middleware;
 using NetApiFlow.Recording;
 
-namespace NetApiFlow.Tests.TestSupport;
+namespace NetApiFlow.TestSupport;
 
 internal static class FlowTestRequest
 {
