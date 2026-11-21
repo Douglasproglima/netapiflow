@@ -79,7 +79,8 @@ em cada camada. Elas se combinam livremente na mesma requisição.
 | `.WithNetApiFlowTracking()` | Envolve um endpoint de Minimal API, ou todos os endpoints de um `MapGroup`, numa etapa `Endpoint` | Apps com Minimal API. Controllers MVC não precisam |
 | `NetApiFlow.Step(...)` | Abre e fecha uma etapa manualmente em volta de um trecho de código | Qualquer código, sem depender de DI |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Envolve toda chamada à implementação de uma interface numa etapa, via proxy dinâmico | Uma interface de repositório/serviço já registrada no DI |
-| `DecorateFlowTracked(predicate, ...)` | O mesmo de cima, aplicado em lote a todo registro que bater com um predicado | Muitas interfaces que seguem uma convenção de nome (ex.: `I*Repository`) |
+| `TrackFlowByConvention()` | Envolve em etapas as interfaces `*Service`, `*Repository` e `*Handler` do seu código, cada uma com o seu tipo de componente | Um app em camadas: uma linha depois dos seus registros |
+| `DecorateFlowTracked(predicate, ...)` | O mesmo de cima, aplicado em lote a todo registro que bater com um predicado | Muitas interfaces que seguem uma convenção de nome que você mesmo escolhe |
 | `NetApiFlow.MediatR` | Um pipeline behavior que envolve todo `IRequest` tratado pelo MediatR | Projetos que já usam MediatR para comandos/queries |
 | `NetApiFlow.EntityFrameworkCore` | Um `DbCommandInterceptor` que marca cada comando SQL como uma etapa `Database` | Projetos que usam EF Core |
 
@@ -111,19 +112,50 @@ builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
-O `DecorateFlowTracked` faz o mesmo em lote, para toda interface já registrada no DI cujo tipo de
-implementação bater com um predicado. Escala para um projeto real com muitos repositórios e
-serviços, por convenção de nome, em vez de uma chamada por interface:
+Uma linha cobre as camadas de sempre. Chame o `TrackFlowByConvention` depois dos seus registros:
 
 ```csharp
 using NetApiFlow.Marking;
 
-builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
-builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.TrackFlowByConvention(); // depois dos registros acima
+```
+
+Ele rastreia `*Service` como `Service`, `*Repository` como `Repository` e `*Handler` como
+`UseCase`, nas interfaces cuja implementação é um tipo do assembly de entrada da sua aplicação.
+Nunca toca num tipo do framework, de um pacote de terceiros ou do NetApiFlow. Quando os
+repositórios ficam noutro assembly, informe-o, ou um namespace:
+
+```csharp
+builder.Services.TrackFlowByConvention(options =>
+{
+    options.IncludeAssembly(typeof(OrderRepository).Assembly);
+    options.IncludeNamespacePrefix("MyCompany.Orders");
+});
+```
+
+Qualquer uma das duas chamadas troca o escopo padrão, o assembly de entrada. Um handler de MediatR
+fica de fora, porque o `NetApiFlow.MediatR` já abre a etapa dele. Dois casos que o atalho não
+cobre saem como aviso no log quando o host sobe, nomeando os tipos: um registro feito depois da
+chamada, e um registro feito por fábrica, para o qual o caminho é o
+`AddFlowTracked<TInterface, TImplementation>`. Continua opcional, o `AddNetApiFlow()` nunca o liga.
+
+O `DecorateFlowTracked` é a base dele: decora toda interface já registrada no DI cujo tipo de
+implementação bater com um predicado que você escreve. Acrescente o assembly ao predicado, ou ele
+também casa com tipos do framework e de outros pacotes:
+
+```csharp
+using NetApiFlow.Marking;
+
+builder.Services.DecorateFlowTracked(
+    type => type.Assembly == typeof(Program).Assembly && type.Name.EndsWith("Repository"),
+    ComponentType.Repository);
 ```
 
 O predicado recebe o tipo de implementação concreta registrado no DI, nunca a interface. Uma
-convenção de nome que só bate na interface (`IOrderRepository`) não funciona.
+convenção de nome que só bate na interface (`IOrderRepository`) não funciona. Um tipo do próprio
+NetApiFlow nunca é decorado, qualquer que seja o predicado.
 
 ### Comandos de banco do EF Core
 
@@ -881,7 +913,7 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   `ExecutionContext.SuppressFlow()` ou um thread pool próprio que não propaga o contexto. Etapas
   criadas depois desse ponto são gravadas corretamente, mas como uma nova raiz, não aninhadas sob
   o trace da requisição.
-- O rastreamento automático (`AddFlowTracked`/`DecorateFlowTracked`) não dá suporte a retorno do
+- O rastreamento automático (`AddFlowTracked`, `DecorateFlowTracked` e `TrackFlowByConvention`) não dá suporte a retorno do
   tipo `IAsyncEnumerable<T>` nesta versão.
 - O rastreamento automático também não funciona sob Native AOT. Tanto `AddFlowTracked` quanto
   `DecorateFlowTracked` montam o proxy com `DispatchProxy`, que gera um tipo em tempo de execução, e

@@ -9,6 +9,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: `TrackFlowByConvention()` tracks the application's own services, repositories and
+  handlers with one line, called after the registrations. `*Service` becomes a `Service` step,
+  `*Repository` a `Repository` step and `*Handler` a `UseCase` step, for the types of the entry
+  assembly, or of the assemblies and namespaces you name with `IncludeAssembly` and
+  `IncludeNamespacePrefix`. It never touches a type of the framework, of a third-party package or of
+  NetApiFlow, and it leaves MediatR handlers to `NetApiFlow.MediatR`. When the host starts it logs a
+  warning naming a registration made after the call and a registration made by factory, which
+  cannot be decorated. It is optional, `AddNetApiFlow()` never turns it on.
 - `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
   in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
   want the trace id in its responses. The default is `true`, so nothing changes unless you set it.
@@ -26,6 +34,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow`: `DecorateFlowTracked` no longer decorates a type of NetApiFlow's own packages,
+  whatever the predicate says. A predicate such as `type.Name.EndsWith("Service")` used to put a
+  proxy on NetApiFlow's own hosted services, so their `StartAsync` and `StopAsync` went through it.
 - `NetApiFlow`: the step that `.WithNetApiFlowTracking()` records for a Minimal API endpoint is named
   from the handler, no longer from the framework's display name. It used to read
   `HTTP: GET /hello./hello` in the dashboard. A handler that is a named method is shown as its type
