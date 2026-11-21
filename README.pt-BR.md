@@ -53,17 +53,22 @@ builder.Services.AddNetApiFlowDashboard();
 var app = builder.Build();
 app.UseNetApiFlowDashboard(); // montado em /flow por padrão
 
-app.MapGet("/hello", () => "Hello")
-    .WithNetApiFlowTracking();
+app.MapGet("/hello", () => "Hello");
 
 app.Run();
 ```
 
-Controllers MVC viram uma etapa sozinhos. Um endpoint de Minimal API só vira com
-`.WithNetApiFlowTracking()`, no endpoint ou num grupo inteiro
-(`app.MapGroup("/api").WithNetApiFlowTracking()`). O modelo padrão `dotnet new webapi` usa Minimal
-API, então acrescente a chamada ao `MapGet` dele. Sem ela, a requisição é gravada e aparece na
-lista, mas com zero etapas. O dashboard avisa e mostra como marcar uma, em vez de desenhar um grafo.
+Controllers MVC e endpoints de Minimal API viram uma etapa sozinhos, sem nada para marcar. Isso
+inclui o modelo padrão `dotnet new webapi`. Um endpoint de Minimal API ganha uma etapa `Endpoint`
+por requisição rastreada, do momento em que o roteamento o escolhe até o fim da requisição, então
+a etapa também conta os middlewares que rodam no meio, como a autenticação. Uma requisição que não
+casa com nenhuma rota, um 404 ou um arquivo estático por exemplo, continua gravada e listada, com
+zero etapas.
+
+Para desligar a etapa automática, defina `CaptureMinimalApiEndpoints = false`. Um endpoint de
+Minimal API então só vira etapa com `.WithNetApiFlowTracking()`, no endpoint ou num grupo inteiro
+(`app.MapGroup("/api").WithNetApiFlowTracking()`). Marcar um endpoint com a opção ligada não faz
+mal: ele nunca ganha duas etapas.
 
 Abra `http://localhost:<porta>/flow` e envie uma requisição para o endpoint. Veja
 [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção) antes de publicar isso
@@ -76,7 +81,7 @@ em cada camada. Elas se combinam livremente na mesma requisição.
 
 | Forma | O que faz | Quando usar |
 |---|---|---|
-| `.WithNetApiFlowTracking()` | Envolve um endpoint de Minimal API, ou todos os endpoints de um `MapGroup`, numa etapa `Endpoint` | Apps com Minimal API. Controllers MVC não precisam |
+| `.WithNetApiFlowTracking()` | Envolve um endpoint de Minimal API, ou todos os endpoints de um `MapGroup`, numa etapa `Endpoint` | Só com `CaptureMinimalApiEndpoints = false`. Fora isso todo endpoint de Minimal API já ganha a etapa, e os controllers MVC sempre ganham |
 | `NetApiFlow.Step(...)` | Abre e fecha uma etapa manualmente em volta de um trecho de código | Qualquer código, sem depender de DI |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Envolve toda chamada à implementação de uma interface numa etapa, via proxy dinâmico | Uma interface de repositório/serviço já registrada no DI |
 | `DecorateFlowTracked(predicate, ...)` | O mesmo de cima, aplicado em lote a todo registro que bater com um predicado | Muitas interfaces que seguem uma convenção de nome (ex.: `I*Repository`) |
@@ -436,6 +441,7 @@ builder.Services.AddNetApiFlow(options =>
     options.ExcludePaths("/api/health"); // excluída mesmo que também bata com um padrão de inclusão
     options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; padrão é None
     options.CapturePrePipelineSteps = true; // opt-in; padrão é false, ver abaixo
+    options.CaptureMinimalApiEndpoints = true; // valor padrão mostrado; false pede WithNetApiFlowTracking()
     options.TailSampling.Enabled = true; // opt-in; ver Amostragem tail-based abaixo
     options.TailSampling.SuccessSampleRate = 0.1; // valor padrão mostrado
     options.LogCorrelation.Enabled = true; // opt-in; ver Correlação de log abaixo
@@ -460,6 +466,14 @@ para "a requisição levou 400 ms mas o meu controller levou só 20 ms, onde foi
 tempo foi para a autorização ou para um resource filter, como output caching. Vem desligado por
 padrão e não muda nada para quem não ligou. Rota de Minimal API não tem estágio de filtro do MVC,
 então não ganha etapa nova de nenhum jeito.
+
+`CaptureMinimalApiEndpoints` abre a etapa `Endpoint` de um endpoint de Minimal API sem marcação. Ele
+escuta o evento de diagnóstico `Microsoft.AspNetCore.Routing.EndpointMatched` do roteamento, que o
+framework escreve e não documenta como API, então uma versão futura do framework pode renomeá-lo.
+Um teste do repositório falha quando ele deixa de disparar, e o `.WithNetApiFlowTracking()`
+continua funcionando de qualquer jeito. A etapa é marcada como falha quando o endpoint lança
+exceção e também quando a resposta é um 5xx sem exceção, o que o `.WithNetApiFlowTracking()` não
+faz. `MapHealthChecks` e arquivos estáticos não ganham etapa.
 
 `ExternalSources` ingere a `Activity` que o runtime .NET e os drivers de banco mais comuns já
 produzem, sem nenhuma mudança de código nos seus serviços.
@@ -890,7 +904,8 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. A
   forma de marcação que continua segura sob Native AOT e trimming é o `NetApiFlow.Step(...)`: uma
   aplicação que chama só `AddNetApiFlow()` e `Step(...)` publica com zero aviso de AOT ou trimming
-  no net8.0 e no net10.0, e existe uma verificação no repositório que prova isso.
+  no net8.0 e no net10.0, e existe uma verificação no repositório que prova isso. A mesma
+  verificação prova que um endpoint de Minimal API vira uma etapa `Endpoint` no binário nativo.
 - O interceptor do `NetApiFlow.EntityFrameworkCore` é outra conversa. O interceptor em si não emite
   aviso nenhum, mas o próprio EF Core declara que não é totalmente compatível com Native AOT, e uma
   aplicação publicada que o usa acusa isso: `IL2026`/`IL3050` no construtor do `DbContext` e
