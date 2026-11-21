@@ -68,6 +68,19 @@ then becomes a step only with `.WithNetApiFlowTracking()`, on the endpoint or on
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). Marking an endpoint while the option is on does
 no harm: it never gets two steps.
 
+To draw the layers under the endpoint too, add one line after your own registrations:
+
+```csharp
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.TrackFlowByConvention();
+```
+
+Every interface of your own code whose implementation is named `*Service`, `*Repository` or
+`*Handler` then becomes a step, with the matching component type. Call it after the
+registrations: one made later is not tracked, and the host logs a warning that names it.
+[Marking forms](#marking-forms) has the other ways.
+
 Open `http://localhost:<port>/flow` and send a request to the endpoint. See
 [Dashboard security in production](#dashboard-security-in-production) before deploying this
 anywhere but your own machine.

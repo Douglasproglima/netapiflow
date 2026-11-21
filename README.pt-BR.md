@@ -70,6 +70,20 @@ Minimal API então só vira etapa com `.WithNetApiFlowTracking()`, no endpoint o
 (`app.MapGroup("/api").WithNetApiFlowTracking()`). Marcar um endpoint com a opção ligada não faz
 mal: ele nunca ganha duas etapas.
 
+Para desenhar também as camadas abaixo do endpoint, acrescente uma linha depois dos seus próprios
+registros:
+
+```csharp
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.TrackFlowByConvention();
+```
+
+Toda interface do seu código cuja implementação se chama `*Service`, `*Repository` ou `*Handler`
+passa a ser uma etapa, com o tipo de componente correspondente. Chame depois dos registros: um
+registro feito depois não é rastreado, e o host registra um aviso com o nome dele.
+[Formas de marcar etapas](#formas-de-marcar-etapas) tem as outras maneiras.
+
 Abra `http://localhost:<porta>/flow` e envie uma requisição para o endpoint. Veja
 [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção) antes de publicar isso
 em qualquer lugar além da sua própria máquina.
