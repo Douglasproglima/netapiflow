@@ -74,6 +74,8 @@ Para desenhar também as camadas abaixo do endpoint, acrescente uma linha depois
 registros:
 
 ```csharp
+using NetApiFlow.Marking;
+
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.TrackFlowByConvention();
@@ -966,10 +968,10 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   o trace da requisição.
 - O rastreamento automático (`AddFlowTracked`, `DecorateFlowTracked` e `TrackFlowByConvention`) não dá suporte a retorno do
   tipo `IAsyncEnumerable<T>` nesta versão.
-- O rastreamento automático também não funciona sob Native AOT. Tanto `AddFlowTracked` quanto
-  `DecorateFlowTracked` montam o proxy com `DispatchProxy`, que gera um tipo em tempo de execução, e
-  o `DecorateFlowTracked` ainda casa tipos de implementação por reflexão. Os dois têm
-  `[RequiresDynamicCode]` (e o `DecorateFlowTracked` também `[RequiresUnreferencedCode]`), então
+- O rastreamento automático também não funciona sob Native AOT. `AddFlowTracked`,
+  `DecorateFlowTracked` e `TrackFlowByConvention` montam o proxy com `DispatchProxy`, que gera um
+  tipo em tempo de execução, e os dois últimos ainda casam tipos de implementação por reflexão. Os
+  três têm `[RequiresDynamicCode]` (e os dois últimos também `[RequiresUnreferencedCode]`), então
   você recebe um aviso `IL3050`/`IL2026` na build em vez de uma falha na subida da aplicação. A
   forma de marcação que continua segura sob Native AOT e trimming é o `NetApiFlow.Step(...)`: uma
   aplicação que chama só `AddNetApiFlow()` e `Step(...)` publica com zero aviso de AOT ou trimming

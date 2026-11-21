@@ -71,6 +71,8 @@ no harm: it never gets two steps.
 To draw the layers under the endpoint too, add one line after your own registrations:
 
 ```csharp
+using NetApiFlow.Marking;
+
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.TrackFlowByConvention();
@@ -953,11 +955,11 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   as a new root rather than nested under the request's trace.
 - Automatic tracking (`AddFlowTracked`, `DecorateFlowTracked` and `TrackFlowByConvention`) does not support `IAsyncEnumerable<T>`
   return types in this version.
-- Automatic tracking does not work under Native AOT either. Both `AddFlowTracked` and
-  `DecorateFlowTracked` build their proxy with `DispatchProxy`, which emits a type at run time, and
-  `DecorateFlowTracked` also matches implementation types by reflection. Both carry
-  `[RequiresDynamicCode]` (and `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so you get
-  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
+- Automatic tracking does not work under Native AOT either. `AddFlowTracked`,
+  `DecorateFlowTracked` and `TrackFlowByConvention` build their proxy with `DispatchProxy`, which
+  emits a type at run time, and the last two also match implementation types by reflection. All
+  three carry `[RequiresDynamicCode]` (and the last two also `[RequiresUnreferencedCode]`), so you
+  get an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
   stays safe under Native AOT and trimming is `NetApiFlow.Step(...)`: a host calling only
   `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
   net10.0, and there is a check in the repository that proves it. The same check proves that a
