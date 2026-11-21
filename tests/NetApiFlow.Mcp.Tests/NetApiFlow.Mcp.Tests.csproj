@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\SecretLeakCases.cs" Link="Shared\SecretLeakCases.cs" />
+    <Compile Include="..\Shared\AuthorizationMatrix.cs" Link="Shared\AuthorizationMatrix.cs" />
   </ItemGroup>
 
   <ItemGroup>
