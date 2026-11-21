@@ -23,6 +23,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
   it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
   how to fix it.
+- `NetApiFlow` and `NetApiFlow.Dashboard`: `GET /flow/api/blueprint` takes an optional `before`, an
+  ISO 8601 date and time, normally the `startedAt` of the trace being drawn. It answers with the last
+  successful execution that started strictly before it, so a trace is never its own blueprint and a
+  later execution no longer changes the drawing of an earlier one. Without `before` it answers as it
+  did, and a `before` that is not a date is a 400. `ITraceStore` gets
+  `GetLastSuccessfulAsync(method, routeKey, before, cancellationToken)` as a member with a default
+  implementation, so a store written for an earlier release keeps compiling and loading. The default
+  asks for the latest successful trace and returns it only if it started before `before`, so it can
+  return nothing where an exact store would find an earlier one. The in-memory, PostgreSQL and SQL
+  Server stores implement it exactly, with `started_at < before` on the index they already have.
 
 ### Changed
 
