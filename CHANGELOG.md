@@ -53,6 +53,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow.Dashboard`: the details panel no longer says that 100% of the time is uncovered for a
   trace whose steps last microseconds, and the waterfall bars of such a trace no longer all start at
   the same point. Both are now measured in microseconds, the precision the timestamps already carry.
+- `NetApiFlow.Dashboard`: a step name cut with an ellipsis now shows its full text in a tooltip, on the
+  graph node and on the waterfall label of the details panel. Before, two routes of the same group
+  looked alike once the end of the name was cut. A node whose operation fits shows no tooltip.
 
 ### Security
 

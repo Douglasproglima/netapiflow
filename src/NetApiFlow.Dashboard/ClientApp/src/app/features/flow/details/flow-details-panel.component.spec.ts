@@ -111,6 +111,22 @@ describe('FlowDetailsPanelComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(1);
   });
 
+  it('gives each waterfall label the whole component and operation as its tooltip', async () => {
+    const trace = makeTrace();
+    trace.spans[0].component = 'Minimal API';
+    trace.spans[0].operation = 'GET /api/orders/{id:int}/items/{itemId:int}/history';
+
+    const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+    fixture.componentRef.setInput('trace', trace);
+    fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+    await fixture.whenStable();
+
+    const label: HTMLElement = fixture.nativeElement.querySelector('.flow-waterfall__label');
+    expect(label.getAttribute('title')).toBe(
+      'Minimal API.GET /api/orders/{id:int}/items/{itemId:int}/history',
+    );
+  });
+
   describe('unexplained time badge (D-78)', () => {
     it('shows the badge with the percent and both absolute durations for a finished trace', async () => {
       const trace = makeTrace();
