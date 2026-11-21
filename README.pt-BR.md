@@ -135,7 +135,10 @@ builder.Services.TrackFlowByConvention(options =>
 });
 ```
 
-Qualquer uma das duas chamadas troca o escopo padrão, o assembly de entrada. Um handler de MediatR
+Qualquer uma das duas chamadas troca o escopo padrão, o assembly de entrada. Debaixo do
+`WebApplicationFactory` o assembly de entrada é o host de teste, então nomeie o seu com
+`options.IncludeAssembly(typeof(Program).Assembly)`, senão o atalho não rastreia nenhum serviço seu
+nesses testes. Um handler de MediatR
 fica de fora, porque o `NetApiFlow.MediatR` já abre a etapa dele. Dois casos que o atalho não
 cobre saem como aviso no log quando o host sobe, nomeando os tipos: um registro feito depois da
 chamada, e um registro feito por fábrica, para o qual o caminho é o

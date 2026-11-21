@@ -15,5 +15,7 @@ internal static class NetApiFlowOwnTypes
         "NetApiFlow.Testing",
     };
 
+    public static IReadOnlyCollection<string> PackageAssemblyNames => PackageAssemblies;
+
     public static bool Is(Type type) => type.Assembly.GetName().Name is { } name && PackageAssemblies.Contains(name);
 }

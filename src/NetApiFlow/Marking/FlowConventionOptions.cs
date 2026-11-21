@@ -8,7 +8,11 @@ public sealed class FlowConventionOptions
     private readonly List<Assembly> _assemblies = [];
     private readonly List<string> _namespacePrefixes = [];
 
-    /// <summary>Adds an assembly to the scope. Any call replaces the default scope, the entry assembly.</summary>
+    /// <summary>
+    /// Adds an assembly to the scope. Any call replaces the default scope, the entry assembly. Under
+    /// <c>WebApplicationFactory</c> the entry assembly is the test host, so name the assembly of your
+    /// own <c>Program</c> here, with <c>typeof(Program).Assembly</c>.
+    /// </summary>
     public FlowConventionOptions IncludeAssembly(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);

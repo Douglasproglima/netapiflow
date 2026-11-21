@@ -134,7 +134,10 @@ builder.Services.TrackFlowByConvention(options =>
 });
 ```
 
-Any of the two calls replaces the default scope, the entry assembly. A MediatR handler is left out,
+Any of the two calls replaces the default scope, the entry assembly. Under `WebApplicationFactory`
+the entry assembly is the test host, so name yours with
+`options.IncludeAssembly(typeof(Program).Assembly)`, or the shortcut tracks none of your services
+in those tests. A MediatR handler is left out,
 because `NetApiFlow.MediatR` already opens its step. Two cases the shortcut cannot cover are
 logged as warnings when the host starts, naming the types: a registration made after the call,
 and a registration made by factory, for which `AddFlowTracked<TInterface, TImplementation>` is the
