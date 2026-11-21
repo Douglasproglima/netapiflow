@@ -21,7 +21,7 @@ internal static class RequestOriginGuard
         var request = context.Request;
         var services = context.RequestServices;
 
-        if (services.GetRequiredService<IHostEnvironment>().IsDevelopment()
+        if (!services.GetRequiredService<IHostEnvironment>().IsDevelopment()
             && request.Host.HasValue
             && !IsLoopbackOrDeclared(request.Host.Host, services.GetService<IConfiguration>()))
         {
