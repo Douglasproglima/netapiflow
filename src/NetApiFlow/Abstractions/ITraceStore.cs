@@ -40,6 +40,22 @@ public interface ITraceStore
     /// </summary>
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Gets the last successful trace of an endpoint that started strictly before
+    /// <paramref name="before"/>, with its spans. Used as the blueprint of a trace that started at
+    /// <paramref name="before"/>, so the trace is never its own blueprint and a later execution never
+    /// changes the drawing of an earlier one. <paramref name="routeKey"/> is matched as in
+    /// <see cref="GetLastSuccessfulAsync(string, string, CancellationToken)"/>. The default
+    /// implementation asks for the latest successful trace and returns it only when it started before
+    /// <paramref name="before"/>, so it never returns a wrong trace and may return <see langword="null"/>
+    /// where an exact implementation would find an earlier one.
+    /// </summary>
+    async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken)
+    {
+        var latest = await GetLastSuccessfulAsync(method, routeKey, cancellationToken);
+        return latest is not null && latest.Trace.StartedAt < before ? latest : null;
+    }
+
     /// <summary>Removes traces beyond <paramref name="policy"/>'s limits. Returns the number of traces removed.</summary>
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
