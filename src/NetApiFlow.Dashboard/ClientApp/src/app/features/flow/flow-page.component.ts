@@ -242,9 +242,14 @@ export class FlowPageComponent {
       }
 
       this.liveBlueprintTraceId = trace.traceId;
-      this.api
-        .getBlueprint(trace.method, trace.routeTemplate)
-        .subscribe((blueprint) => this.liveBlueprintSpans.set(blueprint?.spans ?? null));
+      if (trace.routeTemplate === UNMATCHED_ROUTE_TEMPLATE) {
+        return;
+      }
+
+      this.api.getBlueprint(trace.method, trace.routeTemplate, trace.startedAt).subscribe({
+        next: (blueprint) => this.applyBlueprint(trace.traceId, blueprint?.spans ?? null),
+        error: () => this.applyBlueprint(trace.traceId, null),
+      });
     });
 
     // Keyed by traceId plus whether the trace is still Running (M5), so a live trace's growing
@@ -267,6 +272,12 @@ export class FlowPageComponent {
   }
 
   private lastReplayLoadKey: string | null = null;
+
+  private applyBlueprint(traceId: string, spans: FlowSpan[] | null): void {
+    if (traceId === this.liveBlueprintTraceId) {
+      this.liveBlueprintSpans.set(spans);
+    }
+  }
 
   readonly replaySpeeds = REPLAY_SPEEDS;
 
