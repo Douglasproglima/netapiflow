@@ -513,6 +513,28 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 
 `NetApiFlow.Storage.SqlServer` espelha a mesma forma (`AddNetApiFlowSqlServerStorage`).
 
+### Rodando sem permissão de DDL
+
+Por padrão o storage cria e atualiza as próprias tabelas no primeiro uso, com um `CREATE TABLE`, um
+`ALTER TABLE` e um `UPDATE` no banco da sua aplicação. Se o usuário de banco da aplicação não pode
+rodar DDL, desligue isso e crie as tabelas você mesmo:
+
+```csharp
+builder.Services.AddNetApiFlowPostgreSqlStorage(
+    connectionString,
+    options => options.AutoCreateSchema = false);
+```
+
+Com `AutoCreateSchema = false` nada é criado nem alterado. No primeiro uso o storage só confere se as
+tabelas e a coluna `route_key` existem. Se faltar algo, ele registra um erro que diz o que falta e
+onde está o script, e não derruba a sua requisição. Rode o `schema.sql` você mesmo:
+`src/NetApiFlow.Storage.PostgreSql/schema.sql` ou `src/NetApiFlow.Storage.SqlServer/schema.sql` no
+repositório, na tag da versão que você instalou
+(`https://github.com/Douglasproglima/netapiflow/tree/v<versão>/src`). Se você mudou o `TablePrefix`,
+troque `netapiflow_` no script antes. O script cria o que falta e atualiza tabelas gravadas por uma
+versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server separa os lotes com
+`GO`, então rode com `sqlcmd`, SSMS ou Azure Data Studio.
+
 ## Segurança do dashboard em produção
 
 > **O dashboard mostra detalhe interno de implementação da sua API: nome de componente, nome de
