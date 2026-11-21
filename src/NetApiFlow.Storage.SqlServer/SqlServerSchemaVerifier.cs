@@ -8,8 +8,8 @@ internal static partial class SqlServerSchemaVerifier
 {
     private const string RepositoryUrl = "https://github.com/Douglasproglima/netapiflow";
 
-    public static async Task VerifyTracesAsync(
-        SqlConnection connection, string tracesTable, string spansTable, ILogger logger, CancellationToken cancellationToken)
+    public static async Task<bool> VerifyTracesAsync(
+        SqlConnection connection, string tracesTable, string spansTable, ILogger logger, IntervalLogLimiter failureLog, CancellationToken cancellationToken)
     {
         try
         {
@@ -29,15 +29,21 @@ internal static partial class SqlServerSchemaVerifier
             }
 
             ReportMissing(logger, missing);
+            return true;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Log.CheckFailed(logger, exception);
+            if (failureLog.TryAcquire())
+            {
+                Log.CheckFailed(logger, exception);
+            }
+
+            return false;
         }
     }
 
-    public static async Task VerifyDeployAnnotationsAsync(
-        SqlConnection connection, string deployAnnotationsTable, ILogger logger, CancellationToken cancellationToken)
+    public static async Task<bool> VerifyDeployAnnotationsAsync(
+        SqlConnection connection, string deployAnnotationsTable, ILogger logger, IntervalLogLimiter failureLog, CancellationToken cancellationToken)
     {
         try
         {
@@ -48,10 +54,16 @@ internal static partial class SqlServerSchemaVerifier
             }
 
             ReportMissing(logger, missing);
+            return true;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Log.CheckFailed(logger, exception);
+            if (failureLog.TryAcquire())
+            {
+                Log.CheckFailed(logger, exception);
+            }
+
+            return false;
         }
     }
 

@@ -530,6 +530,12 @@ installed (`https://github.com/Douglasproglima/netapiflow/tree/v<version>/src`).
 upgrades tables written by an earlier version, and it is safe to run again. The SQL Server script
 separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Studio.
 
+Until the tables exist, the traces your application produces cannot be saved. The storage logs one
+warning with the type and the message of the exception, discards the traces that arrive for 30
+seconds, and tries again. The discarded traces are counted in `netapiflow.persistence.failures`.
+When a save works again it logs one line with how many traces were not saved. The same happens
+when the database is unreachable. The full exception is logged at `Debug`.
+
 ## Dashboard security in production
 
 > **The dashboard shows internal implementation details of your API: component names, operation

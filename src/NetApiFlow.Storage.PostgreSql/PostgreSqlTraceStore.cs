@@ -7,11 +7,6 @@ using NpgsqlTypes;
 
 namespace NetApiFlow.Storage.PostgreSql;
 
-/// <summary>
-/// <see cref="ITraceStore"/> backed by PostgreSQL via raw ADO.NET (D-05). <see cref="SaveAsync"/>
-/// uses <see cref="NpgsqlBinaryImporter"/> (the <c>COPY</c> protocol) for the batch write of a
-/// trace and its spans.
-/// </summary>
 internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 {
     private readonly string _connectionString;
@@ -20,14 +15,22 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
     private readonly bool _autoCreateSchema;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly IntervalLogLimiter _verificationFailureLog = new(PersistenceRetryInterval.Default.Value);
+    private readonly Func<NpgsqlConnection, CancellationToken, Task<bool>> _verifySchema;
     private bool _schemaReady;
 
-    public PostgreSqlTraceStore(string connectionString, PostgreSqlStorageOptions options, ILogger logger)
+    public PostgreSqlTraceStore(
+        string connectionString,
+        PostgreSqlStorageOptions options,
+        ILogger logger,
+        Func<NpgsqlConnection, CancellationToken, Task<bool>>? verifySchema = null)
     {
         _connectionString = connectionString;
         (_tracesTable, _spansTable) = PostgreSqlTableNames.Resolve(options.TablePrefix);
         _autoCreateSchema = options.AutoCreateSchema;
         _logger = logger;
+        _verifySchema = verifySchema ?? ((connection, token) =>
+            PostgreSqlSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, _verificationFailureLog, token));
     }
 
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
@@ -476,9 +479,9 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
                 await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
                 await PostgreSqlSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
             }
-            else
+            else if (!await _verifySchema(connection, cancellationToken))
             {
-                await PostgreSqlSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, cancellationToken);
+                return;
             }
 
             _schemaReady = true;

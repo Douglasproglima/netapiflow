@@ -147,6 +147,7 @@ public class BackgroundServiceFailureIntegrationTests
                     services.AddSingleton<ITraceStore>(store);
                     services.AddNetApiFlow();
                     services.AddSingleton(new RetentionInterval(TickInterval));
+                    services.AddSingleton(new PersistenceRetryInterval(TimeSpan.Zero));
                 });
                 webBuilder.Configure(app =>
                 {

@@ -37,6 +37,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: a store that fails to save no longer fills the log with one error and a stack trace
+  per trace. After a failure the writer logs one warning with the type and the message of the
+  exception, discards the traces that arrive for 30 seconds while counting them in
+  `netapiflow.persistence.failures`, then tries again, and logs one line when saving works again.
+  You see it with `AutoCreateSchema = false` before the tables exist, and when the database is down.
+  The full exception is still logged at `Debug`.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: with `AutoCreateSchema = false`,
+  a schema check that failed on a transient error, such as a dropped connection, was marked as done
+  for good and never ran again. It now runs again on the next call until it completes, and logs the
+  failure at most once every 30 seconds.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
   schema. It was missing the `route_key` column and its index, so a database created by hand from the
   script was rejected by the code. It now also carries the four indexes and the deploy annotations
