@@ -89,6 +89,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   lists what it does not touch: `Basic <base64>` without `Authorization`, `credentials: ...`, a
   cookie in `name=value` form, an unquoted value with a space or a `;` (it is cut there, as in a
   connection string), a JSON value that is not a string, and a URL password with an unencoded `@`.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: every response now carries `X-Content-Type-Options:
+  nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and `Content-Security-Policy:
+  frame-ancestors 'none'`, the 403 and 404 of the access check included. Before, nothing was sent, so
+  any page could show the dashboard in a frame and place its delete button under a click. The
+  dashboard can no longer be embedded in a frame of another page. The dashboard page also carries a
+  full policy with `script-src 'self'` and no `'unsafe-inline'`. Its `style-src` allows inline styles,
+  because Angular adds the styles of each component at run time. To keep `script-src` strict the
+  dashboard build no longer inlines its critical CSS, so the page loads one stylesheet file instead,
+  and `index.html` went from about 14 KB to under 1 KB. If your middleware sets a
+  `Content-Security-Policy` on the dashboard or MCP routes, the one of the package replaces it.
 
 ## [0.5.3] - 2026-11-20
 
