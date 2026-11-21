@@ -29,6 +29,7 @@ internal static class DashboardApiEndpoints
         var group = endpoints.MapGroup(basePath + "/api");
         group.AddEndpointFilter(DashboardAccessGate.EnforceAsync);
         group.ExcludeFromDescription();
+        group.WithoutNetApiFlowTracking();
 
         group.MapGet("/traces", GetTraces);
         group.MapGet("/traces/live", GetLiveTraces);
