@@ -115,6 +115,17 @@ Os três testes da 55.0, agora **verdes** nos três storages, mais:
 - `CHANGELOG.md`, em inglês: `### Changed` para o significado de `CurrentTraceId` e do id, e `### Fixed` para a
   perda e a mistura de traces em chamadas distribuídas. **Não** vai em `### Security` (D-228).
 
+## Resultado da fase (PR #464, 21/11/2026)
+
+Entregue em `develop` (`3e85afd`, head `cff31bc`). Cada requisição tem um id aleatório de 32 caracteres hexadecimais, e uma função só (`FlowTraceResolver`) acha a trace de uma atividade na ordem do D-269, usada pelos seis pontos, o `FlowLogger` incluído. `CurrentTraceId` devolve o id do NetApiFlow, e `null` fora de trace em andamento. O W3C trace id é a tag `w3c.trace_id`, toda atividade do NetApiFlow leva `netapiflow.trace_id`, e o detalhe da trace mostra "Trace" e "W3C trace". Sem diff de API pública.
+
+- **As provas que a Planejadora leu nos logs do CI:** a sonda #465, com o id voltando a ser o W3C, derruba o cenário `i` do pacote real, o `NO LONGER HAPPENS requests-that-share-a-traceparent` da comparação com a `0.5.3` e 2 testes de integração. O job `comparison` mostra uma única diferença nova, anunciada no CHANGELOG. Os 9 vermelhos do 55.0 (3 comportamentos em 3 storages, em `net10.0` e em `net8.0`) e o custo são relato da Executora.
+- **A rodada de revisão achou cinco coisas, todas corrigidas na mesma PR com teste visto falhando antes (relato da Executora):** a frase do README sobre o `SuppressFlow`, que dizia que a etapa depois dele é gravada como nova raiz, quando não está em trace nenhuma; as tags no detalhe da trace em execução e no evento `TraceStarted`, que a auditoria exigiu porque até a `0.5.3` o `trace.traceId` do evento era o W3C, e um consumidor externo do stream perderia a correlação com o OpenTelemetry (regressão da própria `0.6.0`); uma regressão de amostragem, em que o `Sample` pendurava no `AllDataAndRecorded` uma atividade de contexto estrangeiro dentro de uma requisição rastreada, passando por cima do sampler do OpenTelemetry do usuário, onde o `develop` dava `None`; a retenção do `HttpContext` por um `ExecutionContext` capturado, que passou a ser um holder zerado no fim da requisição; e o `MarkFinished` e o `Detach` fora de um `finally`. Um resolvedor de tenant que lança descartava a trace inteira, e agora só perde a tag.
+- **Custo,** medido pela Executora: +0,13 a +0,23 KB por requisição no ponta a ponta (7,67 para 7,86 KB na rota rastreada), abaixo do teto de 0,6 KB da Fase 53. O tempo oscila nos dois sentidos entre rodadas do mesmo código, então não se afirma custo de tempo nem ausência dele.
+- **O registro de guardas** ganhou 21 linhas do S3, com a #464 como `fixedIn`, mais a da `live-panel:ended`, pedida pela auditoria (D-268).
+
+**Fica:** o holder ainda segura o objeto `Activity` do servidor (item 53 do roadmap), e o teste do assinante de `TraceCompleted` que lança afirma que a exceção chega ao usuário, o que a Fase 65 muda (B5). **Critério pendente, da auditoria:** refazer a medição com o pacote real e reconferir a frase do README na segunda passada.
+
 ## Sem quarto advisory (D-228)
 
 A auditoria decidiu **não** publicar um quarto advisory, pela classificação técnica: o S3 é um defeito de correção e

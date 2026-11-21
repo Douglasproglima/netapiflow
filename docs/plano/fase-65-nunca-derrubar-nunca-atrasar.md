@@ -29,7 +29,7 @@ Teste de host real, visto falhando antes:
 
 1. **B5a.** Um `ActivityListener` de teste que faz o callback lançar (um span com um valor que quebra o NetApiFlow, e um
    `FlowActivityListener` com a dependência quebrada): a requisição **responde normalmente** e o erro é logado. Hoje: confere
-   se a exceção chega à requisição, e relata o que achou.
+   se a exceção chega à requisição, e relata o que achou. **O teste da Fase 55** `InvokeAsync_WhenCompletingTheTraceThrows_ReleasesTheRequestFromAContextCapturedDuringIt` afirma `Should.ThrowAsync<InvalidOperationException>`, ou seja, fixa que um assinante de `TraceCompleted` que lança chega ao usuário. Quando esta tarefa puser o `try/catch` nos callbacks, a exceção deixa de chegar, e esse teste muda no mesmo commit: a requisição responde, e a liberação do contexto capturado continua conferida (D-271).
 2. **B5b.** `IncludePaths("/x", null!)`: hoje a primeira requisição dá `NullReferenceException`. Depois: o app **não sobe**,
    com uma mensagem que diz qual padrão está inválido.
 3. **B5c.** Um `IFlowEventListener` de teste cuja parte síncrona demora 200 ms. A latência de uma requisição com esse
