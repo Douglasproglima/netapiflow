@@ -193,4 +193,9 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   Projeto de teste novo entra nos dois na mesma PR. O do SqlClient ficou fora do CI, o do Npgsql
   fora do `release.yml`, e três projetos (Mcp, OpenTelemetry e o spike de pré-pipeline) fora dos
   dois, por falta dessa regra.
+- O job do pacote real (D-254, D-259) tem **uma definição só**, `.github/workflows/real-package.yml` (`workflow_call`), chamada pelo
+  `ci.yml` e pelo `release.yml`, então a paridade dele é estrutural. No `ci.yml` o chamador sempre chama e passa `run` (verdadeiro
+  quando o PR não é só de documentação ou mexe no README), e o job do workflow chamado tem `if: inputs.run`: assim o check
+  `real-package / real-package` existe também num PR só de docs, como Skipped. Um `if` no job chamador faria o check não nascer, e um
+  check obrigatório que não nasce trava o PR. No `release.yml` o job é pré-requisito da publicação (`needs`).
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`: padrão do time, sem exceções.
