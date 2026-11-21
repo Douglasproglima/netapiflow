@@ -113,3 +113,31 @@ Opção A, com quatro emendas da auditoria (20/11/2026).
   qualquer código de qualquer um.
 - **OTLP:** os spans exportados continuam com o W3C trace id nativo, e cada atividade do NetApiFlow carrega
   `netapiflow.trace_id`, que liga o backend ao painel.
+
+## Adendo de 21/11/2026: o que a Tarefa 55.0 mediu e a forma escolhida
+
+A decisão acima não muda. O adendo fecha o que ela deixou para a medição, e corrige uma contagem. Quem mediu foi a Executora, em host real, `net10.0`, e a Planejadora leu o relatório e não repetiu as medições.
+
+**São seis os pontos que leem o trace id da `Activity`,** não quatro nem cinco: o middleware, o `Sample` do `FlowActivityListener` (que só tem `options.TraceId` e o `Activity.Current` ambiente, nunca a atividade nova), o `OnActivityStarted`, o `OnActivityStopped`, o `NetApiFlow.CurrentTraceId` e o `FlowLogger`, que correlaciona o log à trace e o ADR não listava. Os dois usos de `CurrentTraceId` no `FlowAuthorizationFilterListener` ficam coerentes sem mudança. **Os seis passam por uma função só.**
+
+**A matriz,** medida contra o que anexa a etapa hoje, contra a subida pela cadeia de `Activity.Parent` e contra o `AsyncLocal`:
+
+| Caso | Hoje | Cadeia | `AsyncLocal` |
+|---|---|---|---|
+| `Task.Run`, `Task.WhenAll`, `IAsyncEnumerable`, `HttpClient` de saída, EF Core, SqlClient, Npgsql | sim | sim | sim |
+| `ExecutionContext.SuppressFlow` | não | não | não |
+| `ActivityContext` explícito, fluxo mantido | sim | **não** | sim |
+| `ActivityContext` explícito, sem fluxo | sim | **não** | **não** |
+| `Activity.Current` atribuído à mão numa thread sem fluxo | sim | sim | **não** |
+
+Nenhuma das duas formas sozinha cobre tudo o que funciona hoje, e a união das duas cobre tudo, menos a quarta linha.
+
+**A forma escolhida:** o middleware grava o estado da requisição (o id próprio e o W3C trace id) num `AsyncLocal`, e grava o id próprio como propriedade customizada da atividade do servidor. A função única resolve nesta ordem: (1) se há estado no `AsyncLocal` **e o W3C trace id da atividade é o dele**, o id próprio; (2) senão, sobe `Activity.Parent` até uma atividade que tenha a propriedade; (3) senão, nenhuma trace. No `Sample` a comparação usa `options.TraceId` e a subida parte de `Activity.Current`.
+
+**Por que a comparação com o W3C trace id no passo 1, que é a Planejadora acrescentando ao que a medição propôs:** o `AsyncLocal` é ambiente. Um worker de vida longa, iniciado dentro de uma requisição A, guarda o `ExecutionContext` dela para sempre, e depois processa a atividade de uma requisição B. Sem a comparação, essa atividade seria pendurada em A enquanto A ainda está ativa, que é a mistura que a fase conserta. Com ela, o `AsyncLocal` só vale para uma atividade que pertence ao mesmo W3C trace id da requisição, que é exatamente a condição em que a etapa é anexada hoje. O custo é uma comparação de 16 bytes, e o estado é o `FlowRequestState` que a Fase 53 já cria por requisição, então não há alocação a mais.
+
+**A perda aceita: o `ActivityContext` explícito sem fluxo.** Funciona hoje só porque o W3C trace id é compartilhado, que é o mecanismo do defeito. Exige suprimir o fluxo e ainda criar a atividade com o pai explícito, e o caso real que se imagina (um worker que consome uma fila em processo) só anexa hoje se a requisição ainda estiver ativa, ou seja, por acaso de tempo. É a mesma classe de perda do `SuppressFlow`, que o README já diz. **Não se monta um índice por W3C trace id**, porque ele traria de volta a ambiguidade que a fase conserta. Se um caso real aparecer, a opção é um índice que só anexa quando exatamente uma trace ativa tem aquele W3C trace id, e isso é uma decisão nova.
+
+**Custo,** medido pela Executora com `BenchmarkDotNet` em `ShortRun`, ordem de grandeza: ler o `AsyncLocal` 10 ns e 0 B, subir a cadeia de 38 a 44 ns e 0 B (profundidade 1 a 6), gravar o `AsyncLocal` uma vez por requisição 9 ns, gravar a propriedade na atividade do servidor uma vez por requisição 39 ns, e a tag `netapiflow.trace_id` em cada atividade +31 ns e +80 B. Gravar uma propriedade em **toda** atividade custaria +140 ns e +216 B, e por isso não se faz. A tag chega ao span exportado pelo SDK, que mantém o W3C trace id nativo. O benchmark de ponta a ponta contra a `develop` é da Executora, depois da 55.1.
+
+**Coerência com o ADR-0027:** o id nasce no início do middleware, junto da reserva não publicada que a Fase 53 já faz, e a trace abre no `EndpointMatched`. A etapa anterior à abertura acha a trace reservada pelo mesmo id, e o cabeçalho sai do `FlowRequestState`. Só o `StartRequest` muda.
