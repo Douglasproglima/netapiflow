@@ -48,6 +48,7 @@ public static class NetApiFlowServiceCollectionExtensions
         services.Configure<MvcOptions>(options => options.Filters.Add<FlowControllerActionFilter>());
         services.AddSingleton<PersistenceWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<PersistenceWriter>());
+        services.AddSingleton(RetentionInterval.Default);
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();
 
