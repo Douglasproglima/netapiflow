@@ -585,6 +585,17 @@
     "job": "build-test"
   },
   {
+    "id": "Runtime11-the-suite-never-ran-on-it",
+    "defect": "The CI never ran the suite on the .NET 11 runtime, although the decision was that it should, and a roll forward that did not happen would have left the step green on runtime 10",
+    "fixedIn": "#451",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Release.ExpectedRuntimeTests.Runtime_WhenTheCiNamesTheMajorTheSuiteMustRunOn_IsThatMajor"
+    },
+    "job": "build-test"
+  },
+  {
     "id": "F1-waiting-in-the-real-panel",
     "defect": "A running trace was drawn without the steps it was expected to run, because the panel asked for its blueprint under the route (unmatched)",
     "fixedIn": "#420",
