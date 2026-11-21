@@ -37,6 +37,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.EntityFrameworkCore`: a query cancelled by its `CancellationToken` no longer leaves its
+  step open. The interceptor did not handle the cancellation event, so the step stayed in its
+  internal table for good and the span kept showing as running. The span now closes as failed with
+  an `OperationCanceledException`, and the step is released.
+- `NetApiFlow`: `DecorateFlowTracked` no longer leaves the services it decorates undisposed. It built
+  the original with `ActivatorUtilities`, so a decorated service that implements `IDisposable` was
+  never disposed. The container now owns the original and disposes it with the lifetime the service
+  was registered with.
+- `NetApiFlow`: a call through a tracked interface (`AddFlowTracked` or `DecorateFlowTracked`) that
+  returns a cancelled `Task` or `ValueTask` now hands the caller a cancelled task. It used to hand
+  back a faulted one, and the span closed as a success. The span now closes as failed with the
+  cancellation exception.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
   schema. It was missing the `route_key` column and its index, so a database created by hand from the
   script was rejected by the code. It now also carries the four indexes and the deploy annotations
