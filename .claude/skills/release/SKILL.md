@@ -57,10 +57,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    conferência do passo 10.
 9. Pare aqui e peça confirmação explícita antes de `git push` e `gh pr create --base main`. Push,
    PR e tag são ações públicas (ver `.claude/rules/git-workflow.md`).
-10. Depois do merge em `main` (squash): **só na `0.6.0`, a `AUDITORIA-16-11` torna `real-package / real-package` check obrigatório
-    na `main`** (D-261). O check já é obrigatório no `develop`. A `main` ficou de fora até aqui de propósito: o `ci.yml` dela ainda é o
-    antigo, sem o job, e um `hotfix/*` nasce da `main` e nunca produziria o check, então torná-lo obrigatório antes travaria qualquer
-    `0.5.x`. A configuração é da auditoria, com a autorização do dono. Depois disso, criar a tag `v<versao>` (**só com confirmação explícita**),
+10. Depois do merge em `main` (squash): **só na `0.6.0`, a `AUDITORIA-16-11` torna `real-package / real-package` e `real-package /
+    comparison` checks obrigatórios na `main`** (D-261, D-262). Os dois já são obrigatórios no `develop`. A `main` ficou de fora até aqui
+    de propósito: o `ci.yml` dela ainda é o antigo, sem o job, e um `hotfix/*` nasce da `main` e nunca produziria os checks, então
+    torná-los obrigatórios antes travaria qualquer `0.5.x`. A configuração é da auditoria, com a autorização do dono. Depois disso,
+    criar a tag `v<versao>` (**só com confirmação explícita**),
     que dispara `release.yml` (Trusted Publishing, sem API key guardada). Confirme antes de criar
     a tag que a política de Trusted Publishing já foi configurada no nuget.org (tarefa 7.7 em
     `docs/plano/fase-7-documentacao.md`); se for a primeira release, esse passo manual precisa ter
@@ -77,6 +78,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
     branch (push direto é rejeitado pelo próprio GitHub), então isso sempre é PR, nunca
     fast-forward direto. Mergear com "Create a merge commit" (nunca squash), senão a PR perde o
     vínculo de ancestralidade que o merge deveria estabelecer.
+13. **Depois da publicação e do back-merge, nunca antes da tag (D-260),** num PR de `chore/*` no `develop`: apontar
+    `tests/real-package/previous-published-version.txt` para a versão nova e esvaziar `tests/real-package/expected-differences.json`
+    (`[]`). A tag publica com a lista cheia, porque o job `comparison` roda na tag e faz parte do `needs` da publicação: esvaziar
+    antes travaria o release. Esvaziar logo depois é o que impede o primeiro CI do ciclo seguinte de cair, porque a regra "linha que
+    não aparece mais falha" acusaria cada linha velha.
 
 Nunca criar a tag nem publicar sem confirmação explícita de quem pediu, mesmo que os passos
 anteriores já tenham sido aprovados.

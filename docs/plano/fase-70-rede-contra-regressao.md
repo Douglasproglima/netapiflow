@@ -154,6 +154,18 @@ Entregue em `develop` (`efaa818`).
 - **Acréscimos de desenho da Executora, aceitos** (D-259): `dotnet add package <id> --version "[<versão>]" --no-restore`, o `nuget.config` do app começando com `<clear />`, `NU1901` a `NU1904` fora do `TreatWarningsAsErrors` só no app de usuário, e `node:http` no roteiro para controlar o `Host`.
 - **Ainda não visto:** o check `real-package / real-package` como Skipped num PR só de docs, que só existe depois do merge. O nome só vai ao dono, para ser obrigatório, depois disso.
 
+## Resultado da PR 2, tarefa 70.7 (#432, 21/11/2026)
+
+Entregue em `develop` (`a974ed7`).
+
+- **O job `comparison`** é o segundo job do `real-package.yml`, com `if: inputs.run` como o primeiro, então `real-package / comparison` também aparece como Skipped num PR só de docs. O `needs` do `release.yml` cobre os dois. As etapas de pack viraram uma ação composta compartilhada, `.github/actions/pack-packages`.
+- **14 cenários em 8 variantes**, com o mesmo app compilado contra o build e contra a `0.5.3` do nuget.org. Os arquivos que a tarefa criou: `tests/real-package/previous-published-version.txt` (hoje `0.5.3`) e `tests/real-package/expected-differences.json` (8 linhas, cada uma com o texto da entrada do CHANGELOG que a anuncia).
+- **As 8 diferenças que a comparação acha hoje,** todas intencionais e anunciadas no `[Unreleased]`: o cabeçalho no 500 tratado (50.13) em quatro cenários, a visão ao vivo de uma requisição sem endpoint (R2 da #420), o `ExcludePaths` sob `PathBase` (duas linhas) e o cabeçalho em Production (50.15). Nenhuma era regressão.
+- **Provas vermelhas,** lidas nos logs do CI pela Planejadora: a regressão 1 da #420 de volta dá 14 diferenças contra 8 esperadas; uma linha tirada da lista dá `differences=8 expected=7`; uma linha que não acontece mais dá `NO LONGER HAPPENS` e manda removê-la.
+- **Medido pela Executora:** três execuções verdes seguidas, de 2m05s, 2m08s e 2m02s.
+- **Dois desvios do texto da 70.7, ditos na PR e aceitos** (D-262): não há símbolo de compilação para o que a `0.5.3` não tem, porque nenhum cenário comparado usa `TrackFlowByConvention` nem `WithoutNetApiFlowTracking` (quando um precisar, o símbolo entra por propriedade do build); e a requisição presa tem um `NetApiFlow.Step` dentro (um step ao vivo na `0.5.3`), não uma chamada `HttpClient`.
+- **Os checks:** `real-package / real-package` e `real-package / comparison` são obrigatórios no `develop` (D-261, D-262). A `main` os recebe depois do merge do `release/0.6.0` (passo 10 da skill `/release`).
+
 ## Tarefa 70.7: a comparação com o pacote publicado anterior (PR 2, D-257)
 
 Foi este método que a auditoria fez à mão, o mesmo roteiro contra a `0.5.3` do nuget.org e contra o build da PR, e que pegou as
@@ -196,7 +208,10 @@ job do mesmo workflow, em paralelo, para não somar ao tempo do primeiro.
   última tag da `main` naquele momento** (e não para a última lida no nuget.org na hora, para o hotfix não depender de rede nem de
   um publish paralelo) e esvazia a lista, e as diferenças do próprio hotfix entram nela, com a entrada do CHANGELOG. Assim o hotfix é
   comparado com o que está em produção, que é a regressão que importa num PATCH (D-205). **O back-merge do hotfix para o `develop`**
-  deixa o `develop` apontando para a versão do hotfix, com a lista vazia, pela mesma regra do release.
+  passa a versão anterior para a do hotfix e deixa a lista com a do `develop` (as diferenças do ciclo dele) sem as linhas que só o
+  hotfix acrescentou. **"Lista vazia" vale para o release, não para o hotfix** (D-262): no meio de um ciclo a lista do `develop`
+  tem as diferenças do ciclo seguinte, e esvaziá-la derrubaria o primeiro CI. Nesse back-merge, um `NO LONGER HAPPENS` significa "o
+  hotfix levou isso", e a correção é tirar a linha (D-263).
 
 **Os cenários.** A Planejadora lista os que o "como hoje" exige, e a Executora acrescenta os que achar:
 
