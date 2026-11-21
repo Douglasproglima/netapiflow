@@ -52,11 +52,11 @@ defina `OpenApiDocumentPath`. A linha `/hello` representa os seus próprios endp
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
-using NetApiFlow.Marking;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddNetApiFlow();
+using NetApiFlow.Marking;
 builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();

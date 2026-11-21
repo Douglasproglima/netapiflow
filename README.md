@@ -51,11 +51,11 @@ The `/hello` line stands for your own endpoints.
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
-using NetApiFlow.Marking;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddNetApiFlow();
+using NetApiFlow.Marking;
 builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
