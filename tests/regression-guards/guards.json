@@ -809,5 +809,27 @@
       "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished"
     },
     "job": "build-test"
+  },
+  {
+    "id": "S3-tenant-resolver-failure",
+    "defect": "A tenant resolver that threw discarded the whole trace, because the opening tags are resolved before the trace is published",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.OpeningTagsTests.Trace_WhenTheTenantResolverThrows_IsStillRecordedWithTheW3CTraceIdAndWithoutTheTenant"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-released-when-completing-throws",
+    "defect": "When completing the trace threw, the request stayed reachable from a context captured during it, because the release ran after the completion in the same block",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_ReleasesTheRequestFromAContextCapturedDuringIt"
+    },
+    "job": "build-test"
   }
 ]
