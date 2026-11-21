@@ -90,12 +90,19 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult<IReadOnlyList<ComponentStat>>(stats);
     }
 
-    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken) =>
+        FindLastSuccessful(method, routeKey, DateTime.MaxValue);
+
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
+        FindLastSuccessful(method, routeKey, before);
+
+    private ValueTask<FlowTraceDetail?> FindLastSuccessful(string method, string routeKey, DateTime before)
     {
         var entry = _entries.Values
             .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
             .Where(e => RouteTemplateNormalizer.NormalizeForComparison(e.Trace.RouteTemplate) == routeKey)
             .Where(e => e.Trace.Status == FlowStatus.Success)
+            .Where(e => e.Trace.StartedAt < before)
             .OrderByDescending(e => e.Trace.StartedAt)
             .FirstOrDefault();
 
