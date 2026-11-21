@@ -169,7 +169,7 @@ jobs:
         shell: bash
         env:
           DOTNET_ROLL_FORWARD: LatestMajor
-          NETAPIFLOW_EXPECT_RUNTIME_MAJOR: "11"
+          NETAPIFLOW_EXPECT_RUNTIME_MAJOR: "12"
         run: |
           set -e
           dotnet --version
