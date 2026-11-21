@@ -3,7 +3,7 @@ using NetApiFlow.Domain;
 namespace NetApiFlow.Recording;
 
 /// <summary>Mutable, thread-safe state for a trace that is still being recorded.</summary>
-internal sealed class ActiveTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc)
+internal sealed class ActiveTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc, bool published = true)
 {
     private readonly object _lock = new();
     private readonly List<FlowSpan> _spans = [];
@@ -21,6 +21,8 @@ internal sealed class ActiveTrace(string traceId, string method, string routeTem
     public DateTime StartedAtUtc { get; } = startedAtUtc;
 
     public bool Truncated { get; private set; }
+
+    public bool Published { get; set; } = published;
 
     public IReadOnlyDictionary<string, string> Tags
     {
