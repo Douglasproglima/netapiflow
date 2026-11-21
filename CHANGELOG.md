@@ -99,6 +99,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   declaration. In every environment an `Origin` must match the `Host` the application sees, and the
   scheme is not compared. Behind a reverse proxy that rewrites the `Host`, keep the original `Host`
   or call `UseForwardedHeaders` with `XForwardedHost`, otherwise a `DELETE` from the browser gets 403.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: every response now carries `X-Content-Type-Options:
+  nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and `Content-Security-Policy:
+  frame-ancestors 'none'`, the 403 and 404 of the access check included. Before, nothing was sent, so
+  any page could show the dashboard in a frame and place its delete button under a click. The
+  dashboard can no longer be embedded in a frame of another page. The dashboard page also carries a
+  full policy with `script-src 'self'` and no `'unsafe-inline'`. Its `style-src` allows inline styles,
+  because Angular adds the styles of each component at run time. To keep `script-src` strict the
+  dashboard build no longer inlines its critical CSS, so the page loads one stylesheet file instead,
+  and `index.html` went from about 14 KB to under 1 KB. If your middleware sets a
+  `Content-Security-Policy` on the dashboard or MCP routes, the one of the package replaces it.
 - `NetApiFlow.Dashboard`: `POST /flow/api/deploys` now reads and validates its body after the access
   check. Before, a body that failed to bind (`{}`, broken JSON, or a content type that is not JSON)
   was answered with 400 or 415 before the check ran, so a caller without access learned that the

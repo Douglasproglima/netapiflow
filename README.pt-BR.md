@@ -623,6 +623,25 @@ Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. As req
 rastreadas. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção
 enquanto o cabeçalho estiver desligado.
 
+### Cabeçalhos de segurança
+
+Toda resposta do dashboard e do endpoint do MCP carrega `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` e `Content-Security-Policy: frame-ancestors
+'none'`. Isso inclui o 403 e o 404 da conferência de acesso. Nenhuma outra página consegue mostrar o
+dashboard num frame, então nada esconde o botão de apagar embaixo de um clique.
+
+A página do dashboard em si carrega uma política completa:
+
+```text
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'
+```
+
+O `script-src` não tem `'unsafe-inline'`: o dashboard só roda os arquivos de script que ele traz. O
+`style-src` tem, de propósito. O Angular acrescenta os estilos de cada componente como elementos
+`<style>` quando a página roda, são dezenas, e um hash para cada um mudaria a cada build. Um estilo
+inline não executa código. Se o seu próprio middleware define um `Content-Security-Policy` nessas
+rotas, o do dashboard o substitui.
+
 ## Servidor MCP
 
 ```bash
@@ -651,7 +670,8 @@ trace nem dispara um replay via MCP.
 > `AllowedHosts`, e uma `Origin` tem de casar com o `Host` que a aplicação enxerga. Um cliente MCP
 > que não é navegador, como o MCP Inspector ou o cliente C# oficial, não manda `Origin`, então não é
 > afetado. Os detalhes, e o que configurar atrás de um proxy reverso, estão em
-> [Quais `Host` e `Origin` são aceitos](#quais-host-e-origin-são-aceitos).
+> [Quais `Host` e `Origin` são aceitos](#quais-host-e-origin-são-aceitos). As respostas dele carregam
+> os mesmos [cabeçalhos de segurança](#cabeçalhos-de-segurança) do dashboard.
 
 Veja `samples/SampleApi.Controllers/README.md` para como apontar um cliente MCP real (ex.:
 Claude Code) para uma instância rodando.
