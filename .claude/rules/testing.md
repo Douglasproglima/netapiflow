@@ -195,6 +195,13 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
   Projeto de teste novo entra nos dois na mesma PR. O do SqlClient ficou fora do CI, o do Npgsql
   fora do `release.yml`, e três projetos (Mcp, OpenTelemetry e o spike de pré-pipeline) fora dos
   dois, por falta dessa regra.
+- O passo do runtime 11 (D-267) roda a mesma lista de nove projetos, na build de `net10.0`, com `DOTNET_ROLL_FORWARD=LatestMajor` e
+  `NETAPIFLOW_EXPECT_RUNTIME_MAJOR=11`, só no `ubuntu-latest`, no `ci.yml` e no `release.yml`. Projeto de teste novo entra nele na
+  mesma PR em que entra na lista normal. O README diz "no Linux" porque é o que o passo prova, e o texto muda junto no dia em que
+  ele rodar no Windows.
+- Passo de CI cuja prova depende do ambiente (runtime, sistema operacional, variável) tem um guarda que lê o ambiente e falha se for
+  outro, e uma vermelha vista com o ambiente trocado (D-267). Sem o guarda, o passo é teatro: na Fase 69, sem o roll-forward, os
+  outros 372 testes do `NetApiFlow.Tests` passam no runtime 10, e só o `ExpectedRuntimeTests` reprova.
 - O job do pacote real (D-254, D-259) tem **uma definição só**, `.github/workflows/real-package.yml` (`workflow_call`), chamada pelo
   `ci.yml` e pelo `release.yml`, então a paridade dele é estrutural. No `ci.yml` o chamador sempre chama e passa `run` (verdadeiro
   quando o PR não é só de documentação ou mexe no README), e o job do workflow chamado tem `if: inputs.run`: assim o check

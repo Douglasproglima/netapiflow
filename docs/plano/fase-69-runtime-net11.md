@@ -109,3 +109,16 @@ Só depois de a 69.2 estar na mesma PR, porque o texto promete o que o passo pro
 A linha de base por projeto (69.0). O guarda vermelho e verde. O link da execução do CI com o `dotnet --list-runtimes` e a prova
 do runtime 11. A saída da prova vermelha. Os minutos que o passo acrescenta. O diff dos textos e a lista do que a busca por
 "net12" e "artefato próprio" achou.
+
+## Resultado da fase (PR #451, 21/11/2026)
+
+Entregue em `develop` (`d1549bc`, head `f79c5b8`).
+
+- **A linha de base (69.0),** num checkout limpo de `develop` com o `dist` refeito: `NetApiFlow.Tests` 373, `IntegrationTests` 483, `Ef8Tests` 4, `Mcp.Tests` 85, `OpenTelemetry.Tests` 17, `PrePipelineInteropSpike` 6, `Storage.Tests` 188, `Npgsql.IntegrationTests` 23 e `SqlClient.IntegrationTests` 19, todos verdes no runtime 11, os três últimos com Testcontainers. A falha que a Planejadora tinha medido na `IntegrationTests` (`DashboardSecurityHeadersTests.TheEmbeddedIndexHtml_...`) era o `dist` velho, como o plano supunha.
+- **O guarda (69.1)** é `ExpectedRuntimeTests`, com a linha `Runtime11-the-suite-never-ran-on-it` no registro de guardas.
+- **O passo (69.2)** está no `ci.yml` (só no `ubuntu-latest`) e no `release.yml`, com `11.0.x` na lista do `setup-dotnet` dos dois. O log do head final mostra `dotnet --version` `10.0.404`, os runtimes `11.0.0` e os nove projetos passando. O SDK do build e do pacote continua o 10, a condição de parada do plano.
+- **As vermelhas (69.3),** lidas nos logs: sem o roll-forward o guarda falha com `Failed: 1, Passed: 372, Total: 373`, e com o guarda esperando `12` falha igual. Como o passo cai no primeiro projeto por causa do `set -e`, o que a vermelha mostra no runtime 10 são os outros 372 testes do `NetApiFlow.Tests`. Que os oito projetos restantes também passariam no 10 é inferência, apoiada no passo normal da mesma execução.
+- **O tempo:** 1m12s no head final (26% do job sem o passo) e 1m47s numa execução lenta (30%), abaixo do terço do plano nas duas. O Windows instala o `11.0.x` e não roda nada nele (8 s).
+- **O texto (69.4):** os dois READMEs e o `[Unreleased]` do CHANGELOG dizem que o `net8.0` sai na primeira versão publicada a partir de 10/05/2027 e que a suíte roda no runtime 11 "no Linux". A busca por "net12", "artefato próprio" e "asset of its own" só achou esses dois parágrafos e uma frase da seção `0.4.1` do CHANGELOG, já publicada, que não se edita.
+
+**Ressalva:** o passo do `release.yml` só se exercita na tag `v0.6.0`, e o `11.0.x` flutuante passa a fazer parte da publicação. Um patch ruim do .NET 11 pode travá-la, e a auditoria anotou isso para o dia da tag.
