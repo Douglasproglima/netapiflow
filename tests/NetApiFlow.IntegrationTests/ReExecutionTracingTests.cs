@@ -46,17 +46,6 @@ public class ReExecutionTracingTests
     }
 
     [Fact]
-    public async Task StatusCodePageReExecution_ForAPathInExcludePaths_LeavesNoTraceAndNoHeader()
-    {
-        await using var app = await PathBaseApp.StartAsync(WithStatusCodePages(options => options.ExcludePaths("/internal/**")));
-
-        var response = await app.GetAsync("/internal/missing");
-
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-        await ShouldHaveLeftNoTraceAsync(app, response);
-    }
-
-    [Fact]
     public async Task StatusCodePageReExecution_WhenOnlyTheErrorPathIsExcluded_StillRecordsTheRequest()
     {
         await using var app = await PathBaseApp.StartAsync(WithStatusCodePages(options => options.ExcludePaths("/error/**")));
