@@ -15,7 +15,6 @@ internal static class SecurityHeaders
         var headers = response.Headers;
         headers["X-Content-Type-Options"] = "nosniff";
         headers["Referrer-Policy"] = "no-referrer";
-        headers["X-Frame-Options"] = "DENY";
         headers["Content-Security-Policy"] = FrameAncestorsPolicy;
     }
 
