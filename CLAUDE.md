@@ -130,9 +130,9 @@ Gitflow clássico, SemVer. Resumo:
 - Commits fora de `main`: Conventional Commits em inglês (`feat:`, `fix:`, `refactor:`, `test:`,
   `docs:`, `chore:`), com escopo quando fizer sentido (`feat(core): ...`).
 
-Detalhes em `docs/gitflow.md` e `.claude/rules/git-workflow.md`. Nunca fazer push, merge em
-`develop` ou `main`, criar tag, abrir PR ou publicar release sem confirmação explícita de quem
-pediu.
+Detalhes em `docs/gitflow.md` e `.claude/rules/git-workflow.md`. Nunca fazer merge em `develop`
+ou `main`, criar tag nem publicar release: isso é do dono e da auditoria. Empurrar uma branch de
+trabalho e abrir a PR não pedem confirmação.
 
 ## Skills do projeto
 

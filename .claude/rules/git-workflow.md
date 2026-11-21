@@ -49,9 +49,16 @@ Push direto numa das duas branches é rejeitado pelo próprio GitHub, não só p
 
 ## Ações que exigem confirmação
 
-Push, merge, tag, abrir ou mergear PR e criar release são visíveis publicamente no GitHub (o
-repositório é público). Nunca fazer nenhuma delas sem confirmação explícita na conversa.
-Confirmação vale para aquela ação, não para as próximas.
+Merge, tag, criar release e back-merge são visíveis publicamente no GitHub (o repositório é
+público) e **ficam com o dono ou com a auditoria** (ver "Delegação à auditoria" abaixo). A
+Planejadora e a Executora não executam nenhuma delas, a não ser o merge da PR só de documentação, na exceção
+abaixo (D-109).
+
+**Empurrar uma branch de trabalho e abrir a PR não pedem confirmação** (decisão do dono). A PR é o
+ponto de revisão: quem empurra a branch e abre a PR para ali, e a auditoria revisa, faz o merge e
+publica. Vale para `feature/*`, `bugfix/*`, `chore/*` e `hotfix/*`. Push direto em `main` e em
+`develop` continua rejeitado pela proteção de branch, e `git push --force` continua proibido em
+`main`, `develop` e `release/*` (ver "Nunca").
 
 ### Delegação à auditoria (D-198)
 
