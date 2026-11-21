@@ -1,0 +1,6 @@
+#nullable enable
+NetApiFlow.MediatR.FlowTrackingBehavior<TRequest, TResponse>
+NetApiFlow.MediatR.FlowTrackingBehavior<TRequest, TResponse>.FlowTrackingBehavior() -> void
+NetApiFlow.MediatR.FlowTrackingBehavior<TRequest, TResponse>.Handle(TRequest request, MediatR.RequestHandlerDelegate<TResponse>! next, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TResponse>!
+NetApiFlow.MediatR.NetApiFlowMediatRServiceCollectionExtensions
+static NetApiFlow.MediatR.NetApiFlowMediatRServiceCollectionExtensions.AddNetApiFlowMediatR(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

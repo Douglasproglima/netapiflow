@@ -1,0 +1,13 @@
+#nullable enable
+NetApiFlow.ITraceStore.GetLastSuccessfulAsync(string! method, string! routeKey, System.DateTime before, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.FlowTraceDetail?>
+NetApiFlow.Marking.FlowConventionOptions
+NetApiFlow.Marking.FlowConventionOptions.FlowConventionOptions() -> void
+NetApiFlow.Marking.FlowConventionOptions.IncludeAssembly(System.Reflection.Assembly! assembly) -> NetApiFlow.Marking.FlowConventionOptions!
+NetApiFlow.Marking.FlowConventionOptions.IncludeNamespacePrefix(string! prefix) -> NetApiFlow.Marking.FlowConventionOptions!
+NetApiFlow.NetApiFlowEndpointConventionExtensions
+NetApiFlow.NetApiFlowOptions.CaptureMinimalApiEndpoints.get -> bool
+NetApiFlow.NetApiFlowOptions.CaptureMinimalApiEndpoints.set -> void
+NetApiFlow.NetApiFlowOptions.EmitTraceIdHeader.get -> bool
+NetApiFlow.NetApiFlowOptions.EmitTraceIdHeader.set -> void
+static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.TrackFlowByConvention(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.Marking.FlowConventionOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.NetApiFlowEndpointConventionExtensions.WithoutNetApiFlowTracking<TBuilder>(this TBuilder builder) -> TBuilder

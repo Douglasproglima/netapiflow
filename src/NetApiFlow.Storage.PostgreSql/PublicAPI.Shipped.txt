@@ -1,0 +1,7 @@
+#nullable enable
+NetApiFlow.Storage.PostgreSql.NetApiFlowPostgreSqlServiceCollectionExtensions
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.PostgreSqlStorageOptions() -> void
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.TablePrefix.get -> string!
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.TablePrefix.set -> void
+static NetApiFlow.Storage.PostgreSql.NetApiFlowPostgreSqlServiceCollectionExtensions.AddNetApiFlowPostgreSqlStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString, System.Action<NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

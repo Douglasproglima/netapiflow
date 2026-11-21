@@ -1,0 +1,11 @@
+#nullable enable
+NetApiFlow.Testing.FlowAssertionException
+NetApiFlow.Testing.FlowAssertionException.FlowAssertionException(string! message) -> void
+NetApiFlow.Testing.FlowTestingHttpResponseExtensions
+NetApiFlow.Testing.FlowTraceAssertions
+static NetApiFlow.Testing.FlowTestingHttpResponseExtensions.GetFlowTrace(this System.Net.Http.HttpResponseMessage! response, System.IServiceProvider! services) -> NetApiFlow.FlowTraceDetail!
+static NetApiFlow.Testing.FlowTraceAssertions.ShouldCallAtMost(this NetApiFlow.FlowTraceDetail! trace, NetApiFlow.ComponentType type, int maxCount) -> NetApiFlow.FlowTraceDetail!
+static NetApiFlow.Testing.FlowTraceAssertions.ShouldHaveCalled(this NetApiFlow.FlowTraceDetail! trace, string! component, string? operation = null) -> NetApiFlow.FlowTraceDetail!
+static NetApiFlow.Testing.FlowTraceAssertions.ShouldHaveNoErrors(this NetApiFlow.FlowTraceDetail! trace) -> NetApiFlow.FlowTraceDetail!
+static NetApiFlow.Testing.FlowTraceAssertions.ShouldHaveStatus(this NetApiFlow.FlowTraceDetail! trace, NetApiFlow.FlowStatus status) -> NetApiFlow.FlowTraceDetail!
+static NetApiFlow.Testing.FlowTraceAssertions.ShouldNeverCall(this NetApiFlow.FlowTraceDetail! trace, string! component, string? operation = null) -> NetApiFlow.FlowTraceDetail!
