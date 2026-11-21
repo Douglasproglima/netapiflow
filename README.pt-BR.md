@@ -568,6 +568,10 @@ versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server
 > `.AllowAnonymous()` e registre um `IFlowAccessFilter`, que passa a decidir toda requisição.
 > Encadear `.AllowAnonymous()` junto com `.RequireAuthorization()` não autoriza nada: o
 > `AllowAnonymous` vence a policy, então sem `IFlowAccessFilter` toda rota responde 404.
+>
+> Quando a aplicação sobe com um `FallbackPolicy` e um dashboard sem `.AllowAnonymous()` nem
+> `.RequireAuthorization()`, o NetApiFlow registra um aviso que nomeia o 401 e o caminho para
+> resolver, para ele não ficar sem explicação.
 
 ### O cabeçalho com o trace id
 

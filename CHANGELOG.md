@@ -19,6 +19,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `ALTER` or `UPDATE` on your database. On first use it only checks that the tables and the
   `route_key` column exist, and when something is missing it logs an error that says what and where
   the script is, without failing the request. For an application whose database user cannot run DDL.
+- `NetApiFlow.Dashboard`: an application with an authorization `FallbackPolicy` that mounts the
+  dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
+  it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
+  how to fix it.
 
 ### Fixed
 

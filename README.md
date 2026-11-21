@@ -562,6 +562,10 @@ separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Stu
 > chain `.AllowAnonymous()` and register an `IFlowAccessFilter`, which then decides every request.
 > Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
 > `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
+>
+> When the application starts with a `FallbackPolicy` and a dashboard that has neither
+> `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the 401
+> and the way out, so it does not stay unexplained.
 
 ### The trace id header
 
