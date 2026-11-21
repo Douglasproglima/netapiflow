@@ -38,6 +38,19 @@ public class McpSecurityHeadersTests
         AssertSecurityHeaders(response);
     }
 
+    [Theory]
+    [InlineData("evil.example", null)]
+    [InlineData("localhost", "http://evil.example")]
+    public async Task ARequestRefusedByTheHostAndOriginGuard_ComesWithTheSecurityHeaders(string hostHeader, string? origin)
+    {
+        using var host = await StartHostAsync(Environments.Development);
+        using var response = await PostInitializeAsync(host, hostHeader, origin);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync()).ShouldContain("NetApiFlow refused this request");
+        AssertSecurityHeaders(response);
+    }
+
     [Fact]
     public async Task ARouteThatAnswers404OutsideDevelopment_ComesWithTheSecurityHeaders()
     {
@@ -59,7 +72,7 @@ public class McpSecurityHeadersTests
         response.Headers.GetValues("Content-Security-Policy").Single().ShouldContain(ExpectedSecurityHeaders.FrameAncestors);
     }
 
-    private static Task<HttpResponseMessage> PostInitializeAsync(IHost host)
+    private static Task<HttpResponseMessage> PostInitializeAsync(IHost host, string? hostHeader = null, string? origin = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/flow/mcp")
         {
@@ -70,6 +83,15 @@ public class McpSecurityHeadersTests
         };
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        if (hostHeader is not null)
+        {
+            request.Headers.Host = hostHeader;
+        }
+
+        if (origin is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Origin", origin);
+        }
 
         return host.GetTestServer().CreateClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
     }

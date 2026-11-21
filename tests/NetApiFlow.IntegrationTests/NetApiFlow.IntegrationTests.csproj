@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="..\Shared\SecretLeakCases.cs" Link="Shared\SecretLeakCases.cs" />
     <Compile Include="..\Shared\ExpectedSecurityHeaders.cs" Link="Shared\ExpectedSecurityHeaders.cs" />
+    <Compile Include="..\Shared\OriginAndHostCases.cs" Link="Shared\OriginAndHostCases.cs" />
   </ItemGroup>
 
   <ItemGroup>

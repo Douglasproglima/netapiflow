@@ -54,6 +54,26 @@ public class DashboardSecurityHeadersTests
         AssertSecurityHeaders(response);
     }
 
+    [Theory]
+    [InlineData("evil.example", null)]
+    [InlineData("localhost", "http://evil.example")]
+    public async Task ARequestRefusedByTheHostAndOriginGuard_ComesWithTheSecurityHeaders(string host, string? origin)
+    {
+        using var server = await StartHostAsync(Environments.Development);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/flow/api/traces");
+        request.Headers.Host = host;
+        if (origin is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Origin", origin);
+        }
+
+        using var response = await server.GetTestServer().CreateClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync()).ShouldContain("NetApiFlow refused this request");
+        AssertSecurityHeaders(response);
+    }
+
     [Fact]
     public async Task ARouteThatAnswers404OutsideDevelopment_ComesWithTheSecurityHeaders()
     {

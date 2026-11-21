@@ -567,6 +567,39 @@ separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Stu
 > `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the 401
 > and the way out, so it does not stay unexplained.
 
+### Which `Host` and `Origin` are accepted
+
+The dashboard and the MCP endpoint check the `Host` and the `Origin` of every request, on every
+method: the REST API, the live stream, the files and the MCP transport. The check runs after your
+own pipeline, so `UseForwardedHeaders` has already set the `Host`. A refused request gets a **403**
+whose message says why and what to change.
+
+- **In Development**, the `Host` must be `localhost`, `127.0.0.1` or `[::1]`, or a name you declare
+  in the `AllowedHosts` setting. A `"*"` does not count as declaring. This is what stops DNS
+  rebinding: a page on another site whose own name resolves to your machine reaches the dashboard
+  with that name as the `Host`, so only the `Host` can refuse it.
+- **In every environment**, a request with an `Origin` must have the host and the port of the `Host`
+  the application sees. The scheme is not compared. A request without an `Origin` passes, such as a
+  `GET` from the same page or a client that is not a browser, and an `Origin: null` is refused.
+- **Outside Development**, the `Host` follows your own `AllowedHosts` and `UseForwardedHeaders`.
+
+To open the dashboard in Development by a name other than localhost, for example from a phone
+through the address of your machine on the local network, or `host.docker.internal`, declare it:
+
+```json
+{ "AllowedHosts": "localhost;192.168.1.13" }
+```
+
+An entry is a name without a port, and `*.example.com` matches subdomains. ASP.NET Core reads the same
+setting in its own host filtering, so once the list names specific hosts, keep `localhost` in it or
+the application answers 400 to `localhost` itself.
+
+Behind a reverse proxy the application has to see the original `Host`. Otherwise the `Origin` the
+browser sends does not match it and a `DELETE` gets 403. Keep the `Host` in the proxy
+(`proxy_set_header Host $http_host;` in nginx), or call `UseForwardedHeaders` with
+`ForwardedHeaders.XForwardedHost` before the dashboard and let the proxy send `X-Forwarded-Host`.
+A proxy that ends TLS needs nothing for the scheme, because it is not compared.
+
 ### The trace id header
 
 NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request, in every
@@ -623,8 +656,15 @@ trace or triggers a replay through MCP.
 > **Same security rule as the dashboard.** Outside `IHostEnvironment.IsDevelopment()`, every MCP
 > route responds **404** unless you explicitly configure `.RequireAuthorization(...)` or a custom
 > `IFlowAccessFilter`, exactly like [Dashboard security in production](#dashboard-security-in-production).
-> An AI agent reading trace data is the same exposure risk as the visual dashboard. Its responses
-> carry the same [security headers](#security-headers) as the dashboard's.
+> An AI agent reading trace data is the same exposure risk as the visual dashboard.
+>
+> The endpoint also refuses a request whose `Host` or `Origin` is not its own, with a **403**. In
+> Development the `Host` must be `localhost`, `127.0.0.1`, `[::1]` or a name declared in
+> `AllowedHosts`, and an `Origin` must match the `Host` the application sees. An MCP client that is
+> not a browser, such as the MCP Inspector or the official C# client, sends no `Origin`, so it is
+> not affected. The details, and what to set behind a reverse proxy, are in
+> [Which `Host` and `Origin` are accepted](#which-host-and-origin-are-accepted). Its responses carry
+> the same [security headers](#security-headers) as the dashboard's.
 
 See `samples/SampleApi.Controllers/README.md` for how to point a real MCP client (e.g. Claude
 Code) at a running instance.
