@@ -1033,9 +1033,9 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
 ## Limitações conhecidas
 
 - `Activity.Current` (e portanto o aninhamento de etapas) se perde através de
-  `ExecutionContext.SuppressFlow()` ou um thread pool próprio que não propaga o contexto. Etapas
-  criadas depois desse ponto são gravadas corretamente, mas como uma nova raiz, não aninhadas sob
-  o trace da requisição.
+  `ExecutionContext.SuppressFlow()` ou um thread pool próprio que não propaga o contexto. Os spans
+  criados depois dessa fronteira começam uma nova atividade raiz, e o NetApiFlow não os anexa à
+  trace da requisição.
 - Uma etapa iniciada com um `ActivityContext` explícito como pai, num thread que não carrega o
   `ExecutionContext` da requisição, não entra em trace nenhum. Antes da 0.6.0 ela era gravada, porque
   dividia o trace id do W3C com a requisição. Inicie a etapa dentro do fluxo da requisição, ou ponha

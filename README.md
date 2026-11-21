@@ -1022,8 +1022,8 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
 ## Known limitations
 
 - `Activity.Current` (and therefore step nesting) is lost across `ExecutionContext.SuppressFlow()`
-  or a custom, non-flowing thread pool. Spans created after such a boundary record correctly, but
-  as a new root rather than nested under the request's trace.
+  or a custom, non-flowing thread pool. Spans created after such a boundary start a new root
+  activity, and NetApiFlow does not attach them to the trace of the request.
 - A step started with an explicit `ActivityContext` as its parent, in a thread that does not carry
   the `ExecutionContext` of the request, is not part of any trace. Before 0.6.0 it was recorded,
   because it shared the W3C trace id of the request. Start it inside the flow of the request, or set

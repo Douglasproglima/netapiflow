@@ -60,7 +60,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   request has no trace in progress, including a request that is not traced, where it used to return
   the W3C trace id. The W3C trace id is in the tag `w3c.trace_id` of the trace and in
   `Activity.Current.TraceId`, and the details of a trace in the dashboard show both with their
-  labels. Every NetApiFlow activity carries the tag `netapiflow.trace_id`, so a span in an OTLP
+  labels. The `TraceStarted` event of the stream and the detail of a trace that is still running
+  carry `w3c.trace_id` and the tenant from the start, which they did not carry before, so a consumer
+  of the stream can match the first event with OpenTelemetry. Every NetApiFlow activity carries the
+  tag `netapiflow.trace_id`, so a span in an OTLP
   backend leads to its trace, and the exported spans keep the W3C trace id. A trace saved before
   stays readable. If a test or a log line compared `CurrentTraceId` or the header with
   `Activity.Current.TraceId`, read the W3C trace id from the tag.
