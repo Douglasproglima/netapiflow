@@ -16,6 +16,8 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
 {
     private readonly ConcurrentDictionary<Guid, FlowStep> _steps = new();
 
+    internal int OpenStepCount => _steps.Count;
+
     /// <inheritdoc />
     public override InterceptionResult<DbDataReader> ReaderExecuting(
         DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
@@ -117,6 +119,16 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public override void CommandCanceled(DbCommand command, CommandEndEventData eventData) => CancelStep(eventData);
+
+    /// <inheritdoc />
+    public override Task CommandCanceledAsync(DbCommand command, CommandEndEventData eventData, CancellationToken cancellationToken = default)
+    {
+        CancelStep(eventData);
+        return Task.CompletedTask;
+    }
+
     private void StartStep(DbCommand command, CommandEventData eventData)
     {
         // EF Core runs this once per attachment, so the same instance attached twice to one
@@ -142,6 +154,15 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
     {
         if (_steps.TryRemove(eventData.CommandId, out var step))
         {
+            step.Dispose();
+        }
+    }
+
+    private void CancelStep(CommandEndEventData eventData)
+    {
+        if (_steps.TryRemove(eventData.CommandId, out var step))
+        {
+            step.MarkError(new OperationCanceledException("The database command was canceled."));
             step.Dispose();
         }
     }
