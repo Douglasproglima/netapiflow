@@ -10,6 +10,12 @@ internal static class DashboardAccessGate
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
+        var refusal = RequestOriginGuard.Refusal(httpContext);
+        if (refusal is not null)
+        {
+            return Results.Text(refusal, statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
