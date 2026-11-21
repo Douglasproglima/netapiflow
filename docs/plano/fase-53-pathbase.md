@@ -66,8 +66,8 @@ A rota gravada no trace já escapa disso: o `finally` do middleware lê o templa
 5. Requisição sem endpoint casado (arquivo estático, 404) sob `PathBase`: se nenhum mecanismo resolver
    isso com exatidão, o limite é dito no README, nos dois idiomas, com o que o usuário faz (padrão com o
    prefixo). Nunca fica "resolvido pela metade" sem aviso.
-6. Sem API pública nova. Se a investigação provar que não há outro jeito, volta à Planejadora antes de
-   qualquer código.
+6. Sem API pública nova, **exceto a que o ADR-0027 aceito decidiu**: `WithoutNetApiFlowTracking()`. Nenhum outro
+   tipo ou membro público.
 7. Falha da própria checagem é logada e engolida (`.claude/rules/tracing.md`).
 
 ## Mecanismos a investigar (a Planejadora não escolhe antes da 53.0)
@@ -190,12 +190,12 @@ diagnóstico, não API formal), que funcionou nos dois TFMs. O ADR-0027 é escri
 - O custo com `tests/NetApiFlow.Benchmarks` e `[MemoryDiagnoser]`, no lugar do loop grosseiro.
 - O requisito 5, o limite que vai ao README: sem endpoint casado (arquivo estático, 404) sob `PathBase`, o
   `ExcludePaths` continua valendo só contra o caminho cheio.
-- O marcador de identidade é um tipo `internal`, e o MCP precisa de `InternalsVisibleTo` (o painel já tem).
+- O marcador de identidade é um tipo `internal`, e o MCP precisa de `InternalsVisibleTo` (o painel já tem). Substituído pelo ADR-0027 aceito: o metadado é gravado por uma extensão pública, sem `InternalsVisibleTo` novo.
 
 ## Estado depois da 53.0
 
-A 53.0 está entregue e o mecanismo é o **A** (D-211). O **ADR-0027** está escrito, **Proposto** (D-229), e a
-auditoria o aceita ou devolve. **Nenhum código da correção começa antes de o ADR estar aceito e de a Fase 51
+A 53.0 está entregue e o mecanismo é o **A** (D-211). O **ADR-0027** está **aceito** (D-230), com uma emenda da
+auditoria: o metadado é gravado por uma extensão pública. **Nenhum código da correção começa antes de a Fase 51
 estar em `develop`**, porque o mecanismo A vive no mesmo listener do `EndpointMatched` que a Fase 51 cria.
 
 ## Coerência com as Fases 51, 55 e 57 (ADR-0027, ADR-0028)
@@ -227,16 +227,19 @@ para e relata, e a decisão é da Planejadora e da auditoria.
    `PathBase` (requisito 4: o caminho comum não paga a mais) e com. A alocação por requisição entra no número.
 6. **O limite do requisito 5.** Sem endpoint casado sob `PathBase`, o que acontece com um arquivo estático e com um
    404, para a frase do README sair exata.
-7. **A API pública.** O tipo do metadado é `internal`, o pacote do MCP ganha `InternalsVisibleTo`, e a lista de
-   tipos públicos de nenhum pacote muda. A Executora diz como conferiu.
+7. **A API pública.** O único membro público novo é `WithoutNetApiFlowTracking()`, o tipo do metadado fica
+   `internal`, e o pacote do MCP **não** ganha `InternalsVisibleTo`. A Executora compara a lista de tipos e membros
+   públicos antes e depois e diz como conferiu (o repositório não tem arquivo `PublicAPI.*.txt`).
 
 **Pronto quando:** os sete pontos respondidos com número ou saída real, e a forma escolhida para as etapas anteriores
 à abertura, com o motivo.
 
 ## Tarefa 53.2: o mecanismo A
 
-- **Metadado interno de identidade** nos endpoints do painel (REST, SSE, arquivos estáticos) e do MCP. Tipo
-  `internal`. Nenhuma API pública nova (requisito 6).
+- **A extensão pública `WithoutNetApiFlowTracking<TBuilder>() where TBuilder : IEndpointConventionBuilder`**, no
+  núcleo, que grava o metadado. O tipo do metadado é `internal`. O painel (REST, SSE, arquivos estáticos) e o MCP a
+  chamam nos grupos deles. Nenhum `InternalsVisibleTo` novo (requisito 6).
+- **O metadado de exclusão vence** `ExcludePaths`, `IncludePaths` e `WithNetApiFlowTracking()` no mesmo endpoint.
 - **Middleware no início:** só guarda a hora, gera o id (ADR-0028) e registra o `Response.OnStarting` do cabeçalho.
   Não publica nada.
 - **Listener do `EndpointMatched`**, o da Fase 51: endpoint com o metadado do NetApiFlow não é rastreado. Nos outros,
@@ -259,6 +262,8 @@ A matriz da 53.0 vira teste de host real, **visto falhando antes** no `develop`,
 - Requisição excluída: sem `X-NetApiFlow-TraceId`, sem linha no store e **sem evento num cliente SSE**.
 - O stream do painel nunca aparece como `Running`.
 - Sem endpoint casado sob `PathBase`: o comportamento que o README documenta.
+- **Uma rota do usuário com `.WithoutNetApiFlowTracking()` não é rastreada sob `PathBase`**, e vence `IncludePaths` e
+  `WithNetApiFlowTracking()` no mesmo endpoint. Cobre `MapGet`, grupo, `MapControllers()` e `MapHealthChecks()`.
 - Política que lança (requisito 7) e etapa anterior à abertura (a forma da 53.1).
 - **Teste com o pacote real** (D-176, D-186): um app novo, pacote empacotado com `-p:Version=<próxima>-verify.<n>`
   (D-153, D-174), `UsePathBase("/api")`, e os quatro casos da tabela de "O fato".
@@ -266,11 +271,15 @@ A matriz da 53.0 vira teste de host real, **visto falhando antes** no `develop`,
 ## Tarefa 53.4: README, XML doc e CHANGELOG
 
 - `README.md` e `README.pt-BR.md`: o que `ExcludePaths`, `IncludePaths` e `OpenApiDocumentPath` valem sob
-  `PathBase` (o caminho que o usuário enxerga, quando há endpoint casado), e o limite do requisito 5 com o que o
-  usuário faz.
-- XML doc de `OpenApiDocumentPath`, `ExcludePaths` e `IncludePaths`, em inglês, com a mesma frase.
+  `PathBase` (o caminho que o usuário enxerga, quando há endpoint casado), o limite do requisito 5 com o que o
+  usuário faz, e a `WithoutNetApiFlowTracking()` na tabela de métodos. **Dizem o que foi medido** (Kestrel, IIS
+  Express com o ANCM v2 e o nginx da 53.0) **e o que não foi** (IIS completo, YARP). Sem prometer o que não se mediu.
+- XML doc de `OpenApiDocumentPath`, `ExcludePaths`, `IncludePaths` e `WithoutNetApiFlowTracking()`, em inglês, com a
+  mesma frase.
+- `contratos.md`: já atualizado pela Planejadora na aceitação do ADR.
 - `CHANGELOG.md`, em inglês, `### Fixed`: as rotas do NetApiFlow rastreadas e o `ExcludePaths` ignorado sob
   `UsePathBase`, e o `IncludePaths` que deixava a rota do usuário fora do store. Defeito antigo, sem hotfix (D-205).
+  `### Added`: `WithoutNetApiFlowTracking()`.
 - `riscos.md`, R-33: a Planejadora passa a `Mitigado` na revisão, com o arquivo de teste citado.
 
 ## Relatório da correção
