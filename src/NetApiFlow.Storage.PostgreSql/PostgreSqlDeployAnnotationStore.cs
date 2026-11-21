@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -8,13 +9,17 @@ internal sealed class PostgreSqlDeployAnnotationStore : IDeployAnnotationStore, 
 {
     private readonly string _connectionString;
     private readonly string _deployAnnotationsTable;
+    private readonly bool _autoCreateSchema;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
     private bool _schemaReady;
 
-    public PostgreSqlDeployAnnotationStore(string connectionString, PostgreSqlStorageOptions options)
+    public PostgreSqlDeployAnnotationStore(string connectionString, PostgreSqlStorageOptions options, ILogger logger)
     {
         _connectionString = connectionString;
         _deployAnnotationsTable = PostgreSqlTableNames.ResolveDeployAnnotations(options.TablePrefix);
+        _autoCreateSchema = options.AutoCreateSchema;
+        _logger = logger;
     }
 
     public async ValueTask SaveAsync(DeployAnnotation annotation, CancellationToken cancellationToken)
@@ -83,7 +88,15 @@ internal sealed class PostgreSqlDeployAnnotationStore : IDeployAnnotationStore, 
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await PostgreSqlSchemaInitializer.EnsureDeployAnnotationsCreatedAsync(connection, _deployAnnotationsTable, cancellationToken);
+            if (_autoCreateSchema)
+            {
+                await PostgreSqlSchemaInitializer.EnsureDeployAnnotationsCreatedAsync(connection, _deployAnnotationsTable, cancellationToken);
+            }
+            else
+            {
+                await PostgreSqlSchemaVerifier.VerifyDeployAnnotationsAsync(connection, _deployAnnotationsTable, _logger, cancellationToken);
+            }
+
             _schemaReady = true;
         }
         finally

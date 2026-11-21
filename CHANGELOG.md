@@ -9,6 +9,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
+  in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
+  want the trace id in its responses. The default is `true`, so nothing changes unless you set it.
+  Requests are still traced with it off, but `GetFlowTrace` from `NetApiFlow.Testing` reads that
+  header and throws, and its message now names the option.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: the `AutoCreateSchema` option
+  (default `true`, so nothing changes unless you set it). With `false` the storage runs no `CREATE`,
+  `ALTER` or `UPDATE` on your database. On first use it only checks that the tables and the
+  `route_key` column exist, and when something is missing it logs an error that says what and where
+  the script is, without failing the request. For an application whose database user cannot run DDL.
 - `NetApiFlow.Dashboard`: an application with an authorization `FallbackPolicy` that mounts the
   dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
   it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
@@ -16,6 +26,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
+  schema. It was missing the `route_key` column and its index, so a database created by hand from the
+  script was rejected by the code. It now also carries the four indexes and the deploy annotations
+  table the package creates, and an upgrade section that adds `route_key` and fills it for tables
+  written by an earlier version. It is safe to run again.
 - `NetApiFlow`: the request that fetches your OpenAPI document (`OpenApiDocumentPath`, `/openapi/v1.json`
   by default) is no longer traced. The dashboard fetches that document on its own, so it used to show
   up in recent executions and in the metrics as if it were your traffic. The match ignores case and
@@ -38,6 +53,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   answered. A route now counts as protected only when it requires authorization and does not allow
   anonymous access. If you relied on the two chained calls to open the dashboard, it now answers 404:
   register an `IFlowAccessFilter` instead.
+- `NetApiFlow`: the error message of a failed step is now sanitized and truncated to 300 characters
+  before it is written on the `Activity`, so it reaches OpenTelemetry (OTLP) clean. It used to be
+  exported as thrown, with no sanitization and no length limit, while the dashboard showed the
+  sanitized version.
+- `NetApiFlow`: the error message sanitizer now sanitizes first and truncates after, so a secret cut
+  by the 300 character limit leaves no piece behind, and it covers the forms it missed:
+  `Authorization: Bearer ...` and `Basic ...` (the whole value, not only the scheme), `access_token=`,
+  `client_secret=`, `DB_PASSWORD=`, `api_key=` and `apikey=`, `Pwd=` and `passwd=` pairs, values in
+  quotes or with spaces, `"password":"..."` in JSON, and a bare `Bearer <token>`. The key is matched
+  by containing a sensitive word, so a harmless `key: value` message such as `Unexpected token: '}'`
+  now loses its value too.
 
 ## [0.5.2] - 2026-11-20
 

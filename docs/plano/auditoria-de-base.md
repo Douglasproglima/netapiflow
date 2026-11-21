@@ -34,7 +34,7 @@ antes de corrigir.
 | S7 | Sem cabeçalhos de segurança em `/flow`: CSP, `X-Frame-Options` ou `frame-ancestors`, `X-Content-Type-Options`. O painel, com o botão de apagar traces, carrega num iframe | **Reproduzido pela auditoria no `0.5.2`**: `GET /flow/` só traz `Content-Type: text/html`, sem CSP, `X-Frame-Options`, `X-Content-Type-Options` nem `Referrer-Policy`. Não reproduzi de novo eu mesma | 56 |
 | F1 | O estado "Aguardando" nunca aparece: o middleware abre a trace com `(unmatched)` e só grava a rota no fim, e o painel busca o blueprint por essa rota. "Não executado" ao vivo também não funciona. E "Não executado" usa o **último sucesso**, mesmo posterior à trace aberta, então o desenho de uma trace antiga muda com o tempo | **Código:** a primeira parte confere, o middleware abre com `UnmatchedRouteTemplate` e atualiza a rota no `finally`. A parte do blueprint posterior: **reproduzida pela auditoria no `0.5.2`** (comandos abaixo): a trace B, mais nova, vira o blueprint da trace A, mais antiga, porque `/blueprint` não recebe âncora de tempo. Não reproduzi de novo eu mesma | 57 |
 | F2 | O Npgsql 10 sai sempre como "SQL command", sem SQL, porque o código só lê `db.statement` e o Npgsql 10 manda `db.query.text`. A suíte testa só o Npgsql do EF 9.0.4 | **Código:** `NpgsqlActivityTagNames.Statement = "db.statement"`. **Reproduzido pela auditoria** com o Npgsql 10.0.0 em `net10.0` (ver abaixo): são três defeitos, não um. Não reproduzi de novo eu mesma | 58 |
-| F3 | Uma resposta 500 de exceção não tratada sai sem `X-NetApiFlow-TraceId`, embora a trace exista. O Runner mostra só "A requisição falhou.", o `NetApiFlow.Testing` diz "did not track this request", e o primeiro bloco de "Asserting" do README quebra | **Reproduzi no `0.5.2`**: 500 sem o cabeçalho em Development e em Production, e em Development a trace existe no store (`Error`, 500) | 58 |
+| F3 | Uma resposta 500 de exceção não tratada sai sem `X-NetApiFlow-TraceId`, embora a trace exista. O Runner mostra só "A requisição falhou.", o `NetApiFlow.Testing` diz "did not track this request", e o primeiro bloco de "Asserting" do README quebra | **Reproduzi no `0.5.2`**: 500 sem o cabeçalho em Development e em Production, e em Development a trace existe no store (`Error`, 500) | 50.13, junto do (f) |
 | F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()`. Sem a chamada, nada aparece e nada avisa | **Reproduzido pela auditoria** no `0.5.2` (ver abaixo). Não reproduzi de novo eu mesma | 58 |
 
 ## Nível 2: correção do README nos dois idiomas, e do código quando o texto não puder ficar verdadeiro sem ele
@@ -89,6 +89,10 @@ Fase 60, se couber. O que não couber vira item de roadmap, um registro por item
 - **Texto e rótulos:** `aria-label="Request summary"` fixo em inglês em
   `flow-details-panel.component.html`, mesmo em português. O OpenAPI lista `/api/orders/{id}` e o histórico
   mostra `/api/orders/{id:int}`.
+- **Rotas cortadas sem tooltip:** a rota do cabeçalho do Fluxo (`flow-workspace__route`) e a do painel de
+  detalhes (`flow-details__route`) também são cortadas pela elipse sem `title`. A Tarefa 51.10 cobre só o nó do
+  grafo e o rótulo da cascata, e o `title` da cascata vai sempre, não só quando o rótulo é cortado, porque o CSS
+  não dá para saber no template.
 - **Acessibilidade:** no celular, o botão ▷ do cabeçalho do Fluxo, que abre o Runner, tem `aria-label`
   vazio. Medido pela auditoria: os botões do cabeçalho são `["Abrir navegação", "", "PT", "EN", ...]`, e
   um leitor de tela anuncia só "botão".

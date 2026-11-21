@@ -68,6 +68,9 @@ Medido pela Executora em 20/11/2026, no Windows 10, com o `impeccable` da versã
   vazios que não significavam nada.
 - **No Git Bash, um argumento que começa com `/` é reescrito** (`/history` vira
   `C:/Program Files/Git/history`). Rodar com `MSYS_NO_PATHCONV=1`.
+- **O painel redireciona `/flow?trace=` para `/flow/?trace=`.** O `--target` do detector precisa casar com a URL
+  **final**, senão ele sai com exit 1 e uma saída vazia, que parece "zero achados". Abrir a URL final e provar a
+  aba (o passo 5) antes de varrer.
 
 ## Conferir qual build o navegador está mostrando
 
