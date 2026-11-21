@@ -531,6 +531,8 @@ meio, porque evita também uma ida ao banco por trace. Mas quem mede é ela.
 controlável), **zero** erros com pilha, e o contador de descarte subindo. Depois o schema é criado pelo
 `schema.sql` e o trace seguinte grava. Vem depois da #373 mergeada, em branch própria, e vai no `0.6.0`.
 
+**O que entra na 50.14 por ser defeito da #373, PR da própria `0.6.0` (D-232, D-240).** Com `AutoCreateSchema = false`, se a **verificação** do schema lança por um erro **transitório** (a conexão cai no meio), ela captura a exceção, loga em `Debug` e o `EnsureSchemaAsync` marca `_schemaReady = true` mesmo assim, então o store nunca mais revê o schema. O esperado: a verificação que falha por erro transitório **não** marca o schema como pronto e **roda de novo na chamada seguinte**, com o mesmo limitador de log da 50.14. Vale para o `PostgreSqlTraceStore`, o `SqlServerTraceStore` e os dois `DeployAnnotationStore`, que têm o mesmo `EnsureSchemaAsync`. Teste: a verificação lança **uma vez**, e na chamada seguinte ela **roda de novo**. Visto falhando antes.
+
 ### Tarefa 50.15 (B10, D-236): `EmitTraceIdHeader` liga só em Development
 
 O padrão de `EmitTraceIdHeader` passa a ser **ligado só em `Development`**, como o `ExternalSources`. Seguro por padrão, e fecha a impressão digital que o cabeçalho `X-NetApiFlow-TraceId` dá em produção (achado (f)). Faz junto da Tarefa 50.13, porque as duas mexem no mesmo trecho do middleware.
