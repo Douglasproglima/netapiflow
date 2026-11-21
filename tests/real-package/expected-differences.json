@@ -50,19 +50,6 @@
     "changelog": "compared the full path, `/api/health`, with patterns written for `/health`, so none of them matched."
   },
   {
-    "scenario": "exclude-paths-under-a-path-base",
-    "aspect": "traces after",
-    "old": [
-      "GET /health 200",
-      "GET /orders/{id:int} 200"
-    ],
-    "new": [
-      "GET /orders/{id:int} 200"
-    ],
-    "reason": "Under UsePathBase the patterns are compared with the path the application sees, so ExcludePaths(\"/health\") now excludes /api/health.",
-    "changelog": "compared the full path, `/api/health`, with patterns written for `/health`, so none of them matched."
-  },
-  {
     "scenario": "trace-id-header-in-production",
     "aspect": "GET /orders/1 header",
     "old": true,
