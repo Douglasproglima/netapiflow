@@ -102,6 +102,7 @@ Fase 67, e cada comando do README foi **executado**.
   dois TFMs.
 - Cada item com teste **visto falhando antes**. Os do painel também no navegador, com captura de tela antes e depois.
 - Zero achado de `low-contrast` e de `undersized-ui-text` no detector.
+- **Pendência pequena dos scripts, sem PR própria:** o guarda `import.meta.url === pathToFileURL(process.argv[1]).href` quebra com `ERR_INVALID_ARG_TYPE` quando o módulo é importado por `node -e`, porque `process.argv[1]` não existe (reproduzido em `verify-built-demo.mjs` e em `verify-live-panel.mjs`). A mesma linha está em oito scripts de `scripts/`. Não afeta o CI. Se a fase tocar um deles, corrige nos oito de uma vez, com um teste do módulo importado sem `argv[1]`.
 
 ## Versionamento e fluxo
 
