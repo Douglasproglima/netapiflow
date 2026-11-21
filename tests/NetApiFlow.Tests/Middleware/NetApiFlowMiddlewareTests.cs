@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Options;
@@ -47,7 +48,36 @@ public class NetApiFlowMiddlewareTests
         completed.RouteTemplate.ShouldBe("/api/orders/{id}");
         completed.HttpStatus.ShouldBe(200);
         completed.Status.ShouldBe(FlowStatus.Success);
-        httpContext.Response.Headers["X-NetApiFlow-TraceId"].ToString().ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithEmitTraceIdHeaderOn_WritesTheHeaderOnlyWhenTheResponseStarts()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, new FlowRecorder(options), options);
+        var responseFeature = new StartingResponseFeature();
+        var httpContext = TracedGetRequest(responseFeature);
+
+        await subject.InvokeAsync(httpContext);
+
+        httpContext.Response.Headers.ContainsKey("X-NetApiFlow-TraceId").ShouldBeFalse();
+        await responseFeature.RunOnStartingCallbacksAsync();
+        httpContext.Response.Headers["X-NetApiFlow-TraceId"].ToString().ShouldBe(httpContext.TraceIdentifier);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithEmitTraceIdHeaderOff_RegistersNothingOnTheResponse()
+    {
+        var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = false });
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, new FlowRecorder(options), options);
+        var responseFeature = new StartingResponseFeature();
+        var httpContext = TracedGetRequest(responseFeature);
+
+        await subject.InvokeAsync(httpContext);
+
+        responseFeature.RegisteredCallbacks.ShouldBe(0);
+        await responseFeature.RunOnStartingCallbacksAsync();
+        httpContext.Response.Headers.ContainsKey("X-NetApiFlow-TraceId").ShouldBeFalse();
     }
 
     [Fact]
@@ -166,5 +196,31 @@ public class NetApiFlowMiddlewareTests
 
         completed.ShouldNotBeNull();
         completed.Status.ShouldBe(FlowStatus.Timeout);
+    }
+
+    private static DefaultHttpContext TracedGetRequest(StartingResponseFeature responseFeature)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpResponseFeature>(responseFeature);
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/api/orders/42";
+        return httpContext;
+    }
+
+    private sealed class StartingResponseFeature : HttpResponseFeature
+    {
+        private readonly List<(Func<object, Task> Callback, object State)> _callbacks = [];
+
+        public int RegisteredCallbacks => _callbacks.Count;
+
+        public override void OnStarting(Func<object, Task> callback, object state) => _callbacks.Add((callback, state));
+
+        public async Task RunOnStartingCallbacksAsync()
+        {
+            foreach (var (callback, state) in _callbacks)
+            {
+                await callback(state);
+            }
+        }
     }
 }

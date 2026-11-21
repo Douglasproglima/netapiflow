@@ -613,6 +613,13 @@ ambiente. Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` d
 por ele que o `NetApiFlow.Testing` acha o trace de uma resposta. Saber um trace id não abre o
 dashboard: as rotas dele continuam atrás das regras acima.
 
+Uma resposta não o carrega. Em Production sem tratador de exceção, uma exceção que ninguém trata
+chega ao servidor, e o servidor monta o 500 sozinho e descarta os cabeçalhos postos antes. Esse 500
+não tem `X-NetApiFlow-TraceId`, embora o trace seja gravado. Medido no Kestrel, no `net8.0` e no
+`net10.0`. O NetApiFlow não altera essa resposta. Adicione `UseExceptionHandler` e o 500 é respondido
+dentro do seu pipeline, então ele carrega o cabeçalho. Em Development a página de exceção do
+desenvolvedor faz isso por você.
+
 Para manter o trace id fora das suas respostas, desligue o cabeçalho:
 
 ```csharp

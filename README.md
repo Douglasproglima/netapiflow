@@ -607,6 +607,13 @@ environment. It carries the trace id, the same value the W3C `traceparent` heade
 and it is how `NetApiFlow.Testing` finds the trace of a response. Knowing a trace id does not open
 the dashboard: its routes stay behind the rules above.
 
+One response does not carry it. In Production with no exception handler, an exception that nothing
+handles reaches the server, and the server builds the 500 itself and drops the headers set before.
+That 500 has no `X-NetApiFlow-TraceId`, although the trace is recorded. Measured on Kestrel, on
+`net8.0` and `net10.0`. NetApiFlow does not change that response. Add `UseExceptionHandler` and the
+500 is answered inside your pipeline, so it carries the header. In Development the developer
+exception page does that for you.
+
 To keep the trace id out of your responses, turn the header off:
 
 ```csharp

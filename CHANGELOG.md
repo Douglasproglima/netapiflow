@@ -37,6 +37,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: a request that throws an exception nothing in your pipeline handled now keeps the
+  `X-NetApiFlow-TraceId` header in Development. The developer exception page rewrites the response
+  before NetApiFlow could write the header, so the 500 came back without it. The dashboard's Runner
+  then showed only "The request failed." and `GetFlowTrace` from `NetApiFlow.Testing` said NetApiFlow
+  did not track the request when it had. The header is now written at the moment the response starts.
+  One 500 still carries no header: in Production with no exception handler, the server builds the 500
+  itself and drops the headers set before, so add `UseExceptionHandler` if you need it there. Measured
+  on Kestrel, `net8.0` and `net10.0`. NetApiFlow does not change that response.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
   schema. It was missing the `route_key` column and its index, so a database created by hand from the
   script was rejected by the code. It now also carries the four indexes and the deploy annotations

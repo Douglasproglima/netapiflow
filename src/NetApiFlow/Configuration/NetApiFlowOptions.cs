@@ -39,7 +39,9 @@ public sealed class NetApiFlowOptions
     /// <summary>
     /// Writes <c>X-NetApiFlow-TraceId</c> on the response of every traced request, so a caller can
     /// find the trace and <c>NetApiFlow.Testing</c> can read it. Default: <see langword="true"/>.
-    /// Set it to <see langword="false"/> to keep the trace id out of responses.
+    /// Set it to <see langword="false"/> to keep the trace id out of responses. A 500 that the server
+    /// builds because nothing in the pipeline handled an exception carries no header, because the
+    /// server drops the headers set before it. Add <c>UseExceptionHandler</c> and the response carries it.
     /// </summary>
     public bool EmitTraceIdHeader { get; set; } = true;
 

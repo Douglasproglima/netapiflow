@@ -19,12 +19,13 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class GetFlowTraceIntegrationTests
 {
-    private static IHost CreateHost(bool trackingEnabled = true, bool emitTraceIdHeader = true)
+    private static IHost CreateHost(bool trackingEnabled = true, bool emitTraceIdHeader = true, bool developerExceptionPage = false)
     {
         return Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseTestServer();
+                webBuilder.UseEnvironment(developerExceptionPage ? Environments.Development : Environments.Production);
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
@@ -43,9 +44,15 @@ public class GetFlowTraceIntegrationTests
                 });
                 webBuilder.Configure(app =>
                 {
+                    if (developerExceptionPage)
+                    {
+                        app.UseDeveloperExceptionPage();
+                    }
+
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
+                        endpoints.MapGet("/api/boom", () => Boom());
                         endpoints.MapGet("/api/orders/{id}", async () =>
                         {
                             using var controllerStep = NetApiFlow.Step("OrdersController", "GetOrder", ComponentType.Controller);
@@ -82,6 +89,18 @@ public class GetFlowTraceIntegrationTests
             .ShouldCallAtMost(ComponentType.Database, 1)
             .ShouldHaveCalled("OrderRepository", "FindAsync")
             .ShouldNeverCall("PaymentGateway");
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_AfterAnUnhandledExceptionAnsweredByTheDeveloperExceptionPage_ReturnsTheErrorTrace()
+    {
+        using var host = CreateHost(developerExceptionPage: true);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/boom");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        response.GetFlowTrace(host.Services).ShouldHaveStatus(FlowStatus.Error);
     }
 
     [Fact]
@@ -127,4 +146,6 @@ public class GetFlowTraceIntegrationTests
 
         thrown.Message.ShouldStartWith("No trace found for ");
     }
+
+    private static string Boom() => throw new InvalidOperationException("boom");
 }
