@@ -54,11 +54,21 @@ SQL Server, estes dois com Testcontainers, em `NetApiFlow.Storage.Tests`):
 
 O relatório da 55.0 diz o que foi reproduzido, os números, e o que muda de comportamento.
 
+## Resultado da 55.0 e a decisão da forma (D-269, 21/11/2026)
+
+A Executora reproduziu os três achados em host real, visto falhando antes de qualquer mudança em `src/`, em `net10.0` (a `net8.0` ainda por rodar): 3 testes em 3 storages, 9 vermelhos. Em sequência, a memória guarda 1 trace de 3 e os bancos guardam 1 e logam a violação de chave. Ao mesmo tempo, a segunda resposta não traz `X-NetApiFlow-TraceId` nos três. Com o cliente escolhendo a chave, a memória é sobrescrita e os bancos não guardam a segunda. As cinco medições dispararam o ponto de parada: nenhuma das duas formas passa em todos os casos que funcionam hoje. **A matriz, os seis pontos, os custos e a forma escolhida estão no adendo do ADR-0028.** Em resumo: o `AsyncLocal` com verificação do W3C trace id, e a subida pela cadeia como reserva, numa função só que os seis pontos usam. O `ActivityContext` explícito sem fluxo vira perda dita no README, ao lado do `SuppressFlow`.
+
+Uma observação lateral da Executora, que **não é achado:** com `Microsoft.Data.SqlClient` 5.2.2 a sonda não produziu passo de SqlClient, e com 6.1.8 produziu. O README já diz que os eventos do driver só trazem o comando legível a partir da 6.0 (D-172), então a 5.2.2 está abaixo do piso documentado.
+
 ## Tarefa 55.1: o id próprio e o mapeamento
 
-Conforme o ADR-0028: o middleware gera o id aleatório de 32 caracteres hexadecimais, e **uma função só** resolve a
-trace de uma atividade pela forma que a 55.0 escolheu (a subida pelos pais, ou o `AsyncLocal`). Os quatro pontos
-que leem `activity.TraceId` passam por ela. Sem API pública nova.
+Conforme o ADR-0028 e o adendo dele: o middleware gera o id aleatório de 32 caracteres hexadecimais, grava o estado da
+requisição (o id próprio e o W3C trace id) num `AsyncLocal`, e grava o id próprio como propriedade customizada da atividade do
+servidor. **Uma função só** resolve a trace de uma atividade: o `AsyncLocal`, se o W3C trace id da atividade é o dele; senão a
+subida pelos pais; senão nenhuma trace. Os **seis** pontos que leem o trace id da `Activity` passam por ela (o middleware, o
+`Sample`, o `OnActivityStarted`, o `OnActivityStopped`, o `CurrentTraceId` e o `FlowLogger`). O log do `FlowLogger` passa a
+carregar o id próprio, o mesmo que a trace guarda. `CurrentTraceId` devolve `null` quando a requisição não tem trace em
+andamento, inclusive a requisição que a Fase 53 decide não rastrear. Sem API pública nova.
 
 ## Tarefa 55.2: as tags, o OTLP, o `CurrentTraceId` e os dois ids no detalhe
 
@@ -81,13 +91,27 @@ Os três testes da 55.0, agora **verdes** nos três storages, mais:
 - O detalhe da trace mostra os dois ids com os rótulos "Trace" e "W3C trace".
 - Cada caso de cadeia de pais da 55.0 que funcionava hoje continua funcionando.
 - Uma trace gravada **antes** (com o id antigo, o W3C trace id) continua legível.
+- **A matriz da 55.0 vira teste de host, uma linha por caso:** `Task.Run`, `Task.WhenAll`, `IAsyncEnumerable`, `HttpClient` de
+  saída, EF Core, SqlClient, Npgsql, `Activity.Current` atribuído à mão numa thread sem fluxo, e `ActivityContext` explícito com
+  fluxo mantido. O caso do `ActivityContext` explícito **sem** fluxo é um teste que **fixa a perda**: a etapa não é anexada a
+  trace nenhuma, nem a outra.
+- **Três casos que a matriz não tem e que o `AsyncLocal` torna perigosos,** cada um com teste de host: (a) um `Task.Run` sem
+  `await` que termina **depois** do fim da requisição não pendura span numa trace já encerrada nem cria uma trace fantasma; (b) a
+  próxima requisição na mesma thread do pool não herda o id; (c) uma atividade cujo W3C trace id não é o da requisição que está
+  no `AsyncLocal` (um worker que guardou o fluxo da requisição A e processa a B) não é pendurada em A.
+- **O S3 é reproduzível de fora, então vira cenário permanente do job do pacote real:** o mesmo `traceparent` em três requisições
+  seguidas dá três traces, com cabeçalhos diferentes. E a comparação com a `0.5.3` mostrará a mudança de identidade, então
+  entra em `tests/real-package/expected-differences.json` com o texto da entrada do CHANGELOG.
+- O `FlowLogger`: um log escrito dentro da requisição aparece na trace com o id próprio.
 
 ## Tarefa 55.4: README, contrato e CHANGELOG
 
 - `contratos.md`: já atualizado pela Planejadora na aceitação do ADR (o significado de `FlowTrace.TraceId` e de
   `NetApiFlow.CurrentTraceId`).
 - `README.md` e `README.pt-BR.md`: o id da trace não é o W3C trace id, **numa frase**, onde achar o W3C trace id (a
-  tag e `Activity.Current.TraceId`), e o que mudou para quem usava o id nos testes.
+  tag e `Activity.Current.TraceId`), e o que mudou para quem usava o id nos testes. **E o caso que não é coberto, ao lado do
+  `SuppressFlow`, nos dois idiomas:** uma atividade criada com um `ActivityContext` explícito, com o fluxo de execução
+  suprimido, não é anexada à trace da requisição.
 - `CHANGELOG.md`, em inglês: `### Changed` para o significado de `CurrentTraceId` e do id, e `### Fixed` para a
   perda e a mistura de traces em chamadas distribuídas. **Não** vai em `### Security` (D-228).
 
