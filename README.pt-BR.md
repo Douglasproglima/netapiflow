@@ -600,7 +600,7 @@ dashboard num frame, então nada esconde o botão de apagar embaixo de um clique
 A página do dashboard em si carrega uma política completa:
 
 ```text
-default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'
 ```
 
 O `script-src` não tem `'unsafe-inline'`: o dashboard só roda os arquivos de script que ele traz. O

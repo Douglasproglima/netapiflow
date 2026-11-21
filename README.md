@@ -594,7 +594,7 @@ in a frame, so nothing can hide its delete button under a click.
 The page of the dashboard itself carries a full policy:
 
 ```text
-default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'
 ```
 
 `script-src` has no `'unsafe-inline'`: the dashboard runs only the script files it ships. `style-src`

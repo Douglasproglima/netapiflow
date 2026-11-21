@@ -8,7 +8,7 @@ internal static class SecurityHeaders
 
     private const string DocumentPolicy =
         "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-        + "font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+        + "font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'";
 
     public static void Apply(HttpResponse response)
     {

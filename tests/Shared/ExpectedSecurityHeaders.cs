@@ -6,7 +6,7 @@ public static class ExpectedSecurityHeaders
 
     public const string DocumentPolicy =
         "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-        + "font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+        + "font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'";
 
     public static readonly IReadOnlyDictionary<string, string> OnEveryResponse = new Dictionary<string, string>
     {
