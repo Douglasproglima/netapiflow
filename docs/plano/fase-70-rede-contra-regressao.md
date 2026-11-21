@@ -191,10 +191,12 @@ job do mesmo workflow, em paralelo, para não somar ao tempo do primeiro.
   anterior passa a apontar para a versão nova. Esvaziar antes da tag faria o job do release acusar as diferenças e travar a
   publicação. A regra "linha que não aparece mais falha" é o que obriga a esvaziar logo depois, para o primeiro CI da versão
   seguinte não cair.
-- **Hotfix (acréscimo da Planejadora, para a auditoria contestar).** A base do hotfix é a `main`, cujo arquivo ainda aponta para a
-  versão anterior ao último release e traz a lista cheia daquele release. O primeiro commit do branch do hotfix aponta o arquivo
-  para a última versão publicada e esvazia a lista, e as diferenças do próprio hotfix entram nela, com a entrada do CHANGELOG. Assim
-  o hotfix é comparado com o que está em produção, que é a regressão que importa num PATCH (D-205).
+- **Hotfix (aceito pela auditoria, D-261).** A base do hotfix é a `main`, cujo arquivo ainda aponta para a versão anterior ao último
+  release e traz a lista cheia daquele release. O primeiro commit do branch do hotfix aponta o arquivo para **a versão que está na
+  última tag da `main` naquele momento** (e não para a última lida no nuget.org na hora, para o hotfix não depender de rede nem de
+  um publish paralelo) e esvazia a lista, e as diferenças do próprio hotfix entram nela, com a entrada do CHANGELOG. Assim o hotfix é
+  comparado com o que está em produção, que é a regressão que importa num PATCH (D-205). **O back-merge do hotfix para o `develop`**
+  deixa o `develop` apontando para a versão do hotfix, com a lista vazia, pela mesma regra do release.
 
 **Os cenários.** A Planejadora lista os que o "como hoje" exige, e a Executora acrescenta os que achar:
 
