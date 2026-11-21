@@ -87,8 +87,11 @@ public class ErrorMessageSanitizerTests
         "Rejected the JWT '[redacted-jwt]' as malformed")]
     [InlineData("postgres://app:S3cr3tPw@localhost:5432/db", "postgres://app:[redacted]@localhost:5432/db")]
     [InlineData(
-        "private_key=PK_1 passphrase=PP_2 pass=PS_3",
-        "private_key=[redacted] passphrase=[redacted] pass=[redacted]")]
+        "https://acc.blob.core.windows.net/c?sig=SIG_VALUE%3D&se=2030",
+        "https://acc.blob.core.windows.net/c?sig=[redacted]&se=2030")]
+    [InlineData(
+        "private_key=PK_1 passphrase=PP_2",
+        "private_key=[redacted] passphrase=[redacted]")]
     public void Sanitize_WithASecretInAFormThatLeakedBefore_ReturnsTheMessageWithOnlyTheSecretRedacted(
         string input,
         string expected)
@@ -102,6 +105,18 @@ public class ErrorMessageSanitizerTests
     [InlineData("{'password': 'x'}", "{'password': '[redacted]'}")]
     [InlineData("{\"Authorization\":\"Bearer abc.def\"}", "{\"Authorization\":\"[redacted]\"}")]
     public void Sanitize_WithASecretInsideJson_KeepsTheJsonShape(string input, string expected)
+    {
+        ErrorMessageSanitizer.Sanitize(input).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("Basic dXNlcjpwYXNz", "Basic dXNlcjpwYXNz")]
+    [InlineData("Invalid credentials: ana", "Invalid credentials: ana")]
+    [InlineData(".AspNetCore.Cookies=CfDJ8abc", ".AspNetCore.Cookies=CfDJ8abc")]
+    [InlineData("password=two words", "password=[redacted] words")]
+    [InlineData("{\"token\":12345}", "{\"token\":[redacted]")]
+    [InlineData("postgres://u:p@ss@host/db", "postgres://u:[redacted]@ss@host/db")]
+    public void Sanitize_WithAFormTheRulesDoNotCover_ReturnsWhatTheRulesDoAndNothingMore(string input, string expected)
     {
         ErrorMessageSanitizer.Sanitize(input).ShouldBe(expected);
     }
@@ -225,6 +240,8 @@ public class ErrorMessageSanitizerTests
     [InlineData("Unexpected token } in JSON at position 5")]
     [InlineData("Value cannot be null. (Parameter 'tokenizer')")]
     [InlineData("Failed to read secretKey from vault")]
+    [InlineData("Validation did not pass: Name is required")]
+    [InlineData("The design=modern option is not supported")]
     public void Sanitize_WithAHarmlessMessageThatIsNotShapedLikeAKeyAndValue_IsLeftAsItWas(string message)
     {
         ErrorMessageSanitizer.Sanitize(message).ShouldBe(message);

@@ -27,7 +27,7 @@ internal static partial class ErrorMessageSanitizer
 
     private const string SecretKeyPattern =
         "(?<key>" + KeyCharacters + "(?:password|passwd|pwd|token|secret|api[-_]?key|passphrase|private[-_]?key)"
-        + KeyCharacters + "|" + KeyCharacters + @"(?:accountkey|sharedaccesskey|sharedaccesssignature)|\b(?:sig|pass))"
+        + KeyCharacters + "|" + KeyCharacters + @"(?:accountkey|sharedaccesskey|sharedaccesssignature))"
         + KeyQuoteAndSeparator + "(?:" + QuotedValue + @"|(?<unquoted>(?:bearer[ \t]+)?[^\s;]+))";
 
     public static string? Sanitize(string? message)
@@ -41,6 +41,7 @@ internal static partial class ErrorMessageSanitizer
         sanitized = AuthorizationRegex().Replace(sanitized, RedactPair);
         sanitized = CookieRegex().Replace(sanitized, RedactPair);
         sanitized = SecretKeyValueRegex().Replace(sanitized, RedactPair);
+        sanitized = SignatureQueryRegex().Replace(sanitized, "sig=" + RedactedValue);
         sanitized = BearerTokenRegex().Replace(sanitized, "Bearer " + RedactedValue);
         sanitized = JwtRegex().Replace(sanitized, RedactedJwt);
         sanitized = UrlUserInfoRegex().Replace(sanitized, "$1" + RedactedValue + "@");
@@ -115,6 +116,9 @@ internal static partial class ErrorMessageSanitizer
 
     [GeneratedRegex(SecretKeyPattern, RegexOptions.NonBacktracking | RegexOptions.IgnoreCase)]
     private static partial Regex SecretKeyValueRegex();
+
+    [GeneratedRegex(@"\bsig=[^\s&;]+", RegexOptions.NonBacktracking | RegexOptions.IgnoreCase)]
+    private static partial Regex SignatureQueryRegex();
 
     [GeneratedRegex(@"\bBearer[ \t]+[^\s;]+", RegexOptions.NonBacktracking | RegexOptions.IgnoreCase)]
     private static partial Regex BearerTokenRegex();
