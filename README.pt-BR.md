@@ -1048,14 +1048,14 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   configurado, todas as réplicas escrevem no mesmo banco, então o `GET /traces/{traceId}` e a tela
   de histórico acham a trace independentemente de qual réplica gravou.
 - O `net8.0` saiu do ciclo de vida oficial da Microsoft em 10 de novembro de 2026, e o NetApiFlow
-  continua publicando um artefato para ele. Ele fica por enquanto porque ainda não há para onde ir:
-  a próxima LTS, o `net12.0`, só deve sair em novembro de 2027, então tirar o `net8.0` hoje
-  deixaria o `net10.0` como alvo único. O `net8.0` só deixa de ser publicado quando o `net12.0`
-  puder substituí-lo. Manter significa que o pacote tem um alvo que não recebe mais correção da
-  Microsoft, o que vale saber se a sua própria política proíbe isso.
-- Um app `net11.0` usa hoje o artefato do `net10.0`. Isso foi testado contra um SQL Server real,
-  com o pacote de storage e o `Microsoft.Data.SqlClient` 7.1.2. Um artefato próprio para o
-  `net11.0` está planejado.
+  continua publicando um artefato para ele. Ele deixa de ser publicado na primeira versão lançada a
+  partir de 10 de maio de 2027. Quem ainda precisar dele depois disso fica na última versão que o
+  tem. Manter até lá significa que o pacote tem um alvo que não recebe mais correção da Microsoft,
+  o que vale saber se a sua própria política proíbe isso.
+- Um app `net11.0` usa o artefato do `net10.0`. O CI roda a suíte de testes inteira no runtime
+  .NET 11, no Linux, contra a build de `net10.0`, e o pacote de storage foi testado contra um SQL
+  Server real, com o `Microsoft.Data.SqlClient` 7.1.2. Um artefato próprio para o `net11.0` só vai
+  existir no dia em que o código usar uma API que só o .NET 11 tem.
 - `net9.0` (STS) não é um alvo suportado. O multi-targeting cobre `net8.0` e `net10.0` (as duas
   LTS); quem consome via `net9.0` resolve para o artefato de `net8.0`, incluindo a implementação
   manual de SSE usada lá em vez do `TypedResults.ServerSentEvents` nativo do `net10.0`.

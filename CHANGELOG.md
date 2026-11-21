@@ -93,6 +93,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   not. Traces already stored in PostgreSQL or SQL Server keep the old names, so the architecture map
   and the diff show two nodes for the same endpoint until the old history ages out. If you assert on
   the step name with `NetApiFlow.Testing` or read it through the MCP tools, update the name you expect.
+- **`NetApiFlow`: `net8.0` stops shipping in the first version published on or after 10 May 2027.**
+  It left Microsoft's support window on 10 November 2026, and the package still ships an asset for
+  it until then. If you need it after that date, stay on the last version that has it. This closes
+  the open question that the notes of `0.4.1` left about when to stop shipping it.
+- The CI now runs the whole test suite on the .NET 11 runtime too, on Linux, against the build of
+  `net10.0`. A `net11.0` app uses the `net10.0` asset, and an asset of its own for `net11.0` will
+  exist only on the day the code uses an API that only .NET 11 has.
 
 ### Fixed
 
