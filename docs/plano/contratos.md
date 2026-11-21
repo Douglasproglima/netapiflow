@@ -20,8 +20,9 @@ public static class NetApiFlow
     public static FlowStep Step(string component, string operation,
                                  ComponentType type = ComponentType.Custom);
 
-    /// <summary>Trace id of the request currently executing, or <c>null</c> when tracing is
-    /// disabled or there is no ambient trace.</summary>
+    /// <summary>The NetApiFlow trace id of the request currently executing, the same value as the
+    /// <c>X-NetApiFlow-TraceId</c> response header, or <c>null</c> when tracing is disabled or there is no
+    /// ambient trace. It is not the W3C trace id: read that from <c>Activity.Current.TraceId</c>.</summary>
     public static string? CurrentTraceId { get; }
 
     /// <summary>A trace that finished recently, read straight from memory, without waiting for
@@ -265,6 +266,12 @@ porque o EF Core não tem registro global de interceptor). Formalizado na revis�
 
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
+
+**Identidade da trace (ADR-0028).** `FlowTrace.TraceId` é um id próprio de cada requisição rastreada, aleatório, de
+32 caracteres hexadecimais, gerado pelo NetApiFlow. **Não** é o W3C trace id: este fica na tag `w3c.trace_id` da
+trace, e toda atividade do NetApiFlow carrega a tag `netapiflow.trace_id`. O cabeçalho `X-NetApiFlow-TraceId`, o
+REST, o SSE, o MCP, `NetApiFlow.CurrentTraceId` e o `traceId` de `NetApiFlow.GetRecentTrace` usam o id do
+NetApiFlow. Duas requisições com o mesmo W3C trace id são duas traces.
 
 **Nome da etapa `Endpoint` de um Minimal API (Tarefa 51.9).** O par `(component, operation)` sai de
 metadados do endpoint, nunca do `DisplayName`, e é o mesmo para a etapa de `WithNetApiFlowTracking()` e

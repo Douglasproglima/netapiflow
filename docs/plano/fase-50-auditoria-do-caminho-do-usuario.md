@@ -51,7 +51,7 @@ usuário, ou se a do (d) tirar do trace uma rota que não é o documento OpenAPI
 4. Fase 53, Tarefa 53.0: medir o `PathBase`, sem corrigir (D-205).
 5. Tarefa 50.10, a correção de segurança dos portões, em PR própria.
 6. Tarefa 50.12, o CI publica o núcleo em AOT (D-209).
-7. Parte B (50.6 e 50.7), a tarefa 50.9 e a 50.13 (F3, junto do (f)).
+7. Parte B (50.6 e 50.7), a tarefa 50.9, a 50.13 (F3, junto do (f)) e a 50.14 (a persistência sem schema, depois da #373).
 8. Fase 51, e depois a correção da Fase 53.
 
 Cada item é uma PR separada, de `develop` atualizado. PR pequena é mais fácil de a auditoria ler, e a
@@ -506,6 +506,30 @@ Fase 58, e depende desta.
 
 **Pronto quando:** os testes dos requisitos passam e o 500 sem tratamento foi visto sem o cabeçalho antes da
 correção, nos dois TFMs, em Development e em Production.
+
+### Tarefa 50.14: sem schema, a persistência avisa uma vez, não a cada trace (D-226)
+
+Achado da auditoria, medido por ela contra a #373: com `AutoCreateSchema = false` e um banco **sem** as tabelas, o
+`PersistenceWriter` loga "failed to persist trace" com a **exceção inteira a cada trace** (medido: 7 erros com
+pilha). Num app com tráfego, isso inunda o log de quem acabou de desligar a criação automática do schema e ainda
+não rodou o script. A verificação do schema da #373 já avisa uma vez, com o link do `schema.sql`. O que sobra é o
+escritor continuar falhando e logando em cada trace.
+
+**O esperado:** um aviso só, ou um por intervalo, que diz o que falta e como corrigir (o mesmo texto e o mesmo link
+da verificação). Os traces seguintes são **descartados em silêncio**, e contados no medidor de descarte que já
+existe (`.claude/rules/tracing.md`), até o schema existir. Quando ele passar a existir, o escritor volta a gravar e
+loga **uma vez** que recuperou. Nunca derruba, trava ou atrasa a API.
+
+**Onde.** A Executora decide e justifica no relatório. Dois candidatos. (a) Um limitador de log no
+`PersistenceWriter`, que vale para qualquer falha repetida do storage, inclusive um banco que caiu, não só o schema
+ausente. (b) Um estado "schema ausente" que descarta antes de tentar gravar. A Planejadora recomenda o (a) com um
+disjuntor simples: depois de uma falha, tentar de novo só a cada intervalo, descartando e contando os traces do
+meio, porque evita também uma ida ao banco por trace. Mas quem mede é ela.
+
+**Teste de host real, nos dois storages** (`NetApiFlow.Storage.Tests`, Testcontainers), visto falhando antes:
+`AutoCreateSchema = false` num banco vazio, N traces, e então **um** aviso (ou um por intervalo, com o relógio
+controlável), **zero** erros com pilha, e o contador de descarte subindo. Depois o schema é criado pelo
+`schema.sql` e o trace seguinte grava. Vem depois da #373 mergeada, em branch própria, e vai no `0.6.0`.
 
 ## Critério que vale para a fase inteira
 

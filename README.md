@@ -508,6 +508,28 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 
 `NetApiFlow.Storage.SqlServer` mirrors the same shape (`AddNetApiFlowSqlServerStorage`).
 
+### Running without DDL permission
+
+By default the storage creates and upgrades its tables on first use, with a `CREATE TABLE`, an
+`ALTER TABLE` and an `UPDATE` against your application's database. If the database user of your
+application cannot run DDL, turn that off and create the tables yourself:
+
+```csharp
+builder.Services.AddNetApiFlowPostgreSqlStorage(
+    connectionString,
+    options => options.AutoCreateSchema = false);
+```
+
+With `AutoCreateSchema = false` nothing is created or changed. On first use the storage only checks
+that the tables and the `route_key` column exist. If something is missing it logs an error that says
+what is missing and where the script is, and it does not take your request down. Run `schema.sql`
+yourself: `src/NetApiFlow.Storage.PostgreSql/schema.sql` or
+`src/NetApiFlow.Storage.SqlServer/schema.sql` in the repository, at the tag of the version you
+installed (`https://github.com/Douglasproglima/netapiflow/tree/v<version>/src`). If you changed
+`TablePrefix`, replace `netapiflow_` in the script first. The script creates what is missing and
+upgrades tables written by an earlier version, and it is safe to run again. The SQL Server script
+separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Studio.
+
 ## Dashboard security in production
 
 > **The dashboard shows internal implementation details of your API: component names, operation
@@ -540,6 +562,27 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > chain `.AllowAnonymous()` and register an `IFlowAccessFilter`, which then decides every request.
 > Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
 > `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
+>
+> When the application starts with a `FallbackPolicy` and a dashboard that has neither
+> `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the 401
+> and the way out, so it does not stay unexplained.
+
+### The trace id header
+
+NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request, in every
+environment. It carries the trace id, the same value the W3C `traceparent` header already carries,
+and it is how `NetApiFlow.Testing` finds the trace of a response. Knowing a trace id does not open
+the dashboard: its routes stay behind the rules above.
+
+To keep the trace id out of your responses, turn the header off:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+```
+
+Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. Requests are still
+traced. `GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is
+off.
 
 ## MCP server
 

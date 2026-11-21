@@ -7,8 +7,30 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
+  in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
+  want the trace id in its responses. The default is `true`, so nothing changes unless you set it.
+  Requests are still traced with it off, but `GetFlowTrace` from `NetApiFlow.Testing` reads that
+  header and throws, and its message now names the option.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: the `AutoCreateSchema` option
+  (default `true`, so nothing changes unless you set it). With `false` the storage runs no `CREATE`,
+  `ALTER` or `UPDATE` on your database. On first use it only checks that the tables and the
+  `route_key` column exist, and when something is missing it logs an error that says what and where
+  the script is, without failing the request. For an application whose database user cannot run DDL.
+- `NetApiFlow.Dashboard`: an application with an authorization `FallbackPolicy` that mounts the
+  dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
+  it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
+  how to fix it.
+
 ### Fixed
 
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
+  schema. It was missing the `route_key` column and its index, so a database created by hand from the
+  script was rejected by the code. It now also carries the four indexes and the deploy annotations
+  table the package creates, and an upgrade section that adds `route_key` and fills it for tables
+  written by an earlier version. It is safe to run again.
 - `NetApiFlow`: the request that fetches your OpenAPI document (`OpenApiDocumentPath`, `/openapi/v1.json`
   by default) is no longer traced. The dashboard fetches that document on its own, so it used to show
   up in recent executions and in the metrics as if it were your traffic. The match ignores case and

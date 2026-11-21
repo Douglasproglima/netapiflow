@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
 using NetApiFlow.Routing;
 
@@ -15,12 +16,16 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
     private readonly string _connectionString;
     private readonly string _tracesTable;
     private readonly string _spansTable;
+    private readonly bool _autoCreateSchema;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
     private bool _schemaReady;
 
-    public SqlServerTraceStore(string connectionString, SqlServerStorageOptions options)
+    public SqlServerTraceStore(string connectionString, SqlServerStorageOptions options, ILogger logger)
     {
         _connectionString = connectionString;
+        _autoCreateSchema = options.AutoCreateSchema;
+        _logger = logger;
         (_tracesTable, _spansTable) = SqlServerTableNames.Resolve(options.TablePrefix);
     }
 
@@ -427,8 +432,16 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
-            await SqlServerSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            if (_autoCreateSchema)
+            {
+                await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
+                await SqlServerSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            }
+            else
+            {
+                await SqlServerSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, cancellationToken);
+            }
+
             _schemaReady = true;
         }
         finally

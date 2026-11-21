@@ -19,7 +19,7 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class GetFlowTraceIntegrationTests
 {
-    private static IHost CreateHost(bool trackingEnabled = true)
+    private static IHost CreateHost(bool trackingEnabled = true, bool emitTraceIdHeader = true)
     {
         return Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -30,6 +30,7 @@ public class GetFlowTraceIntegrationTests
                     services.AddRouting();
                     services.AddNetApiFlow(o =>
                     {
+                        o.EmitTraceIdHeader = emitTraceIdHeader;
                         if (trackingEnabled)
                         {
                             o.IncludePaths("/**");
@@ -96,6 +97,22 @@ public class GetFlowTraceIntegrationTests
         var thrown = Should.Throw<FlowAssertionException>(() => response.GetFlowTrace(host.Services));
 
         thrown.Message.ShouldStartWith("The response carries no X-NetApiFlow-TraceId header");
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_WhenTheHeaderIsTurnedOff_ThrowsNamingTheOption()
+    {
+        using var host = CreateHost(emitTraceIdHeader: false);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.Headers.Contains("X-NetApiFlow-TraceId").ShouldBeFalse();
+
+        var thrown = Should.Throw<FlowAssertionException>(() => response.GetFlowTrace(host.Services));
+
+        thrown.Message.ShouldStartWith("The response carries no X-NetApiFlow-TraceId header");
+        thrown.Message.ShouldContain("NetApiFlowOptions.EmitTraceIdHeader");
     }
 
     [Fact]

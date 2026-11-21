@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
 using NetApiFlow.Routing;
 using Npgsql;
@@ -16,13 +17,17 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
     private readonly string _connectionString;
     private readonly string _tracesTable;
     private readonly string _spansTable;
+    private readonly bool _autoCreateSchema;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
     private bool _schemaReady;
 
-    public PostgreSqlTraceStore(string connectionString, PostgreSqlStorageOptions options)
+    public PostgreSqlTraceStore(string connectionString, PostgreSqlStorageOptions options, ILogger logger)
     {
         _connectionString = connectionString;
         (_tracesTable, _spansTable) = PostgreSqlTableNames.Resolve(options.TablePrefix);
+        _autoCreateSchema = options.AutoCreateSchema;
+        _logger = logger;
     }
 
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
@@ -466,8 +471,16 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
-            await PostgreSqlSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            if (_autoCreateSchema)
+            {
+                await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
+                await PostgreSqlSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            }
+            else
+            {
+                await PostgreSqlSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, cancellationToken);
+            }
+
             _schemaReady = true;
         }
         finally

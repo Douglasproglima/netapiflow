@@ -513,6 +513,28 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 
 `NetApiFlow.Storage.SqlServer` espelha a mesma forma (`AddNetApiFlowSqlServerStorage`).
 
+### Rodando sem permissão de DDL
+
+Por padrão o storage cria e atualiza as próprias tabelas no primeiro uso, com um `CREATE TABLE`, um
+`ALTER TABLE` e um `UPDATE` no banco da sua aplicação. Se o usuário de banco da aplicação não pode
+rodar DDL, desligue isso e crie as tabelas você mesmo:
+
+```csharp
+builder.Services.AddNetApiFlowPostgreSqlStorage(
+    connectionString,
+    options => options.AutoCreateSchema = false);
+```
+
+Com `AutoCreateSchema = false` nada é criado nem alterado. No primeiro uso o storage só confere se as
+tabelas e a coluna `route_key` existem. Se faltar algo, ele registra um erro que diz o que falta e
+onde está o script, e não derruba a sua requisição. Rode o `schema.sql` você mesmo:
+`src/NetApiFlow.Storage.PostgreSql/schema.sql` ou `src/NetApiFlow.Storage.SqlServer/schema.sql` no
+repositório, na tag da versão que você instalou
+(`https://github.com/Douglasproglima/netapiflow/tree/v<versão>/src`). Se você mudou o `TablePrefix`,
+troque `netapiflow_` no script antes. O script cria o que falta e atualiza tabelas gravadas por uma
+versão anterior, e pode ser rodado de novo sem problema. O script do SQL Server separa os lotes com
+`GO`, então rode com `sqlcmd`, SSMS ou Azure Data Studio.
+
 ## Segurança do dashboard em produção
 
 > **O dashboard mostra detalhe interno de implementação da sua API: nome de componente, nome de
@@ -546,6 +568,27 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > `.AllowAnonymous()` e registre um `IFlowAccessFilter`, que passa a decidir toda requisição.
 > Encadear `.AllowAnonymous()` junto com `.RequireAuthorization()` não autoriza nada: o
 > `AllowAnonymous` vence a policy, então sem `IFlowAccessFilter` toda rota responde 404.
+>
+> Quando a aplicação sobe com um `FallbackPolicy` e um dashboard sem `.AllowAnonymous()` nem
+> `.RequireAuthorization()`, o NetApiFlow registra um aviso que nomeia o 401 e o caminho para
+> resolver, para ele não ficar sem explicação.
+
+### O cabeçalho com o trace id
+
+O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada, em qualquer
+ambiente. Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega, e é
+por ele que o `NetApiFlow.Testing` acha o trace de uma resposta. Saber um trace id não abre o
+dashboard: as rotas dele continuam atrás das regras acima.
+
+Para manter o trace id fora das suas respostas, desligue o cabeçalho:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = false);
+```
+
+Ou no `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. As requisições continuam
+rastreadas. O `GetFlowTrace` do `NetApiFlow.Testing` lê esse cabeçalho, então ele lança exceção
+enquanto o cabeçalho estiver desligado.
 
 ## Servidor MCP
 
