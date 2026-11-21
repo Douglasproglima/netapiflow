@@ -92,8 +92,9 @@ async function nodeTexts(browser) {
 }
 
 async function settledNodeTexts(browser) {
+  const deadline = Date.now() + TIMEOUT_MS;
   let previous = JSON.stringify(await nodeTexts(browser));
-  for (;;) {
+  while (Date.now() < deadline) {
     await delay(SETTLE_MS);
     const current = JSON.stringify(await nodeTexts(browser));
     if (current === previous) {
@@ -102,6 +103,8 @@ async function settledNodeTexts(browser) {
 
     previous = current;
   }
+
+  throw new Error(`the drawing kept changing for ${TIMEOUT_MS} ms, last seen: ${previous}`);
 }
 
 async function openTrace(browser, page, baseUrl, traceId) {
