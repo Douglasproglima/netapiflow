@@ -55,6 +55,97 @@ public class ErrorMessageSanitizerTests
     }
 
     [Theory]
+    [InlineData("token: Bearer abc.def", "token=[redacted]")]
+    [InlineData(
+        "Authorization: AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=host;x-amz-date, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
+        "Authorization=[redacted]")]
+    [InlineData(
+        "Authorization: AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/x, Signature=ff and the request failed",
+        "Authorization=[redacted] and the request failed")]
+    [InlineData(
+        @"Authorization: Digest username=""Mufasa"", realm=""testrealm@host.com"", nonce=""dcd98b7102dd2f0e8b11d0f600bfb0c093"", uri=""/dir/index.html"", response=""6629fae49393a05397450978507c4ef1""",
+        "Authorization=[redacted]")]
+    [InlineData(@"password=""p\""w""", "password=[redacted]")]
+    [InlineData(@"{\""password\"":\""x\""}", @"{\""password\"":\""[redacted]\""}")]
+    [InlineData("config[password]=x", "config[password]=[redacted]")]
+    [InlineData("Cookie: sid=SESS_1; theme=dark", "Cookie=[redacted]")]
+    [InlineData("Set-Cookie: sid=SESS_2; Path=/; HttpOnly", "Set-Cookie=[redacted]")]
+    [InlineData(
+        "AccountName=acc;AccountKey=KEY_AZ+/==;EndpointSuffix=core.windows.net",
+        "AccountName=acc;AccountKey=[redacted];EndpointSuffix=core.windows.net")]
+    [InlineData(
+        "Endpoint=sb://bus.servicebus.windows.net/;SharedAccessKeyName=RootManage;SharedAccessKey=SAK_VALUE=",
+        "Endpoint=sb://bus.servicebus.windows.net/;SharedAccessKeyName=RootManage;SharedAccessKey=[redacted]")]
+    [InlineData(
+        "https://acc.blob.core.windows.net/c?sv=2020&sig=SIG_VALUE%3D",
+        "https://acc.blob.core.windows.net/c?sv=2020&sig=[redacted]")]
+    [InlineData(
+        "Rejected eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.c2lnbmF0dXJl today",
+        "Rejected [redacted-jwt] today")]
+    [InlineData(
+        "Rejected the JWT 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.c2lnbmF0dXJl' as malformed",
+        "Rejected the JWT '[redacted-jwt]' as malformed")]
+    [InlineData("postgres://app:S3cr3tPw@localhost:5432/db", "postgres://app:[redacted]@localhost:5432/db")]
+    [InlineData(
+        "private_key=PK_1 passphrase=PP_2 pass=PS_3",
+        "private_key=[redacted] passphrase=[redacted] pass=[redacted]")]
+    public void Sanitize_WithASecretInAFormThatLeakedBefore_ReturnsTheMessageWithOnlyTheSecretRedacted(
+        string input,
+        string expected)
+    {
+        ErrorMessageSanitizer.Sanitize(input).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("{\"password\":\"TOKEN_G\"}", "{\"password\":\"[redacted]\"}")]
+    [InlineData("{\"access_token\": \"JSON_TOK\", \"user\": \"ana\"}", "{\"access_token\": \"[redacted]\", \"user\": \"ana\"}")]
+    [InlineData("{'password': 'x'}", "{'password': '[redacted]'}")]
+    [InlineData("{\"Authorization\":\"Bearer abc.def\"}", "{\"Authorization\":\"[redacted]\"}")]
+    public void Sanitize_WithASecretInsideJson_KeepsTheJsonShape(string input, string expected)
+    {
+        ErrorMessageSanitizer.Sanitize(input).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Sanitize_WithAPasswordFollowedByAnotherConnectionStringPair_KeepsThePair()
+    {
+        ErrorMessageSanitizer.Sanitize("Password=abc;Server=db").ShouldBe("Password=[redacted];Server=db");
+    }
+
+    [Theory]
+    [InlineData("password=ab;cd", "password=[redacted];cd")]
+    [InlineData("Server=db;Password=a;b;Database=app", "Server=db;Password=[redacted];b;Database=app")]
+    public void Sanitize_WithASemicolonInsideAnUnquotedValue_EndsTheValueThereLikeAConnectionStringAndKeepsTheRest(
+        string input,
+        string expected)
+    {
+        ErrorMessageSanitizer.Sanitize(input).ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Sanitize_WithASurrogatePairStraddlingTheLimit_CutsBeforeItInsteadOfSplittingIt()
+    {
+        var message = new string('a', 299) + "\U0001F600";
+
+        var result = ErrorMessageSanitizer.Sanitize(message);
+
+        result.ShouldBe(new string('a', 299));
+    }
+
+    [Fact]
+    public void Sanitize_AppliedTwiceToAMessageLongerThan300Characters_ChangesNothing()
+    {
+        var message = "Login failed password=PW " + new string('x', 400) + " john.doe@example.com Authorization: Bearer abc.def";
+
+        var once = ErrorMessageSanitizer.Sanitize(message);
+        var twice = ErrorMessageSanitizer.Sanitize(once);
+
+        once.ShouldNotBeNull();
+        once.Length.ShouldBe(300);
+        twice.ShouldBe(once);
+    }
+
+    [Theory]
     [MemberData(nameof(SecretLeakCases.Ids), MemberType = typeof(SecretLeakCases))]
     public void Sanitize_WithEachCaseTheAuditMeasured_LeavesNoFragmentOfTheSecretAndNoMoreThan300Characters(int id)
     {
