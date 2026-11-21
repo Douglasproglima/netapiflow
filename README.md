@@ -748,22 +748,34 @@ the value of any `key=value`, `key: value` or JSON `"key": "value"` pair whose k
 `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (also `api_key` and `apikey`),
 `passphrase`, `private_key` or `authorization`, in any case. A key inside brackets, such as
 `config[password]`, counts. The Azure keys `AccountKey`, `SharedAccessKey`,
-`SharedAccessSignature` and a `sig` in a signed URL count too, and so does a key called `pass`.
+`SharedAccessSignature` count too, and so does a `sig=` in a signed URL.
 
 How a value ends:
 
-- A quoted value is removed whole, escaped quotes included, and the JSON around it stays valid.
+- A quoted value is removed whole, escaped quotes included. When it is a quoted string in JSON, the
+  JSON around it stays valid.
 - The value of `Authorization` includes its scheme (`Bearer`, `Basic`, `Digest`, AWS) and its
   parameters. A `Cookie:` or `Set-Cookie:` header loses the rest of the line.
 - A bare `Bearer <token>` is removed.
 - An unquoted value ends at a space or at `;`, like a connection string pair. So `password=ab;cd`
-  leaves `;cd`, and `password=two words` leaves `words`. Only a quoted value can hold spaces.
+  leaves `;cd`.
 
 Any message with one of those words followed by `:` or `=` loses what comes after it, even a
 harmless one such as `Unexpected token: '}'`, because a secret cannot be told apart from it and
 leaking one is the worse failure. For the same reason `the bearer of the card` loses the word after
-`bearer`. `Basic <base64>` on its own, without `Authorization`, and `credentials: ...` are not
-touched. See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+`bearer`. See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+
+What it does not touch, or touches only in part:
+
+- `Basic <base64>` on its own, without `Authorization`.
+- `credentials: ...`, as in `Invalid credentials: ana`.
+- A cookie in `name=value` form without the `Cookie:` prefix, such as `.AspNetCore.Cookies=...`.
+- An unquoted value with a space: it is cut at the first space, so `password=two words` leaves
+  `words`. Only a quoted value can hold spaces.
+- A JSON value that is not a string: `{"token":12345}` becomes `{"token":[redacted]`, and the closing
+  brace goes with it.
+- A password with a `@` that is not percent-encoded in a URL: `postgres://u:p@ss@host/db` leaves what
+  follows the first `@`.
 
 The one exception is what you write yourself: a step's tags (see
 [Tagging a step](#tagging-a-step)) are stored and served exactly as given, with no sanitization.

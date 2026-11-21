@@ -758,23 +758,34 @@ o valor de qualquer par `chave=valor`, `chave: valor` ou `"chave": "valor"` em J
 contenha `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (também `api_key` e `apikey`),
 `passphrase`, `private_key` ou `authorization`, em qualquer caixa. Chave entre colchetes,
 como `config[password]`, também conta. As chaves do Azure `AccountKey`, `SharedAccessKey`,
-`SharedAccessSignature` e um `sig` numa URL assinada contam, e uma chave chamada `pass` também.
+`SharedAccessSignature` contam, e um `sig=` numa URL assinada também.
 
 Como um valor termina:
 
-- Valor entre aspas some inteiro, aspa escapada incluída, e o JSON em volta continua válido.
+- Valor entre aspas some inteiro, aspa escapada incluída. Quando é uma string entre aspas em JSON, o
+  JSON em volta continua válido.
 - O valor de `Authorization` inclui o esquema (`Bearer`, `Basic`, `Digest`, AWS) e os parâmetros.
   Um cabeçalho `Cookie:` ou `Set-Cookie:` perde o resto da linha.
 - Um `Bearer <token>` solto é removido.
 - Valor sem aspas termina no espaço ou no `;`, como um par de connection string. Então
-  `password=ab;cd` deixa `;cd`, e `password=duas palavras` deixa `palavras`. Só um valor entre aspas
-  pode ter espaço.
+  `password=ab;cd` deixa `;cd`.
 
 Toda mensagem com uma dessas palavras seguida de `:` ou `=` perde o que vem depois, até uma
 inofensiva como `Unexpected token: '}'`, porque um segredo não se distingue dela e vazar um é a
-falha pior. Pelo mesmo motivo, `the bearer of the card` perde a palavra depois de `bearer`. `Basic
-<base64>` sozinho, sem `Authorization`, e `credentials: ...` não são tocados. Veja
+falha pior. Pelo mesmo motivo, `the bearer of the card` perde a palavra depois de `bearer`. Veja
 [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+
+O que ele não toca, ou toca só em parte:
+
+- `Basic <base64>` sozinho, sem `Authorization`.
+- `credentials: ...`, como em `Invalid credentials: ana`.
+- Cookie no formato `name=value` sem o prefixo `Cookie:`, como `.AspNetCore.Cookies=...`.
+- Valor sem aspas com espaço: ele é cortado no primeiro espaço, então `password=duas palavras` deixa
+  `palavras`. Só um valor entre aspas pode ter espaço.
+- Valor JSON que não é string: `{"token":12345}` vira `{"token":[redacted]`, e a chave de fechamento
+  vai junto.
+- Senha com `@` sem percent-encoding numa URL: `postgres://u:p@ss@host/db` deixa o que vem depois do
+  primeiro `@`.
 
 A única exceção é o que você mesmo escreve: as tags de uma etapa (veja
 [Tags numa etapa](#tags-numa-etapa)) são gravadas e servidas exatamente como foram passadas, sem

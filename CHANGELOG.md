@@ -81,13 +81,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: the error message sanitizer now also covers an `Authorization` value of any length
   (`Digest`, an AWS signature, with all its parameters), `token: Bearer ...`, a quoted value with an
   escaped quote inside, a key in brackets such as `config[password]`, `Cookie:` and `Set-Cookie:`
-  headers, the Azure keys `AccountKey`, `SharedAccessKey`, `SharedAccessSignature` and `sig`, the
-  keys `passphrase`, `private_key` and `pass`, a bare JWT, and the password in a URL
-  (`scheme://user:password@host`). A secret inside JSON now leaves valid JSON,
+  headers, the Azure keys `AccountKey`, `SharedAccessKey` and `SharedAccessSignature`, `sig=` in a
+  signed URL, the keys `passphrase` and `private_key`, a bare JWT, and the password in a URL
+  (`scheme://user:password@host`). A secret in a quoted JSON string now leaves valid JSON,
   `{"password":"[redacted]"}`, where it used to leave `{"password=[redacted]}`. The sanitizer is a
   filter for known shapes and does not promise that no secret survives. The README now says so, and
-  lists what it does not touch: an unquoted value is cut at a space or at `;`, as in a connection
-  string, and `Basic <base64>` without `Authorization` and `credentials: ...` are left as they are.
+  lists what it does not touch: `Basic <base64>` without `Authorization`, `credentials: ...`, a
+  cookie in `name=value` form, an unquoted value with a space or a `;` (it is cut there, as in a
+  connection string), a JSON value that is not a string, and a URL password with an unencoded `@`.
 
 ## [0.5.2] - 2026-11-20
 
