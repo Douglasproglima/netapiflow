@@ -74,14 +74,19 @@ internal sealed class NetApiFlowMiddleware(
 
     private void FinishRequest(HttpContext context, FlowRequestState state, Exception? caughtException)
     {
-        state.OpenWhenNoEndpointWasMatched(context);
-        state.ReleaseReservation();
-        if (state.Opened)
+        try
         {
-            CompleteTrace(context, state.TraceId, caughtException);
+            state.OpenWhenNoEndpointWasMatched(context);
+            state.ReleaseReservation();
+            if (state.Opened)
+            {
+                CompleteTrace(context, state.TraceId, caughtException);
+            }
         }
-
-        state.MarkFinished();
+        finally
+        {
+            state.MarkFinished();
+        }
     }
 
     private void CompleteTrace(HttpContext context, string traceId, Exception? caughtException)

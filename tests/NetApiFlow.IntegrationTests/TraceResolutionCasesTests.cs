@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NetApiFlow.Domain;
 using NetApiFlow.EntityFrameworkCore;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using NetApiFlow.Testing;
 using Shouldly;
@@ -28,6 +29,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
     private readonly ManualResetEventSlim _lateStepFinished = new();
     private IHost _host = null!;
     private HttpClient _client = null!;
+    private ExecutionContext? _capturedContext;
 
     public async Task InitializeAsync()
     {
@@ -216,6 +218,37 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task Activity_WithAnotherW3CTraceIdStartedInsideATracedRequest_IsNotForcedIntoRecording()
+    {
+        var response = await _client.GetAsync("/cases/foreign-activity-sampling");
+
+        (await response.Content.ReadAsStringAsync()).ShouldBe("not-recorded");
+    }
+
+    [Fact]
+    public async Task ExecutionContext_CapturedDuringTheRequest_NoLongerSeesTheRequestOnceItEnded()
+    {
+        await TraceOfTheRequestAsync("/cases/capture-context");
+
+        FlowRequestStateSeen seen;
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        do
+        {
+            seen = new FlowRequestStateSeen();
+            ExecutionContext.Run(_capturedContext!, state => ((FlowRequestStateSeen)state!).Found = FlowTraceResolver.ForCurrentActivity() is not null, seen);
+            if (!seen.Found)
+            {
+                break;
+            }
+
+            await Task.Delay(25);
+        }
+        while (DateTime.UtcNow < deadline);
+
+        seen.Found.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Activity_WithAnotherW3CTraceIdStartedInAFlowCapturedFromTheRequest_IsNotAttachedToTheTrace()
     {
         var spans = await SpansOfTheRequestAsync("/cases/foreign-activity-in-captured-flow");
@@ -366,6 +399,19 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
             return "ok";
         });
 
+        endpoints.MapGet("/cases/foreign-activity-sampling", () =>
+        {
+            var foreign = new ActivityContext(ActivityTraceId.CreateRandom(), ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded);
+            using var activity = ExplicitParentSource.StartActivity("foreign-sampling", ActivityKind.Internal, foreign);
+            return activity is null || !activity.Recorded ? "not-recorded" : "recorded";
+        });
+
+        endpoints.MapGet("/cases/capture-context", () =>
+        {
+            _capturedContext = ExecutionContext.Capture();
+            return "ok";
+        });
+
         endpoints.MapGet("/cases/outliving-task", () =>
         {
             _lateStepFinished.Reset();
@@ -420,6 +466,11 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
             }
         });
         return url;
+    }
+
+    private sealed class FlowRequestStateSeen
+    {
+        public bool Found { get; set; }
     }
 
     private sealed class CasesDbContext(DbContextOptions<CasesDbContext> options) : DbContext(options)

@@ -70,6 +70,21 @@ public class NetApiFlowMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        recorder.TraceCompleted += _ => throw new InvalidOperationException("a subscriber failed");
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, recorder, options);
+        var httpContext = TracedGetRequest(new StartingResponseFeature());
+
+        await Should.ThrowAsync<InvalidOperationException>(() => subject.InvokeAsync(httpContext));
+
+        var state = (FlowRequestState)httpContext.Items[FlowHttpContextItems.RequestState]!;
+        state.IsRecording.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task InvokeAsync_WithEmitTraceIdHeaderOff_RegistersNothingOnTheResponse()
     {
         var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = false });
