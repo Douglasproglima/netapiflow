@@ -1,28 +1,24 @@
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace NetApiFlow.Storage;
 
-/// <summary>Periodically removes traces beyond the configured retention policy.</summary>
-internal sealed class RetentionService(ITraceStore store, IOptions<NetApiFlowOptions> options) : BackgroundService
+internal sealed partial class RetentionService(
+    ITraceStore store,
+    IOptions<NetApiFlowOptions> options,
+    RetentionInterval interval,
+    ILogger<RetentionService> logger) : BackgroundService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(Interval);
+        using var timer = new PeriodicTimer(interval.Value);
 
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                var policy = new RetentionPolicy
-                {
-                    MaxTraces = options.Value.Retention.MaxTraces,
-                    MaxAge = options.Value.Retention.MaxAge,
-                };
-
-                await store.ApplyRetentionAsync(policy, stoppingToken);
+                await ApplyRetentionWithoutFailingAsync(stoppingToken);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -31,5 +27,31 @@ internal sealed class RetentionService(ITraceStore store, IOptions<NetApiFlowOpt
             // supplied token (as opposed to the timer itself) is what caused the wait to end;
             // that is the expected shape of a graceful host shutdown, not a failure.
         }
+    }
+
+    private async Task ApplyRetentionWithoutFailingAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            var policy = new RetentionPolicy
+            {
+                MaxTraces = options.Value.Retention.MaxTraces,
+                MaxAge = options.Value.Retention.MaxAge,
+            };
+
+            await store.ApplyRetentionAsync(policy, stoppingToken);
+        }
+        catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+        {
+            Log.RetentionFailed(logger, ex);
+        }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(
+            Level = LogLevel.Warning,
+            Message = "NetApiFlow: applying the trace retention failed, retention will be tried again at the next interval")]
+        public static partial void RetentionFailed(ILogger logger, Exception exception);
     }
 }
