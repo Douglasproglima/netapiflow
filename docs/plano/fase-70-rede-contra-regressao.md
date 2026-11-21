@@ -56,8 +56,11 @@ Cinco PRs, uma por parte, nesta ordem. Cada uma traz as suas provas vermelhas. A
 
 ## Tarefa 70.1: o job do pacote real
 
-No `ci.yml` **e** no `release.yml`, na mesma lista (D-183). No `release.yml` o job é pré-requisito da publicação (`needs`), para o
-porteiro da publicação ficar igual ao do CI. Só no `ubuntu-latest`. Pode usar `needs: build-test` e baixar o `dist` já construído
+Uma definição só, em `.github/workflows/real-package.yml` (`workflow_call`), chamada pelo `ci.yml` e pelo `release.yml` (D-254): a
+paridade do D-183 passa de duas listas iguais a uma estrutura só. No `release.yml` o job chamado é pré-requisito da publicação
+(`needs`), para o porteiro da publicação ficar igual ao do CI. A condição de `docs_only` fica no `if` do job chamador, e o
+`permissions` do workflow chamado é só `contents: read`. O check aparece na proteção de branch como `<id do job chamador> / <nome do
+job chamado>`, e quem o torna obrigatório é o dono, depois da primeira execução: a PR diz o nome exato. Só no `ubuntu-latest`. Pode usar `needs: build-test` e baixar o `dist` já construído
 em vez de construir o Angular de novo, se a Executora medir que compensa.
 
 **Montagem.**
@@ -71,11 +74,19 @@ em vez de construir o Angular de novo, se a Executora medir que compensa.
    `csharp quickstart:program` para o arquivo inteiro e `csharp quickstart:registrations` para os comandos que entram antes de
    `builder.Build()`. O GitHub usa só a primeira palavra da linha de abertura para o realce, e a Executora confere isso na
    pré-visualização da PR. O script **falha** se um marcador sumir, para uma edição do README quebrar o CI e não desligar o teste
-   em silêncio. Os `dotnet add package` do bloco `bash` do Quick start também saem do README, com `--version` e `--source` do feed.
+   em silêncio. Os ids dos `dotnet add package` do bloco `bash` do Quick start também saem do README, e o job roda `dotnet add package <id>
+   --version <exata> --no-restore` para cada um (o comando aceita um único `--source`, e com só o feed o restore dos pacotes
+   transitivos de terceiros falha). O restore fica com o `nuget.config` do app, que começa com `<clear />` e lista o feed do job e o
+   nuget.org. A versão é sempre exata, para um `0.6.0-ci.N` que não esteja no feed falhar alto, em vez de cair num pacote antigo do
+   nuget.org (D-254).
    **O MCP também** (ajuste da auditoria): o bloco da seção "MCP server" tem os seus marcadores, `csharp mcp:registration` e
    `bash mcp:package`. Esse bloco atravessa a linha `var app = builder.Build();` (o `AddNetApiFlowMcp()` vem antes e o
    `UseNetApiFlowMcp()` depois), então o script o **divide nessa linha**: o que vem antes entra com os registros do Quick start, e o
    que vem depois entra depois do `Build`. O job instala também o `NetApiFlow.Mcp` do feed.
+   **O bloco do MCP não trazia os `using`**, e o cenário a achou isso na PR 1: `AddNetApiFlowMcp` está em `NetApiFlow.Mcp` e
+   `UseNetApiFlowMcp` em `NetApiFlow.Mcp.Endpoints`, e sem eles a seção dá `CS1061`. O README ganha um bloco `csharp mcp:usings` com
+   as duas linhas e uma frase no texto da seção, nos dois idiomas, no molde da #414. O job o cola no topo do `Program.cs`, antes da
+   primeira linha que não é `using`, e o bloco `mcp:registration` não muda. Entra na PR 1, num commit separado (D-254).
    **O `README.pt-BR.md` também** (ajuste da auditoria): o script lê os mesmos marcadores no `README.pt-BR.md` e **falha se o código
    de algum bloco divergir do inglês**, para um dos dois não apodrecer sem ninguém ver. Antes de comparar, tira o comentário de fim
    de linha (`\s+//.*$`): hoje a única diferença entre os dois é `// mounted at /flow by default` contra `// montado em /flow por
@@ -97,14 +108,16 @@ prometem. Se um valor não bater, é achado, e a Executora para e relata.
 | d | Development | `GET /flow/api/config` com `Host: evil.example` dá **403**; com `Origin: http://evil.example` dá **403**; com o host do app dá 200 | O DNS rebinding (S6, #398) |
 | e | Development | A página `/flow/` e as respostas da API trazem `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` e uma `Content-Security-Policy` com `frame-ancestors 'none'`. A da página tem `script-src 'self'` **sem** `'unsafe-inline'`. A própria resposta `403` do cenário d também traz os três | O iframe e a CSP (S7, #401) |
 | f | Dev e Production | O cabeçalho `X-NetApiFlow-TraceId`: presente em Development; **ausente** em Production por padrão; presente em Production com `EmitTraceIdHeader=true` e `UseExceptionHandler`, também no 500; ausente no 500 de Production com a opção e **sem** tratador (o README diz isso) | O cabeçalho sem opção (50.6), no 500 (50.13, D-241) e o padrão só em Development (50.15) |
-| g | Production | Sem `AllowAnonymous` nem autorização, o painel responde **404** (`/flow/` e `/flow/api/traces`) e o MCP também (`/flow/mcp`), como o README promete. **Um `Origin` alheio dá 403, não 404**, porque o guarda roda antes do portão de autorização | O painel aberto em Production, e a promessa do advisory nos dois ambientes |
-| h | Development | No MCP, em `/flow/mcp`: `Origin` alheio dá **403**; `Host` alheio dá **403**; e a resposta traz os três cabeçalhos do cenário e | O `Origin` do MCP (S6 e S7, #398 e #401), que o advisory 3 promete |
+| g | Production | Sem `AllowAnonymous` nem autorização, o painel responde **404** (`/flow/` e `/flow/api/traces`) e o MCP também (`POST /flow/mcp` com um corpo JSON-RPC `initialize`), como o README promete. **Um `Origin` alheio dá 403, não 404**, porque o guarda roda antes do portão de autorização | O painel aberto em Production, e a promessa do advisory nos dois ambientes |
+| h | Development | No MCP, em `POST /flow/mcp` com um corpo JSON-RPC `initialize`: `Origin` alheio dá **403**; `Host` alheio dá **403**; e a resposta traz os três cabeçalhos do cenário e | O `Origin` do MCP (S6 e S7, #398 e #401), que o advisory 3 promete |
 
 **O que a auditoria conferiu no código do `develop`**, para os valores dos cenários d, e, g e h não serem chute: o
 `SecurityHeaders.Apply` roda antes da recusa, então a resposta `403` leva os três cabeçalhos; o `RequestOriginGuard` recusa o `Host`
 só em Development, e o `*` do `AllowedHosts` do modelo `webapi` não conta como declarado, então `evil.example` dá `403`; o `Origin`
 diferente dá `403` em todo ambiente; e Production sem `IAuthorizeData` responde `Results.NotFound`. O Quick start atual já tem o
-`TrackFlowByConvention` no bloco de registros, então o cenário b vale.
+`TrackFlowByConvention` no bloco de registros, então o cenário b vale. **As requisições ao MCP têm de ser `POST` com corpo JSON-RPC
+de `initialize`:** o `McpAccessGate` é um endpoint filter do grupo do `MapMcp`, e com `GET` ou `DELETE` o roteamento responde 405
+antes do filtro (item 44 do roadmap), então o 404 do cenário g e o 403 do h nunca acontecem com esses métodos.
 
 Regra permanente: **todo achado da auditoria que dá para reproduzir de fora vira um cenário aqui**, de forma permanente (70.6).
 
