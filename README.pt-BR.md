@@ -730,10 +730,16 @@ Um proxy que termina o TLS não precisa de nada para o esquema, porque ele não 
 ### O cabeçalho com o trace id
 
 O NetApiFlow escreve `X-NetApiFlow-TraceId` na resposta de toda requisição rastreada em Development.
-Ele carrega o trace id, o mesmo valor que o cabeçalho `traceparent` do W3C já carrega. É por ele que
-o `NetApiFlow.Testing` acha o trace de uma resposta e que o Runner do dashboard abre o grafo da
+Ele carrega o id do trace, um id aleatório que o servidor cria para cada requisição. Não é o trace id
+do W3C do cabeçalho `traceparent`: esse fica na tag `w3c.trace_id` do trace e em
+`Activity.Current.TraceId`, e o detalhe de um trace no dashboard mostra os dois. É por ele que o
+`NetApiFlow.Testing` acha o trace de uma resposta e que o Runner do dashboard abre o grafo da
 requisição que enviou. Saber um trace id não abre o dashboard: as rotas dele continuam atrás das
 regras acima.
+
+**Antes da 0.6.0 o id do trace era o trace id do W3C.** Duas requisições com o mesmo `traceparent`
+dividiam um id e perdiam um trace. Se um teste ou uma linha de log comparava `NetApiFlow.CurrentTraceId`
+ou este cabeçalho com `Activity.Current.TraceId`, leia o trace id do W3C pela tag.
 
 **A partir da 0.6.0, o cabeçalho só sai em Development por padrão. Para mantê-lo em Production,
 defina `EmitTraceIdHeader = true`.**
@@ -1030,6 +1036,10 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   `ExecutionContext.SuppressFlow()` ou um thread pool próprio que não propaga o contexto. Etapas
   criadas depois desse ponto são gravadas corretamente, mas como uma nova raiz, não aninhadas sob
   o trace da requisição.
+- Uma etapa iniciada com um `ActivityContext` explícito como pai, num thread que não carrega o
+  `ExecutionContext` da requisição, não entra em trace nenhum. Antes da 0.6.0 ela era gravada, porque
+  dividia o trace id do W3C com a requisição. Inicie a etapa dentro do fluxo da requisição, ou ponha
+  `Activity.Current` numa atividade da requisição antes.
 - O rastreamento automático (`AddFlowTracked`, `DecorateFlowTracked` e `TrackFlowByConvention`) não dá suporte a retorno do
   tipo `IAsyncEnumerable<T>` nesta versão.
 - O rastreamento automático também não funciona sob Native AOT. `AddFlowTracked`,
