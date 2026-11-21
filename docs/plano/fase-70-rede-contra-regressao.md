@@ -173,7 +173,8 @@ Entregue em `develop` (`ccfee25`).
 - **O job `built-demo`** é um job comum do `ci.yml`, com `if` no próprio job, e roda `scripts/verify-built-demo.mjs`: cada trace do manifest mais `/history`, `/components` e `/runner` num Chrome sem janela, por CDP, com falha em qualquer erro de console, exceção, HTTP 400 ou mais, falha de rede ou pedido sem resposta, e se o número de traces visitadas não for o do manifest.
 - **Provas vermelhas,** lidas nos logs: o manifest no formato anterior à #416 dá `console.error: The demo has no recording for api/blueprint?...` em cada trace, e uma fixture apagada dá `HTTP 404` e "only 25 of 26 are clean".
 - **Três desvios, aceitos** (D-264): sem biblioteca de navegador (156 linhas de CDP); o interceptor da demo escreve no console quando não há gravação; e o `deploys.json` com `[]` gravado à mão, porque `/history` pedia uma rota que a demo nunca gravou.
-- **O check `built-demo`** ainda não é obrigatório: a auditoria espera a confirmação do dono.
+- **O check `built-demo`** é obrigatório no `develop` desde 21/11/2026, com a autorização do dono (D-270). A `main` o recebe
+  depois do merge do `release/0.6.0`.
 
 ## Resultado da PR 4, tarefa 70.4 (#443, 21/11/2026)
 
