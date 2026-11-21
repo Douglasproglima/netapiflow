@@ -147,6 +147,17 @@ pode ficar verdadeira com o código desta fase). `CHANGELOG.md`, em inglês, `##
 aparecia, e o desenho de uma trace antiga que mudava com a chegada de uma execução nova. `### Added`: o parâmetro
 `before` de `GET /blueprint` e o membro novo do `ITraceStore`.
 
+## Resultado da 57.4 e da 57.5 (#454, 21/11/2026)
+
+Entregue em `develop` (`59df251`, head `031ac12`). **Nenhum código de produto mudou.** A Executora procurou o defeito antes de escrever qualquer coisa: num app novo, no painel real, uma requisição segurada mostra `OrderRepository` como Aguardando, com a rota `/orders/{id:int}` e não `(unmatched)`, e depois do fim o mesmo nó é Não executado, com 0 erros de console. O F1a já estava fechado pela #420 (a rota é conhecida desde o início) e o F1b pela #412 e pela #416 (o blueprint tem âncora). A auditoria confirmou.
+
+- **O que a PR traz** é o guarda permanente em navegador de verdade, no job do pacote real. `LiveProbeEndpoints.cs` é código de usuário do job, nunca entra em pacote: uma etapa manual, uma espera num portão que o script abre (nunca um `Delay`) e o retorno antecipado ou a chamada do `IOrderService`. `scripts/verify-live-panel.mjs` abre o painel num Chrome sem janela e lê os nós `.flow-graph__node`, com três checagens de id próprio: `live-panel:old-trace`, `live-panel:running` e `live-panel:ended`. O passo leva cerca de 4 s.
+- **O registro de guardas** ganhou duas linhas, `F1-waiting-in-the-real-panel` (#420, aponta `live-panel:running`) e `F1-old-trace-in-the-real-panel` (#416, aponta `live-panel:old-trace`). A `live-panel:ended` não tem linha própria.
+- **Provas vermelhas,** lidas nos logs: o painel sem pedir o blueprint de uma trace `Running` derruba `running` e `ended` com a espera de 15 000 ms estourada e `passed=1 of 3`, e o painel sem o `before` derruba só a `old-trace`, com os nós `Não executado` de uma execução posterior na mensagem e `passed=2 of 3`. A head dá `passed=3 of 3`.
+- **O texto:** um parágrafo nos dois READMEs depois da tabela de estados diz o que é o blueprint (a última execução com sucesso do mesmo método e da mesma rota que começou antes, nenhuma para a primeira execução, e com retenção a anterior ou nenhuma), e o `[Unreleased]` do CHANGELOG ganhou a entrada de `### Fixed` que faltava para o F1a.
+
+**Limites aceitos:** as duas vermelhas põem o defeito de volta no painel, não na rota da #420 no núcleo. Uma regressão da rota conhecida desde o início apareceria como "a requisição segurada nunca aparece na lista ao vivo com a rota", antes de `running` e `ended` rodarem, e não foi mostrada por uma vermelha. O teste de host dessa rota já tem linha própria no registro (`F1-route-known-while-running`). O guarda roda em 1280x800 e no tema padrão, e o plano pedia os dois temas e `390x844`: isso foi visto à mão na #416, nenhum arquivo do `ClientApp` mudou e o detector não rodou, como manda o `design-quality.md`. O estado do nó é lido pelo texto do rótulo em inglês e em português, então um rótulo novo ou um terceiro idioma pede a lista atualizada, e o teste unitário do script cobre os dois idiomas.
+
 ## Fora de escopo
 
 - Escolher como blueprint a execução "mais completa" em vez da última com sucesso.
