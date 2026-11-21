@@ -617,6 +617,25 @@ Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": false }`. Reques
 traced. `GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is
 off.
 
+### Security headers
+
+Every response of the dashboard and of the MCP endpoint carries `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors
+'none'`. That includes the 403 and the 404 of the access check. No other page can show the dashboard
+in a frame, so nothing can hide its delete button under a click.
+
+The page of the dashboard itself carries a full policy:
+
+```text
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'
+```
+
+`script-src` has no `'unsafe-inline'`: the dashboard runs only the script files it ships. `style-src`
+has it, on purpose. Angular adds the styles of each component as `<style>` elements when the page
+runs, there are dozens of them, and a hash for each would change with every build. An inline style
+cannot run code. If your own middleware sets a `Content-Security-Policy` on these routes, the one of
+the dashboard replaces it.
+
 ## MCP server
 
 ```bash
@@ -644,7 +663,8 @@ trace or triggers a replay through MCP.
 > `AllowedHosts`, and an `Origin` must match the `Host` the application sees. An MCP client that is
 > not a browser, such as the MCP Inspector or the official C# client, sends no `Origin`, so it is
 > not affected. The details, and what to set behind a reverse proxy, are in
-> [Which `Host` and `Origin` are accepted](#which-host-and-origin-are-accepted).
+> [Which `Host` and `Origin` are accepted](#which-host-and-origin-are-accepted). Its responses carry
+> the same [security headers](#security-headers) as the dashboard's.
 
 See `samples/SampleApi.Controllers/README.md` for how to point a real MCP client (e.g. Claude
 Code) at a running instance.
