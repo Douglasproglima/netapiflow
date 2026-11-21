@@ -179,10 +179,49 @@ public static class AuthorizationMatrix
         string basePath,
         Action<IServiceCollection> addPackage,
         Func<IEndpointRouteBuilder, IEndpointConventionBuilder> mount,
-        Action<IEndpointRouteBuilder>? mapExtra = null)
+        Action<IEndpointRouteBuilder>? mapExtra = null,
+        string getQuery = "")
+    {
+        var (host, mapped) = await StartAsync(matrixCase, addPackage, mount, mapExtra);
+        using (host)
+        {
+            var requests = RequestsUnder(new CompositeEndpointDataSource(mapped.DataSources), basePath);
+            var client = host.GetTestServer().CreateClient();
+            var answers = new List<MatrixAnswer>();
+            foreach (var request in requests)
+            {
+                var sent = request.Method == "GET" ? request with { Path = request.Path + getQuery } : request;
+                answers.Add(new MatrixAnswer(sent, await StatusOfAsync(client, sent, null)));
+            }
+
+            return answers;
+        }
+    }
+
+    public static async Task<int> PostAsync(
+        AuthorizationMatrixCase matrixCase,
+        Action<IServiceCollection> addPackage,
+        Func<IEndpointRouteBuilder, IEndpointConventionBuilder> mount,
+        string path,
+        string body,
+        string contentType)
+    {
+        var (host, _) = await StartAsync(matrixCase, addPackage, mount, null);
+        using (host)
+        {
+            var request = new MatrixRequest("POST", path, false);
+            return await StatusOfAsync(host.GetTestServer().CreateClient(), request, (body, contentType));
+        }
+    }
+
+    private static async Task<(IHost Host, IEndpointRouteBuilder Mapped)> StartAsync(
+        AuthorizationMatrixCase matrixCase,
+        Action<IServiceCollection> addPackage,
+        Func<IEndpointRouteBuilder, IEndpointConventionBuilder> mount,
+        Action<IEndpointRouteBuilder>? mapExtra)
     {
         IEndpointRouteBuilder? mapped = null;
-        using var host = await Host.CreateDefaultBuilder()
+        var host = await Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseTestServer();
@@ -209,15 +248,7 @@ public static class AuthorizationMatrix
             })
             .StartAsync();
 
-        var requests = RequestsUnder(new CompositeEndpointDataSource(mapped!.DataSources), basePath);
-        var client = host.GetTestServer().CreateClient();
-        var answers = new List<MatrixAnswer>();
-        foreach (var request in requests)
-        {
-            answers.Add(new MatrixAnswer(request, await StatusOfAsync(client, request)));
-        }
-
-        return answers;
+        return (host, mapped!);
     }
 
     public static IReadOnlyList<string> Violations(
@@ -229,12 +260,17 @@ public static class AuthorizationMatrix
             .OfType<string>()
             .ToList();
 
-    private static async Task<int> StatusOfAsync(HttpClient client, MatrixRequest request)
+    private static async Task<int> StatusOfAsync(HttpClient client, MatrixRequest request, (string Body, string ContentType)? payload)
     {
         var message = new HttpRequestMessage(new HttpMethod(request.Method), request.Path);
-        if (request.Method is "POST" or "PUT" or "PATCH")
+        if (payload is { } custom)
         {
-            message.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+            message.Content = new StringContent(custom.Body, Encoding.UTF8);
+            message.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(custom.ContentType);
+        }
+        else if (request.Method is "POST" or "PUT" or "PATCH")
+        {
+            message.Content = new StringContent("{\"label\":\"matrix\"}", Encoding.UTF8, "application/json");
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         }

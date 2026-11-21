@@ -28,7 +28,7 @@ public class McpAuthorizationMatrixTests
     {
         var answers = await RunAsync(AuthorizationMatrix.Cases[0]);
 
-        answers.Select(answer => $"{answer.Request.Method} {answer.Request.Path}").ShouldContain("POST /flow/mcp");
+        answers.Select(answer => $"{answer.Request.Method} {answer.Request.Path}").ShouldContain("POST /flow/mcp/");
     }
 
     [Fact]
