@@ -83,6 +83,8 @@ export interface FlowTraceSummary {
   truncated: boolean;
 }
 
+export const UNMATCHED_ROUTE_TEMPLATE = '(unmatched)';
+
 /** GET /traces/{traceId} and GET /blueprint: a trace with its spans. */
 export interface FlowTraceDetail extends FlowTrace {
   spans: FlowSpan[];

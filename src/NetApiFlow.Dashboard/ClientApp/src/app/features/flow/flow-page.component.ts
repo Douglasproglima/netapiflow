@@ -8,7 +8,13 @@ import { MatMenuModule } from '@angular/material/menu';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
-import { FlowSpan, FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
+import {
+  FlowSpan,
+  FlowTraceDetail,
+  FlowTraceSummary,
+  SpanDetail,
+  UNMATCHED_ROUTE_TEMPLATE,
+} from '../../core/models';
 import { SSE_REFRESH_AUDIT_MS, SseService } from '../../core/sse.service';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
@@ -106,6 +112,8 @@ export class FlowPageComponent {
 
   readonly importedTrace = signal<FlowTraceDetail | null>(null);
   readonly importErrorKey = signal<TranslationKey | null>(null);
+
+  protected readonly unmatchedRouteTemplate = UNMATCHED_ROUTE_TEMPLATE;
 
   readonly trace = computed<FlowTraceDetail | null>(
     () => this.importedTrace() ?? this.livePlayer.trace(),
