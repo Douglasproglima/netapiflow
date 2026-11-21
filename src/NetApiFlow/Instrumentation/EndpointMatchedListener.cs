@@ -62,7 +62,14 @@ internal sealed partial class EndpointMatchedListener
 
         try
         {
-            OpenEndpointStep(context);
+            if (!ReferenceEquals(context.RequestServices?.GetService<EndpointMatchedListener>(), this))
+            {
+                return;
+            }
+
+            var state = context.Items.TryGetValue(FlowHttpContextItems.RequestState, out var item) ? item as FlowRequestState : null;
+            state?.OpenForTheMatchedEndpoint(context);
+            OpenEndpointStep(context, state?.CaptureMinimalApiEndpoints ?? true);
         }
         catch (Exception ex)
         {
@@ -78,9 +85,9 @@ internal sealed partial class EndpointMatchedListener
     {
     }
 
-    private void OpenEndpointStep(HttpContext context)
+    private static void OpenEndpointStep(HttpContext context, bool captureMinimalApiEndpoints)
     {
-        if (!ReferenceEquals(context.RequestServices?.GetService<EndpointMatchedListener>(), this)
+        if (!captureMinimalApiEndpoints
             || !context.Items.ContainsKey(FlowHttpContextItems.TraceStarted)
             || context.Items.ContainsKey(FlowHttpContextItems.ImplicitEndpointStep)
             || context.GetEndpoint() is not RouteEndpoint endpoint
