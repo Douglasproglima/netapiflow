@@ -44,14 +44,15 @@ Consultado no nuget.org em 21/11/2026: `Microsoft.CodeAnalysis.PublicApiAnalyzer
 
 ## Como a fase entrega
 
-Cinco PRs, uma por parte, nesta ordem. Cada uma traz as suas provas vermelhas. A parte 6 é da Planejadora e já está escrita.
+Seis PRs, uma por parte, nesta ordem (a comparação da 70.7 vem logo depois da PR 1, D-257). Cada uma traz as suas provas vermelhas. A parte 6 é da Planejadora e já está escrita.
 
 | PR | Tarefas | O que entra |
 |---|---|---|
 | 1 | 70.1 e 70.2 | O job do pacote real e o snapshot dos `.nuspec` |
-| 2 | 70.3 | A demo construída no CI |
-| 3 | 70.4 | A linha de base da API pública |
-| 4 | 70.5 | O registro de guardas |
+| 2 | 70.7 | A comparação com o pacote publicado anterior |
+| 3 | 70.3 | A demo construída no CI |
+| 4 | 70.4 | A linha de base da API pública |
+| 5 | 70.5 | O registro de guardas |
 | (Planejadora) | 70.6 | A regra dos consumidores do contrato |
 
 ## Tarefa 70.1: o job do pacote real
@@ -141,6 +142,53 @@ passa a ver o diff do arquivo na própria PR.
 **Prova vermelha:** subir o piso do EF Core em `Directory.Packages.props` (o erro da `0.5.1`, que fez o pacote exigir o EF Core
 `9.0.22`) dá vermelho.
 
+## Tarefa 70.7: a comparação com o pacote publicado anterior (PR 2, D-257)
+
+Foi este método que a auditoria fez à mão, o mesmo roteiro contra a `0.5.3` do nuget.org e contra o build da PR, e que pegou as
+duas regressões da #420 que o vermelho e o verde da própria PR, o AOT e a revisão por diff não pegaram. É a rede que o dono pediu
+para regressão de **comportamento**. Reaproveita o roteiro HTTP, o feed local e o `real-package.yml` da PR 1: roda como um segundo
+job do mesmo workflow, em paralelo, para não somar ao tempo do primeiro.
+
+**Os requisitos, da auditoria:**
+
+1. **Dois apps, o mesmo roteiro.** Um compilado contra o build da PR (o feed local do job) e outro contra o último publicado, do
+   nuget.org (hoje a `0.5.3`). O que o pacote antigo não tem (`TrackFlowByConvention`, `WithoutNetApiFlowTracking`) sai por
+   compilação condicional, com um símbolo definido por uma propriedade do app, e a comparação vale **só para os cenários comuns
+   aos dois**.
+2. **O que se compara por cenário:** o status HTTP, a presença do cabeçalho `X-NetApiFlow-TraceId` e o conjunto de traces gravadas
+   (método, rota e status), **ao vivo** (durante a requisição, em `/flow/api/traces/live`) e **depois** (em `/flow/api/traces`).
+3. **A lista de diferenças esperadas**, versionada em `tests/real-package/expected-differences.json`. Cada linha traz o cenário, a
+   diferença, a razão e a entrada do CHANGELOG que a anuncia. **Diferença fora da lista falha, e linha da lista que não aparece
+   mais também falha**, para a lista não apodrecer.
+4. **A vermelha obrigatória:** reintroduzir a regressão 1 da #420 (a reexecução abrindo a trace de um 404 que o `ExcludePaths`
+   excluía) dá vermelho. Além dela, apagar uma linha da lista dá vermelho, e deixar uma linha que não aparece mais também.
+5. **O publicado anterior vem do nuget.org**, com a versão fixada num arquivo (`tests/real-package/previous-published-version.txt`)
+   que a skill `/release` atualiza. A Planejadora escreve o passo na skill quando esta tarefa entrar, como na 70.4.
+
+**Acréscimos de desenho da Planejadora, para a auditoria contestar:**
+
+- **O app da comparação é um `Program.cs` fixo**, separado do app montado do README: o Quick start usa `TrackFlowByConvention`, que a
+  `0.5.3` não tem, então não compila contra o pacote antigo.
+- **A entrada do CHANGELOG citada em cada linha tem de existir no `[Unreleased]`.** O script confere o texto. Assim ninguém lista
+  uma diferença que não anunciou.
+- **O "ao vivo" espera um sinal do app, não um tempo.** Um endpoint que segura a requisição até o roteiro liberar, como os testes da
+  63 fazem com `TaskCompletionSource`. Nada de `Delay` para esperar a visão ao vivo.
+- **No `/release`, a lista é esvaziada no mesmo passo que troca a versão publicada anterior,** porque depois do release as diferenças
+  passam a ser a base, e a regra "linha que não aparece mais falha" a derrubaria.
+
+**Os cenários.** A Planejadora lista os que o "como hoje" exige, e a Executora acrescenta os que achar:
+
+- Uma rota excluída por `ExcludePaths` que dá 404 com `UseStatusCodePagesWithReExecute`, e o mesmo com `UseExceptionHandler` (a R1 da #420).
+- Uma requisição lenta num `app.Map` terminal, ao vivo e depois, com um span de `HttpClient` dentro dela (a R2 da #420). Na `0.6.0`
+  essa diferença é **esperada** (D-256), com a entrada do CHANGELOG, e é o primeiro exemplo da lista.
+- Um arquivo estático e um 404 sem rota.
+- Um endpoint de controller e um de Minimal API, com o template de rota gravado.
+- `ExcludePaths` e `IncludePaths` sem `PathBase`, e com `UsePathBase`: sob `PathBase` a diferença é a correção da Fase 53, esperada.
+- O cabeçalho de trace por ambiente: o padrão em Production mudou na `0.6.0` (50.15), então a diferença é esperada.
+
+**Ponto de parada:** se a comparação precisar de mais de uma diferença esperada **sem** entrada de CHANGELOG para fechar, para e
+relata: é regressão, não diferença. O tempo do job entra na régua dos 15 minutos da fase.
+
 ## Tarefa 70.3: a demo construída no CI
 
 Um job (ou passos no `ci.yml`, à escolha da Executora), em todo PR que não seja só documentação. Se a Executora medir que o custo
@@ -224,14 +272,14 @@ pressa:** vai para uma lista de lacunas no relatório, e a auditoria decide quai
 - **Cada guarda vista falhando contra o defeito antigo, reintroduzido de propósito num branch de prova, e verde no `develop`.** O
   relatório cola, por guarda, o link da execução vermelha no CI.
 - As vermelhas obrigatórias: o `using` no meio do Quick start; o portão de `Host` tirado; o guarda de `Origin` do MCP tirado; o piso
-  do EF Core subido; o manifest sem a chave `before`; um membro público sem o arquivo; um teste registrado apagado.
+  do EF Core subido; o manifest sem a chave `before`; um membro público sem o arquivo; um teste registrado apagado; a regressão 1 da #420 reintroduzida, na comparação com o pacote publicado.
 - O job do pacote real verde em 3 execuções seguidas no CI, e o roteiro HTTP 20 vezes seguidas contra um app de pé sem falhar.
 - Build, testes, formato e lint limpos nos dois TFMs. `AotCoreVerification` com zero aviso.
 - O tempo de cada job novo, medido, no relatório.
 
 ## Versionamento e fluxo
 
-- `0.6.0`, logo depois da Fase 53. Branches `chore/ci-pacote-real`, `chore/ci-demo-construida`, `chore/ci-api-publica` e
+- `0.6.0`, logo depois da Fase 53. Branches `chore/ci-pacote-real`, `chore/ci-comparacao-publicada`, `chore/ci-demo-construida`, `chore/ci-api-publica` e
   `chore/guardas-de-regressao`, a partir de `develop` atualizado. Commits pequenos, em inglês, uma linha, sem linha de coautor.
 - Tem workflow e código: abrir a PR e parar, o merge é da auditoria.
 
