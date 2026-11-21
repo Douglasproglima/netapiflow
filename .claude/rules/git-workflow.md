@@ -45,6 +45,10 @@ agir. Não assuma um papel fixo só porque é o que este arquivo descreveu numa 
 `main` e `develop` têm proteção configurada no GitHub (D-65): PR obrigatório para mergear, checks
 `pr-lint`, `secret-scan`, `detect-changes` e `build-test` (os dois sistemas operacionais)
 obrigatórios, sem force-push, sem apagar a branch. Vale até para quem administra o repositório.
+O `develop` exige também `real-package / real-package`, `real-package / comparison` e `built-demo` (D-261, D-262, D-270). A `main`
+passa a exigi-los depois do merge do `release/0.6.0` (passo 10 da skill `/release`), porque o `ci.yml` dela ainda é o antigo. Um
+job que não roda num PR só de documentação aparece como Skipped, e o Skipped satisfaz o check obrigatório. A configuração da
+proteção é da auditoria, com a autorização do dono.
 Push direto numa das duas branches é rejeitado pelo próprio GitHub, não só pela convenção abaixo.
 
 ## Ações que exigem confirmação
