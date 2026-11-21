@@ -2,3 +2,7 @@ title = "NetApiFlow gitleaks config"
 
 [extend]
 useDefault = true
+
+[allowlist]
+description = "The made-up JWT that the sanitizer tests use as an input"
+regexes = ['''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0In0\.c2lnbmF0dXJl''']
