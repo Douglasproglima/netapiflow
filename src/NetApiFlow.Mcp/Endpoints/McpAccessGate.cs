@@ -11,12 +11,6 @@ internal static class McpAccessGate
     {
         var httpContext = context.HttpContext;
         SecurityHeaders.Apply(httpContext.Response);
-        var refusal = RequestOriginGuard.Refusal(httpContext);
-        if (refusal is not null)
-        {
-            return Results.Text(refusal, statusCode: StatusCodes.Status403Forbidden);
-        }
-
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
