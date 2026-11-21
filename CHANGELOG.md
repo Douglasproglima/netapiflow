@@ -56,8 +56,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: the trace of a request that matches an endpoint now opens when routing picks the
   endpoint, with its route already known. The `TraceStarted` event, the live list and the REST list
   show `/orders/{id}` where they used to show `(unmatched)` until the request ended. The start time is
-  still the start of the request, and a step created before routing is kept. A request that matches
-  no endpoint is still recorded as `(unmatched)`, when it ends.
+  still the start of the request, and a step created before routing is kept.
+- **`NetApiFlow`: a request that matches no endpoint is now recorded only when it ends.** A static
+  file, a 404, a branch with its own terminal middleware and a WebSocket handler used to be listed as
+  running, as `(unmatched)`, from the start of the request, and the live list and the stream showed
+  its steps as they happened, such as an EF Core or `HttpClient` call. Now none of it appears until
+  the request ends: the trace, with its steps, is published then. It is still recorded and listed.
+  What you lose is seeing it while it runs, in the live list, in the stream and in
+  `GET /traces/{id}`. This is what lets a route that you excluded, with `.WithoutNetApiFlowTracking()`
+  or with `ExcludePaths` under a `PathBase`, never show up at all.
 - `NetApiFlow`: `DecorateFlowTracked` no longer decorates a type of NetApiFlow's own packages,
   whatever the predicate says. A predicate such as `type.Name.EndsWith("Service")` used to put a
   proxy on NetApiFlow's own hosted services, so their `StartAsync` and `StopAsync` went through it.

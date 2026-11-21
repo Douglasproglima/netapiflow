@@ -932,6 +932,12 @@ O NetApiFlow nunca captura, em nenhuma configuração:
 > template acima, só que pro caso em que ainda não existe template nenhum. Se arquivo estático ou
 > o próprio documento OpenAPI estiverem poluindo o histórico com ruído de `(unmatched)`,
 > `ExcludePaths` tira os dois do rastreamento de vez.
+>
+> Uma requisição que não casa com nenhuma rota só é gravada quando termina. Enquanto está em
+> andamento ela não aparece como em execução, e nada do que ela faz aparece antes disso, como uma
+> chamada de EF Core ou de `HttpClient` dentro de um middleware terminal ou de um tratador de
+> WebSocket. Uma requisição que casa um endpoint aparece como em execução desde o momento em que o
+> roteamento o escolhe.
 
 Mensagem de erro é sanitizada e depois truncada em 300 caracteres, em toda saída: o dashboard, as
 ferramentas do MCP, o trace gravado, o log correlacionado e a tag `netapiflow.error.message` da

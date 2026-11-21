@@ -923,6 +923,11 @@ NetApiFlow never captures, under any configuration:
 > for the case where there's no template to use yet. If static assets or your own OpenAPI document
 > are cluttering your history with `(unmatched)` noise, `ExcludePaths` keeps them out of tracing
 > entirely.
+>
+> A request that matches no route is recorded only when it ends. While it is in progress it is not
+> listed as running, and nothing it does shows up before then, such as an EF Core or `HttpClient`
+> call inside a terminal middleware or a WebSocket handler. A request that matches an endpoint
+> shows as running from the moment routing picks it.
 
 Error messages are sanitized and then truncated to 300 characters, in every output: the dashboard,
 the MCP tools, the stored trace, correlated logs and the `netapiflow.error.message` tag on the
