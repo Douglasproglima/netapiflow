@@ -614,5 +614,15 @@
       "scenario": "live-panel:old-trace"
     },
     "job": "real-package"
+  },
+  {
+    "id": "F1-not-executed-after-the-end-in-the-real-panel",
+    "defect": "A request that ended without running steps the blueprint expected was not drawn with them as not executed in the real panel",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:ended"
+    },
+    "job": "real-package"
   }
 ]
