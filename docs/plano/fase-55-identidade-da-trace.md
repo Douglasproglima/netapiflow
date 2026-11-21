@@ -109,6 +109,7 @@ traces em chamadas distribuídas legítimas. Vai em `### Fixed`, bem explicado.
 
 - Build, testes e formato limpos nos dois TFMs. `AotCoreVerification` com zero aviso.
 - Cada achado com código tem teste de host real **visto falhando antes**, nos três storages.
+- A correção do S3 entra com a sua linha em `tests/regression-guards/guards.json` (D-266), e a auditoria o cobra na PR.
 - A auditoria reconfere a frase do README e refaz a medição com o pacote real.
 
 ## Versionamento e fluxo
