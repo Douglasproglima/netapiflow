@@ -320,3 +320,15 @@ com a 51.
 
 A matriz medida, as respostas às duas perguntas com o trecho do código do framework ou o teste que as
 sustenta, a avaliação de cada mecanismo contra os sete requisitos, e qual a Executora recomenda e por quê.
+
+## Resultado da 53.2 a 53.4 (#420, 21/11/2026)
+
+Entregue em `develop` (`1e486ae`). A auditoria **reprovou a primeira versão** (`4710caa`) por duas regressões contra a `0.5.3` e três ajustes menores. A versão mergeada é a `3bb2c94`.
+
+- **O que entrou.** O mecanismo A com a emenda da D-245: `FlowRequestState` com a decisão única, `RequestTracingDecider`, a reserva não publicada no `FlowRecorder`. A única API pública nova é `WithoutNetApiFlowTracking<TBuilder>()`, que o painel e o MCP chamam nos grupos deles. README, XML doc e CHANGELOG dizem o que os padrões valem sob `PathBase` e o limite do requisito 5.
+- **Testes.** 61 de host real em `PathBaseTracingTests` (com e sem `UsePathBase`, em Development e em Production, nos dois TFMs; 40 falham contra o código do `develop`, o que a Planejadora reproduziu), 7 em `ReExecutionTracingTests` (4 falham sem a correção do R1, também reproduzido), os da visibilidade da requisição sem endpoint e da reserva, e os unitários.
+- **Custo** (`tests/NetApiFlow.Benchmarks`, `net10.0`, medido pela Executora). A rota rastreada sem `PathBase` vai de 7,64 a 7,65 KB. A rota excluída sem `PathBase` vai de 6,44 a 6,92 KB (+0,48 KB, abaixo do teto de 0,6 KB do plano). Sob `UsePathBase`, a rota excluída deixa de ser rastreada por engano.
+- **As duas regressões.** R1: a reexecução abria a trace de uma requisição que o `ExcludePaths` excluía. Corrigida, e a decisão de uma requisição reexecutada segue a original. R2: uma requisição sem endpoint casado só aparece quando termina. A Planejadora decidiu manter isso como limite declarado (D-256, opção A), com CHANGELOG, README e um teste que fixa a decisão.
+- **Comparação com a `0.5.3`.** A Planejadora, por referência de projeto, e a auditoria, com o pacote real em cinco modos (inclusive `PathBase`, `IncludePaths` e sem `UseRouting`), chegaram às mesmas duas diferenças, as duas intencionais e anunciadas no CHANGELOG: o cabeçalho passa a sair no 500 tratado por `UseExceptionHandler` (50.13), e a requisição sem endpoint só aparece ao terminar.
+- **Critério pendente.** O teste com o pacote real do `develop` inteiro, na segunda passada da auditoria. O R-33 muda para `Mitigado` nela, citando `PathBaseTracingTests` como prova.
+- **Achado no caminho, para a `0.7.0`** (item 52): uma requisição tratada por `UseExceptionHandler` é gravada com a rota da página de erro. É defeito antigo, a `0.5.3` faz igual.
