@@ -106,10 +106,10 @@ em qualquer lugar além da sua própria máquina.
 ## Formas de marcar etapas
 
 O NetApiFlow precisa saber onde uma etapa termina e a próxima começa. Escolha a forma que couber
-em cada camada. Elas se combinam livremente na mesma requisição. Toda forma abaixo, menos o
-`NetApiFlow.Step`, fica no namespace `NetApiFlow.Marking`, então o `Program.cs` precisa de
-`using NetApiFlow.Marking;` no topo, ao lado do `using NetApiFlow;` que o Início rápido já tem
-(`ComponentType` fica em `NetApiFlow`).
+em cada camada. Elas se combinam livremente na mesma requisição. `AddFlowTracked`,
+`DecorateFlowTracked` e `TrackFlowByConvention` ficam no namespace `NetApiFlow.Marking`, então o
+`Program.cs` precisa de `using NetApiFlow.Marking;` no topo, ao lado do `using NetApiFlow;` que o
+Início rápido já tem. O `using NetApiFlow;` cobre `.WithNetApiFlowTracking()` e `ComponentType`.
 
 | Forma | O que faz | Quando usar |
 |---|---|---|

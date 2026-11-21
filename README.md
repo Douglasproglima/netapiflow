@@ -104,9 +104,10 @@ anywhere but your own machine.
 ## Marking forms
 
 NetApiFlow needs to know where one step ends and the next begins. Pick whichever form fits each
-layer. They compose freely in the same request. Every form below except `NetApiFlow.Step` is in the
-`NetApiFlow.Marking` namespace, so `Program.cs` needs `using NetApiFlow.Marking;` at the top, next to
-the `using NetApiFlow;` the Quick start already has (`ComponentType` is in `NetApiFlow`).
+layer. They compose freely in the same request. `AddFlowTracked`, `DecorateFlowTracked` and
+`TrackFlowByConvention` are in the `NetApiFlow.Marking` namespace, so `Program.cs` needs
+`using NetApiFlow.Marking;` at the top, next to the `using NetApiFlow;` the Quick start already has.
+The `using NetApiFlow;` covers `.WithNetApiFlowTracking()` and `ComponentType`.
 
 | Form | What it does | When to use it |
 |---|---|---|
