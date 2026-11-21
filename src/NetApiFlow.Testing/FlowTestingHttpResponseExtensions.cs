@@ -14,7 +14,7 @@ public static class FlowTestingHttpResponseExtensions
     /// </summary>
     /// <exception cref="FlowAssertionException">
     /// The header is absent, which means the request was never tracked,
-    /// <c>NetApiFlowOptions.EmitTraceIdHeader</c> is <see langword="false"/>, or the response is a 500
+    /// <c>NetApiFlowOptions.EmitTraceIdHeader</c> is off, or the response is a 500
     /// the server built because nothing handled an exception. Also thrown when the trace is no longer
     /// in the in-memory buffer of recently completed traces.
     /// </exception>
@@ -27,7 +27,8 @@ public static class FlowTestingHttpResponseExtensions
             values.FirstOrDefault() is not { Length: > 0 } traceId)
         {
             throw new FlowAssertionException(
-                $"The response carries no {TraceIdHeader} header. The usual causes are that NetApiFlowOptions.EmitTraceIdHeader is set to false, " +
+                $"The response carries no {TraceIdHeader} header. The usual causes are that NetApiFlowOptions.EmitTraceIdHeader is off " +
+                "(it is on by default only in Development, so set it to true if your test host runs in another environment), " +
                 "that AddNetApiFlow is not registered, that the route is excluded by IncludePaths/ExcludePaths, " +
                 "or that the response is a 500 the server built because nothing handled the exception (add UseExceptionHandler).");
         }

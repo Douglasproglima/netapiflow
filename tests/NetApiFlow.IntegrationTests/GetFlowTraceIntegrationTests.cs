@@ -19,19 +19,27 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class GetFlowTraceIntegrationTests
 {
-    private static IHost CreateHost(bool trackingEnabled = true, bool emitTraceIdHeader = true, bool developerExceptionPage = false)
+    private static IHost CreateHost(
+        bool trackingEnabled = true,
+        bool? emitTraceIdHeader = true,
+        bool developerExceptionPage = false,
+        string? environment = null)
     {
         return Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseTestServer();
-                webBuilder.UseEnvironment(developerExceptionPage ? Environments.Development : Environments.Production);
+                webBuilder.UseEnvironment(environment ?? (developerExceptionPage ? Environments.Development : Environments.Production));
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
                     services.AddNetApiFlow(o =>
                     {
-                        o.EmitTraceIdHeader = emitTraceIdHeader;
+                        if (emitTraceIdHeader is { } emit)
+                        {
+                            o.EmitTraceIdHeader = emit;
+                        }
+
                         if (trackingEnabled)
                         {
                             o.IncludePaths("/**");
@@ -101,6 +109,30 @@ public class GetFlowTraceIntegrationTests
 
         response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
         response.GetFlowTrace(host.Services).ShouldHaveStatus(FlowStatus.Error);
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_InDevelopmentWithTheHeaderOptionLeftAlone_FindsTheTrace()
+    {
+        using var host = CreateHost(emitTraceIdHeader: null, environment: Environments.Development);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.GetFlowTrace(host.Services).ShouldHaveStatus(FlowStatus.Success);
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_InProductionWithTheHeaderOptionLeftAlone_ThrowsNamingTheOption()
+    {
+        using var host = CreateHost(emitTraceIdHeader: null, environment: Environments.Production);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        var thrown = Should.Throw<FlowAssertionException>(() => response.GetFlowTrace(host.Services));
+
+        thrown.Message.ShouldContain("NetApiFlowOptions.EmitTraceIdHeader");
     }
 
     [Fact]

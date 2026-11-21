@@ -53,7 +53,7 @@ public class NetApiFlowMiddlewareTests
     [Fact]
     public async Task InvokeAsync_WithEmitTraceIdHeaderOn_WritesTheHeaderOnlyWhenTheResponseStarts()
     {
-        var options = Options.Create(new NetApiFlowOptions());
+        var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = true });
         var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, new FlowRecorder(options), options);
         var responseFeature = new StartingResponseFeature();
         var httpContext = TracedGetRequest(responseFeature);

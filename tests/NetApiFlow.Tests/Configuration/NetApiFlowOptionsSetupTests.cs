@@ -35,7 +35,7 @@ public class NetApiFlowOptionsSetupTests
         options.CapturePrePipelineSteps.ShouldBeFalse();
         options.ExternalSources.ShouldBe(ExternalActivitySource.None);
         options.OpenApiDocumentPath.ShouldBe("/openapi/v1.json");
-        options.EmitTraceIdHeader.ShouldBeTrue();
+        options.EmitTraceIdHeader.ShouldBeFalse();
         options.IncludePatterns.ShouldBeEmpty();
         options.ExcludePatterns.ShouldBeEmpty();
         options.Retention.MaxTraces.ShouldBe(1000);
@@ -61,7 +61,7 @@ public class NetApiFlowOptionsSetupTests
             ["NetApiFlow:CapturePrePipelineSteps"] = "true",
             ["NetApiFlow:ExternalSources"] = "HttpClient",
             ["NetApiFlow:OpenApiDocumentPath"] = "/swagger/v1/swagger.json",
-            ["NetApiFlow:EmitTraceIdHeader"] = "false",
+            ["NetApiFlow:EmitTraceIdHeader"] = "true",
         });
 
         options.Enabled.ShouldBeFalse();
@@ -70,7 +70,7 @@ public class NetApiFlowOptionsSetupTests
         options.CapturePrePipelineSteps.ShouldBeTrue();
         options.ExternalSources.ShouldBe(ExternalActivitySource.HttpClient);
         options.OpenApiDocumentPath.ShouldBe("/swagger/v1/swagger.json");
-        options.EmitTraceIdHeader.ShouldBeFalse();
+        options.EmitTraceIdHeader.ShouldBeTrue();
     }
 
     [Fact]
