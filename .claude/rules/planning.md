@@ -59,7 +59,7 @@ roadmap.
 
 **Reproduzir é condição necessária para hotfix, não suficiente (D-205).** Hotfix só para uma de duas
 coisas: regressão nova, um comportamento que funcionava na versão anterior e quebrou; ou falha de
-severidade alta, que é perda de dado ou exposição grave. Defeito antigo, mesmo reproduzido contra o
+severidade alta, que é perda de dado, exposição grave ou **derrubar a API de produção do usuário** (D-235). Defeito antigo, mesmo reproduzido contra o
 pacote publicado, vai na próxima minor. O motivo é que, desde a `0.4.0`, cada versão foi conferida
 só pelo próprio diff, e cada furo antigo achado depois virou hotfix. O resto dos critérios do
 hotfix (PATCH, sem mudança de API pública) continua valendo para os dois casos.
