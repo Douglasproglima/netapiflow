@@ -74,10 +74,21 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: the error message sanitizer now sanitizes first and truncates after, so a secret cut
   by the 300 character limit leaves no piece behind, and it covers the forms it missed:
   `Authorization: Bearer ...` and `Basic ...` (the whole value, not only the scheme), `access_token=`,
-  `client_secret=`, `DB_PASSWORD=`, `api_key=` and `apikey=`, `Pwd=` and `passwd=` pairs, values in
-  quotes or with spaces, `"password":"..."` in JSON, and a bare `Bearer <token>`. The key is matched
-  by containing a sensitive word, so a harmless `key: value` message such as `Unexpected token: '}'`
-  now loses its value too.
+  `client_secret=`, `DB_PASSWORD=`, `api_key=` and `apikey=`, `Pwd=` and `passwd=` pairs, quoted
+  values, `"password":"..."` in JSON, and a bare `Bearer <token>`. The key is matched by containing
+  a sensitive word, so a harmless `key: value` message such as `Unexpected token: '}'` now loses its
+  value too.
+- `NetApiFlow`: the error message sanitizer now also covers an `Authorization` value of any length
+  (`Digest`, an AWS signature, with all its parameters), `token: Bearer ...`, a quoted value with an
+  escaped quote inside, a key in brackets such as `config[password]`, `Cookie:` and `Set-Cookie:`
+  headers, the Azure keys `AccountKey`, `SharedAccessKey` and `SharedAccessSignature`, `sig=` in a
+  signed URL, the keys `passphrase` and `private_key`, a bare JWT, and the password in a URL
+  (`scheme://user:password@host`). A secret in a quoted JSON string now leaves valid JSON,
+  `{"password":"[redacted]"}`, where it used to leave `{"password=[redacted]}`. The sanitizer is a
+  filter for known shapes and does not promise that no secret survives. The README now says so, and
+  lists what it does not touch: `Basic <base64>` without `Authorization`, `credentials: ...`, a
+  cookie in `name=value` form, an unquoted value with a space or a `;` (it is cut there, as in a
+  connection string), a JSON value that is not a string, and a URL password with an unencoded `@`.
 
 ## [0.5.2] - 2026-11-20
 
