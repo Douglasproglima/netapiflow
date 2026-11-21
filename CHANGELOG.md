@@ -79,6 +79,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.Dashboard`: the graph of a trace no longer changes when a newer execution of the
+  endpoint arrives. The steps drawn as "Not executed" came from the latest successful execution of
+  the endpoint, even one that started after the trace you were looking at, and it could be the trace
+  itself. They now come from the last successful execution that started before the trace. When there
+  is none, the graph shows only what happened. A trace with no matched route asks for no blueprint.
 - `NetApiFlow.EntityFrameworkCore`: a query cancelled by its `CancellationToken` no longer leaves its
   step open. The interceptor did not handle the cancellation event, so the step stayed in its
   internal table for good and the span kept showing as running. The span now closes as failed with
