@@ -743,5 +743,71 @@
       "scenario": "requests-that-share-a-traceparent"
     },
     "job": "comparison"
+  },
+  {
+    "id": "S3-trace-started-tags",
+    "defect": "The TraceStarted event came without the W3C trace id and the tenant, so a consumer of the stream lost the match with OpenTelemetry on the first event",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSseTests.Stream_TraceStartedOfATracedRequest_CarriesTheW3CTraceIdAndTheTenantInItsTags"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-no-endpoint",
+    "defect": "The TraceStarted event of a request that matches no endpoint, published when it ends, came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSseTests.Stream_TraceStartedOfARequestWithoutAMatchedEndpoint_CarriesTheW3CTraceIdAndTheTenantInItsTags"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-running-trace-detail-tags",
+    "defect": "The detail of a trace that is still running came with no tags, so the panel could not show the W3C trace id until the request ended",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RunningTraceDetailTests.TraceLookupOfThePanel_WhileTheRequestStillRuns_CarriesTheW3CTraceIdTag"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sampling-of-a-foreign-activity",
+    "defect": "An activity with another W3C trace id, started inside a traced request, was forced into recording although NetApiFlow then dropped it, over the sampler of the user",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TraceResolutionCasesTests.Activity_WithAnotherW3CTraceIdStartedInsideATracedRequest_IsNotForcedIntoRecording"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-released-at-the-end",
+    "defect": "The state of a request stayed reachable from an ExecutionContext captured during the request, and so did the HttpContext behind it, after the request ended",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TraceResolutionCasesTests.ExecutionContext_CapturedDuringTheRequest_NoLongerSeesTheRequestOnceItEnded"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-finished-when-completing-throws",
+    "defect": "When completing the trace threw, the request was not marked as finished and CurrentTraceId kept answering in a task that outlived it",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished"
+    },
+    "job": "build-test"
   }
 ]
