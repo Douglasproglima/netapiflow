@@ -250,6 +250,7 @@ para e relata, e a decisão é da Planejadora e da auditoria.
   só, e não divergem.
 - **As etapas anteriores à abertura** seguem a forma escolhida na 53.1.
 - **Falha da decisão** é logada e engolida, e o padrão é **não rastrear**.
+- **Os padrões de rota são compilados uma vez**, na configuração, e não a cada requisição (D-236, varredura final). É a única otimização do caminho quente que entra na `0.6.0`.
 - **Sem `PathBase`**, nenhum teste do `develop` muda de resultado e nenhum precisa de edição.
 
 ## Tarefa 53.3: os testes

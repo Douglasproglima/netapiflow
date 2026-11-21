@@ -82,6 +82,13 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 59 | README e textos verdadeiros | **Planejada, `0.6.0`** (2026-11-20) | D-210, nível 2: cerca de vinte frases medidas como falsas ou imprecisas, e a tabela de performance de novo. |
 | 60 | Acabamento | **Planejada, `0.6.0`: o necessário** (2026-11-20) | D-210, nível 3. A lista final vem de uma última varredura da auditoria (D-232). O cosmético que não couber vai para a `0.7.0`, decidido pela auditoria, e o resto vira item de roadmap, um registro por item. |
 | 61 | Hotfix `0.5.3`: um serviço de fundo nunca derruba o host do usuário | **Hotfix em andamento, passa à frente de tudo** (2026-11-20) | D-235 e R-34. Reproduzido pela auditoria contra o `0.5.2` publicado: com o PostgreSQL derrubado, o `RetentionService` lança do `ExecuteAsync`, e o padrão do host (`StopHost`) mata a API cerca de cinco minutos depois. Mais o filtro do `PersistenceWriter`, que deixa escapar um cancelamento fora do desligamento, e a varredura de todo serviço de fundo. Branch `hotfix/0.5.3` a partir de `main`. Plano em `fase-61-hotfix-servico-de-fundo.md`. Sem advisory (disponibilidade por falha de infraestrutura). |
+| 62 | O site diz a verdade | **Planejada, logo depois do hotfix** (2026-11-20) | D-236, varredura final, item D. O site já está público: o quick start não compila, três princípios afirmam o que o produto não faz, o link de documentação em português leva ao README em inglês, e o repositório do site não tem licença. A Executora prepara e para, e a auditoria publica. Plano em `fase-62-site-verdadeiro.md`. |
+| 63 | O ciclo de vida dos steps e os testes estáveis | **Planejada, `0.6.0`** (2026-11-20) | D-236, B1, B2, B3, B15. A query EF Core cancelada deixa o step vazar, o serviço decorado não é descartado, o proxy troca cancelado por falho, e dois testes dependem de tempo. Plano em `fase-63-ciclo-de-vida-e-testes-estaveis.md`. |
+| 64 | Uma transação por gravação nos storages | **Planejada, `0.6.0`, depois da Fase 55** (2026-11-20) | D-236, B4. Trace gravada sem os spans quando a gravação dos spans falha. Plano em `fase-64-storages-transacao.md`. |
+| 65 | Nunca derrubar e nunca atrasar a API, além do hotfix | **Planejada, `0.6.0`, depois das Fases 53 e 55** (2026-11-20) | D-236, B5. `try/catch` nos callbacks, validação dos padrões, e o `FlowEventPublisher` fora da thread da requisição. Plano em `fase-65-nunca-derrubar-nunca-atrasar.md`. |
+| 66 | Registro idempotente e o exportador OTLP | **Planejada, `0.6.0`, depois da Fase 55** (2026-11-20) | D-236, B6 e B7. Chamar `Add*` duas vezes dá resultado errado, e o `AddNetApiFlowOtlpExport` muda o que o app inteiro exporta. Plano em `fase-66-registro-idempotente-e-otlp.md`. |
+| 67 | A API pública com os nomes certos, sem quebrar ninguém | **Planejada, `0.6.0`, depois da Fase 66 e antes da 58 e da 59** (2026-11-20) | D-236 e D-237, B8 e B9. A classe passa a se chamar `Flow` (a medir), `Map*` no lugar de `Use*`, `WithNetApiFlowTracking` genérica, `Tag` com mais tipos, e os pequenos. O nome antigo fica `[Obsolete]` e encaminha. Plano em `fase-67-api-publica-sem-quebra.md`. |
+| 68 | O essencial de acessibilidade por teclado | **Planejada, `0.6.0`, depois da Fase 57** (2026-11-20) | D-236, B13. Foco visível dos botões, a gaveta "Testar um endpoint" como diálogo, e o foco que cai no `body`. Plano em `fase-68-acessibilidade.md`. |
 
 `0.3.0` publicada (D-120, MINOR por causa do `OpenApiDocumentPath` da Fase 29,
 `FlowStatus.Cancelled`/`Timeout` da Fase 27 e `IDeployAnnotationStore` da Fase 28). Fases 8 a 30
@@ -158,6 +165,26 @@ problemas de documentação: o dashboard dá 401 num app com `FallbackPolicy` qu
 autenticado, e a correlação de log não alcança o trace com `UseSerilog` sem
 `writeToProviders: true`. Os dois estão corrigidos no `README.md` e no `README.pt-BR.md`, sem mudar
 nenhum pacote.
+
+## Ordem de execução da `0.6.0` (D-236)
+
+O escopo da `0.6.0` está **congelado** desde 20/11/2026 (D-232 e D-236). Achado novo vai para a `0.7.0`, salvo segurança ou regressão de uma PR da própria `0.6.0`. A ordem abaixo é a da Executora. A numeração das fases não é a ordem.
+
+| Passo | Fase | O que |
+|---|---|---|
+| 1 | 61 | **Hotfix `0.5.3`** (agora). A auditoria publica e faz o back-merge |
+| 2 | 62 | O site, logo depois do hotfix |
+| 3 | 56 | A superfície HTTP: `Origin`, `Host`, cabeçalhos de segurança e a matriz de autorização |
+| 4 | 50.12, 50.13, 50.15, 50.14 | AOT no CI, o cabeçalho no 500 e o padrão do `EmitTraceIdHeader`, a persistência sem schema |
+| 5 | 63 | O ciclo de vida dos steps e os testes estáveis |
+| 6 | 51, 53 | A etapa de endpoint sem marcação, depois o `PathBase` (53.0 e 53.1 primeiro) |
+| 7 | 57, 55 | A visão ao vivo (depois da 53.2) e a identidade da trace (depois da 53.1) |
+| 8 | 64, 65, 66 | Transação nos storages, nunca derrubar e nunca atrasar, e o registro idempotente. Todas depois da 55 |
+| 9 | 67 | A API pública com os nomes certos, antes do README |
+| 10 | 58 | Integrações (Npgsql 10, SqlClient, o Runner, o MediatR) e os pacotes na versão exata |
+| 11 | 68, 60 | Acessibilidade e o acabamento do painel, da API e dos samples |
+| 12 | 59 | O README e os textos, **por último**, com a performance medida por último |
+| 13 | | A segunda passada da auditoria, e a `0.6.0` |
 
 ## Regra de avanço
 

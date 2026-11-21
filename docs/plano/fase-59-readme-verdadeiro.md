@@ -1,0 +1,156 @@
+# Fase 59: o README e os textos dizem só o que o produto faz (D-210, nível 2)
+
+A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e cinco afirmações como falsas ou
+imprecisas. Ninguém quebra por causa de uma frase, mas é no README que o usuário decide se confia no produto, e uma
+frase falsa vale mais que um bug que ele nunca vê. Esta fase deixa o texto verdadeiro.
+
+Vai no `0.6.0` (D-210, D-232). Vem **perto do fim**, porque muitas frases dependem do código das fases anteriores
+(53, 55, 56, 57 e 58) e o README não deve ser reescrito duas vezes.
+
+## A regra da fase: o texto muda, o código não
+
+**O padrão de cada item é corrigir o texto.** O código só muda se o texto não puder ficar verdadeiro sem isso, e então
+a Executora **para e pergunta** à Planejadora, item por item. O escopo da `0.6.0` está fechado (D-232), e um item que
+vira código novo é escopo novo. O que a Executora achar de código nesta fase vai à auditoria, e a auditoria decide se é
+`0.7.0`.
+
+## Ponto de parada
+
+- Se a Executora não reproduzir uma frase como falsa, **não a muda**. Pede à auditoria o comando que ela mediu.
+- Se a tabela de performance medida de novo piorar além do que o README promete, para e relata. A decisão é da
+  Planejadora e da auditoria, e o número real vai para o README de qualquer forma.
+
+## Os itens, e o que a Planejadora conferiu
+
+Nada abaixo foi reproduzido pela Planejadora. Cada linha está de pé pela medição da auditoria, e a Tarefa 59.0
+reproduz uma a uma antes de mexer no texto.
+
+| # | Frase ou parte do produto | O que a auditoria mediu |
+|---|---|---|
+| 1 | `SuppressFlow`: "record correctly, but as a new root" | A etapa **some**, não vira nova raiz |
+| 2 | OTLP: "samples independently ... can still be exported" | Com a configuração do README dá o contrário: `Enabled=false` e `ExcludePaths` exportam 0, e um sampler de 0% do host exporta os spans do NetApiFlow |
+| 3 | O aviso do `IncludeHttpClientSource` | A query não saiu no `net8.0` nem no `net10.0`, o texto está pessimista |
+| 4 | "Sensitive data" | O corpo volta pela mensagem de exceção (`int.Parse` de um campo do corpo). Dizer com clareza |
+| 5 | `ExternalSources`, "default is None" | Em Development o padrão é HttpClient, Npgsql e SqlClient |
+| 6 | "Run an endpoint", e `scheme://host[:port]/path` | A UI diz "Try an endpoint". O gravado sai sem o esquema |
+| 7 | `CapturePrePipelineSteps` | O `[Authorize]` comum não gera etapa, e o output caching não aparece no acerto de cache |
+| 8 | `IAsyncEnumerable` | Não "falha": grava cerca de 0,9 ms e `Success`, mesmo quando a enumeração lança |
+| 9 | AOT: "warning at build time instead of a failure at startup", e "there is a check in the repository that proves it" | O binário sobe e dá 500 na primeira requisição. A segunda frase só fica verdadeira com a Tarefa 50.12 |
+| 10 | "naming convention (e.g. `I*Repository`)" | O predicado recebe o tipo concreto |
+| 11 | "only compiles from inside a namespace of your own" | Com o `using` no topo também dá CS0234 |
+| 12 | Os blocos de "Asserting" | Não compilam sem `using Microsoft.AspNetCore.Mvc.Testing`, e no `net8.0` precisam de `public partial class Program` |
+| 13 | "in-memory buffer kept while persistence catches up" | É uma fila fixa das últimas 500 traces |
+| 14 | O cartão p95 com sparkline, "Authorize ... above the request form", "preview shows the exact header" | O cartão só aparece com 1600 px ou mais. A seção fica entre os parâmetros e os headers, e a prévia é mascarada |
+| 15 | Import: "same ... metric cards and event feed" | Os cartões mostram a instância local, e o feed fica vazio |
+| 16 | Rotas mortas | Listam `GET /openapi/{documentName}.json`, porque `/endpoints` não filtra o documento (item 26 do roadmap) |
+| 17 | pt-BR | O gênero de "trace" alterna. Padronizar no masculino, como a UI |
+| 18 | Um step manual que lança sem chamar `MarkError` | É gravado como `Success`. Dizer com clareza |
+| 19 | O OTLP | Sai sem o span `SERVER` e com raiz órfã. Dizer como adicionar a instrumentação do ASP.NET Core para ter o trace completo |
+| 20 | O filtro por tenant e o `IFlowTenantResolver` | Não são documentados (0 ocorrências) |
+| 21 | `OTEL_SERVICE_NAME`, a retenção, o `schema.sql` | O `OTEL_SERVICE_NAME` não é citado. A retenção roda a cada 5 minutos, e a primeira 5 minutos depois de subir. O caminho do `schema.sql` falta nos READMEs dos dois storages |
+| 22 | Os trechos de código do MCP, do storage e do OTLP | Faltam os `using` |
+| 23 | Os limites fixos | Na `0.6.0` o README só **documenta os valores** (virar `LimitsOptions` é da `0.7.0`) |
+| 24 | `DELETE` e `POST /deploys` | Usam a mesma política da leitura, sem papel só leitura. Dizer |
+| 25 | `NetApiFlow.Storage.SqlServer` e o MediatR | O pacote traz o `Microsoft.Data.SqlClient` `5.2.2`, que não grava comandos. O README não fala da licença do MediatR 13 ou superior |
+
+
+Mais itens que não são frases, e que a mesma fase leva:
+
+- **A tabela de performance** (59.4).
+- **As citações internas e os comentários que a regra de ouro manda resolver** (59.2): 39 citações de `ADR-`, `D-` ou `risk R-` (a auditoria contou, a Executora conta de novo) e 64 comentários `//`, mais os XML docs que só repetem o nome.
+- **O `CONTRIBUTING`, o `SECURITY.md` e o template de PR** (59.6).
+- **O parágrafo do README do MCP** que só aponta para o painel (59.3).
+
+## Tarefa 59.0: reproduzir cada frase, antes de mexer em qualquer texto
+
+Um app novo (`dotnet new webapi`) com o pacote empacotado localmente do estado atual de `develop` (número
+`-verify.<n>`, D-153 e D-174), seguindo o README como um usuário. Para cada linha da tabela: o comando, a saída real,
+e a classificação:
+
+- **Falsa ou imprecisa, corrige o texto** (o caso de quase todas).
+- **Verdadeira hoje, e uma fase anterior a tornou falsa ou a corrigiu.** O texto fica como está ou muda com o código novo.
+- **Não reproduzida.** Para a Tarefa e pede o comando à auditoria.
+
+A tabela preenchida vai no relatório da 59.0. **Pronto quando:** as 25 linhas classificadas com saída real.
+
+## Tarefa 59.1: o texto, nos dois idiomas
+
+Para cada linha classificada como "corrige o texto": `README.md` e `README.pt-BR.md` dizem a mesma coisa, em frases
+curtas e sem floreio (`.claude/rules/writing-style.md`). Cada correção cita o que foi medido, não o que se supõe. A
+frase 9, "there is a check in the repository that proves it", só entra verdadeira depois de a 50.12 estar em
+`develop`.
+
+A linha 17 padroniza o gênero de "trace" no masculino, em todo o `README.pt-BR.md`, como a UI.
+
+## Tarefa 59.6: os arquivos de comunidade
+
+- **`CONTRIBUTING`:** os pré-requisitos (a versão do Node da `.nvmrc` e o Docker), o `npm run format:check`, e tirar o "Phase 4".
+- **Template de PR:** com o `format:check`.
+- **`SECURITY.md`:** o escopo inclui o MCP.
+- **`.github/ISSUE_TEMPLATE/config.yml`** com `contact_links` para a política de segurança.
+
+O canal privado de vulnerabilidade, o `secret scanning`, o `push protection` e as atualizações de segurança do Dependabot já foram ligados pela auditoria (20/11/2026). A Executora **confere** que o `SECURITY.md` descreve o canal que existe.
+
+## Tarefa 59.2: zerar as citações no XML doc, e travar no CI
+
+Há **39** citações de `ADR-`, `D-` ou `risk R-` sob `src/` (a contagem é da varredura final de 20/11/2026, a anterior era de
+28 em `///` no commit `f6d6649`, e a Executora conta de novo antes de começar), mais **64 comentários `//`** que a regra de ouro
+manda resolver e os XML docs que só repetem o nome do membro. Cada comentário `//` se resolve com um nome melhor, um método
+extraído ou uma constante, e **só então** é apagado (regra de ouro do `CLAUDE.md`). Exemplos: `TailSamplingOptions.cs:3`, `LogCorrelationOptions.cs:5`,
+`FlowActivityListener.cs:12`, `FlowTraceDetail.cs:5`. Várias estão em membros públicos e aparecem no IntelliSense de
+quem instala o pacote, contra a regra de ouro do `CLAUDE.md`.
+
+- Zerar as 28. Onde a citação carrega um porquê real, reescrever **o porquê** sem o número.
+- Pôr no CI uma checagem que falhe com o padrão (por exemplo `grep` nos `///` por
+  `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk R-[0-9]`).
+- **Rodada de prova vermelha:** mostrar a checagem falhando numa citação plantada e passando depois de removê-la.
+
+Esta tarefa **não** troca nenhum nome nem mexe em lógica: só comentário XML.
+
+## Tarefa 59.3: o parágrafo do MCP
+
+O parágrafo "Same security rule as the dashboard" do README do MCP só aponta para a seção do painel. Depois da Fase 56
+ele diz o que vale para o MCP **em si** (a validação de `Origin` e `Host`, e o portão), em frases que um leitor que
+chegou direto na página do pacote entende sem sair dela.
+
+## Tarefa 59.4: a tabela de performance, de novo
+
+A tabela do README é da `0.1.0`, nunca foi medida de novo, o hardware não é dito e o relatório não está no repositório.
+"32 µs more" é o overhead total do cenário Nested. Medir no estado da `0.6.0` (esta tarefa é a **última** da fase, depois
+das mudanças de custo das Fases 53, 55 e 57):
+
+- `tests/NetApiFlow.Benchmarks` com `[MemoryDiagnoser]`, nos dois TFMs.
+- **Uma rodada concorrente**, além da sequencial.
+- O relatório **versionado no repositório**, com o hardware, o sistema operacional, o runtime e o commit.
+- O README com os números novos, o hardware dito, e a frase de "32 µs more" corrigida.
+
+Se o número novo for pior que a promessa do README, vale o ponto de parada acima.
+
+## Tarefa 59.5: a auditoria relê
+
+A auditoria relê cada frase tocada, nos dois idiomas, contra o app novo. A Executora entrega a tabela da 59.0 com a
+saída real e o diff do README, e **não** declara a fase pronta antes disso.
+
+## Fora de escopo
+
+- Qualquer mudança de código, salvo o que a Planejadora liberar item por item (ver a regra da fase).
+- Os itens do nível 3 (Fase 60) e o que a varredura final da auditoria acrescentar.
+- O item 26 do roadmap (filtrar o documento OpenAPI de `/endpoints`): a frase 16 vira texto, e a correção continua
+  roadmap.
+
+## Critério que vale para a fase inteira
+
+- Cada frase da tabela com a saída real da reprodução, e a frase final conferida pela auditoria.
+- Build, testes e formato limpos. A checagem de citação no CI passa e foi vista falhando.
+- `grep -rn "—"` sem ocorrência nos textos em português e nos READMEs.
+
+## Versionamento e fluxo
+
+- `0.6.0`. Branch `chore/59-readme-verdadeiro` a partir de `develop` atualizado, **depois** das Fases 53, 55, 56, 57 e 58.
+  A 59.4 é a última tarefa.
+- Commits pequenos, em inglês, uma linha, sem linha de coautor. Abrir a PR e parar.
+
+## Relatório final
+
+A tabela de 25 linhas com a classificação e a saída real. Os 28 comentários, antes e depois. A saída da checagem de
+citação, vermelha e verde. O relatório de performance e o hardware.
