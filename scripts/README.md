@@ -24,6 +24,15 @@ with `-p:Version=<base>-ci.<run number>` into a folder outside the repository, m
   that apply to each. `--list` prints them. `--base-url <url> --variant <name> --repeat <n>` runs one
   variant against an app that is already standing, which is how to check that a scenario is stable.
   A new scenario goes in the `SCENARIOS` list, with the promise it comes from in its title.
+- `verify-live-panel.mjs` opens the panel of the built app in a headless Chrome and reads the nodes it
+  draws. `tests/real-package/user-code/LiveProbeEndpoints.cs` gives it an endpoint that runs one step,
+  and then either returns or waits at a gate that the script opens, so a request is held by the gate and
+  never by a sleep. It runs three checks: `live-panel:old-trace` (an older trace is not redrawn with the
+  steps of a later execution as not executed), `live-panel:running` (a request that is still running
+  draws the steps it is expected to run as waiting, with its route known) and `live-panel:ended` (the same
+  steps are drawn as not executed once the request ended without them). The panel follows the language of
+  the browser, so a node is read as waiting or not executed in English and in Portuguese. Run it by hand
+  with `node scripts/verify-live-panel.mjs --dll <app>/bin/Release/net10.0/UserApp.dll`.
 
 ## The built demo in a browser
 

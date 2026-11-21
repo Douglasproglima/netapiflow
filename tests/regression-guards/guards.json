@@ -583,5 +583,25 @@
       "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.PublishReserved_WhileAnotherThreadAddsAndCompletesSpans_PublishesEachEventOnce"
     },
     "job": "build-test"
+  },
+  {
+    "id": "F1-waiting-in-the-real-panel",
+    "defect": "A running trace was drawn without the steps it was expected to run, because the panel asked for its blueprint under the route (unmatched)",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:running"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "F1-old-trace-in-the-real-panel",
+    "defect": "An older trace was drawn with the steps of a later execution as not executed, so its drawing changed with time",
+    "fixedIn": "#416",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:old-trace"
+    },
+    "job": "real-package"
   }
 ]

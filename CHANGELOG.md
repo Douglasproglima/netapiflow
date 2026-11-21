@@ -96,6 +96,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.Dashboard`: a request that was still running was drawn without the steps it was
+  expected to run, so the Waiting state never showed. The panel asked for the blueprint of a running
+  request under the route `(unmatched)`, because the route was only known at the end. The route is
+  known from the start now, so the expected steps show as Waiting while the request runs and as Not
+  executed when it ends without them. A test in the CI now opens the panel in a real browser against
+  a new app, holds a request, and checks both states and that an older trace is not redrawn by a
+  later execution.
 - `NetApiFlow`: under `app.UsePathBase("/api")`, `ExcludePaths`, `IncludePaths` and
   `OpenApiDocumentPath` compared the full path, `/api/health`, with patterns written for `/health`,
   so none of them matched. Now, whenever the request matches an endpoint, they value the path your

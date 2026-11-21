@@ -15,7 +15,8 @@ Every row has:
   - `vitest`: `file` (the spec, from the `ClientApp` folder) and `test` (the start of the name of the
     test, `describe` and `it`, as the report writes it).
   - `ci-scenario`: `scenario`, the id of a scenario of a job. The scenarios are the ones of
-    `scripts/package-scenarios.mjs` and the `a` of `scripts/build-user-app.mjs` for `real-package`, one
+    `scripts/package-scenarios.mjs`, the `a` of `scripts/build-user-app.mjs` and the three
+    `live-panel:<check>` of `scripts/verify-live-panel.mjs` for `real-package`, one
     `nuspec:<PackageId>` for each file of `tests/nuspec-snapshot/`, the ids of
     `scripts/compare-with-published.mjs` for `comparison`, and the checks of
     `scripts/verify-built-demo.mjs` for `built-demo`.
