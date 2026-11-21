@@ -17,4 +17,7 @@ public enum FlowStatus
 
     /// <summary>An internal cancellation fired while the client was still connected.</summary>
     Timeout,
+
+    /// <summary>Probe.</summary>
+    Probe = 99,
 }
