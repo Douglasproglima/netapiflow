@@ -208,7 +208,10 @@ job do mesmo workflow, em paralelo, para não somar ao tempo do primeiro.
   última tag da `main` naquele momento** (e não para a última lida no nuget.org na hora, para o hotfix não depender de rede nem de
   um publish paralelo) e esvazia a lista, e as diferenças do próprio hotfix entram nela, com a entrada do CHANGELOG. Assim o hotfix é
   comparado com o que está em produção, que é a regressão que importa num PATCH (D-205). **O back-merge do hotfix para o `develop`**
-  deixa o `develop` apontando para a versão do hotfix, com a lista vazia, pela mesma regra do release.
+  passa a versão anterior para a do hotfix e deixa a lista com a do `develop` (as diferenças do ciclo dele) sem as linhas que só o
+  hotfix acrescentou. **"Lista vazia" vale para o release, não para o hotfix** (D-262): no meio de um ciclo a lista do `develop`
+  tem as diferenças do ciclo seguinte, e esvaziá-la derrubaria o primeiro CI. Nesse back-merge, um `NO LONGER HAPPENS` significa "o
+  hotfix levou isso", e a correção é tirar a linha (D-263).
 
 **Os cenários.** A Planejadora lista os que o "como hoje" exige, e a Executora acrescenta os que achar:
 

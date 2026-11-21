@@ -75,7 +75,9 @@ paralelo, e esvazia `tests/real-package/expected-differences.json`. As diferenç
 CHANGELOG que as anuncia. Assim o hotfix é comparado com o que está em produção. **No back-merge para o `develop`,** a versão anterior
 passa a ser a do hotfix, e a lista fica com a do `develop` (as diferenças do ciclo dele) sem as linhas que só o hotfix acrescentou:
 esvaziá-la por inteiro derrubaria o primeiro CI do `develop`, porque ela tem as diferenças do ciclo seguinte. O conflito de merge em
-`expected-differences.json` se resolve ficando com a lista do `develop`.
+`expected-differences.json` se resolve ficando com a lista do `develop`. Nesse back-merge, um `NO LONGER HAPPENS` do job `comparison`
+significa "o hotfix levou isso" (o `develop` tinha uma linha para uma mudança que o hotfix também levou para a linha `0.6.x`), e a
+correção é tirar a linha.
 
 **Se o `develop` mudou o `.gitleaks.toml` depois da última release, o hotfix leva a mesma mudança (D-239).** O `secret-scan` do CI varre o histórico de **todas as refs**, o `develop` incluído, com a config da branch que está sendo testada. Uma `[allowlist]` que só existe no `develop` faz o scan da `main` falhar com achados do histórico do `develop`. Copiar o arquivo inteiro do `develop` evita o conflito no back-merge.
 
