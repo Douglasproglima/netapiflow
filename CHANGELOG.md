@@ -9,6 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: a Minimal API endpoint becomes an `Endpoint` step with no marking, so the graph of
+  the default `dotnet new webapi` app is no longer empty. The `CaptureMinimalApiEndpoints` option
+  (`NetApiFlowOptions`, or `NetApiFlow:CaptureMinimalApiEndpoints` in configuration, default `true`)
+  turns it off.
 - `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
   in configuration) turns off the `X-NetApiFlow-TraceId` response header, for an app that does not
   want the trace id in its responses. It is on by default in Development and off elsewhere, see
@@ -26,6 +30,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **`NetApiFlow`: every Minimal API endpoint now gets one step per traced request by default.** A
+  trace of an app that did not mark its endpoints goes from 0 steps to 1, so the span count, the
+  architecture map and the limit of 300 steps per trace see one more step per request, and a step
+  you open inside a handler now has the `Endpoint` step as its parent. The step runs from routing
+  to the end of the request, so it includes the middleware in between, such as authentication,
+  while `.WithNetApiFlowTracking()` measures only the filters and the handler. It is marked as
+  failed when the endpoint throws, and also when the response is a 5xx with no exception. Set
+  `CaptureMinimalApiEndpoints = false` to go back to marking each endpoint. An endpoint that is
+  already marked still gets one step.
 - **`NetApiFlow`: from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by
   default. To keep it in Production, set `EmitTraceIdHeader = true`**, in code or in
   `NetApiFlow:EmitTraceIdHeader`. In Production it is no longer sent and nothing warns you, so a

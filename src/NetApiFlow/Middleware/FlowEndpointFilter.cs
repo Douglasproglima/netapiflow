@@ -7,6 +7,11 @@ internal sealed class FlowEndpointFilter : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
+        if (context.HttpContext.Items.ContainsKey(FlowHttpContextItems.ImplicitEndpointStep))
+        {
+            return await next(context);
+        }
+
         var name = EndpointStepName.For(context.HttpContext.GetEndpoint());
 
         using var step = NetApiFlow.Step(name.Component, name.Operation, ComponentType.Endpoint);
