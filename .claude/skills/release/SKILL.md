@@ -10,11 +10,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
 "major" vira incremento de `MINOR`).
 
 **Quem faz o quê (D-272).** Uma `EXECUTORA-RELEASE` faz os passos de código (1 a 9, e o 13 depois da publicação), abre as PRs e
-para. A `AUDITORIA-16-11` faz os merges, a tag, o Release, o back-merge, os advisories e os checks obrigatórios da `main` (passos
+para. A `AUDITORIA` faz os merges, a tag, o Release, o back-merge, os advisories e os checks obrigatórios da `main` (passos
 10 a 12). A Planejadora mantém esta skill e registra. Os passos 7 e 13 mexem em `Directory.Build.props`, em `tests/real-package/` e
 em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
 
-0. **Para a `0.6.0`:** confirme com a `AUDITORIA-16-11` que a auditoria de base está fechada
+0. **Para a `0.6.0`:** confirme com a `AUDITORIA` que a auditoria de base está fechada
    (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. Confirme também a Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia).
 1. Rode `git status` em `develop`. Working tree precisa estar limpo.
 2. Leia `CHANGELOG.md`, seção `[Unreleased]`, e `docs/plano/README.md` para confirmar quais fases
@@ -62,7 +62,7 @@ em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
    conferência do passo 10.
 9. Pare aqui e peça confirmação explícita antes de `git push` e `gh pr create --base main`. Push,
    PR e tag são ações públicas (ver `.claude/rules/git-workflow.md`).
-10. Depois do merge em `main` (squash): **só na `0.6.0`, a `AUDITORIA-16-11` torna `real-package / real-package`, `real-package /
+10. Depois do merge em `main` (squash): **só na `0.6.0`, a `AUDITORIA` torna `real-package / real-package`, `real-package /
     comparison` e `built-demo` checks obrigatórios na `main`** (D-261, D-262, D-270). Os três já são obrigatórios no `develop`. A
     `main` ficou de fora até aqui de propósito: o `ci.yml` dela ainda é o antigo, sem os jobs, e um `hotfix/*` nasce da `main` e
     nunca produziria os checks, então torná-los obrigatórios antes travaria qualquer `0.5.x`. A configuração é da auditoria, com a autorização do dono. Depois disso,
