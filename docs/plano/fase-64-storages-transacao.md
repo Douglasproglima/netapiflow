@@ -60,3 +60,28 @@ volta), e duas gravações seguidas com a primeira falhando e a segunda inteira.
 ## Relatório final
 
 A saída da falha parcial antes e depois, nos dois bancos. O custo medido. O que a retenção mostrou.
+
+## Resultado da fase (PR #469, 21/11/2026)
+
+Entregue em `develop` (`516661e`, head `d6f89f8`) e fechada pela auditoria. Nos dois bancos, o `SaveAsync` grava a trace e os
+spans numa transação só: o `COPY` do PostgreSQL e o `SqlBulkCopy` do SQL Server entram nela, e uma falha desfaz tudo. O
+`PersistenceWriter` continua logando e contando a falha, e o schema não mudou.
+
+- **Vista falhando antes (corpo da PR e log do CI):** o commit `49015d8`, só com os testes, deu 4 falhas por TFM na run
+  44970760895. A linha da trace ficava depois da falha dos spans, e a segunda gravação da mesma trace dava erro de chave
+  primária nos dois bancos. A falha é forçada com dois spans de mesmo `SpanId`.
+- **Custo,** medido pela Executora no mesmo roteiro antes e depois, 1000 gravações de 10 spans em 3 rodadas: PostgreSQL de
+  cerca de 104 para cerca de 103 ms por gravação, SQL Server de cerca de 58 para cerca de 55 ms. Fica dentro do ruído, então
+  o ponto de parada não se aplicou.
+- **Retenção:** vale a medição da 64.0. Com `MaxTraces = 200` sobre 3052 traces, ficaram 200, sem span órfão e sem trace
+  com `span_count > 0` e nenhum span. Sem achado.
+- **O registro de guardas** ganhou 4 linhas, `B4-no-trace-without-spans-*` e `B4-same-trace-saved-after-failure-*`, nos
+  dois bancos.
+- **Pacote real, pela auditoria:** com o `0.6.0-audit.1` num app novo, PostgreSQL 16 e SQL Server 2022 reais, e a tabela de
+  spans quebrada no meio da execução. A `0.5.3` publicada deixa nos dois bancos uma trace com `span_count > 0` e nenhum
+  span, e a linha continua lá depois de a tabela voltar. A versão nova não deixa linha nenhuma, grava a trace seguinte
+  inteira, e a API segue respondendo 200.
+
+**Fica:** a espera em `TraceIdentityHost.SpansOfAsync`, que só existia por causa deste defeito, pode ficar mais simples.
+É só teste, e virou o item 54 do roadmap. **Não verificado pela Planejadora,** pelo regime mínimo (D-272): o diff e as
+medições. Ela leu o corpo da PR, os checks e o `guards.json`.
