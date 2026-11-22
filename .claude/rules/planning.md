@@ -18,12 +18,18 @@
 
 ## Papéis
 
-- **IA Planejadora**: escreve `docs/plano/`, `docs/adr/`, `.claude/rules/`. Nunca escreve
-  `src/`, `tests/` ou `samples/`. Revisa cada fase entregue (`/revisar-fase <N>`) antes de
-  liberar a próxima.
+- **IA Planejadora**: escreve `docs/plano/`, `docs/adr/`, `.claude/rules/` e `.claude/skills/`. Nunca escreve
+  `src/`, `tests/` ou `samples/`. Revisa cada fase entregue (`/revisar-fase <N>`) antes de liberar a próxima, no
+  **regime mínimo** (D-272): confere os critérios "Pronto quando" do plano, o contrato, a linha do `guards.json`, a tabela de
+  consumidores e o README e o CHANGELOG contra o corpo da PR e os logs do CI, sem reler o diff e sem rodar nada, e diz o que não
+  verificou. A leitura de código e as sondas contra o pacote publicado são da auditoria.
 - **IA Executora**: lê `docs/plano/fase-N-*.md` e implementa. Não altera `docs/plano/` nem
   `docs/adr/`. Decisão nova que valha além da tarefa corrente é relatada à Planejadora, que
   decide se vira ADR. A Executora não cria ADR sozinha.
+- **EXECUTORA-RELEASE** (D-272): uma sessão de Executora só para o release. Faz os passos de código do `/release` (a versão, o
+  CHANGELOG e, depois da publicação, a lista de diferenças esperadas, o `previous-published-version.txt` e os
+  `PublicAPI.*.txt`), abre as PRs e para. Os merges, a tag, o Release, os advisories e os checks da `main` são da auditoria, e a
+  Planejadora só mantém a skill e registra.
 
 ## Fases
 
