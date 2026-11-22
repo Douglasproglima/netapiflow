@@ -3,25 +3,35 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using NetApiFlow.Routing;
+using NetApiFlow.Storage;
 
 namespace NetApiFlow.Middleware;
 
-internal sealed class NetApiFlowMiddleware(
+internal sealed partial class NetApiFlowMiddleware(
     RequestDelegate next,
     FlowRecorder recorder,
     IOptions<NetApiFlowOptions> options,
-    RequestTracingDecider decider)
+    RequestTracingDecider decider,
+    ILogger<NetApiFlowMiddleware> logger)
 {
     internal const string UnmatchedRouteTemplate = "(unmatched)";
 
+    private readonly IntervalLogLimiter _failureLog = new(TimeSpan.FromSeconds(30));
+
     public NetApiFlowMiddleware(RequestDelegate next, FlowRecorder recorder, IOptions<NetApiFlowOptions> options)
-        : this(next, recorder, options, new RequestTracingDecider(options, NullLogger<RequestTracingDecider>.Instance))
+        : this(
+            next,
+            recorder,
+            options,
+            new RequestTracingDecider(options, NullLogger<RequestTracingDecider>.Instance),
+            NullLogger<NetApiFlowMiddleware>.Instance)
     {
     }
 
@@ -34,7 +44,12 @@ internal sealed class NetApiFlowMiddleware(
             return;
         }
 
-        var state = StartRequest(context, flowOptions);
+        var state = TryStartRequest(context, flowOptions);
+        if (state is null)
+        {
+            await next(context);
+            return;
+        }
 
         Exception? caughtException = null;
         try
@@ -48,23 +63,66 @@ internal sealed class NetApiFlowMiddleware(
         }
         finally
         {
-            try
-            {
-                FinishRequest(context, state, caughtException);
-            }
-            finally
-            {
-                FlowTraceResolver.Detach();
-            }
+            TryFinishRequest(context, state, caughtException);
         }
     }
 
-    private FlowRequestState StartRequest(HttpContext context, NetApiFlowOptions flowOptions)
+    private FlowRequestState? TryStartRequest(HttpContext context, NetApiFlowOptions flowOptions)
     {
         var traceId = ActivityTraceId.CreateRandom().ToHexString();
-        var serverActivity = Activity.Current;
         var startedAtUtc = DateTime.UtcNow;
-        var reserved = recorder.TryReserveTrace(traceId, context.Request.Method, startedAtUtc);
+        var reserved = false;
+        try
+        {
+            reserved = recorder.TryReserveTrace(traceId, context.Request.Method, startedAtUtc);
+            return StartRequest(context, flowOptions, traceId, startedAtUtc, reserved);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+            AbandonRequest(context, traceId, reserved);
+            return null;
+        }
+    }
+
+    private void AbandonRequest(HttpContext context, string traceId, bool reserved)
+    {
+        if (reserved)
+        {
+            recorder.DiscardReserved(traceId);
+        }
+
+        context.Items.Remove(FlowHttpContextItems.RequestState);
+        FlowTraceResolver.Detach();
+    }
+
+    private void TryFinishRequest(HttpContext context, FlowRequestState state, Exception? caughtException)
+    {
+        try
+        {
+            FinishRequest(context, state, caughtException);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+        }
+        finally
+        {
+            FlowTraceResolver.Detach();
+        }
+    }
+
+    private void LogFailure(Exception exception)
+    {
+        if (_failureLog.TryAcquire())
+        {
+            Log.TracingFailed(logger, exception);
+        }
+    }
+
+    private FlowRequestState StartRequest(HttpContext context, NetApiFlowOptions flowOptions, string traceId, DateTime startedAtUtc, bool reserved)
+    {
+        var serverActivity = Activity.Current;
         var traceByFullPath = decider.ShouldTraceFullPath(context.Request.Path.Value ?? "/");
         var state = new FlowRequestState(
             recorder, decider, flowOptions, context.Response, traceId, serverActivity?.TraceId ?? default, startedAtUtc, reserved, traceByFullPath);
@@ -143,5 +201,13 @@ internal sealed class NetApiFlowMiddleware(
         }
 
         step.Dispose();
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(
+            Level = LogLevel.Error,
+            Message = "NetApiFlow: tracing a request failed, so the request may be missing from history. The request was not affected. This is logged at most once every 30 seconds.")]
+        public static partial void TracingFailed(ILogger logger, Exception exception);
     }
 }

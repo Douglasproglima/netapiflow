@@ -1,22 +1,24 @@
+using System.Threading.Channels;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using NetApiFlow.Storage;
 
 namespace NetApiFlow.Events;
 
-/// <summary>
-/// Bridges <see cref="FlowRecorder"/> and <see cref="PersistenceWriter"/> state changes into
-/// <see cref="IFlowEventListener"/> instances. Dispatch never blocks the caller and a failing
-/// listener never affects the others (seção 6.5 do prompt).
-/// </summary>
-internal sealed partial class FlowEventPublisher : IDisposable
+internal sealed partial class FlowEventPublisher : BackgroundService
 {
+    internal const int QueueCapacity = 5000;
+
+    private static long _nextEventId;
+
+    private readonly object _publishLock = new();
     private readonly FlowRecorder _recorder;
     private readonly PersistenceWriter _persistenceWriter;
-    private readonly IReadOnlyList<IFlowEventListener> _listeners;
+    private readonly ListenerQueue[] _queues;
     private readonly ILogger<FlowEventPublisher> _logger;
-    private static long _nextEventId;
 
     private readonly Action<FlowTrace> _onTraceStarted;
     private readonly Action<FlowTrace> _onTraceCompleted;
@@ -33,7 +35,7 @@ internal sealed partial class FlowEventPublisher : IDisposable
     {
         _recorder = recorder;
         _persistenceWriter = persistenceWriter;
-        _listeners = [.. listeners];
+        _queues = [.. listeners.Select(listener => new ListenerQueue(listener))];
         _logger = logger;
 
         _onTraceStarted = trace => Publish(FlowEventType.TraceStarted, trace.TraceId, trace: trace);
@@ -53,40 +55,65 @@ internal sealed partial class FlowEventPublisher : IDisposable
 
     private void Publish(FlowEventType type, string traceId, FlowSpan? span = null, FlowTrace? trace = null)
     {
-        if (_listeners.Count == 0)
+        if (_queues.Length == 0)
         {
             return;
         }
 
-        var flowEvent = new FlowEvent
+        var timestamp = DateTime.UtcNow;
+        lock (_publishLock)
         {
-            EventId = Interlocked.Increment(ref _nextEventId),
-            Type = type,
-            TraceId = traceId,
-            Timestamp = DateTime.UtcNow,
-            Span = span,
-            Trace = trace,
-        };
-
-        _ = DispatchAsync(flowEvent);
-    }
-
-    private async Task DispatchAsync(FlowEvent flowEvent)
-    {
-        foreach (var listener in _listeners)
-        {
-            try
+            var flowEvent = new FlowEvent
             {
-                await listener.OnEventAsync(flowEvent, CancellationToken.None);
-            }
-            catch (Exception ex)
+                EventId = Interlocked.Increment(ref _nextEventId),
+                Type = type,
+                TraceId = traceId,
+                Timestamp = timestamp,
+                Span = span,
+                Trace = trace,
+            };
+
+            foreach (var queue in _queues)
             {
-                Log.ListenerThrew(_logger, listener.GetType().Name, flowEvent.Type, flowEvent.TraceId, ex);
+                if (!queue.TryEnqueue(flowEvent))
+                {
+                    FlowMetrics.DroppedEvents.Add(1);
+                }
             }
         }
     }
 
-    public void Dispose()
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        Task.WhenAll(_queues.Select(queue => Task.Run(() => DeliverAllAsync(queue, stoppingToken), CancellationToken.None)));
+
+    private async Task DeliverAllAsync(ListenerQueue queue, CancellationToken stoppingToken)
+    {
+        while (await queue.Events.WaitToReadAsync(stoppingToken))
+        {
+            while (!stoppingToken.IsCancellationRequested && queue.Events.TryRead(out var flowEvent))
+            {
+                await DeliverAsync(queue.Listener, flowEvent, stoppingToken);
+            }
+        }
+    }
+
+    private async Task DeliverAsync(IFlowEventListener listener, FlowEvent flowEvent, CancellationToken stoppingToken)
+    {
+        try
+        {
+            var delivery = listener.OnEventAsync(flowEvent, stoppingToken);
+            if (!delivery.IsCompletedSuccessfully)
+            {
+                await delivery.AsTask().WaitAsync(stoppingToken);
+            }
+        }
+        catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+        {
+            Log.ListenerThrew(_logger, listener.GetType().Name, flowEvent.Type, flowEvent.TraceId, ex);
+        }
+    }
+
+    public override void Dispose()
     {
         _recorder.TraceStarted -= _onTraceStarted;
         _recorder.TraceCompleted -= _onTraceCompleted;
@@ -94,6 +121,23 @@ internal sealed partial class FlowEventPublisher : IDisposable
         _recorder.SpanCompleted -= _onSpanCompleted;
         _recorder.SpanFailed -= _onSpanFailed;
         _persistenceWriter.TraceSaved -= _onTraceSaved;
+        base.Dispose();
+    }
+
+    private sealed class ListenerQueue(IFlowEventListener listener)
+    {
+        private readonly Channel<FlowEvent> _events = Channel.CreateBounded<FlowEvent>(new BoundedChannelOptions(QueueCapacity)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false,
+        });
+
+        public IFlowEventListener Listener => listener;
+
+        public ChannelReader<FlowEvent> Events => _events.Reader;
+
+        public bool TryEnqueue(FlowEvent flowEvent) => _events.Writer.TryWrite(flowEvent);
     }
 
     private static partial class Log

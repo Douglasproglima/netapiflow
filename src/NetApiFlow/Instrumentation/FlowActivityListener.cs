@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
 using NetApiFlow.Sanitization;
+using NetApiFlow.Storage;
 
 namespace NetApiFlow.Instrumentation;
 
@@ -12,11 +13,13 @@ namespace NetApiFlow.Instrumentation;
 /// sampling eagerly (risk R-05): a span is only recorded when tracing is enabled and its trace is
 /// already tracked by the recorder.
 /// </summary>
-internal sealed class FlowActivityListener : IDisposable
+internal sealed partial class FlowActivityListener : IDisposable
 {
     private readonly FlowRecorder _recorder;
     private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ActivityListener _listener;
+    private readonly ILogger<FlowActivityListener> _logger;
+    private readonly IntervalLogLimiter _failureLog = new(TimeSpan.FromSeconds(30));
 #if NET8_0
     private readonly HttpClientActivityTagBackfill _httpClientActivityTagBackfill;
 #endif
@@ -25,13 +28,14 @@ internal sealed class FlowActivityListener : IDisposable
     {
         _recorder = recorder;
         _options = options;
+        _logger = loggerFactory.CreateLogger<FlowActivityListener>();
 
         _listener = new ActivityListener
         {
-            ShouldListenTo = ShouldListenTo,
-            Sample = Sample,
-            ActivityStarted = OnActivityStarted,
-            ActivityStopped = OnActivityStopped,
+            ShouldListenTo = SafeShouldListenTo,
+            Sample = SafeSample,
+            ActivityStarted = SafeOnActivityStarted,
+            ActivityStopped = SafeOnActivityStopped,
         };
 
         ActivitySource.AddActivityListener(_listener);
@@ -46,6 +50,64 @@ internal sealed class FlowActivityListener : IDisposable
 #if NET8_0
         _httpClientActivityTagBackfill.Dispose();
 #endif
+    }
+
+    private bool SafeShouldListenTo(ActivitySource source)
+    {
+        try
+        {
+            return ShouldListenTo(source);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+            return false;
+        }
+    }
+
+    private ActivitySamplingResult SafeSample(ref ActivityCreationOptions<ActivityContext> options)
+    {
+        try
+        {
+            return Sample(ref options);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+            return ActivitySamplingResult.None;
+        }
+    }
+
+    private void SafeOnActivityStarted(Activity activity)
+    {
+        try
+        {
+            OnActivityStarted(activity);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+        }
+    }
+
+    private void SafeOnActivityStopped(Activity activity)
+    {
+        try
+        {
+            OnActivityStopped(activity);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+        }
+    }
+
+    private void LogFailure(Exception exception)
+    {
+        if (_failureLog.TryAcquire())
+        {
+            Log.RecordingFailed(_logger, exception);
+        }
     }
 
     private bool ShouldListenTo(ActivitySource source) =>
@@ -357,5 +419,13 @@ internal sealed class FlowActivityListener : IDisposable
 
             parent = parent.Parent;
         }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(
+            Level = LogLevel.Error,
+            Message = "NetApiFlow: recording a step failed, so the step may be missing from its trace. The request was not affected. This is logged at most once every 30 seconds.")]
+        public static partial void RecordingFailed(ILogger logger, Exception exception);
     }
 }

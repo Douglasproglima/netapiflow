@@ -50,6 +50,7 @@ public static class NetApiFlowServiceCollectionExtensions
         services.Configure<MvcOptions>(options => options.Filters.Add<FlowControllerActionFilter>());
         services.AddSingleton<PersistenceWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<PersistenceWriter>());
+        services.AddHostedService(sp => sp.GetRequiredService<FlowEventPublisher>());
         services.AddSingleton(RetentionInterval.Default);
         services.AddSingleton(PersistenceRetryInterval.Default);
         services.TryAddSingleton(TimeProvider.System);

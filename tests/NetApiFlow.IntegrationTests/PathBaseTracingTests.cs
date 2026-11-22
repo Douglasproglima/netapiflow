@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using NetApiFlow.Domain;
 using Shouldly;
@@ -337,9 +338,9 @@ public class PathBaseTracingTests
     {
         await using var app = await PathBaseApp.StartAsync(new PathBaseSetup
         {
-            Configure = options => options.IncludePaths(new string[] { null! }),
             Map = endpoints => endpoints.MapGet("/orders", () => "ok"),
         });
+        app.Services.GetRequiredService<IOptions<NetApiFlowOptions>>().Value.IncludePaths(new string[] { null! });
 
         var response = await app.GetAsync(path);
 

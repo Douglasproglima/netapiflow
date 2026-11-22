@@ -63,6 +63,8 @@ internal sealed class PathBaseApp : IAsyncDisposable
 
     public FlowRecorder Recorder { get; }
 
+    public IServiceProvider Services => _host.Services;
+
     public ConcurrentQueue<FlowTrace> StartedTraces { get; } = new();
 
     public ConcurrentQueue<FlowTrace> CompletedTraces { get; } = new();
