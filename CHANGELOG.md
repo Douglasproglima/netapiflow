@@ -56,10 +56,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: events now reach an `IFlowEventListener`, the live panel included, from a background
   queue and no longer on the thread of the request. Before, the synchronous part of every listener ran
   inside the request. A listener that took 200 ms per event made a request to an empty endpoint take
-  811 ms instead of 0.4 ms. Now it takes 0.5 ms. The listeners of one app get the events one at a time,
-  in the order they happened. The queue holds 5000 events. When it is full, a new event is dropped and
-  counted in `netapiflow.events.dropped`, and the request never waits. A listener now gets the shutdown
-  token instead of `CancellationToken.None`.
+  811 ms instead of 0.4 ms. Now it takes 0.5 ms. Each listener has its own queue of 5000 events and gets
+  them one at a time, in the order they happened. A slow listener only delays its own events and never
+  holds back the others. When the queue of a listener is full, a new event is dropped for that listener
+  only and counted in `netapiflow.events.dropped`, and the request never waits. A listener now gets the
+  shutdown token instead of `CancellationToken.None`. When the app stops, the event a listener is
+  handling is awaited only until that token, and the events still in its queue are not delivered.
+- **`NetApiFlow`: a null, empty or blank pattern in `IncludePaths` or `ExcludePaths` now stops the app at
+  startup.** This holds in code and in the `NetApiFlow` configuration section, so an empty environment
+  variable such as `NetApiFlow__ExcludePaths__1=` also stops it. The message names the option and the
+  position of the pattern. Before, the app started, and each case did something different. A null
+  pattern made every request untraced, with only a warning in the log every 30 seconds. An empty pattern
+  worked as `/`. A blank pattern, made only of spaces, never matched anything.
 - **`NetApiFlow`: each request gets its own trace id, and the id of a trace is no longer the W3C trace
   id of the request.** The id is random and has the same format as before, 32 hexadecimal
   characters. `X-NetApiFlow-TraceId`, `NetApiFlow.GetRecentTrace`, `NetApiFlow.Testing`, the REST API,
@@ -133,10 +141,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   of the wrong type was enough. Now the failure is logged as an error that says the request was not
   affected, at most once every 30 seconds, and the request goes on. Only the trace or the step can be
   missing.
-- `NetApiFlow`: a null, empty or blank pattern in `IncludePaths` or `ExcludePaths` (in code or in the
-  `NetApiFlow` configuration section) now stops the app at startup, with a message that names the option
-  and the position of the pattern. Before, the app started, no request was ever traced, and the only sign
-  was a warning in the log every 30 seconds.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: a trace is never stored without its
   steps. The trace and its steps were written one after the other with no transaction, so a failure while
   writing the steps left the trace in history with a step count and no step to show, and a new attempt to

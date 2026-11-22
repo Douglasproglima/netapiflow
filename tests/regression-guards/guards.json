@@ -1007,5 +1007,27 @@
       "test": "NetApiFlow.Tests.Events.FlowEventPublisherTests.Publish_WithTheQueueFull_DropsTheEventCountsItAndNeverWaits"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B5c-slow-listener-holds-no-other",
+    "defect": "With one queue for every listener, a slow listener delayed and made the others, the live panel included, lose events",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Events.FlowEventPublisherTests.Publish_WithASlowAsyncListener_DoesNotDelayNorDropTheEventsOfAnotherListener"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5c-shutdown-does-not-drain",
+    "defect": "The shutdown waited for a slow listener to empty its queue before the host stopped",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.EventDeliveryIntegrationTests.StopAsync_WithASlowListenerAndEventsStillQueued_StopsWithoutDeliveringThem"
+    },
+    "job": "build-test"
   }
 ]

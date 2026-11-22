@@ -88,9 +88,12 @@ internal sealed partial class FlowEventPublisher : BackgroundService
 
     private async Task DeliverAllAsync(ListenerQueue queue, CancellationToken stoppingToken)
     {
-        await foreach (var flowEvent in queue.Events.ReadAllAsync(stoppingToken))
+        while (await queue.Events.WaitToReadAsync(stoppingToken))
         {
-            await DeliverAsync(queue.Listener, flowEvent, stoppingToken);
+            while (!stoppingToken.IsCancellationRequested && queue.Events.TryRead(out var flowEvent))
+            {
+                await DeliverAsync(queue.Listener, flowEvent, stoppingToken);
+            }
         }
     }
 
@@ -98,7 +101,11 @@ internal sealed partial class FlowEventPublisher : BackgroundService
     {
         try
         {
-            await listener.OnEventAsync(flowEvent, stoppingToken);
+            var delivery = listener.OnEventAsync(flowEvent, stoppingToken);
+            if (!delivery.IsCompletedSuccessfully)
+            {
+                await delivery.AsTask().WaitAsync(stoppingToken);
+            }
         }
         catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
         {

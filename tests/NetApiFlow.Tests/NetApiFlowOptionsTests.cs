@@ -174,14 +174,16 @@ public class NetApiFlowOptionsTests
     }
 
     [Theory]
-    [InlineData("NetApiFlow:IncludePaths:1", "IncludePaths")]
-    [InlineData("NetApiFlow:ExcludePaths:1", "ExcludePaths")]
-    public void Value_WithABlankPathPatternInConfiguration_ThrowsOptionsValidationExceptionNamingTheOption(string key, string option)
+    [InlineData("NetApiFlow:IncludePaths:1", "IncludePaths", "   ")]
+    [InlineData("NetApiFlow:ExcludePaths:1", "ExcludePaths", "   ")]
+    [InlineData("NetApiFlow:IncludePaths:1", "IncludePaths", "")]
+    [InlineData("NetApiFlow:ExcludePaths:1", "ExcludePaths", "")]
+    public void Value_WithABlankPathPatternInConfiguration_ThrowsOptionsValidationExceptionNamingTheOption(string key, string option, string pattern)
     {
         var options = BuildOptions(new Dictionary<string, string?>
         {
             [key.Replace(":1", ":0", StringComparison.Ordinal)] = "/api/**",
-            [key] = "   ",
+            [key] = pattern,
         });
 
         var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
