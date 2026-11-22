@@ -68,9 +68,11 @@ public class FlowEventPublisherTests
             return ValueTask.CompletedTask;
         }
 
-        public async Task<bool> WaitForAsync(Func<IReadOnlyList<FlowEvent>, bool> condition)
+        public Task<bool> WaitForAsync(Func<IReadOnlyList<FlowEvent>, bool> condition) => WaitForAsync(condition, WaitLimit);
+
+        public async Task<bool> WaitForAsync(Func<IReadOnlyList<FlowEvent>, bool> condition, TimeSpan limit)
         {
-            var deadline = DateTime.UtcNow + WaitLimit;
+            var deadline = DateTime.UtcNow + limit;
             while (DateTime.UtcNow < deadline)
             {
                 if (condition(Received))
@@ -97,6 +99,12 @@ public class FlowEventPublisherTests
             Gate.Wait(TimeSpan.FromSeconds(30), CancellationToken.None);
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class SlowAsyncListener(TimeSpan delayPerEvent) : IFlowEventListener
+    {
+        public async ValueTask OnEventAsync(FlowEvent flowEvent, CancellationToken cancellationToken) =>
+            await Task.Delay(delayPerEvent, CancellationToken.None);
     }
 
     private sealed class WaitingForShutdownListener : IFlowEventListener
@@ -185,6 +193,32 @@ public class FlowEventPublisherTests
             expected.Add((FlowEventType.TraceCompleted, null));
             recording.Received.Select(e => (e.Type, e.Span?.SpanId)).ShouldBe(expected);
             recording.Received.Select(e => e.EventId).ShouldBeInOrder(Shouldly.SortDirection.Ascending);
+            await publisher.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Publish_WithASlowAsyncListener_DoesNotDelayNorDropTheEventsOfAnotherListener()
+    {
+        const int Traces = 100;
+        var recording = new RecordingListener();
+        var (recorder, writer, publisher) = CreatePublisher(new SlowAsyncListener(TimeSpan.FromMilliseconds(50)), recording);
+        using (writer)
+        using (publisher)
+        {
+            await publisher.StartAsync(CancellationToken.None);
+
+            for (var trace = 0; trace < Traces; trace++)
+            {
+                recorder.TryStartTrace($"busy-{trace}", "GET", "/api/orders", DateTime.UtcNow).ShouldBeTrue();
+                recorder.CompleteTrace($"busy-{trace}", 200, FlowStatus.Success, null);
+            }
+
+            var deliveredInTime = await recording.WaitForAsync(
+                received => received.Count == Traces * EventsPerTraceWithoutSteps,
+                TimeSpan.FromSeconds(2));
+
+            deliveredInTime.ShouldBeTrue($"the other listener got {recording.Received.Count} of {Traces * EventsPerTraceWithoutSteps} events");
             await publisher.StopAsync(CancellationToken.None);
         }
     }

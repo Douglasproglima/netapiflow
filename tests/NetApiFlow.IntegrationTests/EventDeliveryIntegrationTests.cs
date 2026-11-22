@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +16,7 @@ public class EventDeliveryIntegrationTests
 {
     private static readonly TimeSpan ResponseLimit = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan GateLimit = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ShutdownLimit = TimeSpan.FromSeconds(1);
 
     [Fact]
     public async Task Request_WithAListenerThatBlocksWhileHandlingAnEvent_RespondsWithoutWaitingForIt()
@@ -62,6 +64,32 @@ public class EventDeliveryIntegrationTests
         listener.Received.Select(flowEvent => flowEvent.EventId).ShouldBeInOrder(Shouldly.SortDirection.Ascending);
     }
 
+    [Fact]
+    public async Task StopAsync_WithASlowListenerAndEventsStillQueued_StopsWithoutDeliveringThem()
+    {
+        var listener = new SlowListenerIgnoringTheToken(TimeSpan.FromMilliseconds(200));
+        var host = await StartHostAsync(listener);
+        try
+        {
+            var client = host.GetTestServer().CreateClient();
+            for (var request = 0; request < 10; request++)
+            {
+                (await client.GetAsync("/ping")).StatusCode.ShouldBe(HttpStatusCode.OK);
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+            await host.StopAsync();
+            stopwatch.Stop();
+
+            stopwatch.Elapsed.ShouldBeLessThan(ShutdownLimit);
+            listener.Delivered.ShouldBeLessThan(10 * 4);
+        }
+        finally
+        {
+            host.Dispose();
+        }
+    }
+
     private static async Task<IHost> StartHostAsync(IFlowEventListener listener)
     {
         return await Host.CreateDefaultBuilder()
@@ -82,6 +110,19 @@ public class EventDeliveryIntegrationTests
                 });
             })
             .StartAsync();
+    }
+
+    private sealed class SlowListenerIgnoringTheToken(TimeSpan delayPerEvent) : IFlowEventListener
+    {
+        private int _delivered;
+
+        public int Delivered => Volatile.Read(ref _delivered);
+
+        public async ValueTask OnEventAsync(FlowEvent flowEvent, CancellationToken cancellationToken)
+        {
+            await Task.Delay(delayPerEvent, CancellationToken.None);
+            Interlocked.Increment(ref _delivered);
+        }
     }
 
     private sealed class GatedListener(ManualResetEventSlim gate) : IFlowEventListener
