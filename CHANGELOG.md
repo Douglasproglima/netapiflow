@@ -9,6 +9,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow.OpenTelemetry`: `AddNetApiFlowSource()`, for an app that already configures OpenTelemetry.
+  It adds the `"NetApiFlow"` source to the tracing of the app and nothing else, so the steps go to the
+  exporters the app already has. `AddNetApiFlowOtlpExport(...)` does not change: it adds its exporter to the
+  tracer provider of the app, so in an app with its own OpenTelemetry every source of the app also goes to
+  the NetApiFlow endpoint. The README says when to use each one.
 - `NetApiFlow`: `WithoutNetApiFlowTracking()` keeps an endpoint, a group, `MapControllers()` or
   `MapHealthChecks()` out of tracing, for a health check, a metrics route or anything that must never
   show up in history. It is read from the matched endpoint, so it holds under `UsePathBase`, and it
@@ -135,6 +140,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.OpenTelemetry`: a second `AddNetApiFlowOtlpExport(...)` added a second exporter, so every span
+  was sent twice. Now there is one exporter, and the options of every call are applied, in the order of the
+  calls.
 - `NetApiFlow`, `NetApiFlow.Dashboard` and `NetApiFlow.MediatR`: calling a registration more than once is
   now safe. A second `AddNetApiFlow(...)` used to drop its `configure`. Now the `configure` of every call is
   applied, in the order of the calls, and nothing is registered twice. A second `AddNetApiFlowDashboard()`

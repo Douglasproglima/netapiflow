@@ -72,6 +72,11 @@ app.MapGet("/hello", () => "Hello");
 app.Run();
 ```
 
+Chamar de novo `AddNetApiFlow(...)`, `AddNetApiFlowDashboard()`, `AddNetApiFlowMediatR()` ou
+`AddNetApiFlowOtlpExport(...)` é seguro, por exemplo num método de extensão seu ou num teste. Nada é
+registrado duas vezes, e as opções de cada chamada a `AddNetApiFlow(...)` e
+`AddNetApiFlowOtlpExport(...)` valem, na ordem das chamadas.
+
 Controllers MVC e endpoints de Minimal API viram uma etapa sozinhos, sem nada para marcar. Isso
 inclui o modelo padrão `dotnet new webapi`. Um endpoint de Minimal API ganha uma etapa `Endpoint`
 por requisição rastreada, do momento em que o roteamento o escolhe até o fim da requisição, então
@@ -831,6 +836,9 @@ Claude Code) para uma instância rodando.
 dotnet add package NetApiFlow.OpenTelemetry
 ```
 
+Acrescente `using NetApiFlow.OpenTelemetry;` no topo do `Program.cs`, ao lado do `using NetApiFlow;`
+que o Início rápido já tem, e registre a exportação antes de `builder.Build()`:
+
 ```csharp
 builder.Services.AddNetApiFlowOtlpExport();
 ```
@@ -840,6 +848,26 @@ O núcleo do NetApiFlow já produz `Activity` reais na `ActivitySource` `"NetApi
 qualquer backend compatível: Jaeger, Tempo, Aspire Dashboard, Honeycomb, ou um OpenTelemetry
 Collector. Não existe serialização própria do NetApiFlow aqui. O SDK exporta a mesma `Activity`
 que o dashboard lê.
+
+**Se a sua aplicação já configura o OpenTelemetry, use `AddNetApiFlowSource()`, e não
+`AddNetApiFlowOtlpExport`.** O `AddNetApiFlowOtlpExport` acrescenta o exportador dele ao tracer
+provider da sua aplicação. Nessa aplicação, toda fonte que ela rastreia vai também para o endpoint do
+NetApiFlow, e isso pode mandar dado para um destino que você não esperava. O `AddNetApiFlowSource()`
+acrescenta a fonte `"NetApiFlow"` ao tracing que você já tem, e nada mais: nenhum exportador e
+nenhuma outra fonte. As etapas vão então para os exportadores que você já configurou. Uma aplicação
+assim já tem `using OpenTelemetry.Trace;` no topo do `Program.cs`. Acrescente
+`using NetApiFlow.OpenTelemetry;` ao lado dele:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("MyApp")
+        .AddNetApiFlowSource()
+        .AddOtlpExporter());
+```
+
+Use o `AddNetApiFlowOtlpExport` quando o NetApiFlow for tudo o que a sua aplicação exporta e você não
+quiser montar o OpenTelemetry por conta própria.
 
 ```csharp
 builder.Services.AddNetApiFlowOtlpExport(options =>
