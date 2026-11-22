@@ -36,21 +36,22 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
-        using (var bulkCopy = new SqlBulkCopy(connection) { DestinationTableName = _tracesTable })
+        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction) { DestinationTableName = _tracesTable })
         {
             MapTraceColumns(bulkCopy);
             await bulkCopy.WriteToServerAsync(BuildTraceTable(trace), cancellationToken);
         }
 
-        if (spans.Count == 0)
+        if (spans.Count > 0)
         {
-            return;
+            using var spanBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction) { DestinationTableName = _spansTable };
+            MapSpanColumns(spanBulkCopy);
+            await spanBulkCopy.WriteToServerAsync(BuildSpansTable(spans), cancellationToken);
         }
 
-        using var spanBulkCopy = new SqlBulkCopy(connection) { DestinationTableName = _spansTable };
-        MapSpanColumns(spanBulkCopy);
-        await spanBulkCopy.WriteToServerAsync(BuildSpansTable(spans), cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async ValueTask<FlowTraceDetail?> GetAsync(string traceId, CancellationToken cancellationToken)

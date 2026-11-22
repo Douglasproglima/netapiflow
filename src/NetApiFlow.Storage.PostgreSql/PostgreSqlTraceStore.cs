@@ -36,33 +36,42 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        await using (var importer = await connection.BeginBinaryImportAsync(
+        await WriteTraceAsync(connection, trace, cancellationToken);
+        if (spans.Count > 0)
+        {
+            await WriteSpansAsync(connection, spans, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task WriteTraceAsync(NpgsqlConnection connection, FlowTrace trace, CancellationToken cancellationToken)
+    {
+        await using var importer = await connection.BeginBinaryImportAsync(
             $"COPY {_tracesTable} (trace_id, method, route_template, route_key, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags) FROM STDIN (FORMAT BINARY)",
-            cancellationToken))
-        {
-            await importer.StartRowAsync(cancellationToken);
-            await importer.WriteAsync(trace.TraceId, NpgsqlDbType.Varchar, cancellationToken);
-            await importer.WriteAsync(trace.Method, NpgsqlDbType.Varchar, cancellationToken);
-            await importer.WriteAsync(trace.RouteTemplate, NpgsqlDbType.Text, cancellationToken);
-            await importer.WriteAsync(RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate), NpgsqlDbType.Text, cancellationToken);
-            await WriteNullableAsync(importer, trace.HttpStatus, NpgsqlDbType.Integer, cancellationToken);
-            await importer.WriteAsync(trace.Status.ToString(), NpgsqlDbType.Varchar, cancellationToken);
-            await importer.WriteAsync(trace.StartedAt, NpgsqlDbType.TimestampTz, cancellationToken);
-            await WriteNullableAsync(importer, trace.EndedAt, NpgsqlDbType.TimestampTz, cancellationToken);
-            await WriteNullableAsync(importer, trace.DurationMicros, NpgsqlDbType.Bigint, cancellationToken);
-            await importer.WriteAsync(trace.SpanCount, NpgsqlDbType.Integer, cancellationToken);
-            await importer.WriteAsync(trace.Truncated, NpgsqlDbType.Boolean, cancellationToken);
-            await WriteNullableAsync(importer, trace.ErrorMessage, NpgsqlDbType.Text, cancellationToken);
-            await importer.WriteAsync(SerializeTags(trace.Tags), NpgsqlDbType.Jsonb, cancellationToken);
-            await importer.CompleteAsync(cancellationToken);
-        }
+            cancellationToken);
 
-        if (spans.Count == 0)
-        {
-            return;
-        }
+        await importer.StartRowAsync(cancellationToken);
+        await importer.WriteAsync(trace.TraceId, NpgsqlDbType.Varchar, cancellationToken);
+        await importer.WriteAsync(trace.Method, NpgsqlDbType.Varchar, cancellationToken);
+        await importer.WriteAsync(trace.RouteTemplate, NpgsqlDbType.Text, cancellationToken);
+        await importer.WriteAsync(RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate), NpgsqlDbType.Text, cancellationToken);
+        await WriteNullableAsync(importer, trace.HttpStatus, NpgsqlDbType.Integer, cancellationToken);
+        await importer.WriteAsync(trace.Status.ToString(), NpgsqlDbType.Varchar, cancellationToken);
+        await importer.WriteAsync(trace.StartedAt, NpgsqlDbType.TimestampTz, cancellationToken);
+        await WriteNullableAsync(importer, trace.EndedAt, NpgsqlDbType.TimestampTz, cancellationToken);
+        await WriteNullableAsync(importer, trace.DurationMicros, NpgsqlDbType.Bigint, cancellationToken);
+        await importer.WriteAsync(trace.SpanCount, NpgsqlDbType.Integer, cancellationToken);
+        await importer.WriteAsync(trace.Truncated, NpgsqlDbType.Boolean, cancellationToken);
+        await WriteNullableAsync(importer, trace.ErrorMessage, NpgsqlDbType.Text, cancellationToken);
+        await importer.WriteAsync(SerializeTags(trace.Tags), NpgsqlDbType.Jsonb, cancellationToken);
+        await importer.CompleteAsync(cancellationToken);
+    }
 
+    private async Task WriteSpansAsync(NpgsqlConnection connection, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
+    {
         await using var spanImporter = await connection.BeginBinaryImportAsync(
             $"COPY {_spansTable} (trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs) FROM STDIN (FORMAT BINARY)",
             cancellationToken);
