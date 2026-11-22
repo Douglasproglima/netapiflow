@@ -120,6 +120,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: a failure inside NetApiFlow itself no longer reaches your request. Before, an exception while
+  recording a step was thrown from your own code, where the step started or ended, and an exception while
+  the middleware opened or closed the trace broke the response. A step with a reserved tag set to a value
+  of the wrong type was enough. Now the failure is logged as an error that says the request was not
+  affected, at most once every 30 seconds, and the request goes on. Only the trace or the step can be
+  missing.
 - `NetApiFlow`: a null, empty or blank pattern in `IncludePaths` or `ExcludePaths` (in code or in the
   `NetApiFlow` configuration section) now stops the app at startup, with a message that names the option
   and the position of the pattern. Before, the app started, no request was ever traced, and the only sign

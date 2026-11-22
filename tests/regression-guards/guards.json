@@ -963,5 +963,27 @@
       "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenCompletingTheTraceThrows_RespondsNormallyAndLogsTheFailure"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B5a-activity-started-host",
+    "defect": "An exception while recording the start of a step was thrown from the code of the user that started it",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenRecordingTheStartOfAStepThrows_RespondsNormallyAndLogsTheFailure"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5a-activity-stopped-host",
+    "defect": "A reserved tag with a value of the wrong type made the end of a step throw in the code of the user",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenAStepCarriesATagValueThatBreaksTheRecording_RespondsNormallyAndLogsTheFailure"
+    },
+    "job": "build-test"
   }
 ]
