@@ -853,5 +853,49 @@
       "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.TryStartTrace_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B4-no-trace-without-spans-postgresql",
+    "defect": "A failure while writing the spans left the trace stored with a span count and no span",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlAtomicTraceSaveTests.SaveAsync_WhenTheSpansFailToBeWritten_LeavesNoRowOfTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-same-trace-saved-after-failure-postgresql",
+    "defect": "After a failed span write, the leftover trace row made the next save of the same trace fail with a primary key violation",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlAtomicTraceSaveTests.SaveAsync_AfterASaveWhoseSpansFailed_StoresTheSameTraceWholeOnTheNextSave"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-no-trace-without-spans-sqlserver",
+    "defect": "A failure while writing the spans left the trace stored with a span count and no span",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerAtomicTraceSaveTests.SaveAsync_WhenTheSpansFailToBeWritten_LeavesNoRowOfTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-same-trace-saved-after-failure-sqlserver",
+    "defect": "After a failed span write, the leftover trace row made the next save of the same trace fail with a primary key violation",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerAtomicTraceSaveTests.SaveAsync_AfterASaveWhoseSpansFailed_StoresTheSameTraceWholeOnTheNextSave"
+    },
+    "job": "build-test"
   }
 ]

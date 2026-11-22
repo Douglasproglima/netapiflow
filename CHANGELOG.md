@@ -120,6 +120,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: a trace is never stored without its
+  steps. The trace and its steps were written one after the other with no transaction, so a failure while
+  writing the steps left the trace in history with a step count and no step to show, and a new attempt to
+  store the same trace failed with a primary key violation. Both are now written in one transaction, and a
+  failure leaves nothing behind. The cost of a save did not change in the measurement.
 - `NetApiFlow`: requests that carry the same `traceparent`, which is what happens when a service calls
   your API more than once, lost traces and mixed their steps. In sequence, the in-memory store kept
   only the last trace, and PostgreSQL and SQL Server kept only the first and logged a primary key
