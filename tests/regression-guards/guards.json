@@ -941,5 +941,27 @@
       "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Start_WithAnInvalidExcludePathPattern_FailsWithAMessageThatNamesTheOption"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B5a-middleware-start",
+    "defect": "An exception while the middleware started tracing a request reached the request, and the trace reservation stayed held",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenStartingTheTraceThrows_RunsTheRequestUntracedAndReleasesItsReservation"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5a-middleware-finish-host",
+    "defect": "An exception while the middleware completed the trace reached the request and broke the response",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenCompletingTheTraceThrows_RespondsNormallyAndLogsTheFailure"
+    },
+    "job": "build-test"
   }
 ]

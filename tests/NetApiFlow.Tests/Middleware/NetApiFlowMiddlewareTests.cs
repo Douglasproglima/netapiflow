@@ -108,7 +108,7 @@ public class NetApiFlowMiddlewareTests
         var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, recorder, options);
         var httpContext = TracedGetRequest(new StartingResponseFeature());
 
-        await Should.ThrowAsync<InvalidOperationException>(() => subject.InvokeAsync(httpContext));
+        await subject.InvokeAsync(httpContext);
 
         var state = (FlowRequestState)httpContext.Items[FlowHttpContextItems.RequestState]!;
         state.IsRecording.ShouldBeFalse();
@@ -131,7 +131,7 @@ public class NetApiFlowMiddlewareTests
             options);
         var httpContext = TracedGetRequest(new StartingResponseFeature());
 
-        await Should.ThrowAsync<InvalidOperationException>(() => subject.InvokeAsync(httpContext));
+        await subject.InvokeAsync(httpContext);
 
         var requestSeen = true;
         ExecutionContext.Run(captured!, _ => requestSeen = FlowTraceResolver.ForCurrentActivity() is not null, null);
