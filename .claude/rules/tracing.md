@@ -37,6 +37,10 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
   middleware, writer de persistência) é capturada e logada, nunca propagada para o código do
   usuário nem para a resposta HTTP.
 - **Nenhum serviço de fundo deixa exceção escapar** do `ExecuteAsync`, do `StartAsync` ou do `StopAsync`. O padrão do host desde o .NET 6 é parar o processo (`BackgroundServiceExceptionBehavior.StopHost`), então uma exceção solta no `RetentionService` ou no `PersistenceWriter` derruba a API do usuário, e um banco de diagnóstico fora do ar por cinco minutos já fez isso. Cada iteração de um laço de fundo fica em `try/catch` com log. O filtro do `catch` é pelo token de parada (`when (!stoppingToken.IsCancellationRequested)`), nunca pelo tipo `OperationCanceledException`. O `HostOptions` do usuário não se toca.
+- Nenhum listener de evento roda na thread da requisição. O `FlowEventPublisher` só escreve, sem esperar, numa fila
+  limitada de cada `IFlowEventListener` (5000, o mesmo limite da fila de SSE), e um consumidor por listener entrega na
+  ordem. Um listener lento só atrasa e descarta os eventos dele, nunca os dos outros. No desligamento, a entrega para no
+  token de parada, sem esvaziar a fila (D-275).
 - Nenhum I/O de persistência roda na thread da requisição. `ITraceStore.SaveAsync` só é chamado
   pelo `PersistenceWriter` (um `BackgroundService` consumindo um `Channel`), nunca diretamente
   pelo middleware.
