@@ -6,7 +6,7 @@ argument-hint: "<N>"
 
 Revise a Fase $ARGUMENTS do NetApiFlow no **regime mínimo** (D-272). A Planejadora confere os critérios contra o que a PR diz e
 contra o que o CI mostra. **Ela não relê o diff e não roda nada:** a leitura de código e as sondas contra o pacote publicado são
-da `AUDITORIA-16-11`, que tem a decisão final de qualidade.
+da `AUDITORIA`, que tem a decisão final de qualidade.
 
 1. Leia `docs/plano/fase-$ARGUMENTS-*.md` inteiro. Liste cada tarefa e seu "Pronto quando".
 2. Leia o corpo da PR e o resumo de fim de fase da Executora (seção 16.7 do `netapiflow-prompt.md`): o que foi feito, como

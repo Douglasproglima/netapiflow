@@ -72,7 +72,7 @@ hotfix (PATCH, sem mudança de API pública) continua valendo para os dois casos
 
 ## A `0.6.0` só sai depois da auditoria de base (D-205)
 
-A `AUDITORIA-16-11` fecha, antes da `0.6.0`, uma auditoria de base do sistema inteiro, feita por
+A `AUDITORIA` fecha, antes da `0.6.0`, uma auditoria de base do sistema inteiro, feita por
 inventário e não por diff: o README frase a frase num app novo, o mapa de cobertura do CI, a matriz
 de autorização, a matriz de integrações, todas as telas e a demo. `PathBase` e proxy reverso entram
 no inventário. O inventário e o fechamento são da auditoria, e a Planejadora não fecha nenhum item no
