@@ -77,3 +77,35 @@ outros de receber, o canal cheio descarta e conta, e o consumidor para limpo no 
 ## Relatório final
 
 Para cada achado: o teste, a saída dele falhando antes e passando depois. A latência do B5c antes e depois.
+
+## Resultado da fase (PR #471, 22/11/2026)
+
+Entregue em `develop` (`c13a2a5`, head `cd24865`) e fechada pela auditoria, em duas rodadas.
+
+- **B5a:** os quatro callbacks do `FlowActivityListener` e a abertura e o fechamento do `NetApiFlowMiddleware` capturam a
+  exceção, logam no máximo uma vez a cada 30 segundos e seguem. Se a abertura falha, a requisição roda sem trace. A exceção
+  do próprio usuário continua chegando a ele.
+- **B5b:** o validador recusa padrão nulo, vazio ou só de espaços em `IncludePaths` e `ExcludePaths`, e o app não sobe. A
+  65.0 mostrou que o defeito era outro do que o plano descrevia: o padrão nulo não chegava à requisição, só deixava toda
+  requisição sem trace em silêncio. Na `0.5.3`, o vazio valia como `/` e o só de espaços nunca casava. Por isso a entrada
+  do CHANGELOG está em `### Changed`, em negrito, e não em `### Fixed`.
+- **B5c, com desvio da 65.3 decidido pela auditoria:** uma fila limitada de 5000 e um consumidor por listener, no lugar do
+  consumidor único. A fila única da primeira rodada fazia um listener assíncrono de 50 ms segurar os outros. Na sonda, o
+  listener que fazia o papel do painel ao vivo recebeu 332 de cerca de 600 eventos, com 11,9 s de atraso, contra 500 de 500
+  com 66 ms na `0.5.3`. A ordem vale dentro de cada listener, e um listener lento só descarta o que é dele. No desligamento,
+  a entrega para no token, e o que sobra na fila não é entregue.
+- **Vistos falhando antes (corpo da PR e logs do CI):** as runs 44976182008 e 44977383272, na primeira rodada, e as runs
+  44979526035 e 44979699685, na segunda. Dois testes de host foram vistos vermelhos só localmente, porque nenhuma run do CI
+  chegou a eles enquanto estavam vermelhos. Os equivalentes unitários estão na primeira run.
+- **Latência do B5c,** medida pela Executora: com um listener de 200 ms, o `GET /ping` caiu de uma mediana de 811,4 ms para
+  0,5 ms. Sem o listener, ficou entre 0,4 e 0,5 ms.
+- **O registro de guardas** ganhou 12 linhas `B5*`. O `expected-differences.json` não ganhou linha, porque nenhum cenário
+  da comparação usa padrão inválido.
+- **Pacote real, pela auditoria, contra a `0.5.3`:** a etapa com tag reservada do tipo errado dava 500 e agora dá 200. O
+  listener síncrono de 200 ms fazia o `/ping` levar 410 ms, e agora leva de 3 a 14 ms. O app com padrão inválido não sobe,
+  com a mensagem certa. 91 de 91 traces completas e nenhum evento fora de ordem. Depois da correção, o listener de 50 ms
+  não segura mais os outros (700 de 700 eventos, 6 ms de atraso), e o desligamento caiu de 10 s e 23 s para 0,3 s e 0,4 s.
+- **O achado da fila única** veio do revisor independente da auditoria, sem a hipótese dela, e ela o reproduziu.
+
+**Não verificado pela Planejadora,** pelo regime mínimo (D-272): o diff, as medições e o `AotCoreVerification` com zero
+aviso. Este último roda no `build-test`, que ficou verde. Ela leu o corpo da PR, os checks, o CHANGELOG e o `guards.json`.
