@@ -897,5 +897,49 @@
       "test": "NetApiFlow.Storage.Tests.SqlServerAtomicTraceSaveTests.SaveAsync_AfterASaveWhoseSpansFailed_StoresTheSameTraceWholeOnTheNextSave"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-pattern-validator",
+    "defect": "A null, empty or blank path pattern passed validation and silently stopped every request from being traced",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.NetApiFlowOptionsTests.Validate_WithANullEmptyOrBlankPathPattern_FailsNamingTheOptionAndThePosition"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-pattern-configuration",
+    "defect": "A blank path pattern in the NetApiFlow configuration section passed validation",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.NetApiFlowOptionsTests.Value_WithABlankPathPatternInConfiguration_ThrowsOptionsValidationExceptionNamingTheOption"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-include-pattern-host",
+    "defect": "A host with a blank IncludePaths pattern started instead of failing with a message that names the option",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Start_WithAnInvalidIncludePathPattern_FailsWithAMessageThatNamesTheOption"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-exclude-pattern-host",
+    "defect": "A host with a blank ExcludePaths pattern started instead of failing with a message that names the option",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Start_WithAnInvalidExcludePathPattern_FailsWithAMessageThatNamesTheOption"
+    },
+    "job": "build-test"
   }
 ]

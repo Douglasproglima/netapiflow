@@ -2,7 +2,6 @@ using Microsoft.Extensions.Options;
 
 namespace NetApiFlow.Configuration;
 
-/// <summary>Validates <see cref="NetApiFlowOptions"/> before the host finishes starting.</summary>
 internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOptions>
 {
     public ValidateOptionsResult Validate(string? name, NetApiFlowOptions options)
@@ -61,6 +60,23 @@ internal sealed class NetApiFlowOptionsValidator : IValidateOptions<NetApiFlowOp
                 $"NetApiFlow: OpenApiDocumentPath must be root-relative and start with '/' (was '{options.OpenApiDocumentPath}').");
         }
 
-        return ValidateOptionsResult.Success;
+        return FailOnBlankPattern("IncludePaths", options.IncludePatterns)
+            ?? FailOnBlankPattern("ExcludePaths", options.ExcludePatterns)
+            ?? ValidateOptionsResult.Success;
+    }
+
+    private static ValidateOptionsResult? FailOnBlankPattern(string optionName, IReadOnlyList<string> patterns)
+    {
+        for (var position = 0; position < patterns.Count; position++)
+        {
+            if (string.IsNullOrWhiteSpace(patterns[position]))
+            {
+                return ValidateOptionsResult.Fail(
+                    $"NetApiFlow: {optionName} has a null, empty or blank pattern at position {position}. " +
+                    "Remove it, or write a route pattern such as '/api/**'.");
+            }
+        }
+
+        return null;
     }
 }

@@ -120,6 +120,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: a null, empty or blank pattern in `IncludePaths` or `ExcludePaths` (in code or in the
+  `NetApiFlow` configuration section) now stops the app at startup, with a message that names the option
+  and the position of the pattern. Before, the app started, no request was ever traced, and the only sign
+  was a warning in the log every 30 seconds.
 - `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: a trace is never stored without its
   steps. The trace and its steps were written one after the other with no transaction, so a failure while
   writing the steps left the trace in history with a step count and no step to show, and a new attempt to
