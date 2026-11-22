@@ -14,16 +14,10 @@ internal sealed partial class FlowEventPublisher : BackgroundService
 
     private static long _nextEventId;
 
-    private readonly Channel<PendingEvent> _queue = Channel.CreateBounded<PendingEvent>(new BoundedChannelOptions(QueueCapacity)
-    {
-        FullMode = BoundedChannelFullMode.Wait,
-        SingleReader = true,
-        SingleWriter = false,
-    });
-
+    private readonly object _publishLock = new();
     private readonly FlowRecorder _recorder;
     private readonly PersistenceWriter _persistenceWriter;
-    private readonly IReadOnlyList<IFlowEventListener> _listeners;
+    private readonly ListenerQueue[] _queues;
     private readonly ILogger<FlowEventPublisher> _logger;
 
     private readonly Action<FlowTrace> _onTraceStarted;
@@ -41,7 +35,7 @@ internal sealed partial class FlowEventPublisher : BackgroundService
     {
         _recorder = recorder;
         _persistenceWriter = persistenceWriter;
-        _listeners = [.. listeners];
+        _queues = [.. listeners.Select(listener => new ListenerQueue(listener))];
         _logger = logger;
 
         _onTraceStarted = trace => Publish(FlowEventType.TraceStarted, trace.TraceId, trace: trace);
@@ -61,26 +55,42 @@ internal sealed partial class FlowEventPublisher : BackgroundService
 
     private void Publish(FlowEventType type, string traceId, FlowSpan? span = null, FlowTrace? trace = null)
     {
-        if (_listeners.Count == 0)
+        if (_queues.Length == 0)
         {
             return;
         }
 
-        if (!_queue.Writer.TryWrite(new PendingEvent(type, traceId, DateTime.UtcNow, span, trace)))
+        var timestamp = DateTime.UtcNow;
+        lock (_publishLock)
         {
-            FlowMetrics.DroppedEvents.Add(1);
+            var flowEvent = new FlowEvent
+            {
+                EventId = Interlocked.Increment(ref _nextEventId),
+                Type = type,
+                TraceId = traceId,
+                Timestamp = timestamp,
+                Span = span,
+                Trace = trace,
+            };
+
+            foreach (var queue in _queues)
+            {
+                if (!queue.TryEnqueue(flowEvent))
+                {
+                    FlowMetrics.DroppedEvents.Add(1);
+                }
+            }
         }
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        Task.WhenAll(_queues.Select(queue => Task.Run(() => DeliverAllAsync(queue, stoppingToken), CancellationToken.None)));
+
+    private async Task DeliverAllAsync(ListenerQueue queue, CancellationToken stoppingToken)
     {
-        await foreach (var pending in _queue.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var flowEvent in queue.Events.ReadAllAsync(stoppingToken))
         {
-            var flowEvent = pending.ToFlowEvent(Interlocked.Increment(ref _nextEventId));
-            foreach (var listener in _listeners)
-            {
-                await DeliverAsync(listener, flowEvent, stoppingToken);
-            }
+            await DeliverAsync(queue.Listener, flowEvent, stoppingToken);
         }
     }
 
@@ -107,17 +117,20 @@ internal sealed partial class FlowEventPublisher : BackgroundService
         base.Dispose();
     }
 
-    private readonly record struct PendingEvent(FlowEventType Type, string TraceId, DateTime Timestamp, FlowSpan? Span, FlowTrace? Trace)
+    private sealed class ListenerQueue(IFlowEventListener listener)
     {
-        public FlowEvent ToFlowEvent(long eventId) => new()
+        private readonly Channel<FlowEvent> _events = Channel.CreateBounded<FlowEvent>(new BoundedChannelOptions(QueueCapacity)
         {
-            EventId = eventId,
-            Type = Type,
-            TraceId = TraceId,
-            Timestamp = Timestamp,
-            Span = Span,
-            Trace = Trace,
-        };
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false,
+        });
+
+        public IFlowEventListener Listener => listener;
+
+        public ChannelReader<FlowEvent> Events => _events.Reader;
+
+        public bool TryEnqueue(FlowEvent flowEvent) => _events.Writer.TryWrite(flowEvent);
     }
 
     private static partial class Log
