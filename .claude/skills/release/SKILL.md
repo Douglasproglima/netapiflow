@@ -9,6 +9,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
 `MAJOR` fica em `0` até a `1.0.0`, seção 12 do `netapiflow-prompt.md`, então antes da v1.0.0 uma
 "major" vira incremento de `MINOR`).
 
+**Quem faz o quê (D-272).** Uma `EXECUTORA-RELEASE` faz os passos de código (1 a 9, e o 13 depois da publicação), abre as PRs e
+para. A `AUDITORIA-16-11` faz os merges, a tag, o Release, o back-merge, os advisories e os checks obrigatórios da `main` (passos
+10 a 12). A Planejadora mantém esta skill e registra. Os passos 7 e 13 mexem em `Directory.Build.props`, em `tests/real-package/` e
+em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
+
 0. **Para a `0.6.0`:** confirme com a `AUDITORIA-16-11` que a auditoria de base está fechada
    (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. Confirme também a Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia).
 1. Rode `git status` em `develop`. Working tree precisa estar limpo.
