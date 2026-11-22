@@ -985,5 +985,27 @@
       "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenAStepCarriesATagValueThatBreaksTheRecording_RespondsNormallyAndLogsTheFailure"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B5c-listener-off-the-request",
+    "defect": "The synchronous part of an event listener ran on the thread of the request and delayed the response",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.EventDeliveryIntegrationTests.Request_WithAListenerThatBlocksWhileHandlingAnEvent_RespondsWithoutWaitingForIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5c-queue-full-drops-and-counts",
+    "defect": "Without a bounded queue between the recorder and the listeners, nothing limited or counted the events a slow listener could not take",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Events.FlowEventPublisherTests.Publish_WithTheQueueFull_DropsTheEventCountsItAndNeverWaits"
+    },
+    "job": "build-test"
   }
 ]

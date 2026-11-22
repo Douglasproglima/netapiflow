@@ -53,6 +53,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow`: events now reach an `IFlowEventListener`, the live panel included, from a background
+  queue and no longer on the thread of the request. Before, the synchronous part of every listener ran
+  inside the request. A listener that took 200 ms per event made a request to an empty endpoint take
+  811 ms instead of 0.4 ms. Now it takes 0.5 ms. The listeners of one app get the events one at a time,
+  in the order they happened. The queue holds 5000 events. When it is full, a new event is dropped and
+  counted in `netapiflow.events.dropped`, and the request never waits. A listener now gets the shutdown
+  token instead of `CancellationToken.None`.
 - **`NetApiFlow`: each request gets its own trace id, and the id of a trace is no longer the W3C trace
   id of the request.** The id is random and has the same format as before, 32 hexadecimal
   characters. `X-NetApiFlow-TraceId`, `NetApiFlow.GetRecentTrace`, `NetApiFlow.Testing`, the REST API,

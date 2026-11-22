@@ -1,22 +1,30 @@
+using System.Threading.Channels;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using NetApiFlow.Storage;
 
 namespace NetApiFlow.Events;
 
-/// <summary>
-/// Bridges <see cref="FlowRecorder"/> and <see cref="PersistenceWriter"/> state changes into
-/// <see cref="IFlowEventListener"/> instances. Dispatch never blocks the caller and a failing
-/// listener never affects the others (seção 6.5 do prompt).
-/// </summary>
-internal sealed partial class FlowEventPublisher : IDisposable
+internal sealed partial class FlowEventPublisher : BackgroundService
 {
+    internal const int QueueCapacity = 5000;
+
+    private static long _nextEventId;
+
+    private readonly Channel<PendingEvent> _queue = Channel.CreateBounded<PendingEvent>(new BoundedChannelOptions(QueueCapacity)
+    {
+        FullMode = BoundedChannelFullMode.Wait,
+        SingleReader = true,
+        SingleWriter = false,
+    });
+
     private readonly FlowRecorder _recorder;
     private readonly PersistenceWriter _persistenceWriter;
     private readonly IReadOnlyList<IFlowEventListener> _listeners;
     private readonly ILogger<FlowEventPublisher> _logger;
-    private static long _nextEventId;
 
     private readonly Action<FlowTrace> _onTraceStarted;
     private readonly Action<FlowTrace> _onTraceCompleted;
@@ -58,35 +66,37 @@ internal sealed partial class FlowEventPublisher : IDisposable
             return;
         }
 
-        var flowEvent = new FlowEvent
+        if (!_queue.Writer.TryWrite(new PendingEvent(type, traceId, DateTime.UtcNow, span, trace)))
         {
-            EventId = Interlocked.Increment(ref _nextEventId),
-            Type = type,
-            TraceId = traceId,
-            Timestamp = DateTime.UtcNow,
-            Span = span,
-            Trace = trace,
-        };
-
-        _ = DispatchAsync(flowEvent);
+            FlowMetrics.DroppedEvents.Add(1);
+        }
     }
 
-    private async Task DispatchAsync(FlowEvent flowEvent)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        foreach (var listener in _listeners)
+        await foreach (var pending in _queue.Reader.ReadAllAsync(stoppingToken))
         {
-            try
+            var flowEvent = pending.ToFlowEvent(Interlocked.Increment(ref _nextEventId));
+            foreach (var listener in _listeners)
             {
-                await listener.OnEventAsync(flowEvent, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                Log.ListenerThrew(_logger, listener.GetType().Name, flowEvent.Type, flowEvent.TraceId, ex);
+                await DeliverAsync(listener, flowEvent, stoppingToken);
             }
         }
     }
 
-    public void Dispose()
+    private async Task DeliverAsync(IFlowEventListener listener, FlowEvent flowEvent, CancellationToken stoppingToken)
+    {
+        try
+        {
+            await listener.OnEventAsync(flowEvent, stoppingToken);
+        }
+        catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+        {
+            Log.ListenerThrew(_logger, listener.GetType().Name, flowEvent.Type, flowEvent.TraceId, ex);
+        }
+    }
+
+    public override void Dispose()
     {
         _recorder.TraceStarted -= _onTraceStarted;
         _recorder.TraceCompleted -= _onTraceCompleted;
@@ -94,6 +104,20 @@ internal sealed partial class FlowEventPublisher : IDisposable
         _recorder.SpanCompleted -= _onSpanCompleted;
         _recorder.SpanFailed -= _onSpanFailed;
         _persistenceWriter.TraceSaved -= _onTraceSaved;
+        base.Dispose();
+    }
+
+    private readonly record struct PendingEvent(FlowEventType Type, string TraceId, DateTime Timestamp, FlowSpan? Span, FlowTrace? Trace)
+    {
+        public FlowEvent ToFlowEvent(long eventId) => new()
+        {
+            EventId = eventId,
+            Type = Type,
+            TraceId = TraceId,
+            Timestamp = Timestamp,
+            Span = Span,
+            Trace = Trace,
+        };
     }
 
     private static partial class Log
