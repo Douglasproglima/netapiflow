@@ -71,6 +71,35 @@ public class NetApiFlowMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WhenStartingTheTraceThrows_RunsTheRequestUntracedAndReleasesItsReservation()
+    {
+        var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = true });
+        var recorder = new FlowRecorder(options);
+        var nextRan = false;
+        var seenByTheRequest = true;
+        var subject = new NetApiFlowMiddleware(
+            _ =>
+            {
+                nextRan = true;
+                seenByTheRequest = FlowTraceResolver.ForCurrentActivity() is not null;
+                return Task.CompletedTask;
+            },
+            recorder,
+            options);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpResponseFeature>(new AlreadyStartedResponseFeature());
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/api/orders/42";
+
+        await subject.InvokeAsync(httpContext);
+
+        nextRan.ShouldBeTrue();
+        seenByTheRequest.ShouldBeFalse();
+        httpContext.Items.ContainsKey(FlowHttpContextItems.RequestState).ShouldBeFalse();
+        recorder.ActiveTraceCount.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished()
     {
         var options = Options.Create(new NetApiFlowOptions());
@@ -249,6 +278,12 @@ public class NetApiFlowMiddlewareTests
         httpContext.Request.Method = "GET";
         httpContext.Request.Path = "/api/orders/42";
         return httpContext;
+    }
+
+    private sealed class AlreadyStartedResponseFeature : HttpResponseFeature
+    {
+        public override void OnStarting(Func<object, Task> callback, object state) =>
+            throw new InvalidOperationException("The response has already started.");
     }
 
     private sealed class StartingResponseFeature : HttpResponseFeature

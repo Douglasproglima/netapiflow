@@ -172,4 +172,46 @@ public class NetApiFlowOptionsTests
         var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
         exception.Message.ShouldContain("Limits.MaxTagValueLength");
     }
+
+    [Theory]
+    [InlineData("NetApiFlow:IncludePaths:1", "IncludePaths")]
+    [InlineData("NetApiFlow:ExcludePaths:1", "ExcludePaths")]
+    public void Value_WithABlankPathPatternInConfiguration_ThrowsOptionsValidationExceptionNamingTheOption(string key, string option)
+    {
+        var options = BuildOptions(new Dictionary<string, string?>
+        {
+            [key.Replace(":1", ":0", StringComparison.Ordinal)] = "/api/**",
+            [key] = "   ",
+        });
+
+        var exception = Should.Throw<OptionsValidationException>(() => _ = options.Value);
+        exception.Message.ShouldContain(option);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_WithANullEmptyOrBlankPathPattern_FailsNamingTheOptionAndThePosition(string? pattern)
+    {
+        var include = new NetApiFlowOptionsValidator().Validate(null, new NetApiFlowOptions().IncludePaths("/api/**", pattern!));
+        var exclude = new NetApiFlowOptionsValidator().Validate(null, new NetApiFlowOptions().ExcludePaths("/health/**", pattern!));
+
+        include.Failed.ShouldBeTrue();
+        include.FailureMessage.ShouldContain("IncludePaths");
+        include.FailureMessage.ShouldContain("position 1");
+        exclude.Failed.ShouldBeTrue();
+        exclude.FailureMessage.ShouldContain("ExcludePaths");
+        exclude.FailureMessage.ShouldContain("position 1");
+    }
+
+    [Fact]
+    public void Validate_WithThePatternsThatWereAlreadyValid_Succeeds()
+    {
+        var options = new NetApiFlowOptions()
+            .IncludePaths("/api/**", "/orders/*", "/", "**")
+            .ExcludePaths("/health", "/api/internal/**");
+
+        new NetApiFlowOptionsValidator().Validate(null, options).Succeeded.ShouldBeTrue();
+    }
 }
