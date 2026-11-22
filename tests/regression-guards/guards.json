@@ -1029,5 +1029,38 @@
       "test": "NetApiFlow.IntegrationTests.EventDeliveryIntegrationTests.StopAsync_WithASlowListenerAndEventsStillQueued_StopsWithoutDeliveringThem"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B6a-add-netapiflow-twice",
+    "defect": "A second AddNetApiFlow call dropped its configure",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlow_CalledTwiceWithDifferentConfigure_AppliesBothInTheOrderOfTheCalls"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6b-dashboard-twice",
+    "defect": "A second AddNetApiFlowDashboard call registered the SSE listener twice and every event reached the panel twice",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlowDashboard_CalledTwice_RegistersOneListenerAndDeliversEachEventOnce"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6c-mediatr-twice",
+    "defect": "A second AddNetApiFlowMediatR call recorded every handler as two steps",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlowMediatR_CalledTwice_RecordsOneStepPerHandlerCall"
+    },
+    "job": "build-test"
   }
 ]

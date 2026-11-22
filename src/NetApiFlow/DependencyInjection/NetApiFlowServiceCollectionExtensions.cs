@@ -20,23 +20,28 @@ public static class NetApiFlowServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the tracing middleware, recorder, event publisher and the default in-memory trace
-    /// store. Calling this more than once has no additional effect.
+    /// store. Calling it again registers nothing new, and the <paramref name="configure"/> of every call is
+    /// applied, in the order of the calls.
     /// </summary>
     public static IServiceCollection AddNetApiFlow(this IServiceCollection services, Action<NetApiFlowOptions>? configure = null)
     {
-        if (services.Any(descriptor => descriptor.ServiceType == typeof(NetApiFlowMarkerService)))
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(NetApiFlowMarkerService)))
         {
-            return services;
+            AddServices(services);
         }
 
-        services.AddSingleton<NetApiFlowMarkerService>();
-
-        services.AddNetApiFlowOptions();
         if (configure is not null)
         {
             services.Configure(configure);
         }
 
+        return services;
+    }
+
+    private static void AddServices(IServiceCollection services)
+    {
+        services.AddSingleton<NetApiFlowMarkerService>();
+        services.AddNetApiFlowOptions();
         services.AddSingleton<FlowRecorder>();
         services.AddSingleton<RequestTracingDecider>();
         services.AddSingleton<FlowEventPublisher>();
@@ -69,7 +74,5 @@ public static class NetApiFlowServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IDeveloperPageExceptionFilter, FlowDeveloperPageExceptionFilter>());
         services.AddSingleton<EndpointMatchedListener>();
         services.AddHostedService<EndpointMatchedListenerWarmupHostedService>();
-
-        return services;
     }
 }

@@ -135,6 +135,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`, `NetApiFlow.Dashboard` and `NetApiFlow.MediatR`: calling a registration more than once is
+  now safe. A second `AddNetApiFlow(...)` used to drop its `configure`. Now the `configure` of every call is
+  applied, in the order of the calls, and nothing is registered twice. A second `AddNetApiFlowDashboard()`
+  registered the live stream twice, so every event reached the panel twice. A second
+  `AddNetApiFlowMediatR()` recorded every handler as two steps. Both now register once.
 - `NetApiFlow`: a failure inside NetApiFlow itself no longer reaches your request. Before, an exception while
   recording a step was thrown from your own code, where the step started or ended, and an exception while
   the middleware opened or closed the trace broke the response. A step with a reserved tag set to a value
