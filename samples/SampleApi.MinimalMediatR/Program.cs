@@ -93,6 +93,6 @@ orders.MapGet("/sequential", async (int[] ids, IMediator mediator, CancellationT
 #if NET10_0_OR_GREATER
 app.MapOpenApi();
 #endif
-app.UseNetApiFlowDashboard();
+app.MapNetApiFlowDashboard();
 
 app.Run();

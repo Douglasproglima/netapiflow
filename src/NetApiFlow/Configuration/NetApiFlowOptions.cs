@@ -8,7 +8,7 @@ public sealed class NetApiFlowOptions
 
     /// <summary>
     /// Base path where the dashboard is mounted. Routes under it are never traced, even without
-    /// explicit configuration. Set internally by <c>UseNetApiFlowDashboard</c>. Default: <c>/flow</c>.
+    /// explicit configuration. Set internally by <c>MapNetApiFlowDashboard</c>. Default: <c>/flow</c>.
     /// </summary>
     internal string DashboardBasePath { get; set; } = "/flow";
 

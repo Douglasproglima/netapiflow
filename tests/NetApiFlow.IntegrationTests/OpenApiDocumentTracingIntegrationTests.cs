@@ -72,7 +72,7 @@ public class OpenApiDocumentTracingIntegrationTests
                         endpoints.MapGet(UserRoute, () => Results.Ok());
                         endpoints.MapGet("/openapi/v1.json", () => Results.Text("{}", "application/json"));
                         endpoints.MapGet("/swagger/v1/swagger.json", () => Results.Text("{}", "application/json"));
-                        endpoints.UseNetApiFlowDashboard();
+                        endpoints.MapNetApiFlowDashboard();
                     });
                 });
             })

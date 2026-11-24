@@ -115,7 +115,7 @@ public class DashboardOriginAndHostTests
                 webBuilder.Configure(app =>
                 {
                     app.UseRouting();
-                    app.UseEndpoints(endpoints => endpoints.UseNetApiFlowDashboard());
+                    app.UseEndpoints(endpoints => endpoints.MapNetApiFlowDashboard());
                 });
             })
             .StartAsync();

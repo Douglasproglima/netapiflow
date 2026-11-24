@@ -15,7 +15,7 @@ using NetApiFlow.Storage;
 
 namespace NetApiFlow;
 
-/// <summary>Registers NetApiFlow tracing. See <c>UseNetApiFlowDashboard</c> in <c>NetApiFlow.Dashboard</c> for the dashboard UI.</summary>
+/// <summary>Registers NetApiFlow tracing. See <c>MapNetApiFlowDashboard</c> in <c>NetApiFlow.Dashboard</c> for the dashboard UI.</summary>
 public static class NetApiFlowServiceCollectionExtensions
 {
     /// <summary>

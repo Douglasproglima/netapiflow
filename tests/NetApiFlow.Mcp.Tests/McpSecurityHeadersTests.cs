@@ -116,7 +116,7 @@ public class McpSecurityHeadersTests
                 webBuilder.Configure(app =>
                 {
                     app.UseRouting();
-                    app.UseEndpoints(endpoints => endpoints.UseNetApiFlowMcp());
+                    app.UseEndpoints(endpoints => endpoints.MapNetApiFlowMcp());
                 });
             })
             .StartAsync();

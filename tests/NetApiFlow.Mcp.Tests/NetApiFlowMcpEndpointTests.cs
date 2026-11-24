@@ -24,7 +24,7 @@ namespace NetApiFlow.Mcp.Tests;
 public class NetApiFlowMcpEndpointTests
 {
     [Fact]
-    public async Task UseNetApiFlowMcp_InDevelopment_HandshakeSucceeds()
+    public async Task MapNetApiFlowMcp_InDevelopment_HandshakeSucceeds()
     {
         using var host = await StartHostAsync(Environments.Development);
         var httpClient = host.GetTestServer().CreateClient();
@@ -204,7 +204,7 @@ public class NetApiFlowMcpEndpointTests
                     app.UseAuthorization();
                     app.UseEndpoints(endpoints =>
                     {
-                        var mcp = endpoints.UseNetApiFlowMcp();
+                        var mcp = endpoints.MapNetApiFlowMcp();
                         configureMcp?.Invoke(mcp);
                     });
                 });

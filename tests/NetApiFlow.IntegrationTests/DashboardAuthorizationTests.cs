@@ -163,7 +163,7 @@ public class DashboardAuthorizationTests
                     app.UseAuthorization();
                     app.UseEndpoints(endpoints =>
                     {
-                        var dashboard = endpoints.UseNetApiFlowDashboard();
+                        var dashboard = endpoints.MapNetApiFlowDashboard();
                         configureDashboard?.Invoke(dashboard);
                     });
                 });

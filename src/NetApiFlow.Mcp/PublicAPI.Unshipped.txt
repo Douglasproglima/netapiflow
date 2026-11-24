@@ -1,1 +1,2 @@
 #nullable enable
+static NetApiFlow.Mcp.Endpoints.NetApiFlowMcpEndpointRouteBuilderExtensions.MapNetApiFlowMcp(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! basePath = "/flow/mcp") -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!

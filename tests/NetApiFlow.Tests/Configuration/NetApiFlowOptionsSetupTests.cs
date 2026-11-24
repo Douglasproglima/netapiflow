@@ -151,7 +151,7 @@ public class NetApiFlowOptionsSetupTests
 
     /// <summary>
     /// <c>DashboardBasePath</c> is internal and <c>Bind</c> never touched a non-public property,
-    /// so configuration must not reach it either: <c>UseNetApiFlowDashboard</c> owns that value.
+    /// so configuration must not reach it either: <c>MapNetApiFlowDashboard</c> owns that value.
     /// </summary>
     [Fact]
     public void Configure_WithDashboardBasePathInConfiguration_IgnoresIt()
