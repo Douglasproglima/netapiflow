@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <EnablePackageValidation>true</EnablePackageValidation>
-    <PackageValidationBaselineVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../tests/real-package/previous-published-version.txt').Trim())</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion Condition="Exists('$(MSBuildThisFileDirectory)../tests/real-package/previous-published-version.txt')">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../tests/real-package/previous-published-version.txt').Trim())</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>
