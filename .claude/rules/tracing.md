@@ -49,6 +49,7 @@ pedir o contrário, o conflito é motivo para parar e relatar à Planejadora (se
   50 clientes SSE simultâneos. Exceder qualquer um deles tem um comportamento definido (descartar
   e contar, nunca lançar exceção ou travar).
 - Todo contador de descarte é exposto via `System.Diagnostics.Metrics`, `Meter("NetApiFlow")`.
+- API que roda no código do usuário em produção (`Flow.Step`, `FlowStep.Tag`, `FlowStep.MarkError`) não lança em argumento nulo: o argumento nulo é ignorado, com um aviso de no máximo uma vez a cada 30 segundos (D-277). `ThrowIfNull` é para os pontos de configuração, que lançam na partida.
 
 ## Correlação e hierarquia
 

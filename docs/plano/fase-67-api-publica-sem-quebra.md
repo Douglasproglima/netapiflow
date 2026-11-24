@@ -85,6 +85,19 @@ A Executora mediu, sem código nem commit, e a Planejadora leu o relatório (nã
 - `CHANGELOG.md`, em inglês: `### Added` (nomes novos, sobrecargas), `### Deprecated` (os antigos), `### Changed` (o `serverInfo.name`, e as tools
   do MCP internas, **só se** o item 4 da 67.0 permitir).
 
+## Resultado da fase (PR #481, 24/11/2026)
+
+Entregue em `develop` (`e9e78c7`) e fechada pela auditoria, em duas rodadas.
+
+- **B8, os nomes novos:** `NetApiFlow.Flow` (`Step`, `CurrentTraceId`, `GetRecentTrace`), `MapNetApiFlowDashboard` e `MapNetApiFlowMcp`, `WithNetApiFlowTracking<TBuilder>` e `FlowStep.Tag` para `int`, `long`, `double`, `bool` e `TEnum`. Os nomes antigos ficam `[Obsolete]` e encaminham. As duas sobrecargas não genéricas de `WithNetApiFlowTracking` ficam escondidas do IntelliSense e não `[Obsolete]`, porque a resolução de sobrecarga as prefere, e marcá-las avisaria numa chamada correta (desvio do plano, aceito pela auditoria).
+- **B9, os pequenos:** `Flow.Step`, `FlowStep.Tag` e `FlowStep.MarkError` não lançam em argumento nulo, com o aviso de no máximo uma vez a cada 30 segundos (a `NullStepArgumentLog`, que guarda o logger do `FlowActivityListener` do host); `ThrowIfNull` e `ThrowIfNullOrEmpty` nos pontos de configuração, a `connection string` dos storages incluída; `CompositeEndpointConventionBuilder.Finally` implementado; as tools do MCP `internal`, com `CompatibilitySuppressions.xml` e as linhas `*REMOVED*`; o `serverInfo.name` `NetApiFlow`, gravado só quando o app não definiu o dele (`??=`); `EnablePackageValidation` com a baseline lida de `previous-published-version.txt`; e `IsAotCompatible` no núcleo, com uma supressão justificada no `Invoke` do `DispatchProxy` (aceita pela auditoria).
+- **A primeira rodada voltou por três coisas:** a dica do painel ainda sugeria `NetApiFlow.Step(...)` (achado do revisor independente); o `serverInfo` sobrescrevia o nome do MCP do próprio app (`MyApp` na `0.5.3`, `NetApiFlow` na PR), que o revisor levantou e a auditoria reproduziu; e a leitura da baseline sem `Condition Exists`, apontada pela Planejadora.
+- **Provas no CI:** o vermelho do argumento nulo na run 45482339122, o do `serverInfo` do app na 45493460621, e as quatro guardas B9 reintroduzidas de propósito, uma por projeto, nas runs 45494325583, 45494406568, 45494456516 e 45494510862. **Nove guardas novas** no `guards.json`, que ficou com 109 linhas.
+- **Com o pacote real contra a `0.5.3`,** por relato da auditoria: o código com os nomes antigos compila só com CS0618 e roda igual; o `Tag<TEnum>` grava `Paid`; os argumentos nulos não derrubam a requisição e geram os três avisos; as tools `internal` funcionam no `tools/list` e no `tools/call`; e o MCP do app mantém o nome dele. O detector rodou na `/flow` da demo, nos dois temas, a 1440 e a 390, com 0 achados.
+- **Dois pontos do revisor que a auditoria não levou adiante:** um logger que lança exceção, teórico e não introduzido aqui, e `Tag` com `char` ou `float` compilando por conversão implícita, uma curiosidade e não uma regressão.
+
+O `contratos.md` tem os nomes novos, os obsoletos, os `*REMOVED*` das tools e o `serverInfo` com `??=`.
+
 ## Fora de escopo
 
 - Remover qualquer nome antigo. Isso é depois da `1.0` ou numa minor decidida à parte.
