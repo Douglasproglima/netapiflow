@@ -1084,5 +1084,93 @@
       "test": "NetApiFlow.OpenTelemetry.Tests.OwnTracingTests.AddNetApiFlowSource_OnAnAppWithItsOwnTracing_SendsTheStepsToTheExportersOfTheAppAndAddsNothingElse"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B9-step-null-argument",
+    "defect": "A null component or operation to Step was recorded as a step with no name instead of being ignored with a warning",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.NullStepArgumentIntegrationTests.Step_WithANullArgument_AnswersTheRequestRecordsNoStepAndLogsAWarning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-tag-null-argument",
+    "defect": "A tag with a null key made the step lose every tag it had",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.NullStepArgumentIntegrationTests.Tag_WithANullArgument_AnswersTheRequestKeepsTheStepWithoutTheTagAndLogsAWarning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-mark-error-null",
+    "defect": "MarkError(null) threw an ArgumentNullException into the code of the user",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.NullStepArgumentIntegrationTests.MarkError_WithANullException_AnswersTheRequestKeepsTheStepSuccessfulAndLogsAWarning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-dashboard-finally",
+    "defect": "Finally on the builder the dashboard mapping returns threw NotImplementedException",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardConventionFinallyTests.MapNetApiFlowDashboard_WithAFinallyConvention_AppliesItToEveryDashboardRoute"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B8d-tag-typed-values",
+    "defect": "FlowStep.Tag accepted only a string, so an enum or a number did not compile",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TypedTagIntegrationTests.Tag_WithANumberAFlagOrAnEnum_RecordsItAsInvariantText"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-mcp-server-name",
+    "defect": "The MCP server answered the name of the host assembly instead of NetApiFlow",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpServerInfoTests.Initialize_AnswersWithNetApiFlowAsTheServerName"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-entry-point-arguments",
+    "defect": "The registration entry points did not check their arguments, so a null one did not throw an ArgumentNullException naming it",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.ArgumentValidationTests.EntryPoint_WithANullArgument_ThrowsNamingTheParameter"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-storage-connection-string",
+    "defect": "A null, empty or blank storage connection string was accepted at registration",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.StorageArgumentValidationTests.AddStorage_WithoutAConnectionString_ThrowsAMessageThatSaysWhatToPass"
+    },
+    "job": "build-test"
   }
 ]

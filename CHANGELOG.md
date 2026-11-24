@@ -9,6 +9,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow`: the class `Flow`, the new name of the entry point for marking a step by hand:
+  `Flow.Step("OrderRepository", "Find")`, `Flow.CurrentTraceId` and `Flow.GetRecentTrace`. It needs
+  only `using NetApiFlow;` and works from a top-level `Program.cs` too, where `NetApiFlow.Step(...)`
+  did not compile.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: `MapNetApiFlowDashboard` and `MapNetApiFlowMcp`, the
+  new names of `UseNetApiFlowDashboard` and `UseNetApiFlowMcp`, following the `Map*` convention of
+  ASP.NET Core for adding endpoints.
+- `NetApiFlow`: `WithNetApiFlowTracking()` works on any `IEndpointConventionBuilder`, and no longer
+  only on `RouteHandlerBuilder` and `RouteGroupBuilder`.
+- `NetApiFlow`: `FlowStep.Tag` accepts an `int`, a `long`, a `double`, a `bool` or an enum value, and
+  records it as text. An enum value is recorded as the name of its member. Before, only a `string`
+  compiled.
 - `NetApiFlow.OpenTelemetry`: `AddNetApiFlowSource()`, for an app that already configures OpenTelemetry.
   It adds the `"NetApiFlow"` source to the tracing of the app and nothing else, so the steps go to the
   exporters the app already has. `AddNetApiFlowOtlpExport(...)` does not change: it adds its exporter to the
@@ -58,6 +70,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow.Mcp`: the MCP server answers `NetApiFlow` as its name in the `initialize` handshake.
+  Before, it answered the name of the host assembly of the app.
+- `NetApiFlow.Mcp`: the tool classes `GetTraceTool`, `ListRecentTracesTool`, `GetComponentStatsTool`
+  and the result type `TraceLookupResult` are no longer public. They were meant to be called by an MCP
+  client and not from code. The tools, their names and their answers stay the same.
+- Every registration entry point now checks its arguments: a null `services`, `builder`,
+  `endpoints`, `basePath`, `predicate` or array of patterns throws `ArgumentNullException` naming the
+  parameter. `AddNetApiFlowPostgreSqlStorage` and `AddNetApiFlowSqlServerStorage` throw at startup when
+  the connection string is null, empty or blank, with a message that says what to pass.
 - `NetApiFlow`: events now reach an `IFlowEventListener`, the live panel included, from a background
   queue and no longer on the thread of the request. Before, the synchronous part of every listener ran
   inside the request. A listener that took 200 ms per event made a request to an empty endpoint take
@@ -138,8 +159,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   `net10.0`. A `net11.0` app uses the `net10.0` asset, and an asset of its own for `net11.0` will
   exist only on the day the code uses an API that only .NET 11 has.
 
+### Deprecated
+
+- `NetApiFlow`: the class `NetApiFlow.NetApiFlow`. Use `NetApiFlow.Flow`, which has the same members.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: `UseNetApiFlowDashboard` and `UseNetApiFlowMcp`. Use
+  `MapNetApiFlowDashboard` and `MapNetApiFlowMcp`.
+- The old names still work and forward to the new ones, with warning `CS0618`. They will be removed in
+  a later version, announced here before it happens.
+
 ### Fixed
 
+- `NetApiFlow`: a null argument to `Step`, `FlowStep.Tag` or `FlowStep.MarkError` no longer breaks
+  the request or the step. `MarkError(null)` threw an `ArgumentNullException` into your code, and a
+  tag with a null key made the step lose every tag it had. Now a null component or operation records
+  no step, a null tag key or value is ignored, and `MarkError(null)` does nothing. Each case logs a
+  warning, at most once every 30 seconds.
+- `NetApiFlow.Dashboard`: calling `Finally(...)` on the builder `MapNetApiFlowDashboard` returns threw
+  `NotImplementedException`. It now applies the convention to every route of the dashboard.
 - `NetApiFlow.OpenTelemetry`: a second `AddNetApiFlowOtlpExport(...)` added a second exporter, so every span
   was sent twice. Now there is one exporter, and the options of every call are applied, in the order of the
   calls.
