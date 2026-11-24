@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace NetApiFlow.MediatR;
 
@@ -11,7 +12,7 @@ public static class NetApiFlowMediatRServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddNetApiFlowMediatR(this IServiceCollection services)
     {
-        services.AddTransient(typeof(global::MediatR.IPipelineBehavior<,>), typeof(FlowTrackingBehavior<,>));
+        services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(global::MediatR.IPipelineBehavior<,>), typeof(FlowTrackingBehavior<,>)));
         return services;
     }
 }

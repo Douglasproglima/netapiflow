@@ -1029,5 +1029,60 @@
       "test": "NetApiFlow.IntegrationTests.EventDeliveryIntegrationTests.StopAsync_WithASlowListenerAndEventsStillQueued_StopsWithoutDeliveringThem"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B6a-add-netapiflow-twice",
+    "defect": "A second AddNetApiFlow call dropped its configure",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlow_CalledTwiceWithDifferentConfigure_AppliesBothInTheOrderOfTheCalls"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6b-dashboard-twice",
+    "defect": "A second AddNetApiFlowDashboard call registered the SSE listener twice and every event reached the panel twice",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlowDashboard_CalledTwice_RegistersOneListenerAndDeliversEachEventOnce"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6c-mediatr-twice",
+    "defect": "A second AddNetApiFlowMediatR call recorded every handler as two steps",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlowMediatR_CalledTwice_RecordsOneStepPerHandlerCall"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6c-otlp-export-twice",
+    "defect": "A second AddNetApiFlowOtlpExport call added a second exporter and every span was sent twice",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.OpenTelemetry.Tests",
+      "test": "NetApiFlow.OpenTelemetry.Tests.RepeatedOtlpExportTests.AddNetApiFlowOtlpExport_CalledTwice_ExportsEachSpanOnce"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B7-netapiflow-source-only",
+    "defect": "An app with its own OpenTelemetry had no way to add NetApiFlow without an exporter that also took every source of the app",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.OpenTelemetry.Tests",
+      "test": "NetApiFlow.OpenTelemetry.Tests.OwnTracingTests.AddNetApiFlowSource_OnAnAppWithItsOwnTracing_SendsTheStepsToTheExportersOfTheAppAndAddsNothingElse"
+    },
+    "job": "build-test"
   }
 ]
