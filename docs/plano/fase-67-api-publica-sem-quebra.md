@@ -22,7 +22,7 @@ uma vez só.
 
 A classe passa a se chamar **`Flow`**. É curta, vive no namespace `NetApiFlow`, e se lê `Flow.Step("OrderRepository", "Find")`,
 como `Log.Information(...)` do Serilog. **Antes de fixar o nome**, a Tarefa 67.0 mede se `Flow` colide com algo que um app
-comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A Planejadora avisa a auditoria do nome final antes da Tarefa 67.1.**
+comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A Planejadora avisa a auditoria do nome final antes da Tarefa 67.1, junto com o resultado da 67.0, e a auditoria confere as três coisas do item 1 da 67.0.**
 
 ## Ponto de parada
 
@@ -37,7 +37,7 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A P
 ## Tarefa 67.0: medir, antes de mexer
 
 1. **Colisão do nome `Flow`.** Um app novo (`dotnet new webapi`) com `using NetApiFlow;` e os `using` de EF Core, MediatR,
-   Serilog e OpenTelemetry: `Flow.Step(...)` compila? Dizer o que mediu.
+   Serilog e OpenTelemetry: `Flow.Step(...)` compila? Dizer o que mediu. **A auditoria acrescentou três conferências (24/11/2026), porque um nome público é difícil de trocar depois do release:** (a) o nome colide com algum tipo do BCL ou do ASP.NET Core nos `using` implícitos do `webapi` (`System`, `System.IO`, `System.Linq`, `System.Net.Http`, `System.Threading`, `System.Threading.Tasks`, `Microsoft.AspNetCore.*` e `Microsoft.Extensions.*`)? E o analisador CA1724, que acusa um tipo com o nome de um namespace, dispara? (b) colide com o namespace `NetApiFlow`, ou com algum namespace que o app importa? (c) o trecho do README que usa o nome, colado na ordem do leitor num app novo, compila com 0 avisos? O resultado vai à Planejadora **antes da 67.1**.
 2. **O que a validação de pacote acusaria** contra a `0.5.2` com os nomes novos e os antigos `[Obsolete]`: nada, fora o que o
    item 4 decidir.
 3. **Os pontos de entrada públicos** sem validação de argumento: a lista, por pacote, incluindo as `connection string` dos
