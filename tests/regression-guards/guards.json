@@ -1172,5 +1172,16 @@
       "test": "NetApiFlow.Storage.Tests.StorageArgumentValidationTests.AddStorage_WithoutAConnectionString_ThrowsAMessageThatSaysWhatToPass"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B9-mcp-server-name-of-the-app",
+    "defect": "Naming the NetApiFlow MCP server replaced the name an app gave its own MCP server",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpServerInfoWithAppServerTests.Initialize_OnTheMcpServerOfTheApp_KeepsTheNameTheAppGaveIt"
+    },
+    "job": "build-test"
   }
 ]

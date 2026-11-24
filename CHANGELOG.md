@@ -71,7 +71,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - `NetApiFlow.Mcp`: the MCP server answers `NetApiFlow` as its name in the `initialize` handshake.
-  Before, it answered the name of the host assembly of the app.
+  Before, it answered the name of the host assembly of the app. An app that names its own MCP server
+  keeps its name.
 - `NetApiFlow.Mcp`: the tool classes `GetTraceTool`, `ListRecentTracesTool`, `GetComponentStatsTool`
   and the result type `TraceLookupResult` are no longer public. They were meant to be called by an MCP
   client and not from code. The tools, their names and their answers stay the same.
