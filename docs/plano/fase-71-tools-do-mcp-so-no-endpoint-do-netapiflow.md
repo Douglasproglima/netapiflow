@@ -7,7 +7,7 @@ do app lista `get_component_stats`, `get_trace` e `list_recent_traces`, e o `lis
 status e duração).
 
 Vai no `0.6.0` pela exceção de segurança do D-232 (D-278). **Não é hotfix** (D-205): não é regressão, e a exposição exige que o app
-hospede um MCP próprio. Quem decide se sai um quarto advisory é o dono (D-203), e a auditoria perguntou a ele.
+hospede um MCP próprio. O dono decidiu em 24/11/2026 corrigir na `0.6.0` e publicar um quarto GitHub Security Advisory junto do release, como os outros três (D-279).
 
 ## O achado e o que a Planejadora conferiu
 
@@ -48,7 +48,9 @@ uma tool própria (`app-tool`) e `MapMcp("/mcp")`, mais `AddNetApiFlowMcp` e `Ma
    `tools/list` e de `tools/call`, e um servidor separado. Para cada um: funciona nos dois TFMs? Preserva as tools e o
    `ConfigureSessionOptions` do app? Qual o custo? A Executora escolhe o menor que passa nos critérios da 71.1 e diz qual.
 
-**Pronto quando:** os três pontos respondidos com saída real, e o desenho escolhido dito antes do código.
+4. **Desde quando,** para o intervalo do advisory: desde qual versão do `NetApiFlow.Mcp` o registro das tools no servidor MCP do processo é o mesmo (`git log -S` e a leitura do código do `v0.2.0` em diante), e a reprodução em ao menos uma versão publicada anterior à `0.5.3`.
+
+**Pronto quando:** os quatro pontos respondidos com saída real, e o desenho escolhido dito antes do código.
 
 ## Tarefa 71.1: as tools só no endpoint do NetApiFlow
 
@@ -71,11 +73,15 @@ O desenho é o que a 71.0 escolher. Os critérios, todos testados:
 - **README, nos dois idiomas:** a frase "Same security rule as the dashboard" passa a dizer onde as tools existem (só no `/flow/mcp`) e que
   um app com MCP próprio não as serve no endpoint dele.
 - **`CHANGELOG.md`, em inglês, `### Security`:** o que vazava, para quem (um app que hospeda o próprio MCP), desde quando (até a `0.5.3`) e o
-  que mudou. O texto de um advisory, se o dono o decidir, é dele e da auditoria; a Planejadora escreve o rascunho depois da decisão.
+  que mudou. O advisory é a Tarefa 71.3.
+
+## Tarefa 71.3: o advisory (D-279)
+
+O dono decidiu publicar um quarto GitHub Security Advisory junto do release da `0.6.0`, como os outros três (D-203, D-206 e o da Fase 56). **A Planejadora escreve o rascunho nesta fase, depois da correção,** no molde da Tarefa 50.10 (título, pacote e versões afetadas, CWE, descrição, impacto, o que não é afetado, a correção e o contorno, em inglês e sem dado de app real). **A severidade e o vetor CVSS a auditoria propõe depois da correção, com o pacote real,** como fez nos outros, e o dono confirma. As versões afetadas saem do item 4 da 71.0. Quem publica é a auditoria, junto do Release (D-198), e a Executora não publica nada.
 
 ## Fora de escopo
 
-- O texto e a publicação do advisory (D-203, D-198).
+- A publicação do advisory: é da auditoria, junto do Release (D-198).
 - Mudar o que as tools devolvem ou o nome delas.
 - O `/flow/mcp` de um app que não usa o MCP do SDK de outra forma.
 
