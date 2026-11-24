@@ -23,11 +23,6 @@ internal static class McpAccessGate
             return Results.NotFound();
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Mcp-Session-Id"))
-        {
-            return await next(context);
-        }
-
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
