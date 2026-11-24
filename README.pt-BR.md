@@ -828,7 +828,10 @@ trace nem dispara um replay via MCP.
 >
 > As três tools só existem no endpoint do NetApiFlow. Uma aplicação que hospeda o próprio servidor
 > MCP (`AddMcpServer()` e `MapMcp(...)`) não as serve no endpoint dela, então elas continuam atrás da
-> regra acima, e o `/flow/mcp` não serve as tools da aplicação. Uma configuração é a exceção. Quando o
+> regra acima, e o `/flow/mcp` não serve as tools da aplicação. O `/flow/mcp` só responde às três tools
+> e ao handshake. Prompts, resources, completions e qualquer outro método da aplicação recebem
+> `-32601 Method '...' is not available`, mesmo quando o `initialize` da aplicação anuncia essas
+> capabilities. Uma configuração é a exceção. Quando o
 > servidor MCP da aplicação guarda sessões (um `SessionMode` diferente de `Stateless`) e liga
 > `PerSessionExecutionContext = true`, a chamada de uma tool não carrega a requisição HTTP que a
 > enviou, e o NetApiFlow não consegue saber de qual endpoint ela veio. As tools do NetApiFlow passam

@@ -822,7 +822,10 @@ trace or triggers a replay through MCP.
 >
 > The three tools exist only on the NetApiFlow endpoint. An app that hosts its own MCP server
 > (`AddMcpServer()` and `MapMcp(...)`) does not serve them on its own endpoint, so they stay behind
-> the rule above, and `/flow/mcp` does not serve the tools of the app. One configuration is the
+> the rule above, and `/flow/mcp` does not serve the tools of the app. `/flow/mcp` answers only the
+> three tools and the handshake. Prompts, resources, completions and any other method of the app get
+> `-32601 Method '...' is not available`, even when the `initialize` of the app announces those
+> capabilities. One configuration is the
 > exception. When the MCP server of the app keeps sessions (a `SessionMode` other than `Stateless`)
 > and sets `PerSessionExecutionContext = true`, a tool call does not carry the HTTP request that sent
 > it, so NetApiFlow cannot tell which endpoint it came from. The NetApiFlow tools are then served on

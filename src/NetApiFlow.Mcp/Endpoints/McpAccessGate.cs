@@ -28,17 +28,23 @@ internal static class McpAccessGate
         if (customFilter is not null)
         {
             return await customFilter.AuthorizeAsync(httpContext)
-                ? await next(context)
+                ? await AdmitAsync(context, next)
                 : Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         var environment = httpContext.RequestServices.GetRequiredService<IHostEnvironment>();
         if (environment.IsDevelopment())
         {
-            return await next(context);
+            return await AdmitAsync(context, next);
         }
 
-        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await next(context) : Results.NotFound();
+        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await AdmitAsync(context, next) : Results.NotFound();
+    }
+
+    private static ValueTask<object?> AdmitAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        NetApiFlowMcpRequest.MarkCurrent();
+        return next(context);
     }
 
     private static bool IsGuardedByAuthorization(Endpoint? endpoint) =>

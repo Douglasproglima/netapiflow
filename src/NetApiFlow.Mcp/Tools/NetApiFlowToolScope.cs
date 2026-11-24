@@ -1,7 +1,6 @@
-using Microsoft.AspNetCore.Http;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -11,31 +10,24 @@ namespace NetApiFlow.Mcp.Tools;
 
 internal static class NetApiFlowToolScope
 {
-    private static readonly HashSet<string> NetApiFlowToolNames =
-        [GetComponentStatsTool.Name, GetTraceTool.Name, ListRecentTracesTool.Name];
+    private static readonly string[] NetApiFlowToolNames = [GetComponentStatsTool.Name, GetTraceTool.Name, ListRecentTracesTool.Name];
 
     public static McpRequestHandler<ListToolsRequestParams, ListToolsResult> ListTools(
         McpRequestHandler<ListToolsRequestParams, ListToolsResult> next) =>
         async (context, cancellationToken) =>
         {
             var result = await next(context, cancellationToken);
-            var onNetApiFlowEndpoint = CameThroughNetApiFlowEndpoint(context.Services);
-            result.Tools = [.. result.Tools.Where(tool => NetApiFlowToolNames.Contains(tool.Name) == onNetApiFlowEndpoint)];
+            result.Tools = [.. result.Tools.Where(tool => IsServedHere(context.Server.ServerOptions, tool.Name))];
             return result;
         };
 
-    public static McpRequestHandler<CallToolRequestParams, CallToolResult> CallTool(
-        McpRequestHandler<CallToolRequestParams, CallToolResult> next) =>
-        async (context, cancellationToken) =>
-        {
-            var tool = context.Params?.Name;
-            if (tool is not null && NetApiFlowToolNames.Contains(tool) != CameThroughNetApiFlowEndpoint(context.Services))
-            {
-                throw new McpProtocolException($"Unknown tool: '{tool}'", McpErrorCode.InvalidParams);
-            }
+    public static bool IsServedHere(McpServerOptions options, string? toolName) =>
+        IsNetApiFlowTool(options, toolName) == NetApiFlowMcpRequest.IsCurrent;
 
-            return await next(context, cancellationToken);
-        };
+    public static IEnumerable<string> NamesTakenByAnotherTool(McpServerOptions options) =>
+        NetApiFlowToolNames.Where(name => options.ToolCollection is { } tools
+            && tools.TryGetPrimitive(name, out var tool)
+            && !IsDeclaredByNetApiFlow(tool));
 
 #pragma warning disable MCP9006
     public static bool CannotTellTheEndpoint(HttpServerTransportOptions options) =>
@@ -45,6 +37,12 @@ internal static class NetApiFlowToolScope
     public static bool CannotTellTheEndpoint(IServiceProvider services) =>
         CannotTellTheEndpoint(services.GetRequiredService<IOptions<HttpServerTransportOptions>>().Value);
 
-    private static bool CameThroughNetApiFlowEndpoint(IServiceProvider? services) =>
-        services?.GetService<IHttpContextAccessor>()?.HttpContext?.GetEndpoint()?.Metadata.GetMetadata<NetApiFlowMcpEndpoint>() is not null;
+    private static bool IsNetApiFlowTool(McpServerOptions options, string? toolName) =>
+        toolName is not null
+        && options.ToolCollection is { } tools
+        && tools.TryGetPrimitive(toolName, out var tool)
+        && IsDeclaredByNetApiFlow(tool);
+
+    private static bool IsDeclaredByNetApiFlow(McpServerTool tool) =>
+        tool.Metadata.OfType<MethodInfo>().Any(method => method.DeclaringType?.Assembly == typeof(NetApiFlowToolScope).Assembly);
 }
