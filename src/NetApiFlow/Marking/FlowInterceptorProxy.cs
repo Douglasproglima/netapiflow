@@ -38,7 +38,7 @@ internal class FlowInterceptorProxy : DispatchProxy
         // returns, instead of staying pinned to this step until it completes asynchronously later
         // (which would make unrelated concurrent calls parent themselves under this step by mistake).
         var callerActivity = Activity.Current;
-        var step = NetApiFlow.Step(_component, targetMethod.Name, _componentType);
+        var step = Flow.Step(_component, targetMethod.Name, _componentType);
 
         object? result;
         try

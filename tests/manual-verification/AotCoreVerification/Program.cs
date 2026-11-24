@@ -1,5 +1,5 @@
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
+using static NetApiFlow.Flow;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 

@@ -33,7 +33,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("StockService", "ReserveAsync", ComponentType.Service))
+        using (Flow.Step("StockService", "ReserveAsync", ComponentType.Service))
         {
         }
 
@@ -86,13 +86,13 @@ public class FlowActivityListenerTests
         using var __ = root;
 
         // Warm up: let the JIT compile Step() once before measuring.
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
@@ -115,7 +115,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("OrdersController", "Get", ComponentType.Controller))
+        using (Flow.Step("OrdersController", "Get", ComponentType.Controller))
         {
         }
 
@@ -130,9 +130,9 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("Outer", "Op", ComponentType.Service))
+        using (Flow.Step("Outer", "Op", ComponentType.Service))
         {
-            using (NetApiFlow.Step("Inner", "Op", ComponentType.Repository))
+            using (Flow.Step("Inner", "Op", ComponentType.Repository))
             {
             }
         }
@@ -152,9 +152,9 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("Outer", "Op", ComponentType.Service))
+        using (Flow.Step("Outer", "Op", ComponentType.Service))
         {
-            var inner = NetApiFlow.Step("Inner", "Op", ComponentType.Repository);
+            var inner = Flow.Step("Inner", "Op", ComponentType.Repository);
             inner.MarkError(new InvalidOperationException("boom"));
             inner.Dispose();
         }
@@ -176,7 +176,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (var step = NetApiFlow.Step("OrdersService", "Reserve", ComponentType.Service))
+        using (var step = Flow.Step("OrdersService", "Reserve", ComponentType.Service))
         {
             step.Tag("order_id", "123");
         }
@@ -194,7 +194,7 @@ public class FlowActivityListenerTests
         using var __ = root;
         var longValue = new string('a', 5000);
 
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             step.Tag("payload", longValue);
         }
@@ -210,7 +210,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             for (var i = 0; i < 25; i++)
             {
@@ -232,24 +232,24 @@ public class FlowActivityListenerTests
         using var ___ = root;
 
         // Warm up: let the JIT compile both paths once before measuring.
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
-        using (var warmupStep = NetApiFlow.Step("Component", "Operation"))
+        using (var warmupStep = Flow.Step("Component", "Operation"))
         {
             warmupStep.Tag("order_id", "123");
         }
 
         var beforeNoTag = GC.GetAllocatedBytesForCurrentThread();
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
         var noTagAllocation = GC.GetAllocatedBytesForCurrentThread() - beforeNoTag;
 
         var beforeWithTag = GC.GetAllocatedBytesForCurrentThread();
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             step.Tag("order_id", "123");
         }
@@ -267,7 +267,7 @@ public class FlowActivityListenerTests
         using var __ = root;
         using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
 
-        using (NetApiFlow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
+        using (Flow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
         {
             using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
             npgsqlActivity.ShouldBeNull();
@@ -292,7 +292,7 @@ public class FlowActivityListenerTests
         ActivitySource.AddActivityListener(otherListener);
         using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
 
-        using (NetApiFlow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
+        using (Flow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
         {
             using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
             npgsqlActivity?.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u");

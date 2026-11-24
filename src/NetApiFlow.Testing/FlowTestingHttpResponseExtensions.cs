@@ -33,7 +33,7 @@ public static class FlowTestingHttpResponseExtensions
                 "or that the response is a 500 the server built because nothing handled the exception (add UseExceptionHandler).");
         }
 
-        return NetApiFlow.GetRecentTrace(services, traceId)
+        return Flow.GetRecentTrace(services, traceId)
             ?? throw new FlowAssertionException(
                 $"No trace found for {traceId}. It either aged out of the in-memory buffer of recently " +
                 "completed traces, or tracing is disabled on this host.");

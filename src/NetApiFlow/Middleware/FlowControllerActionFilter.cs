@@ -13,7 +13,7 @@ internal sealed class FlowControllerActionFilter : IAsyncActionFilter
             ?? context.ActionDescriptor.DisplayName
             ?? "Action";
 
-        using var step = NetApiFlow.Step(component, operation, ComponentType.Controller);
+        using var step = Flow.Step(component, operation, ComponentType.Controller);
 
         try
         {

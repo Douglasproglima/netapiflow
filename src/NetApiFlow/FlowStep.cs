@@ -5,7 +5,7 @@ using NetApiFlow.Sanitization;
 
 namespace NetApiFlow;
 
-/// <summary>A tracked step opened by <see cref="NetApiFlow.Step"/>. Dispose it to close the span.</summary>
+/// <summary>A tracked step opened by <see cref="Flow.Step"/>. Dispose it to close the span.</summary>
 public readonly struct FlowStep : IDisposable
 {
     // Marks an exception instance as already attributed to the span where it first occurred, so

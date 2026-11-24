@@ -66,10 +66,10 @@ public abstract class OverheadBenchmarksBase
                         endpoints.MapGet("/excluded", () => Results.Ok());
                         endpoints.MapGet("/nested", async () =>
                         {
-                            using var controller = NetApiFlow.Step("OrdersController", "Get", ComponentType.Controller);
-                            using var service = NetApiFlow.Step("OrderService", "Process", ComponentType.Service);
-                            using var repository = NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
-                            using var database = NetApiFlow.Step("Database", "SELECT orders", ComponentType.Database);
+                            using var controller = Flow.Step("OrdersController", "Get", ComponentType.Controller);
+                            using var service = Flow.Step("OrderService", "Process", ComponentType.Service);
+                            using var repository = Flow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
+                            using var database = Flow.Step("Database", "SELECT orders", ComponentType.Database);
                             await Task.Yield();
                             return Results.Ok();
                         });
@@ -91,7 +91,7 @@ public abstract class OverheadBenchmarksBase
     [Benchmark]
     public Task Simple() => Send("/simple");
 
-    /// <summary>Four nested <see cref="NetApiFlow.Step"/> calls, as a Controller→Service→Repository→Database request would look.</summary>
+    /// <summary>Four nested <see cref="Flow.Step"/> calls, as a Controller→Service→Repository→Database request would look.</summary>
     [Benchmark]
     public Task Nested() => Send("/nested");
 }

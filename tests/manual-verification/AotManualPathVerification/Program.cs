@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NetApiFlow;
 using NetApiFlow.EntityFrameworkCore;
-using static NetApiFlow.NetApiFlow;
+using static NetApiFlow.Flow;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 

@@ -76,7 +76,7 @@ public class ExportedTraceIdentityTests
                     app.UseRouting();
                     app.UseEndpoints(endpoints => endpoints.MapGet("/orders", () =>
                     {
-                        using (NetApiFlow.Step("Work", "Step"))
+                        using (Flow.Step("Work", "Step"))
                         {
                             return "ok";
                         }

@@ -259,7 +259,7 @@ public sealed class ImplicitEndpointStepTests
     {
         await using var app = await TestApp.StartAsync(map: endpoints => endpoints.MapGet("/orders", () =>
         {
-            using var repository = NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
+            using var repository = Flow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
             return "ok";
         }));
 
@@ -423,7 +423,7 @@ public sealed class ImplicitEndpointStepTests
         }
 
         private FlowTraceDetail DetailOf(FlowTrace trace) =>
-            NetApiFlow.GetRecentTrace(_host.Services, trace.TraceId) ?? throw new InvalidOperationException($"Trace {trace.TraceId} is not in the recent buffer.");
+            Flow.GetRecentTrace(_host.Services, trace.TraceId) ?? throw new InvalidOperationException($"Trace {trace.TraceId} is not in the recent buffer.");
 
         private void SignalRequestEnd(PathString path)
         {

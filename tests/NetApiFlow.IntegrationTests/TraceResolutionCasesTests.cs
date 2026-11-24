@@ -214,7 +214,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
     {
         (await _client.GetAsync("/cases/current-trace-id")).EnsureSuccessStatusCode();
 
-        NetApiFlow.CurrentTraceId.ShouldBeNull();
+        Flow.CurrentTraceId.ShouldBeNull();
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
         FlowTraceDetail? detail = null;
         while (detail is null && DateTime.UtcNow < deadline)
         {
-            detail = NetApiFlow.GetRecentTrace(_host.Services, traceId);
+            detail = Flow.GetRecentTrace(_host.Services, traceId);
             if (detail is null)
             {
                 await Task.Delay(25);
@@ -292,7 +292,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
         {
             await Task.Run(() =>
             {
-                using var step = NetApiFlow.Step(CaseComponent, "task-run");
+                using var step = Flow.Step(CaseComponent, "task-run");
             });
             return "ok";
         });
@@ -301,7 +301,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
         {
             await Task.WhenAll(Enumerable.Range(0, 3).Select(index => Task.Run(async () =>
             {
-                using var step = NetApiFlow.Step(CaseComponent, $"when-all-{index}");
+                using var step = Flow.Step(CaseComponent, $"when-all-{index}");
                 await Task.Delay(5);
             })));
             return "ok";
@@ -337,7 +337,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
             {
                 work = Task.Run(() =>
                 {
-                    using var step = NetApiFlow.Step(CaseComponent, "suppress-flow");
+                    using var step = Flow.Step(CaseComponent, "suppress-flow");
                 });
             }
 
@@ -376,7 +376,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
                 work = Task.Run(() =>
                 {
                     Activity.Current = captured;
-                    using var step = NetApiFlow.Step(CaseComponent, "manual-current");
+                    using var step = Flow.Step(CaseComponent, "manual-current");
                 });
             }
 
@@ -384,9 +384,9 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
             return "ok";
         });
 
-        endpoints.MapGet("/cases/current-trace-id", () => NetApiFlow.CurrentTraceId);
+        endpoints.MapGet("/cases/current-trace-id", () => Flow.CurrentTraceId);
 
-        endpoints.MapGet("/cases/untraced-current-trace-id", () => NetApiFlow.CurrentTraceId ?? "none").WithoutNetApiFlowTracking();
+        endpoints.MapGet("/cases/untraced-current-trace-id", () => Flow.CurrentTraceId ?? "none").WithoutNetApiFlowTracking();
 
         endpoints.MapGet("/cases/foreign-activity-in-captured-flow", () =>
         {
@@ -418,7 +418,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
             _ = Task.Run(async () =>
             {
                 await Task.Delay(500);
-                using (NetApiFlow.Step(CaseComponent, "outliving-task"))
+                using (Flow.Step(CaseComponent, "outliving-task"))
                 {
                     _lateStepFinished.Set();
                 }
@@ -431,7 +431,7 @@ public sealed class TraceResolutionCasesTests : IAsyncLifetime, IDisposable
     {
         for (var index = 0; index < 2; index++)
         {
-            using (NetApiFlow.Step(CaseComponent, $"async-enumerable-{index}"))
+            using (Flow.Step(CaseComponent, $"async-enumerable-{index}"))
             {
                 await Task.Delay(2);
             }

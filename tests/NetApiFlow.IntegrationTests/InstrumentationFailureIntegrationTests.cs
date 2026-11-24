@@ -109,14 +109,14 @@ public class InstrumentationFailureIntegrationTests
                         endpoints.MapGet("/ping", () => "pong");
                         endpoints.MapGet("/step", () =>
                         {
-                            using (NetApiFlow.Step("OrderService", "PlaceAsync", ComponentType.Service))
+                            using (Flow.Step("OrderService", "PlaceAsync", ComponentType.Service))
                             {
                                 return "step done";
                             }
                         });
                         endpoints.MapGet("/step-with-a-bool-error-origin", () =>
                         {
-                            using (NetApiFlow.Step("OrderService", "PlaceAsync", ComponentType.Service))
+                            using (Flow.Step("OrderService", "PlaceAsync", ComponentType.Service))
                             {
                                 Activity.Current!.SetTag(FlowTagNames.ErrorOrigin, true);
                                 return "step done";

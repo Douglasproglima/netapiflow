@@ -11,3 +11,7 @@ NetApiFlow.NetApiFlowOptions.EmitTraceIdHeader.get -> bool
 NetApiFlow.NetApiFlowOptions.EmitTraceIdHeader.set -> void
 static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.TrackFlowByConvention(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.Marking.FlowConventionOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static NetApiFlow.NetApiFlowEndpointConventionExtensions.WithoutNetApiFlowTracking<TBuilder>(this TBuilder builder) -> TBuilder
+NetApiFlow.Flow
+static NetApiFlow.Flow.CurrentTraceId.get -> string?
+static NetApiFlow.Flow.GetRecentTrace(System.IServiceProvider! services, string! traceId) -> NetApiFlow.FlowTraceDetail?
+static NetApiFlow.Flow.Step(string! component, string! operation, NetApiFlow.ComponentType type = NetApiFlow.ComponentType.Custom) -> NetApiFlow.FlowStep

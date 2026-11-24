@@ -141,7 +141,7 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
             return;
         }
 
-        var step = NetApiFlow.Step("EntityFrameworkCore", DescribeCommand(command.CommandText), ComponentType.Database);
+        var step = Flow.Step("EntityFrameworkCore", DescribeCommand(command.CommandText), ComponentType.Database);
         if (options.Value.CaptureSqlText)
         {
             step.Tag("sql", command.CommandText);

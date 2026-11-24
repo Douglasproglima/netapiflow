@@ -94,35 +94,35 @@ public class NullStepArgumentIntegrationTests
                     {
                         endpoints.MapGet("/step-with-a-null-component", () =>
                         {
-                            using (NetApiFlow.Step(null!, "PlaceAsync", ComponentType.Service))
+                            using (Flow.Step(null!, "PlaceAsync", ComponentType.Service))
                             {
                                 return Answer;
                             }
                         });
                         endpoints.MapGet("/step-with-a-null-operation", () =>
                         {
-                            using (NetApiFlow.Step("OrderService", null!, ComponentType.Service))
+                            using (Flow.Step("OrderService", null!, ComponentType.Service))
                             {
                                 return Answer;
                             }
                         });
                         endpoints.MapGet("/tag-with-a-null-key", () =>
                         {
-                            using var step = NetApiFlow.Step("OrderService", "PlaceAsync", ComponentType.Service);
+                            using var step = Flow.Step("OrderService", "PlaceAsync", ComponentType.Service);
                             step.Tag("kept", "yes");
                             step.Tag(null!, "kept-out");
                             return Answer;
                         });
                         endpoints.MapGet("/tag-with-a-null-value", () =>
                         {
-                            using var step = NetApiFlow.Step("OrderService", "PlaceAsync", ComponentType.Service);
+                            using var step = Flow.Step("OrderService", "PlaceAsync", ComponentType.Service);
                             step.Tag("kept", "yes");
                             step.Tag("kept-out", null!);
                             return Answer;
                         });
                         endpoints.MapGet("/mark-error-with-null", () =>
                         {
-                            using var step = NetApiFlow.Step("OrderService", "PlaceAsync", ComponentType.Service);
+                            using var step = Flow.Step("OrderService", "PlaceAsync", ComponentType.Service);
                             step.MarkError(null!);
                             return Answer;
                         });

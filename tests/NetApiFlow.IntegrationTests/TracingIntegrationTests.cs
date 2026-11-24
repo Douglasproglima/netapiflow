@@ -44,30 +44,30 @@ public class TracingIntegrationTests
                     {
                         endpoints.MapGet("/api/orders/{id}", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("OrdersController", "GetOrder", ComponentType.Controller);
-                            using var serviceStep = NetApiFlow.Step("OrderService", "GetAsync", ComponentType.Service);
-                            using var repositoryStep = NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
+                            using var controllerStep = Flow.Step("OrdersController", "GetOrder", ComponentType.Controller);
+                            using var serviceStep = Flow.Step("OrderService", "GetAsync", ComponentType.Service);
+                            using var repositoryStep = Flow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
                             await Task.Delay(1);
                             return Results.Ok();
                         });
 
                         endpoints.MapGet("/api/parallel", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("ParallelController", "RunParallel", ComponentType.Controller);
+                            using var controllerStep = Flow.Step("ParallelController", "RunParallel", ComponentType.Controller);
                             await Task.WhenAll(DoWorkAsync("A"), DoWorkAsync("B"));
                             return Results.Ok();
 
                             static async Task DoWorkAsync(string name)
                             {
-                                using var step = NetApiFlow.Step("Worker", name, ComponentType.Service);
+                                using var step = Flow.Step("Worker", name, ComponentType.Service);
                                 await Task.Delay(10);
                             }
                         });
 
                         endpoints.MapGet("/api/fail", () =>
                         {
-                            using var outerStep = NetApiFlow.Step("FailController", "Fail", ComponentType.Controller);
-                            using var innerStep = NetApiFlow.Step("FailService", "DoWork", ComponentType.Service);
+                            using var outerStep = Flow.Step("FailController", "Fail", ComponentType.Controller);
+                            using var innerStep = Flow.Step("FailService", "DoWork", ComponentType.Service);
                             try
                             {
                                 throw new InvalidOperationException("boom");
@@ -82,7 +82,7 @@ public class TracingIntegrationTests
 
                         endpoints.MapGet("/api/simple", () =>
                         {
-                            using var step = NetApiFlow.Step("SimpleController", "Ping", ComponentType.Controller);
+                            using var step = Flow.Step("SimpleController", "Ping", ComponentType.Controller);
                             return Results.Ok();
                         });
                     });

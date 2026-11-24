@@ -53,7 +53,7 @@ public class UnpublishedReservationVisibilityTests
             Configure = options => options.ExcludePaths("/internal/**"),
             Map = endpoints => endpoints.MapGet("/orders", () =>
             {
-                using (NetApiFlow.Step("OrderService", "Find"))
+                using (Flow.Step("OrderService", "Find"))
                 {
                     return "ok";
                 }

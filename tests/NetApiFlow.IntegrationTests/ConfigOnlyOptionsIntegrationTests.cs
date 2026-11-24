@@ -62,7 +62,7 @@ public class ConfigOnlyOptionsIntegrationTests
                     {
                         endpoints.MapGet("/api/warn", (ILoggerFactory loggerFactory) =>
                         {
-                            using var step = NetApiFlow.Step("WarnController", "Warn");
+                            using var step = Flow.Step("WarnController", "Warn");
                             loggerFactory.CreateLogger("WarnController")
                                 .Log(LogLevel.Warning, new EventId(0), "something happened", null, (s, e) => s);
                             return Results.Ok();

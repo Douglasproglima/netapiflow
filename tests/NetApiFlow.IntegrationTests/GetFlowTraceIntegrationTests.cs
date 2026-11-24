@@ -63,8 +63,8 @@ public class GetFlowTraceIntegrationTests
                         endpoints.MapGet("/api/boom", () => Boom());
                         endpoints.MapGet("/api/orders/{id}", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("OrdersController", "GetOrder", ComponentType.Controller);
-                            using (NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Database))
+                            using var controllerStep = Flow.Step("OrdersController", "GetOrder", ComponentType.Controller);
+                            using (Flow.Step("OrderRepository", "FindAsync", ComponentType.Database))
                             {
                                 await Task.Delay(1);
                             }

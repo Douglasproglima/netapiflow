@@ -127,12 +127,12 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     private void OnBefore(BeforeAuthorizationFilterOnAuthorizationEventData data)
     {
-        if (NetApiFlow.CurrentTraceId is not { } traceId)
+        if (Flow.CurrentTraceId is not { } traceId)
         {
             return;
         }
 
-        var step = NetApiFlow.Step("AuthorizationFilters", data.Filter.GetType().Name, ComponentType.Service);
+        var step = Flow.Step("AuthorizationFilters", data.Filter.GetType().Name, ComponentType.Service);
         if (step.IsNoOp)
         {
             // Not tracked by NetApiFlow (route excluded, or tracing disabled): storing it would
@@ -146,7 +146,7 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     private void OnAfter(AfterAuthorizationFilterOnAuthorizationEventData data)
     {
-        if (NetApiFlow.CurrentTraceId is not { } traceId)
+        if (Flow.CurrentTraceId is not { } traceId)
         {
             return;
         }

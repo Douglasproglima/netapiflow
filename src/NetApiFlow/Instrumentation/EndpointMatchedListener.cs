@@ -98,7 +98,7 @@ internal sealed partial class EndpointMatchedListener
         }
 
         var name = EndpointStepName.For(endpoint);
-        var step = NetApiFlow.Step(name.Component, name.Operation, ComponentType.Endpoint);
+        var step = Flow.Step(name.Component, name.Operation, ComponentType.Endpoint);
         if (!step.IsNoOp)
         {
             context.Items[FlowHttpContextItems.ImplicitEndpointStep] = step;
