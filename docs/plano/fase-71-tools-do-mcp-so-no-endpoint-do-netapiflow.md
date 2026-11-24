@@ -45,7 +45,7 @@ uma tool própria (`app-tool`) e `MapMcp("/mcp")`, mais `AddNetApiFlowMcp` e `Ma
    lista também a `app-tool`? Se listar, o `/flow/mcp` (que o NetApiFlow protege) serve uma tool do app, e isso entra no escopo.
 3. **O que o SDK 2.3.1 oferece** para separar as tools por endpoint: a configuração por sessão
    (`HttpServerTransportOptions.ConfigureSessionOptions`, que recebe o `HttpContext` da requisição de `initialize`), os filtros de
-   `tools/list` e de `tools/call`, e um servidor separado. Para cada um: funciona nos dois TFMs? Preserva as tools e o
+   `tools/list` e de `tools/call`, e um servidor separado. Para cada um: funciona nos dois TFMs e nos dois modos do servidor (`Stateless = true` e o padrão)? Preserva as tools e o
    `ConfigureSessionOptions` do app? Qual o custo? A Executora escolhe o menor que passa nos critérios da 71.1 e diz qual.
 
 4. **Desde quando,** para o intervalo do advisory: desde qual versão do `NetApiFlow.Mcp` o registro das tools no servidor MCP do processo é o mesmo (`git log -S` e a leitura do código do `v0.2.0` em diante), e a reprodução em ao menos uma versão publicada anterior à `0.5.3`.
@@ -61,11 +61,16 @@ O desenho é o que a 71.0 escolher. Os critérios, todos testados:
 - O `/flow/mcp` fica **igual**: as mesmas três tools, as mesmas respostas, as mesmas regras de acesso, o mesmo `serverInfo`.
 - Se a 71.0 mostrou o espelho, o `/flow/mcp` também **não** lista a tool do app.
 - Um app **sem** MCP próprio não vê diferença nenhuma.
+- **Base path e `PathBase`.** Com `MapNetApiFlowMcp("/interno/mcp")` e com `app.UsePathBase("/api")`, as três tools funcionam no endpoint do NetApiFlow e seguem fora do `/mcp` do app. A decisão não compara com o `/flow/mcp` fixo.
+- **Prefixo.** Um endpoint MCP do app cujo caminho começa com o do NetApiFlow (`MapMcp("/flow/mcp-app")`, `"/flow/mcpx"`) não recebe as tools. A comparação é pelo endpoint, e não por `StartsWith`.
+- **Sessão trocada de endpoint.** Um cliente que faz o `initialize` no `/flow/mcp`, onde tem acesso, e reusa o `Mcp-Session-Id` no `/mcp` do app não alcança as tools pelo `/mcp`, nem no `tools/list` nem no `tools/call`. A decisão vale a cada requisição e não fica guardada na sessão. Mede-se também o contrário: a sessão aberta no `/mcp`, usada no `/flow/mcp`, segue as regras de acesso do `/flow/mcp`.
+- **Falhar fechado.** Sem `HttpContext`, ou quando não dá para saber de qual endpoint veio a requisição (por exemplo um transporte `stdio` no mesmo processo, se o SDK permitir junto do HTTP), as tools do NetApiFlow não aparecem. Se a 71.0 mostrar que esse caso não existe na 2.3.1, o relatório diz isso.
+- **Os dois modos do servidor.** Todos os critérios acima valem com `WithHttpTransport(o => o.Stateless = true)` e no modo padrão, porque o caminho da sessão muda entre os dois.
 - Sem API pública nova. Se o desenho pedir uma, **para** e avisa.
 
 ## Tarefa 71.2: testes, o pacote real, README e CHANGELOG
 
-- **Teste de host real, visto falhando antes,** nos dois TFMs, para cada critério da 71.1.
+- **Teste de host real, visto falhando antes,** nos dois TFMs, para cada critério da 71.1, os cinco últimos nos dois modos do servidor. Um critério que nasce verde (o de falhar fechado, por exemplo) é provado por mutação, como na Fase 66 (D-276).
 - **Um cenário permanente no job do pacote real** (`scripts/package-scenarios.mjs`): o app do job ganha um MCP próprio, e em `Production`
   sem autorização o `/mcp` não lista as tools do NetApiFlow, enquanto o `/flow/mcp` segue em `404`. Todo achado da auditoria que dá para
   reproduzir de fora vira cenário permanente (`.claude/rules/contratos-e-consumidores.md`). A vermelha vista no CI.
