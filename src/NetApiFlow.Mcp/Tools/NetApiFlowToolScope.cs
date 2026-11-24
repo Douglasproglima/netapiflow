@@ -17,7 +17,6 @@ internal static class NetApiFlowToolScope
         async (context, cancellationToken) =>
         {
             var result = await next(context, cancellationToken);
-            result.Tools = [.. result.Tools.Where(tool => IsServedHere(context.Server.ServerOptions, tool.Name))];
             return result;
         };
 
@@ -25,9 +24,7 @@ internal static class NetApiFlowToolScope
         IsNetApiFlowTool(options, toolName) == NetApiFlowMcpRequest.IsCurrent;
 
     public static IEnumerable<string> NamesTakenByAnotherTool(McpServerOptions options) =>
-        NetApiFlowToolNames.Where(name => options.ToolCollection is { } tools
-            && tools.TryGetPrimitive(name, out var tool)
-            && !IsDeclaredByNetApiFlow(tool));
+        NetApiFlowToolNames;
 
 #pragma warning disable MCP9006
     public static bool CannotTellTheEndpoint(HttpServerTransportOptions options) =>

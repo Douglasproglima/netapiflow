@@ -15,12 +15,8 @@ internal static class NetApiFlowMcpMessages
     [
         RequestMethods.Initialize,
         RequestMethods.ServerDiscover,
-        RequestMethods.Ping,
         RequestMethods.ToolsList,
         RequestMethods.ToolsCall,
-#pragma warning disable MCP9005
-        RequestMethods.LoggingSetLevel,
-#pragma warning restore MCP9005
     ];
 
     private static readonly HashSet<string> NotificationsAcceptedOnTheNetApiFlowEndpoint =
@@ -39,12 +35,8 @@ internal static class NetApiFlowMcpMessages
             var onTheNetApiFlowEndpoint = NetApiFlowMcpRequest.IsCurrent;
             switch (context.JsonRpcMessage)
             {
-                case JsonRpcRequest request when onTheNetApiFlowEndpoint && !RequestsServedOnTheNetApiFlowEndpoint.Contains(request.Method):
+                case JsonRpcRequest request when !RequestsServedOnTheNetApiFlowEndpoint.Contains(request.Method):
                     throw new McpProtocolException($"Method '{request.Method}' is not available.", McpErrorCode.MethodNotFound);
-                case JsonRpcRequest request when request.Method == RequestMethods.ToolsCall
-                    && ToolNameOf(request) is var tool
-                    && !NetApiFlowToolScope.IsServedHere(context.Server.ServerOptions, tool):
-                    throw new McpProtocolException($"Unknown tool: '{tool}'", McpErrorCode.InvalidParams);
                 case JsonRpcNotification notification when onTheNetApiFlowEndpoint && !NotificationsAcceptedOnTheNetApiFlowEndpoint.Contains(notification.Method):
                     return;
             }
