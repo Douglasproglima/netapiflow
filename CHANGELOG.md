@@ -286,6 +286,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- `NetApiFlow.Mcp`: the NetApiFlow tools are served only on the NetApiFlow MCP endpoint. From 0.2.0 to
+  0.5.3, an app that hosts its own MCP server (`AddMcpServer()` and `MapMcp(...)`) also served
+  `list_recent_traces`, `get_trace` and `get_component_stats` on its own endpoint, because the SDK has
+  one MCP server per process. That endpoint does not follow the rule of the dashboard, so in Production,
+  with no authorization configured, `/flow/mcp` answered 404 while the `/mcp` of the app answered
+  whoever could reach it: `list_recent_traces` gave the id, method, route, status and duration of the
+  traces, and `get_trace` the steps of a trace. NetApiFlow never records a body, an argument, a header,
+  a query string or SQL with its parameters, so none of those leaked. Now a tool call is checked on each
+  request against the endpoint it came through: the endpoint of the app no longer lists or calls the
+  NetApiFlow tools, even with a session opened on `/flow/mcp`, and `/flow/mcp` no longer lists or calls
+  the tools of the app. An app that does not host its own MCP server sees no change. When the MCP server
+  of the app keeps sessions and sets `PerSessionExecutionContext = true`, NetApiFlow cannot tell the
+  endpoint of a call, so its tools are served on no endpoint, `/flow/mcp` answers 404, and one warning
+  at startup says how to get them back.
 - `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: chaining `AllowAnonymous()` together with
   `RequireAuthorization(...)` no longer opens the dashboard and the MCP endpoint outside Development.
   The authorization middleware ignores the policy when an endpoint also allows anonymous access, and

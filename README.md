@@ -820,6 +820,15 @@ trace or triggers a replay through MCP.
 > `IFlowAccessFilter`, exactly like [Dashboard security in production](#dashboard-security-in-production).
 > An AI agent reading trace data is the same exposure risk as the visual dashboard.
 >
+> The three tools exist only on the NetApiFlow endpoint. An app that hosts its own MCP server
+> (`AddMcpServer()` and `MapMcp(...)`) does not serve them on its own endpoint, so they stay behind
+> the rule above, and `/flow/mcp` does not serve the tools of the app. One configuration is the
+> exception. When the MCP server of the app keeps sessions (a `SessionMode` other than `Stateless`)
+> and sets `PerSessionExecutionContext = true`, a tool call does not carry the HTTP request that sent
+> it, so NetApiFlow cannot tell which endpoint it came from. The NetApiFlow tools are then served on
+> no endpoint, `/flow/mcp` answers 404, and the app logs one warning at startup that says so. Set
+> `PerSessionExecutionContext = false`, or use the stateless mode, to get them back.
+>
 > The endpoint also refuses a request whose `Host` or `Origin` is not its own, with a **403**. In
 > Development the `Host` must be `localhost`, `127.0.0.1`, `[::1]` or a name declared in
 > `AllowedHosts`, and an `Origin` must match the `Host` the application sees. An MCP client that is

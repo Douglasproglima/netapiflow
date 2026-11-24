@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NetApiFlow.Mcp.Tools;
 
 namespace NetApiFlow.Mcp.Endpoints;
 
@@ -15,6 +16,11 @@ internal static class McpAccessGate
         if (refusal is not null)
         {
             return Results.Text(refusal, statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        if (NetApiFlowToolScope.CannotTellTheEndpoint(httpContext.RequestServices))
+        {
+            return Results.NotFound();
         }
 
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();

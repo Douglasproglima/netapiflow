@@ -1183,5 +1183,114 @@
       "test": "NetApiFlow.Mcp.Tests.McpServerInfoWithAppServerTests.Initialize_OnTheMcpServerOfTheApp_KeepsTheNameTheAppGaveIt"
     },
     "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-tools-not-in-the-app-endpoint",
+    "defect": "The MCP endpoint of an app with its own MCP server listed the NetApiFlow tools, outside the access rule of the dashboard",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.AppEndpoint_ListsTheToolsOfTheAppAndNoneOfNetApiFlow"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-tools-not-callable-on-the-app-endpoint",
+    "defect": "The MCP endpoint of an app with its own MCP server answered calls to the NetApiFlow tools and returned the traces",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.AppEndpoint_CallingAToolOfNetApiFlow_AnswersUnknownTool"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-lists-only-its-tools",
+    "defect": "/flow/mcp listed the tools of the app next to the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.NetApiFlowEndpoint_ListsOnlyItsThreeToolsAndStillAnswersThem"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-cannot-call-the-app-tool",
+    "defect": "/flow/mcp answered calls to the tools of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.NetApiFlowEndpoint_CallingTheToolOfTheApp_AnswersUnknownTool"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-base-path-and-path-base",
+    "defect": "Under a custom base path or a PathBase, the MCP endpoint of the app still served the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.NetApiFlowEndpoint_UnderACustomBasePathOrAPathBase_ServesItsToolsAndTheAppEndpointDoesNot"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-path-prefix",
+    "defect": "An MCP endpoint of the app whose path starts with the NetApiFlow path served the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.AppEndpoint_WhosePathStartsWithTheNetApiFlowPath_GetsNoneOfItsTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-session-moved-to-the-app-endpoint",
+    "defect": "A session opened on /flow/mcp and reused on the MCP endpoint of the app reached the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.SessionOpenedOnTheNetApiFlowEndpoint_ReusedOnTheAppEndpoint_ReachesNoneOfItsTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-fail-closed-without-http",
+    "defect": "A transport with no HTTP request, such as a stream or stdio next to HTTP, listed the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.ToolsListOverATransportWithNoHttpRequest_ListsNoneOfTheToolsOfNetApiFlow"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-per-session-execution-context",
+    "defect": "With PerSessionExecutionContext and sessions, the NetApiFlow tools were served on the MCP endpoint of the app with no warning",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.WithPerSessionExecutionContextAndSessions_TheToolsOfNetApiFlowAreServedOnNoEndpointAndOneWarningSaysWhy"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-app-endpoint-real-package",
+    "defect": "A new app with its own MCP server, built from the published package, served the NetApiFlow tools on its /mcp in Production",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "j"
+    },
+    "job": "real-package"
   }
 ]

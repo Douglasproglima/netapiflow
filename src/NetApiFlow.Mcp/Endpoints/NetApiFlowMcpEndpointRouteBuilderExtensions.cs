@@ -23,6 +23,7 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
         ArgumentNullException.ThrowIfNull(basePath);
         var group = endpoints.MapMcp(basePath);
+        group.WithMetadata(NetApiFlowMcpEndpoint.Marker);
         group.AddEndpointFilter(McpAccessGate.EnforceAsync);
         group.ExcludeFromDescription();
         group.WithoutNetApiFlowTracking();

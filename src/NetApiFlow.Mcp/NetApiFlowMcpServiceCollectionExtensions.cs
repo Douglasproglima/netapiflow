@@ -1,6 +1,9 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Protocol;
+using NetApiFlow.Mcp.Tools;
 
 namespace NetApiFlow.Mcp;
 
@@ -13,13 +16,20 @@ public static class NetApiFlowMcpServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlowMcp(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddHttpContextAccessor();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, PerSessionExecutionContextWarning>());
         services.AddMcpServer(options => options.ServerInfo ??= new Implementation
         {
             Name = ServerName,
             Version = typeof(NetApiFlowMcpServiceCollectionExtensions).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
         })
             .WithHttpTransport()
-            .WithToolsFromAssembly(Assembly.GetExecutingAssembly());
+            .WithToolsFromAssembly(Assembly.GetExecutingAssembly())
+            .WithRequestFilters(filters =>
+            {
+                filters.AddListToolsFilter(NetApiFlowToolScope.ListTools);
+                filters.AddCallToolFilter(NetApiFlowToolScope.CallTool);
+            });
 
         return services;
     }
