@@ -64,6 +64,8 @@ de quem consome o pacote.
 - Toda exceção lançada **dentro** da própria instrumentação (listener, interceptor, proxy,
   middleware) é capturada e logada, nunca propagada para o código do usuário. Ver
   `.claude/rules/tracing.md`.
+- Todo `Add*` de registro, novo ou alterado, é seguro de chamar mais de uma vez: `TryAdd` ou `TryAddEnumerable`, e o `configure`
+  de cada chamada vale, na ordem, sobre um único objeto de opções (D-276). Chamada repetida tem teste de host real.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`, sem exceção.
 - Comentário segue a regra de ouro do `CLAUDE.md`: sintoma de nome ruim, não solução. Nunca cita
   fase, etapa de plano ou número de ADR.
