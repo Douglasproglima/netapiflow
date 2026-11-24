@@ -61,6 +61,8 @@ public static class Flow
     /// <returns>The trace, or <see langword="null"/>.</returns>
     public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(traceId);
         return services.GetService<FlowRecorder>()?.GetRecentlyCompleted(traceId);
     }
 }

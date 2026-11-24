@@ -46,6 +46,8 @@ public static class FlowTrackedServiceCollectionExtensions
         Func<Type, bool> predicate,
         ComponentType componentType = ComponentType.Service)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(predicate);
         DecorateWhere(services, (_, implementationType) => predicate(implementationType), componentType);
         return services;
     }
@@ -106,6 +108,7 @@ public static class FlowTrackedServiceCollectionExtensions
         this IServiceCollection services,
         Action<FlowConventionOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
         return TrackFlowByConventionOf(services, configure, Assembly.GetEntryAssembly());
     }
 
