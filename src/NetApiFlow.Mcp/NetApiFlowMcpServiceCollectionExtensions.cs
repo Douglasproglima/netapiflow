@@ -14,6 +14,7 @@ public static class NetApiFlowMcpServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlowMcp(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.AddHttpContextAccessor();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, NetApiFlowMcpStartupCheck>());
         services.AddMcpServer()
             .WithHttpTransport()
