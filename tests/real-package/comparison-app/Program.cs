@@ -1,3 +1,5 @@
+#pragma warning disable CS0618
+
 using Microsoft.AspNetCore.Builder;
 using NetApiFlow;
 using NetApiFlow.Dashboard;

@@ -18,7 +18,7 @@ public static class LiveProbeEndpoints
 
         app.MapGet("/live-probe/orders/{id:int}", async (int id, bool cached, bool hold, IOrderService orders) =>
         {
-            using (NetApiFlow.NetApiFlow.Step("OrderCache", "TryGet"))
+            using (NetApiFlow.Flow.Step("OrderCache", "TryGet"))
             {
                 await Task.Delay(1);
             }
