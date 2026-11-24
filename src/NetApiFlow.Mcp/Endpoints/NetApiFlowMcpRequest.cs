@@ -2,9 +2,9 @@ namespace NetApiFlow.Mcp.Endpoints;
 
 internal static class NetApiFlowMcpRequest
 {
-    private static readonly AsyncLocal<bool> CameThroughTheNetApiFlowEndpoint = new();
+    private static bool cameThroughTheNetApiFlowEndpoint;
 
-    public static bool IsCurrent => CameThroughTheNetApiFlowEndpoint.Value;
+    public static bool IsCurrent => cameThroughTheNetApiFlowEndpoint;
 
-    public static void MarkCurrent() => CameThroughTheNetApiFlowEndpoint.Value = true;
+    public static void MarkCurrent() => cameThroughTheNetApiFlowEndpoint = true;
 }
