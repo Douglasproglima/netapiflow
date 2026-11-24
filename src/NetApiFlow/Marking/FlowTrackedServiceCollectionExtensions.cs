@@ -14,7 +14,7 @@ public static class FlowTrackedServiceCollectionExtensions
     /// separately, so DI does not create a second instance of the implementation.
     /// </summary>
     [RequiresDynamicCode("The tracking proxy is built with DispatchProxy, which emits a new type at run time and has no Native AOT equivalent. Under Native AOT, mark steps with Flow.Step instead, which publishes without warnings.")]
-    public static IServiceCollection AddFlowTracked<TInterface, TImplementation>(
+    public static IServiceCollection AddFlowTracked<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TInterface, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
         this IServiceCollection services,
         ComponentType componentType,
         ServiceLifetime lifetime = ServiceLifetime.Scoped)
