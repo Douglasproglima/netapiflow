@@ -13,6 +13,7 @@ import {
 const NUGET_ORG = 'https://api.nuget.org/v3/index.json';
 export const SCENARIO_ID = 'a';
 const ADVISORY_WARNINGS = 'NU1901%3BNU1902%3BNU1903%3BNU1904';
+const BEFORE_BUILD = ['UserServices.Add(builder.Services);', ''];
 const AFTER_BUILD = ['UserPipeline.Configure(app);', ''];
 const BEFORE_RUN = ['UserEndpoints.Map(app);'];
 
@@ -45,6 +46,7 @@ async function main() {
       mcpUsings: english.get('mcp:usings').code,
       registrations: english.get('quickstart:registrations').code,
       mcpRegistration: english.get('mcp:registration').code,
+      beforeBuild: BEFORE_BUILD,
       afterBuild: AFTER_BUILD,
       beforeRun: BEFORE_RUN,
     })}\n`,

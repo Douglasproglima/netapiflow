@@ -5,5 +5,6 @@ public static class UserEndpoints
         app.MapGet("/orders/{id:int}", async (int id, IOrderService orders) => await orders.GetAsync(id));
         app.MapGet("/boom", string () => throw new InvalidOperationException("The order endpoint failed on purpose."));
         LiveProbeEndpoints.Map(app);
+        app.MapMcp("/mcp");
     }
 }

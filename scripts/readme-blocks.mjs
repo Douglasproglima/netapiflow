@@ -98,7 +98,7 @@ export function splitAtBuild(code, label) {
   };
 }
 
-export function assembleProgram({ program, mcpUsings, registrations, mcpRegistration, afterBuild, beforeRun }) {
+export function assembleProgram({ program, mcpUsings, registrations, mcpRegistration, beforeBuild = [], afterBuild, beforeRun }) {
   const lines = withUsings(program, mcpUsings).split('\n');
   const buildPosition = onlyPosition(lines, BUILD_LINE, 'the Quick start program');
   const runPosition = onlyPosition(lines, RUN_LINE, 'the Quick start program');
@@ -110,6 +110,7 @@ export function assembleProgram({ program, mcpUsings, registrations, mcpRegistra
     '',
     mcp.before,
     '',
+    ...beforeBuild,
     lines[buildPosition],
     ...afterBuild,
     mcp.after,
