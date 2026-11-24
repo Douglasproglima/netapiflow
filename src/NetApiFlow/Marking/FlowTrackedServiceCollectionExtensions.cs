@@ -46,6 +46,8 @@ public static class FlowTrackedServiceCollectionExtensions
         Func<Type, bool> predicate,
         ComponentType componentType = ComponentType.Service)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(predicate);
         DecorateWhere(services, (_, implementationType) => predicate(implementationType), componentType);
         return services;
     }
@@ -104,8 +106,11 @@ public static class FlowTrackedServiceCollectionExtensions
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection, so trimming can remove a type that would otherwise be decorated, silently dropping its steps.")]
     public static IServiceCollection TrackFlowByConvention(
         this IServiceCollection services,
-        Action<FlowConventionOptions>? configure = null) =>
-        TrackFlowByConventionOf(services, configure, Assembly.GetEntryAssembly());
+        Action<FlowConventionOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        return TrackFlowByConventionOf(services, configure, Assembly.GetEntryAssembly());
+    }
 
     [RequiresDynamicCode("The tracking proxy is built with DispatchProxy at run time.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection.")]

@@ -12,6 +12,7 @@ public static class NetApiFlowEntityFrameworkCoreServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddNetApiFlowEntityFrameworkCore(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         services.AddSingleton<FlowDbCommandInterceptor>();
         return services;
     }

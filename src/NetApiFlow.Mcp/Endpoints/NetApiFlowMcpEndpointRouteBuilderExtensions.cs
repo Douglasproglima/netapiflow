@@ -20,6 +20,8 @@ public static class NetApiFlowMcpEndpointRouteBuilderExtensions
     /// <returns>A builder that applies a convention to the MCP routes.</returns>
     public static IEndpointConventionBuilder MapNetApiFlowMcp(this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp")
     {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentNullException.ThrowIfNull(basePath);
         var group = endpoints.MapMcp(basePath);
         group.AddEndpointFilter(McpAccessGate.EnforceAsync);
         group.ExcludeFromDescription();

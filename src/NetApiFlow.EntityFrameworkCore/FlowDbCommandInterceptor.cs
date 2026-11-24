@@ -14,6 +14,7 @@ namespace NetApiFlow.EntityFrameworkCore;
 /// </summary>
 public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions> options) : DbCommandInterceptor
 {
+    private readonly IOptions<NetApiFlowOptions> _options = options ?? throw new ArgumentNullException(nameof(options));
     private readonly ConcurrentDictionary<Guid, FlowStep> _steps = new();
 
     internal int OpenStepCount => _steps.Count;
@@ -142,7 +143,7 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
         }
 
         var step = Flow.Step("EntityFrameworkCore", DescribeCommand(command.CommandText), ComponentType.Database);
-        if (options.Value.CaptureSqlText)
+        if (_options.Value.CaptureSqlText)
         {
             step.Tag("sql", command.CommandText);
         }

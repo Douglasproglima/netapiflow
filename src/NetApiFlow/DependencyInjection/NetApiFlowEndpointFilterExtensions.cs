@@ -17,8 +17,11 @@ public static class NetApiFlowEndpointFilterExtensions
     /// <param name="builder">The endpoint, group or other convention builder to track.</param>
     /// <returns>The same builder.</returns>
     public static TBuilder WithNetApiFlowTracking<TBuilder>(this TBuilder builder)
-        where TBuilder : IEndpointConventionBuilder =>
-        builder.AddEndpointFilter<TBuilder, FlowEndpointFilter>();
+        where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder.AddEndpointFilter<TBuilder, FlowEndpointFilter>();
+    }
 
     /// <summary>Wraps the endpoint in a tracked <see cref="ComponentType.Endpoint"/> step.</summary>
     /// <param name="builder">The endpoint to track.</param>

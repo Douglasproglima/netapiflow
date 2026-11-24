@@ -12,6 +12,9 @@ public static class NetApiFlowTracerProviderBuilderExtensions
     /// nothing else: no exporter and no other source. The steps of NetApiFlow then go to the exporters the app
     /// already has. Use it when the app configures OpenTelemetry itself.
     /// </summary>
-    public static TracerProviderBuilder AddNetApiFlowSource(this TracerProviderBuilder builder) =>
-        builder.AddSource(NetApiFlowSourceName);
+    public static TracerProviderBuilder AddNetApiFlowSource(this TracerProviderBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder.AddSource(NetApiFlowSourceName);
+    }
 }

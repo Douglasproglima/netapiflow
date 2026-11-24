@@ -59,6 +59,10 @@ public static class Flow
     /// <param name="services">The service provider of the host under test.</param>
     /// <param name="traceId">The NetApiFlow id of the trace, from the <c>X-NetApiFlow-TraceId</c> header.</param>
     /// <returns>The trace, or <see langword="null"/>.</returns>
-    public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId) =>
-        services.GetService<FlowRecorder>()?.GetRecentlyCompleted(traceId);
+    public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(traceId);
+        return services.GetService<FlowRecorder>()?.GetRecentlyCompleted(traceId);
+    }
 }

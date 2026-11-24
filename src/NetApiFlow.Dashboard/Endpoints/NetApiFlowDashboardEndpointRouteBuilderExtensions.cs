@@ -30,6 +30,8 @@ public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
     /// <returns>A builder that applies a convention to every dashboard route.</returns>
     public static IEndpointConventionBuilder MapNetApiFlowDashboard(this IEndpointRouteBuilder endpoints, string basePath = "/flow")
     {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentNullException.ThrowIfNull(basePath);
         var apiGroup = endpoints.MapNetApiFlowDashboardApi(basePath);
 
         var fileProvider = DashboardEmbeddedFiles.CreateFileProvider();
