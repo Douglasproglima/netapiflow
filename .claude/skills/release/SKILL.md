@@ -92,6 +92,9 @@ em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
     `PublicAPI.Unshipped.txt` **na tag** (`git show v<versao>:src/<Pacote>/PublicAPI.Unshipped.txt`), deixando no `Unshipped` só o
     que entrou no `develop` depois do corte. Uma linha `*REMOVED*` tira a linha dela do `Shipped` e some. O registro de guardas
     não tem passo no release.
+    **No mesmo PR, apagar todo `CompatibilitySuppressions.xml` do repositório (D-278),** hoje só o de `src/NetApiFlow.Mcp/`. Com a
+    baseline na `0.6.0`, em que as tools do MCP já são `internal`, a supressão é desnecessária, e o `pack` falha com "Supressões
+    desnecessárias encontradas", que é erro e não aviso (medido pela auditoria).
 
 Nunca criar a tag nem publicar sem confirmação explícita de quem pediu, mesmo que os passos
 anteriores já tenham sido aprovados.

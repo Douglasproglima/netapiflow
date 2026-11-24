@@ -91,6 +91,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 68 | O essencial de acessibilidade por teclado | **Planejada, `0.6.0`, depois da Fase 57** (2026-11-20) | D-236, B13. Foco visível dos botões, a gaveta "Testar um endpoint" como diálogo, e o foco que cai no `body`. Plano em `fase-68-acessibilidade.md`. |
 | 69 | A suíte no runtime .NET 11, e o README sobre o `net8.0` e o `net11.0` | **Entregue em `develop` (#451); `0.6.0`; o `release.yml` só se exercita na tag** (2026-11-21) | D-250, item 16 do roadmap e ADR-0025. A suíte passa a rodar também no runtime .NET 11 contra a build de `net10.0` (só no `ubuntu-latest`), com um guarda que prova no log que rodou no 11, e o README e o CHANGELOG anunciam a saída do `net8.0` em 10/05/2027. Plano em `fase-69-runtime-net11.md`. |
 | 70 | A rede contra regressão | **Entregue em `develop` (#422, #432, #440, #443 e #446); `0.6.0`; decisão do dono; o `release.yml` só se exercita na tag** (2026-11-21) | D-253, R-35. Quatro regressões desta rodada passaram por CI verde: o Quick start da #409, a demo da #416, o piso do EF da `0.5.1` e as opções da Fase 47. A fase põe isso em passos de CI que ficam vermelhos: um job que instala o pacote num app novo e cola o Quick start do README na ordem, o snapshot dos `.nuspec`, a demo construída aberta num navegador, a linha de base da API pública, um registro de guardas que falha se um teste listado sumir e o mesmo roteiro rodado contra o pacote publicado anterior, com uma lista de diferenças esperadas. A regra dos consumidores do contrato já está escrita. Plano em `fase-70-rede-contra-regressao.md`. |
+| 71 | As tools do NetApiFlow só no endpoint do NetApiFlow | **Planejada, `0.6.0`, segurança (D-232), depois da Fase 67 e antes da 58** (2026-11-24) | D-278, S9, R-36. Um app que hospeda o próprio MCP serve as tools do `NetApiFlow.Mcp` e as traces no `/mcp` dele, sem a autorização do `/flow/mcp`. Reproduzido pela auditoria na `0.5.3` e na PR. Plano em `fase-71-tools-do-mcp-so-no-endpoint-do-netapiflow.md`. |
 
 `0.3.0` publicada (D-120, MINOR por causa do `OpenApiDocumentPath` da Fase 29,
 `FlowStatus.Cancelled`/`Timeout` da Fase 27 e `IDeployAnnotationStore` da Fase 28). Fases 8 a 30
@@ -185,6 +186,7 @@ nenhum pacote.
 | 7 | 57, 55 | A visão ao vivo (depois da 53.2) e a identidade da trace (depois da 53.1) |
 | 8 | 64, 65, 66 | Transação nos storages, nunca derrubar e nunca atrasar, e o registro idempotente. Todas depois da 55 |
 | 9 | 67 | A API pública com os nomes certos, antes do README |
+| 9a | 71 | **Segurança:** as tools do MCP do NetApiFlow não aparecem no endpoint MCP do app (D-278). Depois da 67, que mexe no mesmo código do MCP, e antes da 58 |
 | 10 | 58 | Integrações (Npgsql 10, SqlClient, o Runner, o MediatR) e os pacotes na versão exata |
 | 11 | 68, 60 | Acessibilidade e o acabamento do painel, da API e dos samples |
 | 12 | 59 | O README e os textos, **por último**, com a performance medida por último |
