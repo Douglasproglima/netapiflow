@@ -45,6 +45,16 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A P
 4. **O SDK do MCP aceita tool `internal`?** Com o `ModelContextProtocol.AspNetCore` que o pacote usa, o `tools/list` e o
    `tools/call` funcionam com as três tools como `internal`, descobertas pelo atributo? A saída real, nos dois TFMs.
 
+## Resultado da 67.0 e as decisões (D-277, 24/11/2026)
+
+A Executora mediu, sem código nem commit, e a Planejadora leu o relatório (não repetiu a sonda). A auditoria conferiu as três coisas do item 1.
+
+- **O nome é `Flow`, sem colisão.** Um `webapi` novo, em `net8.0` e `net10.0`, com os `using` implícitos e os de EF Core, MediatR, Serilog e OpenTelemetry, compila `Flow.Step(...)` sem CS0104. Uma varredura por reflexão em todos os tipos públicos do app e dos frameworks `Microsoft.NETCore.App` e `Microsoft.AspNetCore.App` inteiros só achou o `Flow` da própria sonda, e nenhum namespace terminado em `Flow`. O CA1724 dispara para a classe `NetApiFlow` de hoje (controle positivo) e não para `Flow`. O Início rápido colado compila com 0 avisos em `net10.0`. **Não medido:** bibliotecas de terceiros que definam um tipo `Flow`. O risco que fica, e que a auditoria aceita, é um tipo do próprio app chamado `Flow` num namespace que o arquivo também importa (CS0104), que se resolve com um alias e acontece com qualquer nome curto.
+- **A validação de pacote** passa nos 9 pacotes contra a `0.5.2` e contra a `0.5.3`, com controle positivo (tornar `AddNetApiFlowMediatR` `internal` dá CP0002). A baseline é a **última publicada**, lida de `tests/real-package/previous-published-version.txt` pelo MSBuild: uma fonte só, que o passo 13 do `/release` já atualiza. Se ler o arquivo no MSBuild não funcionar, uma propriedade fixa em `0.5.3` e uma linha no passo 13.
+- **As tools do MCP viram `internal`.** O SDK (`ModelContextProtocol.AspNetCore` 2.3.1, `WithToolsFromAssembly`) aceita: o `tools/list` e o `tools/call` funcionam em `net8.0` e `net10.0`, e a suíte do MCP passa, 86 de 86. Com `CompatibilitySuppressions.xml`, as linhas `*REMOVED*` no `PublicAPI.Unshipped.txt` (`GetTraceTool`, `ListRecentTracesTool`, `GetComponentStatsTool` e `TraceLookupResult`) e `### Changed` no CHANGELOG.
+- **Os pontos de entrada,** pela lista da Executora: `ThrowIfNull` e `ThrowIfNullOrEmpty` nos de configuração (`Add*`, `Map*`, `Use*`, `WithNetApiFlowTracking`, `DecorateFlowTracked`, `TrackFlowByConvention`, `GetRecentTrace`, o construtor do `FlowDbCommandInterceptor`, a `connection string` dos storages, e `IncludePaths` e `ExcludePaths` com array nulo), que lançam na partida com mensagem acionável. `FlowAssertionException(message)` fica sem validação. **`Flow.Step`, `FlowStep.Tag` e `FlowStep.MarkError` não lançam**, porque rodam no código do usuário em produção (a regra "nunca derrubar" do `tracing.md`): um argumento nulo vira uma etapa não rastreada, com o aviso de no máximo uma vez a cada 30 segundos que já existe, uma tag com chave ou valor nulo é ignorada, e `MarkError(null)` não faz nada.
+- **`Tag` com enum.** O B8d diz que um enum não compila, e as quatro sobrecargas do plano (`int`, `long`, `double`, `bool`) não o resolvem, porque um enum não converte sozinho. Entra `Tag<TEnum>(string key, TEnum value) where TEnum : struct, Enum`, que grava o nome do membro. `Tag(string, object)` fica de fora, porque aceitaria um objeto inteiro e iria contra a regra de não capturar dado sensível. O `AotCoreVerification` fica com zero aviso: se `Enum.ToString` gerar aviso, usa-se `Enum.GetName<TEnum>`.
+
 ## Tarefa 67.1: os nomes novos, com o antigo encaminhando (B8)
 
 - A classe `Flow`, com os mesmos membros. `NetApiFlow.NetApiFlow` fica `[Obsolete("Use NetApiFlow.Flow.")]` e **delega** a ela.
@@ -52,8 +62,8 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A P
 - `WithNetApiFlowTracking<TBuilder>` genérica sobre `IEndpointConventionBuilder`, simétrica à `WithoutNetApiFlowTracking` da
   Fase 53. As duas sobrecargas de hoje ficam `[Obsolete]` e delegam, ou deixam de existir se a genérica as cobre sem quebra de
   resolução de sobrecarga (a Executora mede).
-- Sobrecargas de `Tag` para `int`, `long`, `double` e `bool`.
-- **O README e os samples passam a usar os nomes novos.** O README diz uma frase sobre os antigos (`[Obsolete]`, e até quando).
+- Sobrecargas de `Tag` para `int`, `long`, `double` e `bool`, e a genérica `Tag<TEnum>(string key, TEnum value) where TEnum : struct, Enum`, que grava o nome do membro (D-277).
+- **O README e os samples passam a usar os nomes novos.** O README diz uma frase sobre os antigos (`[Obsolete]`, e até quando), e outra dizendo que, se uma biblioteca importada também define `Flow`, o app usa `NetApiFlow.Flow` ou um alias.
 
 ## Tarefa 67.2: os pequenos (B9)
 
@@ -65,7 +75,7 @@ comum importa. Se colidir, a Executora para e a Planejadora escolhe outro. **A P
     validação de pacote não acusa;
   - **o SDK aceita `internal`:** viram `internal`, com `CompatibilitySuppressions.xml` explícito e `### Changed` no CHANGELOG.
 - O `serverInfo.name` do MCP passa a ser `"NetApiFlow"`.
-- `EnablePackageValidation` com baseline `0.5.2`, e `IsAotCompatible` no núcleo (liga com a Tarefa 50.12).
+- `EnablePackageValidation` com a baseline lida de `tests/real-package/previous-published-version.txt`, a última versão publicada (D-277, no lugar da `0.5.2`), e `IsAotCompatible` no núcleo (liga com a Tarefa 50.12).
 
 ## Tarefa 67.3: contrato, testes e CHANGELOG
 
