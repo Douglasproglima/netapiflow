@@ -17,4 +17,12 @@ internal sealed class CompositeEndpointConventionBuilder(params IEndpointConvent
             builder.Add(convention);
         }
     }
+
+    public void Finally(Action<EndpointBuilder> finallyConvention)
+    {
+        foreach (var builder in builders)
+        {
+            builder.Finally(finallyConvention);
+        }
+    }
 }
