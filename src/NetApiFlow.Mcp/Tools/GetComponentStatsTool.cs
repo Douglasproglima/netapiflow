@@ -5,7 +5,7 @@ namespace NetApiFlow.Mcp.Tools;
 
 /// <summary>MCP tool getting aggregated component statistics, mirroring <c>GET /flow/api/metrics/components</c>.</summary>
 [McpServerToolType]
-public static class GetComponentStatsTool
+internal static class GetComponentStatsTool
 {
     /// <summary>Gets aggregated statistics per component/operation pair.</summary>
     /// <param name="from">Only include spans from traces started at or after this UTC timestamp.</param>
@@ -16,9 +16,9 @@ public static class GetComponentStatsTool
     [McpServerTool(Name = "get_component_stats", ReadOnly = true)]
     [Description("Gets aggregated NetApiFlow statistics per component/operation pair, ordered by execution count.")]
     public static async Task<IReadOnlyList<ComponentStat>> GetComponentStats(
+        ITraceStore store,
         [Description("Only include spans from traces started at or after this UTC timestamp.")] DateTime? from = null,
         [Description("Only include spans from traces started at or before this UTC timestamp.")] DateTime? to = null,
-        ITraceStore store = null!,
         CancellationToken cancellationToken = default)
     {
         var stats = await store.GetComponentStatsAsync(new StatsQuery { From = from, To = to }, cancellationToken);

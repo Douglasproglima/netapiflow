@@ -6,7 +6,7 @@ namespace NetApiFlow.Mcp.Tools;
 
 /// <summary>MCP tool listing recent traces, mirroring <c>GET /flow/api/traces</c>.</summary>
 [McpServerToolType]
-public static class ListRecentTracesTool
+internal static class ListRecentTracesTool
 {
     /// <summary>Lists recent traces, most recent first, with optional filters.</summary>
     /// <param name="status">Filters by trace status: <c>Running</c>, <c>Success</c> or <c>Error</c>.</param>
@@ -20,11 +20,11 @@ public static class ListRecentTracesTool
     [McpServerTool(Name = "list_recent_traces", ReadOnly = true)]
     [Description("Lists recent NetApiFlow traces, most recent first, with optional filters.")]
     public static async Task<IReadOnlyList<FlowTraceSummary>> ListRecentTraces(
+        ITraceStore store,
         [Description("Filters by trace status: Running, Success or Error.")] string? status = null,
         [Description("Filters by HTTP method, e.g. GET.")] string? method = null,
         [Description("Filters by route template, e.g. /api/orders/{id}.")] string? route = null,
         [Description("Maximum number of traces to return. Between 1 and 200, default 50.")] int? limit = null,
-        ITraceStore store = null!,
         CancellationToken cancellationToken = default)
     {
         FlowStatus? parsedStatus = null;

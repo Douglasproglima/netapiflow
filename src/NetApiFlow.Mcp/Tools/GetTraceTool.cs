@@ -5,7 +5,7 @@ namespace NetApiFlow.Mcp.Tools;
 
 /// <summary>MCP tool getting a single trace by id, mirroring <c>GET /flow/api/traces/{traceId}</c>.</summary>
 [McpServerToolType]
-public static class GetTraceTool
+internal static class GetTraceTool
 {
     /// <summary>Gets a single trace with its spans by id.</summary>
     /// <param name="traceId">The trace id.</param>
@@ -16,7 +16,7 @@ public static class GetTraceTool
     [Description("Gets a single NetApiFlow trace with its spans by id.")]
     public static async Task<TraceLookupResult> GetTrace(
         [Description("The trace id.")] string traceId,
-        ITraceStore store = null!,
+        ITraceStore store,
         CancellationToken cancellationToken = default)
     {
         var detail = await store.GetAsync(traceId, cancellationToken);
@@ -28,7 +28,7 @@ public static class GetTraceTool
 }
 
 /// <summary>Result of <see cref="GetTraceTool.GetTrace"/>.</summary>
-public sealed record TraceLookupResult
+internal sealed record TraceLookupResult
 {
     /// <summary>Whether a matching trace was found.</summary>
     public required bool Found { get; init; }
