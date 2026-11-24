@@ -83,7 +83,6 @@ public sealed class NetApiFlowOptions
     /// </summary>
     public NetApiFlowOptions IncludePaths(params string[] patterns)
     {
-        ArgumentNullException.ThrowIfNull(patterns);
         _includePatterns.AddRange(patterns);
         return this;
     }
@@ -96,7 +95,6 @@ public sealed class NetApiFlowOptions
     /// </summary>
     public NetApiFlowOptions ExcludePaths(params string[] patterns)
     {
-        ArgumentNullException.ThrowIfNull(patterns);
         _excludePatterns.AddRange(patterns);
         return this;
     }

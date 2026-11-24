@@ -25,7 +25,6 @@ public static class NetApiFlowServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddNetApiFlow(this IServiceCollection services, Action<NetApiFlowOptions>? configure = null)
     {
-        ArgumentNullException.ThrowIfNull(services);
 
         if (!services.Any(descriptor => descriptor.ServiceType == typeof(NetApiFlowMarkerService)))
         {

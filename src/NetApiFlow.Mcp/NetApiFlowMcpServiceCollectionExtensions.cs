@@ -13,11 +13,7 @@ public static class NetApiFlowMcpServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlowMcp(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        services.AddMcpServer(options => options.ServerInfo ??= new Implementation
-        {
-            Name = ServerName,
-            Version = typeof(NetApiFlowMcpServiceCollectionExtensions).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
-        })
+        services.AddMcpServer()
             .WithHttpTransport()
             .WithToolsFromAssembly(Assembly.GetExecutingAssembly());
 

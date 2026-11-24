@@ -19,7 +19,6 @@ public static class NetApiFlowEndpointFilterExtensions
     public static TBuilder WithNetApiFlowTracking<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder
     {
-        ArgumentNullException.ThrowIfNull(builder);
         return builder.AddEndpointFilter<TBuilder, FlowEndpointFilter>();
     }
 
