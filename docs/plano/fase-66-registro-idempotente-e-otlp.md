@@ -55,6 +55,19 @@ faz hoje. **O README diz quando usar cada forma**: a extensão nova para quem **
 - `README.md` e `README.pt-BR.md`: quando usar cada forma, e que as chamadas repetidas são seguras.
 - `CHANGELOG.md`, em inglês: `### Fixed` (as chamadas repetidas), `### Added` (a extensão).
 
+## Resultado da fase (PR #473, 24/11/2026)
+
+Entregue em `develop` (`be11734`, head `4695067`) e fechada pela auditoria.
+
+- **B6a:** `AddNetApiFlow` aplica o `configure` de cada chamada, na ordem. Os serviços seguem registrados uma vez, atrás do marcador que já existia.
+- **B6b:** `AddNetApiFlowDashboard` usa `TryAddSingleton<SseBroadcaster>` e `TryAddEnumerable` para o `IFlowEventListener`.
+- **B6c:** `AddNetApiFlowMediatR` usa `TryAddEnumerable` para o comportamento genérico aberto. Uma segunda chamada de `AddNetApiFlowOtlpExport` não acrescenta um segundo exportador, e cada chamada aplica o seu `configure` a um único `NetApiFlowOtlpExportOptions`. O `IncludeHttpClientSource` passou a ser lido quando o provider é montado (`IDeferredTracerProviderBuilder.Configure`). Para uma chamada só, o resultado é o de antes.
+- **B7:** a extensão pública `NetApiFlowTracerProviderBuilderExtensions.AddNetApiFlowSource(this TracerProviderBuilder)` só faz `AddSource("NetApiFlow")`. É a única API pública acrescentada, e está em `PublicAPI.Unshipped.txt` e no `contratos.md`. O `AddNetApiFlowOtlpExport` não mudou o que exporta, e o README avisa, em negrito e nos dois idiomas, que num app com OpenTelemetry próprio ele manda todas as fontes do app para o endpoint do NetApiFlow.
+- **Vistos falhando antes (corpo da PR e logs do CI):** a run 44983812709 (B6a, B6b e B6c do MediatR, 3 falhas por TFM) e a run 44984088082 (B6c do OTLP, 1 por TFM). O B7 nasceu verde, porque a API é nova, então a prova foi por mutação: a run 44984788820 (a extensão com um exportador a mais) e a run 44985080165 (com a fonte `System.Net.Http` a mais, que derrubou também o `IncludeHttpClientSourceTests`). O guarda caiu nas duas. O comportamento documentado que fica, `AddNetApiFlowOtlpExport_OnAnAppWithItsOwnTracing_ExportsTheSourcesOfTheAppToo`, é verde antes e depois e não tem linha no `guards.json`, porque não é defeito corrigido.
+- **O registro de guardas** ganhou cinco linhas: `B6a-add-netapiflow-twice`, `B6b-dashboard-twice`, `B6c-mediatr-twice`, `B6c-otlp-export-twice` e `B7-netapiflow-source-only`. Nenhum teste existente mudou.
+- **Com o pacote real,** por relato da auditoria: duas chamadas de exportação mandavam cada etapa duas vezes na `0.5.3`, e na PR saem iguais a uma chamada, uma chamada única dá o mesmo que no `develop`, e com `AddNetApiFlowSource` só o exportador do app recebe os dados. O revisor independente levantou que um serviço registrado com chave quebraria o `AddNetApiFlowOtlpExport` no .NET 8, e a auditoria testou nos runtimes 8.0.34 e 10.0.15: não quebra, e não é achado.
+- **README:** as chamadas repetidas são seguras, e o `using NetApiFlow.OpenTelemetry;` que faltava no bloco do OTLP entrou, nos dois idiomas. A Executora relata os blocos colados na ordem do leitor em dois apps novos, com 0 avisos e 0 erros.
+
 ## Fora de escopo
 
 - Mudar o nome ou o comportamento do `AddNetApiFlowOtlpExport`.

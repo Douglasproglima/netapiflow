@@ -273,6 +273,11 @@ public static class NetApiFlowEndpointConventionExtensions
 (registra o interceptor; ainda precisa de `optionsBuilder.AddInterceptors(...)` no `DbContext`,
 porque o EF Core não tem registro global de interceptor). Formalizado na revisão da Fase 2.
 
+**Chamadas repetidas (Fase 66, D-276).** `AddNetApiFlow`, `AddNetApiFlowDashboard`, `AddNetApiFlowMediatR` e
+`AddNetApiFlowOtlpExport` são seguros de chamar mais de uma vez. O `configure` de cada chamada vale, na ordem das chamadas, sobre
+um único objeto de opções, e nada é registrado duas vezes: um listener, um exportador, um step por requisição. Uma única chamada
+dá o mesmo resultado de antes.
+
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
 
@@ -403,6 +408,11 @@ public sealed class NetApiFlowOtlpExportOptions
     public bool IncludeHttpClientSource { get; set; }
     public Action<OtlpExporterOptions>? ConfigureOtlpExporter { get; set; }
 }
+
+public static class NetApiFlowTracerProviderBuilderExtensions
+{
+    public static TracerProviderBuilder AddNetApiFlowSource(this TracerProviderBuilder builder);
+}
 ```
 
 `AddNetApiFlowOtlpExport` registra o SDK do OpenTelemetry (`AddOpenTelemetry().WithTracing(...)`)
@@ -410,6 +420,12 @@ observando a fonte `"NetApiFlow"` (a mesma `ActivitySource` do núcleo, ADR-0002
 `IncludeHttpClientSource` for `true`, também `"System.Net.Http"` (ADR-0012), antes de
 `AddOtlpExporter`. Não lê nem reescreve `FlowSpan`/`ITraceStore`: exporta a `Activity` nativa
 diretamente, sem depender do pipeline do dashboard. ADR-0016. Formalizado na revisão da Fase 13.
+
+`AddNetApiFlowSource` só faz `AddSource("NetApiFlow")`: nenhum exportador e nenhuma outra fonte. É a forma para quem **já**
+configura o OpenTelemetry, e os spans do NetApiFlow vão só para os exportadores do app (Fase 66, B7, D-276).
+`AddNetApiFlowOtlpExport` não mudou o que exporta: num app com OpenTelemetry próprio, ele manda **todas** as fontes do app para o
+endpoint do NetApiFlow, e o README avisa disso. Ele usa `AddNetApiFlowSource` para a fonte `"NetApiFlow"`, e
+`IncludeHttpClientSource` passa a ser lido quando o provider é montado, não na chamada.
 
 ### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
 
