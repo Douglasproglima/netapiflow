@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Server;
 using NetApiFlow.Mcp.Endpoints;
 
@@ -30,7 +31,7 @@ internal sealed record McpAppSetup
 {
     public string Environment { get; init; } = Environments.Development;
 
-    public bool Stateless { get; init; }
+    public HttpServerSessionMode SessionMode { get; init; } = HttpServerSessionMode.Stateless;
 
     public bool PerSessionExecutionContext { get; init; }
 
@@ -84,7 +85,7 @@ internal sealed class McpAppHost : IAsyncDisposable
                     var mcp = services.AddMcpServer()
                         .WithHttpTransport(options =>
                         {
-                            options.Stateless = setup.Stateless;
+                            options.SessionMode = setup.SessionMode;
                             options.PerSessionExecutionContext = setup.PerSessionExecutionContext;
                             if (setup.ConfigureSessionOptions is not null)
                             {

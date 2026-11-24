@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Shouldly;
 
 namespace NetApiFlow.Mcp.Tests;
@@ -14,22 +15,24 @@ public class McpToolScopeTests
     private const int InvalidParams = -32602;
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AppEndpoint_ListsTheToolsOfTheAppAndNoneOfNetApiFlow(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task AppEndpoint_ListsTheToolsOfTheAppAndNoneOfNetApiFlow(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode });
         var session = (await host.InitializeAsync("/mcp")).SessionId;
 
         (await host.ListToolsAsync("/mcp", session)).ToolNames.ShouldBe([AppTools.Name]);
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AppEndpoint_CallingAToolOfNetApiFlow_AnswersUnknownTool(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task AppEndpoint_CallingAToolOfNetApiFlow_AnswersUnknownTool(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode });
         var session = (await host.InitializeAsync("/mcp")).SessionId;
 
         var answer = await host.CallToolAsync("/mcp", session, "list_recent_traces");
@@ -39,24 +42,26 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AppEndpoint_StillCallsItsOwnTool(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task AppEndpoint_StillCallsItsOwnTool(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode });
         var session = (await host.InitializeAsync("/mcp")).SessionId;
 
         (await host.CallToolAsync("/mcp", session, AppTools.Name)).FirstText.ShouldBe(AppTools.Answer);
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AppEndpoint_KeepsTheSessionOptionsTheAppConfigured(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task AppEndpoint_KeepsTheSessionOptionsTheAppConfigured(HttpServerSessionMode mode)
     {
         await using var host = await McpAppHost.StartAsync(new McpAppSetup
         {
-            Stateless = stateless,
+            SessionMode = mode,
             ConfigureSessionOptions = (_, options, _) =>
             {
                 options.ServerInstructions = "instructions of the app";
@@ -68,11 +73,12 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task NetApiFlowEndpoint_ListsOnlyItsThreeToolsAndStillAnswersThem(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task NetApiFlowEndpoint_ListsOnlyItsThreeToolsAndStillAnswersThem(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode });
         var session = (await host.InitializeAsync("/flow/mcp")).SessionId;
 
         (await host.ListToolsAsync("/flow/mcp", session)).ToolNames.ShouldBe(McpAppHost.NetApiFlowTools);
@@ -80,11 +86,12 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task NetApiFlowEndpoint_CallingTheToolOfTheApp_AnswersUnknownTool(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task NetApiFlowEndpoint_CallingTheToolOfTheApp_AnswersUnknownTool(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode });
         var session = (await host.InitializeAsync("/flow/mcp")).SessionId;
 
         var answer = await host.CallToolAsync("/flow/mcp", session, AppTools.Name);
@@ -94,13 +101,15 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false, "/interno/mcp", "")]
-    [InlineData(true, "/interno/mcp", "")]
-    [InlineData(false, null, "/api")]
-    [InlineData(true, null, "/api")]
-    public async Task NetApiFlowEndpoint_UnderACustomBasePathOrAPathBase_ServesItsToolsAndTheAppEndpointDoesNot(bool stateless, string? basePath, string pathBase)
+    [InlineData(HttpServerSessionMode.Stateful, "/interno/mcp", "")]
+    [InlineData(HttpServerSessionMode.Stateful, null, "/api")]
+    [InlineData(HttpServerSessionMode.Stateless, "/interno/mcp", "")]
+    [InlineData(HttpServerSessionMode.Stateless, null, "/api")]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients, "/interno/mcp", "")]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients, null, "/api")]
+    public async Task NetApiFlowEndpoint_UnderACustomBasePathOrAPathBase_ServesItsToolsAndTheAppEndpointDoesNot(HttpServerSessionMode mode, string? basePath, string pathBase)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless, NetApiFlowBasePath = basePath, PathBase = pathBase });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode, NetApiFlowBasePath = basePath, PathBase = pathBase });
         var netApiFlowPath = basePath ?? "/flow/mcp";
 
         var netApiFlowSession = (await host.InitializeAsync(netApiFlowPath)).SessionId;
@@ -111,13 +120,15 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false, "/flow/mcp-app")]
-    [InlineData(true, "/flow/mcp-app")]
-    [InlineData(false, "/flow/mcpx")]
-    [InlineData(true, "/flow/mcpx")]
-    public async Task AppEndpoint_WhosePathStartsWithTheNetApiFlowPath_GetsNoneOfItsTools(bool stateless, string appPattern)
+    [InlineData(HttpServerSessionMode.Stateful, "/flow/mcp-app")]
+    [InlineData(HttpServerSessionMode.Stateful, "/flow/mcpx")]
+    [InlineData(HttpServerSessionMode.Stateless, "/flow/mcp-app")]
+    [InlineData(HttpServerSessionMode.Stateless, "/flow/mcpx")]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients, "/flow/mcp-app")]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients, "/flow/mcpx")]
+    public async Task AppEndpoint_WhosePathStartsWithTheNetApiFlowPath_GetsNoneOfItsTools(HttpServerSessionMode mode, string appPattern)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless, AppPatterns = [appPattern] });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode, AppPatterns = [appPattern] });
         var session = (await host.InitializeAsync(appPattern)).SessionId;
 
         (await host.ListToolsAsync(appPattern, session)).ToolNames.ShouldBe([AppTools.Name]);
@@ -125,11 +136,12 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task SessionOpenedOnTheNetApiFlowEndpoint_ReusedOnTheAppEndpoint_ReachesNoneOfItsTools(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task SessionOpenedOnTheNetApiFlowEndpoint_ReusedOnTheAppEndpoint_ReachesNoneOfItsTools(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode });
         var session = (await host.InitializeAsync("/flow/mcp")).SessionId;
 
         (await host.ListToolsAsync("/mcp", session)).ToolNames.ShouldBe([AppTools.Name]);
@@ -137,21 +149,24 @@ public class McpToolScopeTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task SessionOpenedOnTheAppEndpoint_ReusedOnTheNetApiFlowEndpoint_FollowsItsAccessRules(bool stateless)
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task SessionOpenedOnTheAppEndpoint_ReusedOnTheNetApiFlowEndpoint_FollowsItsAccessRules(HttpServerSessionMode mode)
     {
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless, Environment = Environments.Production });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode, Environment = Environments.Production });
         var session = (await host.InitializeAsync("/mcp")).SessionId;
 
         (await host.ListToolsAsync("/flow/mcp", session)).Status.ShouldBe(404);
     }
 
-    [Fact]
-    public async Task WithPerSessionExecutionContext_TheToolsOfNetApiFlowAreServedOnNoEndpointAndOneWarningSaysWhy()
+    [Theory]
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task WithPerSessionExecutionContextAndSessions_TheToolsOfNetApiFlowAreServedOnNoEndpointAndOneWarningSaysWhy(HttpServerSessionMode mode)
     {
         var logs = new WarningLogs();
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { PerSessionExecutionContext = true, Logs = logs });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode, PerSessionExecutionContext = true, Logs = logs });
 
         var appSession = (await host.InitializeAsync("/mcp")).SessionId;
         var netApiFlowInitialize = await host.InitializeAsync("/flow/mcp");
@@ -162,13 +177,25 @@ public class McpToolScopeTests
         logs.Warnings.Count(warning => warning.Contains("PerSessionExecutionContext", StringComparison.Ordinal)).ShouldBe(1);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task WithoutPerSessionExecutionContext_NoWarningAboutItIsLogged(bool stateless)
+    [Fact]
+    public async Task WithPerSessionExecutionContextInStatelessMode_TheNetApiFlowEndpointStillServesItsToolsWithNoWarning()
     {
         var logs = new WarningLogs();
-        await using var host = await McpAppHost.StartAsync(new McpAppSetup { Stateless = stateless, Logs = logs });
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = HttpServerSessionMode.Stateless, PerSessionExecutionContext = true, Logs = logs });
+
+        (await host.ListToolsAsync("/flow/mcp", null)).ToolNames.ShouldBe(McpAppHost.NetApiFlowTools);
+        (await host.ListToolsAsync("/mcp", null)).ToolNames.ShouldBe([AppTools.Name]);
+        logs.Warnings.ShouldNotContain(warning => warning.Contains("PerSessionExecutionContext", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(HttpServerSessionMode.Stateful)]
+    [InlineData(HttpServerSessionMode.Stateless)]
+    [InlineData(HttpServerSessionMode.StatefulForInitializeClients)]
+    public async Task WithoutPerSessionExecutionContext_NoWarningAboutItIsLogged(HttpServerSessionMode mode)
+    {
+        var logs = new WarningLogs();
+        await using var host = await McpAppHost.StartAsync(new McpAppSetup { SessionMode = mode, Logs = logs });
 
         await host.InitializeAsync("/flow/mcp");
 
