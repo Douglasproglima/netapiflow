@@ -21,6 +21,9 @@ public static class NetApiFlowSqlServerServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlowSqlServerStorage(
         this IServiceCollection services, string connectionString, Action<SqlServerStorageOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ThrowIfMissing(connectionString);
+
         var options = new SqlServerStorageOptions();
         configure?.Invoke(options);
 

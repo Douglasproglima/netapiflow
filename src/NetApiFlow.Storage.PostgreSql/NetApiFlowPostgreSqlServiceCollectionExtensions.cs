@@ -21,6 +21,9 @@ public static class NetApiFlowPostgreSqlServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlowPostgreSqlStorage(
         this IServiceCollection services, string connectionString, Action<PostgreSqlStorageOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ThrowIfMissing(connectionString);
+
         var options = new PostgreSqlStorageOptions();
         configure?.Invoke(options);
 
