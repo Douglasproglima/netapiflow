@@ -11,7 +11,6 @@ internal static class McpAccessGate
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
-        NetApiFlowMcpRequest.MarkCurrent();
         SecurityHeaders.Apply(httpContext.Response);
         var refusal = RequestOriginGuard.Refusal(httpContext);
         if (refusal is not null)
