@@ -8,13 +8,20 @@ namespace NetApiFlow;
 /// <summary>Entry point for manually marking a tracked step: <c>Flow.Step("OrderRepository", "Find")</c>.</summary>
 public static class Flow
 {
-    /// <summary>Marks the start of a tracked step. Dispose the returned <see cref="FlowStep"/> to close it.</summary>
+    /// <summary>Marks the start of a tracked step. Dispose the returned <see cref="FlowStep"/> to close it.
+    /// A null <paramref name="component"/> or <paramref name="operation"/> returns a step that records nothing, and a warning is logged.</summary>
     /// <param name="component">The component the step belongs to, such as a class name.</param>
     /// <param name="operation">The operation the step runs, such as a method name.</param>
     /// <param name="type">The kind of component, shown in the graph.</param>
     /// <returns>The open step.</returns>
     public static FlowStep Step(string component, string operation, ComponentType type = ComponentType.Custom)
     {
+        if (component is null || operation is null)
+        {
+            NullStepArgumentLog.StepIgnored();
+            return new FlowStep(null);
+        }
+
         if (!FlowActivitySource.Source.HasListeners())
         {
             return new FlowStep(null);

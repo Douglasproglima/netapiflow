@@ -29,6 +29,7 @@ internal sealed partial class FlowActivityListener : IDisposable
         _recorder = recorder;
         _options = options;
         _logger = loggerFactory.CreateLogger<FlowActivityListener>();
+        NullStepArgumentLog.Attach(_logger);
 
         _listener = new ActivityListener
         {
@@ -46,6 +47,7 @@ internal sealed partial class FlowActivityListener : IDisposable
 
     public void Dispose()
     {
+        NullStepArgumentLog.Detach(_logger);
         _listener.Dispose();
 #if NET8_0
         _httpClientActivityTagBackfill.Dispose();

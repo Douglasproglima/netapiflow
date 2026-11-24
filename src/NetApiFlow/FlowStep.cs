@@ -28,12 +28,27 @@ public readonly struct FlowStep : IDisposable
     /// being tracked when it was opened. Every member is then a no-op.</summary>
     internal bool IsNoOp => _activity is null;
 
-    /// <summary>Attaches an explicit tag to the step.</summary>
-    public void Tag(string key, string value) => _activity?.SetTag(key, value);
+    /// <summary>Attaches an explicit tag to the step. A null key or value is ignored, and a warning is logged.</summary>
+    public void Tag(string key, string value)
+    {
+        if (key is null || value is null)
+        {
+            NullStepArgumentLog.TagIgnored();
+            return;
+        }
 
-    /// <summary>Marks the step as failed because of <paramref name="exception"/>.</summary>
+        _activity?.SetTag(key, value);
+    }
+
+    /// <summary>Marks the step as failed because of <paramref name="exception"/>. A null exception is ignored, and a warning is logged.</summary>
     public void MarkError(Exception exception)
     {
+        if (exception is null)
+        {
+            NullStepArgumentLog.ErrorIgnored();
+            return;
+        }
+
         if (_activity is null)
         {
             return;
