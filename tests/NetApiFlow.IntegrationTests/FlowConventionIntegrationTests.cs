@@ -286,7 +286,7 @@ public sealed class FlowConventionIntegrationTests
             }
 
             var trace = _completed.ElementAt(before);
-            return NetApiFlow.GetRecentTrace(Host.Services, trace.TraceId)!;
+            return Flow.GetRecentTrace(Host.Services, trace.TraceId)!;
         }
 
         public async ValueTask DisposeAsync()

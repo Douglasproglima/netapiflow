@@ -1,1 +1,2 @@
 #nullable enable
+static NetApiFlow.Dashboard.Endpoints.NetApiFlowDashboardEndpointRouteBuilderExtensions.MapNetApiFlowDashboard(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! basePath = "/flow") -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!

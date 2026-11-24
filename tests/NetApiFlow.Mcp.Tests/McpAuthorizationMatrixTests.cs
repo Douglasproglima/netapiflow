@@ -51,6 +51,6 @@ public class McpAuthorizationMatrixTests
             matrixCase,
             BasePath,
             services => services.AddNetApiFlowMcp(),
-            endpoints => endpoints.UseNetApiFlowMcp(),
+            endpoints => endpoints.MapNetApiFlowMcp(),
             mapExtra);
 }

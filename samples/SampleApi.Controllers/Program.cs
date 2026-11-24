@@ -67,7 +67,7 @@ app.MapControllers();
 #if NET10_0_OR_GREATER
 app.MapOpenApi();
 #endif
-app.UseNetApiFlowDashboard();
-app.UseNetApiFlowMcp();
+app.MapNetApiFlowDashboard();
+app.MapNetApiFlowMcp();
 
 app.Run();

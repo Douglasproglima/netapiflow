@@ -127,8 +127,8 @@ public class OpenApiInternalRoutesTests
                     {
                         endpoints.MapGet(UserRoute, () => "orders");
                         MapOpenApiDocument(endpoints);
-                        endpoints.UseNetApiFlowDashboard(dashboardBasePath);
-                        endpoints.UseNetApiFlowMcp(mcpBasePath);
+                        endpoints.MapNetApiFlowDashboard(dashboardBasePath);
+                        endpoints.MapNetApiFlowMcp(mcpBasePath);
                     });
                 });
             })

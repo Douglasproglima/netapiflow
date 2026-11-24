@@ -54,7 +54,7 @@ public sealed class SqlInStepController(SqlServerConnectionString connectionStri
     [HttpGet("database-step")]
     public async Task<IActionResult> DatabaseStep()
     {
-        using var step = NetApiFlow.Step("ManualDatabase", "Count", ComponentType.Database);
+        using var step = Flow.Step("ManualDatabase", "Count", ComponentType.Database);
         await using var connection = new SqlConnection(connectionString.Value);
         await connection.OpenAsync();
         await using var command = new SqlCommand("SELECT count(*) FROM Users", connection);
@@ -114,7 +114,7 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
                         endpoints.MapControllers();
                         endpoints.MapGet("/mini/step", async (SqlServerConnectionString connectionString) =>
                         {
-                            using var step = NetApiFlow.Step("MiniEndpoint", "Count");
+                            using var step = Flow.Step("MiniEndpoint", "Count");
                             await using var connection = new SqlConnection(connectionString.Value);
                             await connection.OpenAsync();
                             await using var command = new SqlCommand("SELECT count(*) FROM Users", connection);
@@ -135,7 +135,7 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
         var response = await client.GetAsync(path);
         response.EnsureSuccessStatusCode();
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
-        return NetApiFlow.GetRecentTrace(host.Services, traceId)!.Spans;
+        return Flow.GetRecentTrace(host.Services, traceId)!.Spans;
     }
 
     private static FlowSpan SingleDriverSpan(IReadOnlyList<FlowSpan> spans) =>

@@ -14,7 +14,7 @@ internal sealed class FlowEndpointFilter : IEndpointFilter
 
         var name = EndpointStepName.For(context.HttpContext.GetEndpoint());
 
-        using var step = NetApiFlow.Step(name.Component, name.Operation, ComponentType.Endpoint);
+        using var step = Flow.Step(name.Component, name.Operation, ComponentType.Endpoint);
 
         try
         {

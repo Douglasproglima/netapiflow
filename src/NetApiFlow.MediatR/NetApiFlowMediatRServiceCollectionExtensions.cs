@@ -12,6 +12,7 @@ public static class NetApiFlowMediatRServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddNetApiFlowMediatR(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
         services.TryAddEnumerable(ServiceDescriptor.Transient(typeof(global::MediatR.IPipelineBehavior<,>), typeof(FlowTrackingBehavior<,>)));
         return services;
     }

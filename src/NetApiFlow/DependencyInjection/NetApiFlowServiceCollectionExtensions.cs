@@ -15,7 +15,7 @@ using NetApiFlow.Storage;
 
 namespace NetApiFlow;
 
-/// <summary>Registers NetApiFlow tracing. See <c>UseNetApiFlowDashboard</c> in <c>NetApiFlow.Dashboard</c> for the dashboard UI.</summary>
+/// <summary>Registers NetApiFlow tracing. See <c>MapNetApiFlowDashboard</c> in <c>NetApiFlow.Dashboard</c> for the dashboard UI.</summary>
 public static class NetApiFlowServiceCollectionExtensions
 {
     /// <summary>
@@ -25,6 +25,8 @@ public static class NetApiFlowServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddNetApiFlow(this IServiceCollection services, Action<NetApiFlowOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         if (!services.Any(descriptor => descriptor.ServiceType == typeof(NetApiFlowMarkerService)))
         {
             AddServices(services);

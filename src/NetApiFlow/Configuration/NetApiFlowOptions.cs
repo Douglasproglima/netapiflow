@@ -8,7 +8,7 @@ public sealed class NetApiFlowOptions
 
     /// <summary>
     /// Base path where the dashboard is mounted. Routes under it are never traced, even without
-    /// explicit configuration. Set internally by <c>UseNetApiFlowDashboard</c>. Default: <c>/flow</c>.
+    /// explicit configuration. Set internally by <c>MapNetApiFlowDashboard</c>. Default: <c>/flow</c>.
     /// </summary>
     internal string DashboardBasePath { get; set; } = "/flow";
 
@@ -83,6 +83,7 @@ public sealed class NetApiFlowOptions
     /// </summary>
     public NetApiFlowOptions IncludePaths(params string[] patterns)
     {
+        ArgumentNullException.ThrowIfNull(patterns);
         _includePatterns.AddRange(patterns);
         return this;
     }
@@ -95,6 +96,7 @@ public sealed class NetApiFlowOptions
     /// </summary>
     public NetApiFlowOptions ExcludePaths(params string[] patterns)
     {
+        ArgumentNullException.ThrowIfNull(patterns);
         _excludePatterns.AddRange(patterns);
         return this;
     }

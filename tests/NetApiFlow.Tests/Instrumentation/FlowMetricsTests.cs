@@ -96,7 +96,7 @@ public class FlowMetricsTests
         root.Start();
         var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/orders");
 
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             for (var i = 0; i < 25; i++)
             {

@@ -36,7 +36,7 @@ public class ExistingDatabaseStepTests : IDisposable
     [MemberData(nameof(EveryComponentType))]
     public void Covers_ForAFlowStepOfEachType_IsTrueOnlyForDatabase(ComponentType type, bool expected)
     {
-        using var step = NetApiFlow.Step("Component", "Operation", type);
+        using var step = Flow.Step("Component", "Operation", type);
 
         ExistingDatabaseStep.Covers(Activity.Current).ShouldBe(expected);
     }

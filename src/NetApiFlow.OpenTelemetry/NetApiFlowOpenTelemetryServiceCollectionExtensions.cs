@@ -21,6 +21,7 @@ public static class NetApiFlowOpenTelemetryServiceCollectionExtensions
         this IServiceCollection services,
         Action<NetApiFlowOtlpExportOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
         var registration = services
             .Select(descriptor => descriptor.ImplementationInstance)
             .OfType<NetApiFlowOtlpExportRegistration>()

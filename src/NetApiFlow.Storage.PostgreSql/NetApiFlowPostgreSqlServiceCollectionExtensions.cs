@@ -8,6 +8,9 @@ namespace NetApiFlow.Storage.PostgreSql;
 /// <summary>Registers <see cref="ITraceStore"/> backed by PostgreSQL.</summary>
 public static class NetApiFlowPostgreSqlServiceCollectionExtensions
 {
+    private const string MissingConnectionStringMessage =
+        "NetApiFlow: the PostgreSQL connection string is null or empty. Pass the connection string of the database where NetApiFlow keeps its traces, for example builder.Configuration.GetConnectionString(\"NetApiFlow\").";
+
     private const string LoggerCategory = "NetApiFlow.Storage.PostgreSql";
 
     /// <summary>
@@ -18,6 +21,9 @@ public static class NetApiFlowPostgreSqlServiceCollectionExtensions
     public static IServiceCollection AddNetApiFlowPostgreSqlStorage(
         this IServiceCollection services, string connectionString, Action<PostgreSqlStorageOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ThrowIfMissing(connectionString);
+
         var options = new PostgreSqlStorageOptions();
         configure?.Invoke(options);
 
@@ -31,4 +37,14 @@ public static class NetApiFlowPostgreSqlServiceCollectionExtensions
 
     private static ILogger LoggerFor(IServiceProvider provider) =>
         provider.GetService<ILoggerFactory>()?.CreateLogger(LoggerCategory) ?? NullLogger.Instance;
+
+    private static void ThrowIfMissing(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw connectionString is null
+                ? new ArgumentNullException(nameof(connectionString), MissingConnectionStringMessage)
+                : new ArgumentException(MissingConnectionStringMessage, nameof(connectionString));
+        }
+    }
 }

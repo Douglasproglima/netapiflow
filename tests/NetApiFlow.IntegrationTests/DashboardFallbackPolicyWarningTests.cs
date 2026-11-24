@@ -115,7 +115,7 @@ public class DashboardFallbackPolicyWarningTests
 
         var app = builder.Build();
         app.UseAuthorization();
-        configureDashboard(app.UseNetApiFlowDashboard());
+        configureDashboard(app.MapNetApiFlowDashboard());
         await app.StartAsync();
         return app;
     }
@@ -155,7 +155,7 @@ public class DashboardFallbackPolicyWarningTests
                     {
                         if (configureDashboard is not null)
                         {
-                            configureDashboard(endpoints.UseNetApiFlowDashboard());
+                            configureDashboard(endpoints.MapNetApiFlowDashboard());
                         }
                     });
                 });

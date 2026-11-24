@@ -13,8 +13,8 @@ public static class FlowTrackedServiceCollectionExtensions
     /// lifetime. The proxy is created by a service factory, not by registering the interface
     /// separately, so DI does not create a second instance of the implementation.
     /// </summary>
-    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy, which emits a new type at run time and has no Native AOT equivalent. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
-    public static IServiceCollection AddFlowTracked<TInterface, TImplementation>(
+    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy, which emits a new type at run time and has no Native AOT equivalent. Under Native AOT, mark steps with Flow.Step instead, which publishes without warnings.")]
+    public static IServiceCollection AddFlowTracked<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TInterface, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>(
         this IServiceCollection services,
         ComponentType componentType,
         ServiceLifetime lifetime = ServiceLifetime.Scoped)
@@ -39,13 +39,15 @@ public static class FlowTrackedServiceCollectionExtensions
     /// with a private key, so the container owns and disposes it, and for that reason the
     /// container has to support keyed services.
     /// </summary>
-    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
+    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with Flow.Step instead, which publishes without warnings.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection, so trimming can remove a type that would otherwise be decorated, silently dropping its steps.")]
     public static IServiceCollection DecorateFlowTracked(
         this IServiceCollection services,
         Func<Type, bool> predicate,
         ComponentType componentType = ComponentType.Service)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(predicate);
         DecorateWhere(services, (_, implementationType) => predicate(implementationType), componentType);
         return services;
     }
@@ -100,12 +102,15 @@ public static class FlowTrackedServiceCollectionExtensions
     /// made later is not decorated, and the host logs a warning naming it. A registration made by
     /// factory cannot be decorated, and the host logs a warning naming it too.
     /// </summary>
-    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with NetApiFlow.Step instead, which publishes without warnings.")]
+    [RequiresDynamicCode("The tracking proxy is built with DispatchProxy and closed over implementation types only known at run time, neither of which Native AOT can compile ahead of time. Under Native AOT, mark steps with Flow.Step instead, which publishes without warnings.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection, so trimming can remove a type that would otherwise be decorated, silently dropping its steps.")]
     public static IServiceCollection TrackFlowByConvention(
         this IServiceCollection services,
-        Action<FlowConventionOptions>? configure = null) =>
-        TrackFlowByConventionOf(services, configure, Assembly.GetEntryAssembly());
+        Action<FlowConventionOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        return TrackFlowByConventionOf(services, configure, Assembly.GetEntryAssembly());
+    }
 
     [RequiresDynamicCode("The tracking proxy is built with DispatchProxy at run time.")]
     [RequiresUnreferencedCode("Registered implementation types are matched by reflection.")]

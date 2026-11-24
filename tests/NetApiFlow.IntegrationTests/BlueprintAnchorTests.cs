@@ -39,7 +39,7 @@ public class BlueprintAnchorTests
                         endpoints.MapNetApiFlowDashboardApi();
                         endpoints.MapGet("/orders/{id:int}", async (int id, bool cached) =>
                         {
-                            using (NetApiFlow.Step("OrderCache", "TryGet"))
+                            using (Flow.Step("OrderCache", "TryGet"))
                             {
                                 await Task.Delay(5);
                             }
@@ -49,7 +49,7 @@ public class BlueprintAnchorTests
                                 return "cached";
                             }
 
-                            using (NetApiFlow.Step("OrderRepository", "Find"))
+                            using (Flow.Step("OrderRepository", "Find"))
                             {
                                 await Task.Delay(5);
                             }

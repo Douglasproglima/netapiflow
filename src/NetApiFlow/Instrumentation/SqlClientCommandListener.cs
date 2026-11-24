@@ -133,7 +133,7 @@ internal sealed partial class SqlClientCommandListener
             return;
         }
 
-        var step = NetApiFlow.Step(
+        var step = Flow.Step(
             SqlClientDiagnosticNames.Component,
             SqlCommandDescriber.Describe(command.CommandText),
             ComponentType.Database);

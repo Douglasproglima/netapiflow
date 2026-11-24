@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 
@@ -6,6 +7,9 @@ namespace NetApiFlow.Marking;
 
 internal class FlowInterceptorProxy : DispatchProxy
 {
+    private const string OnlyCreatedFromDynamicCodeEntryPoints =
+        "This proxy only exists when it was created through FlowInterceptorProxy.Create, which requires dynamic code, so a Native AOT caller already got that warning. The wrapped methods have no generic constraint and no reflection requirement.";
+
     private static readonly MethodInfo WrapTaskGenericMethod = typeof(FlowInterceptorProxy)
         .GetMethod(nameof(WrapTaskGeneric), BindingFlags.NonPublic | BindingFlags.Static)!;
 
@@ -18,7 +22,8 @@ internal class FlowInterceptorProxy : DispatchProxy
 
     internal object Target => _target;
 
-    public static TInterface Create<TInterface, TImplementation>(TImplementation target, ComponentType componentType)
+    [RequiresDynamicCode("DispatchProxy emits a new type at run time.")]
+    public static TInterface Create<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TInterface, TImplementation>(TImplementation target, ComponentType componentType)
         where TInterface : class
         where TImplementation : notnull, TInterface
     {
@@ -30,6 +35,8 @@ internal class FlowInterceptorProxy : DispatchProxy
         return (TInterface)proxyObject;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = OnlyCreatedFromDynamicCodeEntryPoints)]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = OnlyCreatedFromDynamicCodeEntryPoints)]
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
@@ -38,7 +45,7 @@ internal class FlowInterceptorProxy : DispatchProxy
         // returns, instead of staying pinned to this step until it completes asynchronously later
         // (which would make unrelated concurrent calls parent themselves under this step by mistake).
         var callerActivity = Activity.Current;
-        var step = NetApiFlow.Step(_component, targetMethod.Name, _componentType);
+        var step = Flow.Step(_component, targetMethod.Name, _componentType);
 
         object? result;
         try

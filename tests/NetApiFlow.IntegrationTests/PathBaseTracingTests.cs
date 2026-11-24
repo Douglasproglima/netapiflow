@@ -358,7 +358,7 @@ public class PathBaseTracingTests
             PathBase = pathBase,
             BeforeRouting = application => application.Use(async (context, next) =>
             {
-                using var step = NetApiFlow.Step("PreRoutingMiddleware", "Run", ComponentType.Service);
+                using var step = Flow.Step("PreRoutingMiddleware", "Run", ComponentType.Service);
                 await next();
             }),
             Map = endpoints => endpoints.MapGet("/orders", () => "ok"),
@@ -384,7 +384,7 @@ public class PathBaseTracingTests
             PathBase = pathBase,
             BeforeRouting = application => application.Use(async (context, next) =>
             {
-                using var step = NetApiFlow.Step("PreRoutingMiddleware", "Run", ComponentType.Service);
+                using var step = Flow.Step("PreRoutingMiddleware", "Run", ComponentType.Service);
                 await next();
             }),
             Map = endpoints => endpoints.MapGet("/excluded", () => "ok").WithoutNetApiFlowTracking(),
@@ -403,7 +403,7 @@ public class PathBaseTracingTests
             Configure = options => options.ExcludePaths("/nothing-matches-this"),
             BeforeRouting = application => application.Use(async (context, next) =>
             {
-                using var step = NetApiFlow.Step("PreRoutingMiddleware", "Run", ComponentType.Service);
+                using var step = Flow.Step("PreRoutingMiddleware", "Run", ComponentType.Service);
                 await next();
             }),
         });

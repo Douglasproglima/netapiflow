@@ -19,7 +19,7 @@ public class UnmatchedRequestLiveVisibilityTests
             Dashboard = true,
             BeforeRouting = builder => builder.Map("/terminal", branch => branch.Run(async context =>
             {
-                using (NetApiFlow.Step("TerminalMiddleware", "Work"))
+                using (Flow.Step("TerminalMiddleware", "Work"))
                 {
                     inside.SetResult();
                     await release.Task;

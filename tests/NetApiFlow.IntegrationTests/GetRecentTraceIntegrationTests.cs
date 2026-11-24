@@ -35,9 +35,9 @@ public class GetRecentTraceIntegrationTests
                     {
                         endpoints.MapGet("/api/orders/{id}", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("OrdersController", "GetOrder", ComponentType.Controller);
-                            using var serviceStep = NetApiFlow.Step("OrderService", "GetAsync", ComponentType.Service);
-                            using (NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Database))
+                            using var controllerStep = Flow.Step("OrdersController", "GetOrder", ComponentType.Controller);
+                            using var serviceStep = Flow.Step("OrderService", "GetAsync", ComponentType.Service);
+                            using (Flow.Step("OrderRepository", "FindAsync", ComponentType.Database))
                             {
                                 await Task.Delay(1);
                             }
@@ -61,7 +61,7 @@ public class GetRecentTraceIntegrationTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
 
-        var trace = NetApiFlow.GetRecentTrace(host.Services, traceId);
+        var trace = Flow.GetRecentTrace(host.Services, traceId);
 
         trace.ShouldNotBeNull();
         trace.Trace.TraceId.ShouldBe(traceId);
@@ -75,7 +75,7 @@ public class GetRecentTraceIntegrationTests
     {
         using var host = CreateHost();
 
-        var trace = NetApiFlow.GetRecentTrace(host.Services, "4bf92f3577b34da6a3ce929d0e0e4736");
+        var trace = Flow.GetRecentTrace(host.Services, "4bf92f3577b34da6a3ce929d0e0e4736");
 
         trace.ShouldBeNull();
     }
@@ -85,7 +85,7 @@ public class GetRecentTraceIntegrationTests
     {
         var services = new ServiceCollection().BuildServiceProvider();
 
-        var trace = NetApiFlow.GetRecentTrace(services, "4bf92f3577b34da6a3ce929d0e0e4736");
+        var trace = Flow.GetRecentTrace(services, "4bf92f3577b34da6a3ce929d0e0e4736");
 
         trace.ShouldBeNull();
     }

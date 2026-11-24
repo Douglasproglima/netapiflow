@@ -42,7 +42,7 @@ public class LogCorrelationIntegrationTests
                     {
                         endpoints.MapGet("/api/warn", (ILoggerFactory loggerFactory) =>
                         {
-                            using var step = NetApiFlow.Step("WarnController", "Warn");
+                            using var step = Flow.Step("WarnController", "Warn");
                             var logger = loggerFactory.CreateLogger("WarnController");
                             logger.Log(LogLevel.Warning, new EventId(0), "something happened", null, (s, e) => s);
                             return Results.Ok();

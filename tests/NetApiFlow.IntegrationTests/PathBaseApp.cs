@@ -123,12 +123,12 @@ internal sealed class PathBaseApp : IAsyncDisposable
                         setup.Map?.Invoke(endpoints);
                         if (setup.Dashboard)
                         {
-                            endpoints.UseNetApiFlowDashboard();
+                            endpoints.MapNetApiFlowDashboard();
                         }
 
                         if (setup.Mcp)
                         {
-                            endpoints.UseNetApiFlowMcp();
+                            endpoints.MapNetApiFlowMcp();
                         }
                     });
                 });

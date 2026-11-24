@@ -21,7 +21,7 @@ namespace NetApiFlow.IntegrationTests;
 /// <summary>
 /// Verifies the Controllers sample produces the full
 /// Controller → Service → Repository → Database flow automatically, with no manual
-/// <c>NetApiFlow.Step(...)</c> call anywhere in the sample's business code.
+/// <c>Flow.Step(...)</c> call anywhere in the sample's business code.
 ///
 /// The sample's own <c>Program.cs</c> targets PostgreSQL via Npgsql, matching the product spec.
 /// This test builds a separate host reusing the sample's Controller/Service/Repository/DbContext

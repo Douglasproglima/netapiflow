@@ -16,7 +16,7 @@ internal sealed class FlowResourceFilter : IAsyncResourceFilter, IOrderedFilter
             ?? context.ActionDescriptor.DisplayName
             ?? "Resource";
 
-        using var step = NetApiFlow.Step("ResourceFilters", operation, ComponentType.Service);
+        using var step = Flow.Step("ResourceFilters", operation, ComponentType.Service);
 
         try
         {

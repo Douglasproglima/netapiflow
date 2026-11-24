@@ -7,7 +7,7 @@ builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
-app.UseNetApiFlowDashboard();
+app.MapNetApiFlowDashboard();
 
 app.MapGet("/plain", () => "plain");
 app.MapGet("/tracked", () => "tracked").WithNetApiFlowTracking();

@@ -392,7 +392,8 @@ describe('FlowPageComponent', () => {
       'A requisição foi gravada, mas nenhuma etapa foi marcada.',
     );
     expect(emptyState?.textContent).toContain('.WithNetApiFlowTracking()');
-    expect(emptyState?.textContent).toContain('NetApiFlow.Step(...)');
+    expect(emptyState?.textContent).toContain('Flow.Step(...)');
+    expect(emptyState?.textContent).not.toContain('NetApiFlow.Step');
     expect(emptyState?.textContent).toContain('AddFlowTracked');
     expect(emptyState?.querySelector('svg')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('app-flow-graph')).toBeNull();

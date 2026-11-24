@@ -157,7 +157,7 @@ public sealed class GetTraceResultsForEveryCase : IAsyncLifetime, IDisposable
                         endpoints
                             .MapGet("/boom/{id:int}", string (int id) => throw new InvalidOperationException(SecretLeakCases.ById(id).Message))
                             .WithNetApiFlowTracking();
-                        endpoints.UseNetApiFlowMcp();
+                        endpoints.MapNetApiFlowMcp();
                     });
                 });
             })

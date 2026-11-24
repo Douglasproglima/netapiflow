@@ -64,7 +64,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseNetApiFlowDashboard(); // mounted at /flow by default
+app.MapNetApiFlowDashboard(); // mounted at /flow by default
 
 app.MapGet("/hello", () => "Hello");
 
@@ -117,7 +117,7 @@ The `using NetApiFlow;` covers `.WithNetApiFlowTracking()` and `ComponentType`.
 | Form | What it does | When to use it |
 |---|---|---|
 | `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Only with `CaptureMinimalApiEndpoints = false`. Otherwise every Minimal API endpoint already gets the step, and MVC controllers always do |
-| `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
+| `Flow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
 | `.WithoutNetApiFlowTracking()` | Keeps an endpoint, a group, `MapControllers()` or `MapHealthChecks()` out of tracing | A health check, a metrics route, any route that must never show up in history, also under a `PathBase` |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
 | `TrackFlowByConvention()` | Wraps the `*Service`, `*Repository` and `*Handler` interfaces of your own code in steps, each with its component type | A layered app: one line after your registrations |
@@ -129,19 +129,23 @@ Manual form, used explicitly:
 
 ```csharp
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
 
 public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 {
-    using var step = Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    using var step = Flow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
     return await _dbContext.Orders.FindAsync([id], cancellationToken);
 }
 ```
 
-The `using static` is what lets you write `Step(...)` unqualified. Writing `NetApiFlow.Step(...)`
-instead only compiles from inside a namespace of your own: from the global namespace, which is
-where a top-level-statements `Program.cs` puts your code, `NetApiFlow` resolves to this package's
-namespace rather than its class, and the compiler reports `CS0234`.
+`Flow` lives in the `NetApiFlow` namespace, so `using NetApiFlow;` is all it needs, from a
+top-level `Program.cs` too. If another library you import also has a type named `Flow`, write
+`NetApiFlow.Flow.Step(...)`, or give it an alias such as `using Tracing = NetApiFlow.Flow;` and call
+`Tracing.Step(...)`.
+
+Before 0.6.0 this class was `NetApiFlow.NetApiFlow`, and the dashboard and the MCP server were
+mounted with `UseNetApiFlowDashboard` and `UseNetApiFlowMcp`. Those names still work and forward to the new
+ones. They are marked `[Obsolete]`, so the compiler shows warning `CS0618` where you use them. They
+will be removed in a later version, and the CHANGELOG will say so before that happens.
 
 Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/`OrderRepository`
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
@@ -219,16 +223,20 @@ EF Core 8, 9 and 10.
 
 ### Tagging a step
 
-A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
+A step opened with `Flow.Step(...)` accepts free key/value tags, recorded on that span:
 
 ```csharp
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
 
-using var step = Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+using var step = Flow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
 step.Tag("order.status", order.Status);
 step.Tag("payment.provider", provider.Name);
 ```
+
+`Tag` takes a `string`, an `int`, a `long`, a `double`, a `bool` or an enum value. A number is
+recorded as text in the invariant culture, a `bool` as `true` or `false`, and an enum value as the
+name of its member. A null key or value is ignored and logs a warning, so a tag never breaks the
+request.
 
 Call `Tag` at any point while the step is open, not only right after opening it: tags are read off
 the step when it completes. A key starting with `netapiflow.` is reserved and never recorded.
@@ -241,20 +249,19 @@ and `Limits.MaxTagValueLength` truncates a long value without dropping the tag. 
 > and served exactly as written. Keep it to identifiers and short labels, never a request payload,
 > a user's data or a credential.
 
-Tags travel on `FlowSpan.Tags`: `GET /traces/{traceId}`, `NetApiFlow.GetRecentTrace`,
+Tags travel on `FlowSpan.Tags`: `GET /traces/{traceId}`, `Flow.GetRecentTrace`,
 `NetApiFlow.Mcp`'s `get_trace` and both storage packages all carry them. The dashboard UI does not
 display them in this version.
 
 ## Asserting on flow in tests
 
 An integration test built on `WebApplicationFactory<TEntryPoint>` already has the response its
-own request just produced. `NetApiFlow.GetRecentTrace` reads that trace straight from the
+own request just produced. `Flow.GetRecentTrace` reads that trace straight from the
 in-memory buffer kept while persistence catches up, so there's no `Task.Delay` or retry loop
 waiting for the asynchronous write to finish:
 
 ```csharp
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
 
 public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
     : IClassFixture<WebApplicationFactory<Program>>
@@ -267,7 +274,7 @@ public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
         var response = await client.GetAsync("/api/orders/42");
 
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
-        var trace = GetRecentTrace(factory.Services, traceId);
+        var trace = Flow.GetRecentTrace(factory.Services, traceId);
 
         Assert.NotNull(trace);
         Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
@@ -581,7 +588,7 @@ feature and an empty flow.
 Mounting the dashboard at a path other than the default, and protecting it:
 
 ```csharp
-app.UseNetApiFlowDashboard("/internal/flow")
+app.MapNetApiFlowDashboard("/internal/flow")
     .RequireAuthorization("AdminOnly"); // or register an IFlowAccessFilter in DI
 ```
 
@@ -665,7 +672,7 @@ exception is logged at `Debug`.
 > Outside `IHostEnvironment.IsDevelopment()`, every dashboard route (REST, SSE and the UI itself)
 > responds **404** unless you explicitly configure one of:
 >
-> - `.RequireAuthorization("YourPolicy")`, chained on `app.UseNetApiFlowDashboard(...)`.
+> - `.RequireAuthorization("YourPolicy")`, chained on `app.MapNetApiFlowDashboard(...)`.
 > - A custom `IFlowAccessFilter` registered in DI, checked on every request
 >   regardless of environment.
 >
@@ -677,7 +684,7 @@ exception is logged at `Debug`.
 > to `/flow`. In Development, let the dashboard through:
 >
 > ```csharp
-> var dashboard = app.UseNetApiFlowDashboard();
+> var dashboard = app.MapNetApiFlowDashboard();
 > if (app.Environment.IsDevelopment())
 > {
 >     dashboard.AllowAnonymous();
@@ -737,7 +744,7 @@ the request it sent. Knowing a trace id does not open the dashboard: its routes 
 rules above.
 
 **Before 0.6.0 the id of the trace was the W3C trace id.** Two requests with the same `traceparent`
-shared one id and lost a trace. If a test or a log line compared `NetApiFlow.CurrentTraceId` or this
+shared one id and lost a trace. If a test or a log line compared `Flow.CurrentTraceId` or this
 header with `Activity.Current.TraceId`, read the W3C trace id from the tag instead.
 
 **From 0.6.0 the header is sent only in Development by default. To keep it in Production, set
@@ -801,7 +808,7 @@ Then register the server before `builder.Build()` and mount it right after:
 builder.Services.AddNetApiFlowMcp();
 
 var app = builder.Build();
-app.UseNetApiFlowMcp(); // mounted at /flow/mcp by default
+app.MapNetApiFlowMcp(); // mounted at /flow/mcp by default
 ```
 
 Three read-only tools, backed by the same `ITraceStore` the dashboard reads from: `list_recent_traces`,
@@ -1027,7 +1034,7 @@ The one exception is what you write yourself: a step's tags (see
 Measured with `tests/NetApiFlow.Benchmarks` (BenchmarkDotNet), comparing the cost of a request
 against a minimal ASP.NET Core pipeline with NetApiFlow **absent** (package not installed),
 **disabled** (`Enabled = false`) and **enabled** (default options), on two endpoints: `Simple`
-(no steps marked) and `Nested` (four nested `NetApiFlow.Step` calls, mirroring a
+(no steps marked) and `Nested` (four nested `Flow.Step` calls, mirroring a
 Controller→Service→Repository→Database chain).
 
 | Scenario | Simple (mean) | Nested, 4 steps (mean) |
@@ -1062,8 +1069,8 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   emits a type at run time, and the last two also match implementation types by reflection. All
   three carry `[RequiresDynamicCode]` (and the last two also `[RequiresUnreferencedCode]`), so you
   get an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
-  stays safe under Native AOT and trimming is `NetApiFlow.Step(...)`: a host calling only
-  `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
+  stays safe under Native AOT and trimming is `Flow.Step(...)`: a host calling only
+  `AddNetApiFlow()` and `Flow.Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
   net10.0, and there is a check in the repository that proves it. The same check proves that a
   Minimal API endpoint becomes an `Endpoint` step in the native binary.
 - The `NetApiFlow.EntityFrameworkCore` interceptor is a separate question from the one above. The
@@ -1071,7 +1078,7 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   AOT, and a published host using it reports that: `IL2026`/`IL3050` on the `DbContext`
   constructor and `IL2104`/`IL3053` on the EF Core assemblies. That limitation belongs to EF Core,
   not to NetApiFlow, and no change here can remove it. Under Native AOT, mark database work with
-  `NetApiFlow.Step(...)` if you want a warning-free publish.
+  `Flow.Step(...)` if you want a warning-free publish.
 - The live view is per process, not per cluster. `GET /traces/live` reads the in-memory recorder of
   whichever replica answered that call, so behind a load balancer without sticky sessions `/flow`
   shows only the traffic that one replica handled, and the browser can land on a different replica

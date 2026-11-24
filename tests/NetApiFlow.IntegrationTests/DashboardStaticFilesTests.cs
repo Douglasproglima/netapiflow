@@ -38,7 +38,7 @@ public class DashboardStaticFilesTests
                     }
 
                     app.UseRouting();
-                    app.UseEndpoints(endpoints => endpoints.UseNetApiFlowDashboard(dashboardPath));
+                    app.UseEndpoints(endpoints => endpoints.MapNetApiFlowDashboard(dashboardPath));
                 });
             })
             .Start();

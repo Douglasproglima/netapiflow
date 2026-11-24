@@ -73,7 +73,7 @@ public class DashboardAuthorizationMatrixTests
         var status = await AuthorizationMatrix.PostAsync(
             AuthorizationMatrix.ByName(caseName),
             services => services.AddNetApiFlowDashboard(),
-            endpoints => endpoints.UseNetApiFlowDashboard(),
+            endpoints => endpoints.MapNetApiFlowDashboard(),
             "/flow/api/deploys",
             body,
             contentType);
@@ -94,13 +94,13 @@ public class DashboardAuthorizationMatrixTests
             AuthorizationMatrix.Cases[0],
             BasePath,
             services => services.AddNetApiFlowDashboard(),
-            endpoints => endpoints.UseNetApiFlowDashboard(),
+            endpoints => endpoints.MapNetApiFlowDashboard(),
             getQuery: malformed);
         var answers = await AuthorizationMatrix.RunAsync(
             matrixCase,
             BasePath,
             services => services.AddNetApiFlowDashboard(),
-            endpoints => endpoints.UseNetApiFlowDashboard(),
+            endpoints => endpoints.MapNetApiFlowDashboard(),
             getQuery: malformed);
 
         AuthorizationMatrix.Violations(matrixCase, answers, openDevelopment).ShouldBeEmpty();
@@ -115,6 +115,6 @@ public class DashboardAuthorizationMatrixTests
             matrixCase,
             BasePath,
             services => services.AddNetApiFlowDashboard(),
-            endpoints => endpoints.UseNetApiFlowDashboard(),
+            endpoints => endpoints.MapNetApiFlowDashboard(),
             mapExtra);
 }
