@@ -23,7 +23,7 @@ public static class NetApiFlowMcpServiceCollectionExtensions
             Name = ServerName,
             Version = typeof(NetApiFlowMcpServiceCollectionExtensions).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
         })
-            .WithHttpTransport()
+            .WithHttpTransport(options => options.ConfigureSessionOptions = null)
             .WithToolsFromAssembly(Assembly.GetExecutingAssembly())
             .WithRequestFilters(filters =>
             {

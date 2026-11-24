@@ -11,7 +11,7 @@ internal sealed partial class PerSessionExecutionContextWarning(IServiceProvider
     {
         try
         {
-            if (NetApiFlowToolScope.CannotTellTheEndpoint(services))
+            if (NetApiFlowToolScope.CannotTellTheEndpoint(services) || services is not null)
             {
                 Log.ToolsUnavailable(logger);
             }

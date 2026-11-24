@@ -29,7 +29,7 @@ internal static class NetApiFlowToolScope
         async (context, cancellationToken) =>
         {
             var tool = context.Params?.Name;
-            if (tool is not null && NetApiFlowToolNames.Contains(tool) != CameThroughNetApiFlowEndpoint(context.Services))
+            if (tool is not null && (NetApiFlowToolNames.Contains(tool) != CameThroughNetApiFlowEndpoint(context.Services) || (!NetApiFlowToolNames.Contains(tool) && !CameThroughNetApiFlowEndpoint(context.Services))))
             {
                 throw new McpProtocolException($"Unknown tool: '{tool}'", McpErrorCode.InvalidParams);
             }
