@@ -1,3 +1,4 @@
+#pragma warning disable MCP9004
 #pragma warning disable MCP9006
 
 using System.ComponentModel;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.AspNetCore;
+using ModelContextProtocol.Client;
 using ModelContextProtocol.Server;
 using NetApiFlow.Mcp.Endpoints;
 
@@ -25,6 +27,50 @@ public sealed class AppTools
     [McpServerTool(Name = Name)]
     [Description("A tool of the app itself.")]
     public static string AppTool() => Answer;
+}
+
+[McpServerResourceType]
+public sealed class AppResources
+{
+    public const string SecretUri = "app://secret";
+    public const string Secret = "APP-SECRET-VALUE";
+
+    [McpServerResource(UriTemplate = SecretUri, Name = "app_secret")]
+    [Description("A resource of the app itself.")]
+    public static string AppSecret() => Secret;
+
+    [McpServerResource(UriTemplate = "app://items/{id}", Name = "app_item")]
+    [Description("A resource template of the app itself.")]
+    public static string AppItem(string id) => "APP-ITEM-" + id;
+}
+
+[McpServerPromptType]
+public sealed class AppPrompts
+{
+    public const string Name = "app_prompt";
+    public const string Text = "APP-PROMPT-TEXT";
+
+    [McpServerPrompt(Name = Name)]
+    [Description("A prompt of the app itself.")]
+    public static string AppPrompt() => Text;
+}
+
+public sealed class AppGetTrace
+{
+    public const string Answer = "the get_trace of the app";
+
+    [McpServerTool(Name = "get_trace")]
+    [Description("A tool of the app that has the name of a NetApiFlow tool.")]
+    public static string GetTrace() => Answer;
+}
+
+public static class McpSessionModes
+{
+    public static TheoryData<HttpServerSessionMode> All =>
+        [HttpServerSessionMode.Stateless, HttpServerSessionMode.Stateful, HttpServerSessionMode.StatefulForInitializeClients];
+
+    public static TheoryData<HttpServerSessionMode> WithSessions =>
+        [HttpServerSessionMode.Stateful, HttpServerSessionMode.StatefulForInitializeClients];
 }
 
 internal sealed record McpAppSetup
@@ -46,6 +92,12 @@ internal sealed record McpAppSetup
     public ILoggerProvider? Logs { get; init; }
 
     public (Stream Input, Stream Output)? Streams { get; init; }
+
+    public Action<IMcpServerBuilder>? ConfigureAppServer { get; init; }
+
+    public bool NetApiFlowRegisteredFirst { get; init; }
+
+    public bool LegacySse { get; init; }
 }
 
 internal sealed class McpAppHost : IAsyncDisposable
@@ -82,24 +134,35 @@ internal sealed class McpAppHost : IAsyncDisposable
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
+                    if (setup.NetApiFlowRegisteredFirst)
+                    {
+                        services.AddNetApiFlow();
+                        services.AddNetApiFlowMcp();
+                    }
+
                     var mcp = services.AddMcpServer()
                         .WithHttpTransport(options =>
                         {
                             options.SessionMode = setup.SessionMode;
                             options.PerSessionExecutionContext = setup.PerSessionExecutionContext;
+                            options.EnableLegacySse = setup.LegacySse;
                             if (setup.ConfigureSessionOptions is not null)
                             {
                                 options.ConfigureSessionOptions = setup.ConfigureSessionOptions;
                             }
                         })
                         .WithTools<AppTools>();
+                    setup.ConfigureAppServer?.Invoke(mcp);
                     if (setup.Streams is { } streams)
                     {
                         mcp.WithStreamServerTransport(streams.Input, streams.Output);
                     }
 
-                    services.AddNetApiFlow();
-                    services.AddNetApiFlowMcp();
+                    if (!setup.NetApiFlowRegisteredFirst)
+                    {
+                        services.AddNetApiFlow();
+                        services.AddNetApiFlowMcp();
+                    }
                 });
                 webBuilder.Configure(app =>
                 {
@@ -130,6 +193,15 @@ internal sealed class McpAppHost : IAsyncDisposable
             .StartAsync();
 
         return new McpAppHost(host, setup.PathBase);
+    }
+
+    public async Task<McpClient> ConnectAsync(string path, HttpTransportMode transportMode = HttpTransportMode.AutoDetect)
+    {
+        var transport = new HttpClientTransport(
+            new HttpClientTransportOptions { Endpoint = new Uri(Http.BaseAddress!, _pathBase + path), TransportMode = transportMode },
+            Http,
+            ownsHttpClient: false);
+        return await McpClient.CreateAsync(transport, cancellationToken: CancellationToken.None);
     }
 
     public async Task<McpAnswer> InitializeAsync(string path)
@@ -205,6 +277,13 @@ internal sealed record McpAnswer(int Status, JsonElement? Message, string? Sessi
     public string? FirstText =>
         Message is { } message && message.TryGetProperty("result", out var result) && result.TryGetProperty("content", out var content)
             ? content.EnumerateArray().First().GetProperty("text").GetString()
+            : null;
+
+    public string Raw => Message?.GetRawText() ?? string.Empty;
+
+    public string? ServerName =>
+        Message is { } message && message.TryGetProperty("result", out var result) && result.TryGetProperty("serverInfo", out var serverInfo)
+            ? serverInfo.GetProperty("name").GetString()
             : null;
 
     public string? Instructions =>
