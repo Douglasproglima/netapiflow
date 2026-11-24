@@ -15,3 +15,4 @@ NetApiFlow.Flow
 static NetApiFlow.Flow.CurrentTraceId.get -> string?
 static NetApiFlow.Flow.GetRecentTrace(System.IServiceProvider! services, string! traceId) -> NetApiFlow.FlowTraceDetail?
 static NetApiFlow.Flow.Step(string! component, string! operation, NetApiFlow.ComponentType type = NetApiFlow.ComponentType.Custom) -> NetApiFlow.FlowStep
+static NetApiFlow.NetApiFlowEndpointFilterExtensions.WithNetApiFlowTracking<TBuilder>(this TBuilder builder) -> TBuilder
