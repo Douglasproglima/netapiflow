@@ -1,6 +1,6 @@
 # Fase 59: o README e os textos dizem só o que o produto faz (D-210, nível 2)
 
-**Estado (25/11/2026):** **as 59A e 59B estão entregues em `develop` (#507, squash `827d67e`, D-299; #510, squash `4526950`, D-300) e conferidas pela auditoria.** Falta a 59C (o desempenho), e a releitura da 59.5 na segunda passada.
+**Estado (25/11/2026):** **as 59A e 59B estão entregues em `develop` (#507, squash `827d67e`, D-299; #510, squash `4526950`, D-300) e conferidas pela auditoria.** Falta a 59C (o desempenho). A releitura 59.5 está feita (D-309).
 
 A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e seis afirmações como falsas ou
 imprecisas. Ninguém quebra por causa de uma frase, mas é no README que o usuário decide se confia no produto, e uma

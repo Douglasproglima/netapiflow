@@ -787,7 +787,8 @@ inalcançável. A exceção completa é registrada em `Debug`.
 > ponha essa decisão no seu `IFlowAccessFilter`, que enxerga o método de toda requisição.
 >
 > **Uma aplicação com `FallbackPolicy` que exige usuário autenticado** (comum em API com JWT)
-> recebe **401** no dashboard, em qualquer ambiente: o middleware de autorização responde antes
+> recebe no dashboard o desafio do esquema de autenticação dela, em qualquer ambiente: **401** com
+> JWT bearer, **302** para a página de login com cookie. O middleware de autorização responde antes
 > da checagem do próprio dashboard, e o navegador não manda o token bearer ao navegar para
 > `/flow`. Em Development, deixe o dashboard passar:
 >
@@ -942,7 +943,7 @@ trace nem dispara um replay via MCP.
 > `PerSessionExecutionContext = true`, a chamada de uma tool não carrega a requisição HTTP que a
 > enviou, e o NetApiFlow não consegue saber de qual endpoint ela veio. As tools do NetApiFlow passam
 > a não ser servidas em nenhum endpoint, o `/flow/mcp` responde 404, e a aplicação registra um aviso
-> na partida dizendo isso. Para tê-las de volta, desligue o `PerSessionExecutionContext` ou use o modo
+> na partida dizendo isso. Para tê-las de volta, defina `PerSessionExecutionContext = false` ou use o modo
 > stateless.
 >
 > O endpoint também recusa, com **403**, uma requisição cujo `Host` ou `Origin` não seja o dele. Em
@@ -1160,7 +1161,7 @@ sanitizador abaixo remove as formas que ele lista e nada além. Mantenha dados d
 mensagens de exceção.
 
 O sanitizador vem ligado por padrão e é um filtro de formas conhecidas, não uma garantia de que
-nenhum segredo sobrevive. O que ele remove: e-mail, CPF, CNPJ, sequência numérica longa, um JWT (três
+nenhum segredo sobrevive. O que ele remove: e-mail, CPF, CNPJ, sequência numérica de 12 dígitos ou mais, um JWT (três
 segmentos base64url começando por `eyJ`), a senha dentro de uma URL (`esquema://usuario:senha@host`), e
 o valor de qualquer par `chave=valor`, `chave: valor` ou `"chave": "valor"` em JSON cuja chave
 contenha `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (também `api_key` e `apikey`),
@@ -1241,14 +1242,15 @@ outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são
   `DecorateFlowTracked` e `TrackFlowByConvention` montam o proxy com `DispatchProxy`, que gera um
   tipo em tempo de execução, e os dois últimos ainda casam tipos de implementação por reflexão. Os
   três têm `[RequiresDynamicCode]` (e os dois últimos também `[RequiresUnreferencedCode]`), então
-  você recebe um aviso `IL3050`/`IL2026` na build. Se publicar mesmo assim, o binário sobe, e a
+  você recebe um aviso `IL3050`, `IL3053` ou `IL2026` na build. Se publicar mesmo assim, o binário sobe, e a
   primeira chamada a um serviço rastreado falha: a requisição responde 500 com
   `PlatformNotSupportedException: Dynamic code generation is not supported on this platform`. A
   forma de marcação que continua segura sob Native AOT e trimming é o `Flow.Step(...)`: uma
   aplicação que chama só `AddNetApiFlow()` e `Flow.Step(...)` publica com zero aviso de AOT ou trimming
-  no net8.0 e no net10.0. Os passos `Publish the core as native AOT` e
-  `Publish the net8.0 core host as native AOT` do `.github/workflows/ci.yml` provam isso, e provam
-  também que um endpoint de Minimal API vira uma etapa `Endpoint` no binário nativo.
+  no net8.0 e no net10.0. Os passos `Publish the core as native AOT, any trim or AOT warning fails` e
+  `Publish the net8.0 core host as native AOT, any IL warning in the output fails` do
+  `.github/workflows/ci.yml` provam isso, e provam também que um endpoint de Minimal API vira uma
+  etapa `Endpoint` no binário nativo.
 - O interceptor do `NetApiFlow.EntityFrameworkCore` é outra conversa. O interceptor em si não emite
   aviso nenhum, mas o próprio EF Core declara que não é totalmente compatível com Native AOT, e uma
   aplicação publicada que o usa acusa isso: `IL2026`/`IL3050` no construtor do `DbContext` e
