@@ -7,7 +7,7 @@ using NetApiFlow.Sanitization;
 namespace NetApiFlow.Instrumentation;
 
 /// <summary>Correlates a log call to the span active in <see cref="Activity.Current"/>, when it
-/// belongs to the <see cref="FlowActivitySource"/> (ADR-0017).</summary>
+/// belongs to the <see cref="FlowActivitySource"/>.</summary>
 internal sealed class FlowLogger(FlowRecorder recorder, IOptions<NetApiFlowOptions> options) : ILogger
 {
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;

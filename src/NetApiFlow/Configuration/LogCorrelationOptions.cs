@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NetApiFlow;
 
-/// <summary>Log and exception correlation per step, via an internal <c>ILoggerProvider</c> (ADR-0017).
+/// <summary>Log and exception correlation per step, via an internal <c>ILoggerProvider</c>.
 /// Default: disabled.</summary>
 public sealed class LogCorrelationOptions
 {

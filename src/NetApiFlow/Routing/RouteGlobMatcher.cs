@@ -2,7 +2,8 @@ namespace NetApiFlow.Routing;
 
 /// <summary>
 /// Matches a request path against a route glob pattern. <c>*</c> matches exactly one path segment;
-/// <c>**</c> matches any number of segments, including zero (see D-08 in docs/plano/decisoes.md).
+/// <c>**</c> matches any number of segments, including zero. Written by hand, because the core takes no
+/// dependency for pattern matching.
 /// </summary>
 internal static class RouteGlobMatcher
 {

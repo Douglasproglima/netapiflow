@@ -39,7 +39,7 @@
 // Brand tokens (docs/brand/tokens.md), as the --mat-sys-*/--mat-card-*/--flow-*
 // variables every mat-* component and the graph/waterfall actually read. Mixins so the same
 // values can apply unconditionally (dark, the default), behind `prefers-color-scheme` (no saved
-// preference), and behind the manual `data-theme` attribute the theme toggle writes (D-36) —
+// preference), and behind the manual `data-theme` attribute the theme toggle writes —
 // without triplicating every declaration by hand.
 @mixin naf-mat-theme-dark {
   --mat-sys-primary: #7c3aed;
@@ -57,7 +57,7 @@
   --mat-sys-error: #ef4444;
   --mat-sys-on-error: #ffffff;
 
-  // Palette audit (D-31, item 4): --mat-sys-primary (flow-600, #7C3AED) is correctly the filled
+  // Palette audit: --mat-sys-primary (flow-600, #7C3AED) is correctly the filled
   // button's background, exactly as docs/brand/tokens.md names it ("Botão primário"). But
   // Material also used it, by default, as the plain *text* color of unfilled buttons (mat-button,
   // mat-stroked-button) — the endpoint list, pagination, nav links. tokens.md has a dedicated
@@ -154,14 +154,14 @@ html {
 
   // Obsidian (dark, principal) is the default; Stage Light applies behind the OS preference
   // (no saved choice) or, explicitly, behind the manual `data-theme` attribute the theme toggle
-  // writes (D-36), which always wins over the OS preference once set. Overriding Material's own
+  // writes, which always wins over the OS preference once set. Overriding Material's own
   // --mat-sys-* system variables after `mat.theme()` runs is the documented way to apply exact
   // brand colors without regenerating a full M3 tonal palette
   // (https://material.angular.dev/guide/system-variables) — the palette above only supplies the
   // roles this file doesn't override.
   @include naf-mat-theme-dark;
 
-  // Card and button recipe from the brand guide (D-31): radius-lg (18px) cards,
+  // Card and button recipe from the brand guide: radius-lg (18px) cards,
   // 44px/radius-md (12px) buttons, 600-weight labels — replacing Material's own defaults, not
   // just its stock color palette. Shape/sizing doesn't change between themes.
   --mat-card-elevated-container-shape: 18px;

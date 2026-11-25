@@ -21,7 +21,7 @@ namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
 /// Verifies <c>GET /stream</c>, the replay buffer with <c>Last-Event-ID</c>
-/// and the client/queue limits of risco R-10.
+/// and the client/queue limits.
 ///
 /// Runs against a real Kestrel listener on an ephemeral port, not <c>TestServer</c>: a long-lived
 /// streaming response needs each write to reach the client as it happens, and <c>TestServer</c>'s
@@ -316,7 +316,7 @@ public class DashboardSseTests
     [Fact]
     public async Task Stream_ReconnectWithLastEventIdAsQueryString_ReplaysMissedEvents()
     {
-        // D-22: EventSource cannot set headers on a connection it creates itself, so a manually
+        // EventSource cannot set headers on a connection it creates itself, so a manually
         // reconnecting client (own exponential backoff) sends Last-Event-ID this way.
         var (host, client) = await CreateHostAsync();
         using var _host = host;

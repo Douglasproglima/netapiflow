@@ -419,7 +419,7 @@ describe('FlowGraphComponent', () => {
     });
   });
 
-  describe('N+1 badge (D-71)', () => {
+  describe('N+1 badge', () => {
     it('renders the badge only on nodes with a non-null nPlusOneCount, with the real count in its text', async () => {
       const spans: FlowSpan[] = [
         span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),

@@ -10,9 +10,9 @@ import { statusLabelKey } from '../../../shared/status-label';
 const W3C_TRACE_ID_TAG = 'w3c.trace_id';
 
 /**
- * No span selected: request summary + waterfall (guide seção 6.6). A span selected: its full
+ * No span selected: request summary + waterfall. A span selected: its full
  * detail, including ancestors, children and the delta from the normal median duration of that
- * operation (seção 8 do prompt).
+ * operation.
  */
 @Component({
   selector: 'app-flow-details-panel',
@@ -51,7 +51,7 @@ export class FlowDetailsPanelComponent {
 
   readonly executedCount = computed(() => this.trace().spans.length);
 
-  /** D-71: siblings of the same shape as the selected span, anywhere in the trace. */
+  /** siblings of the same shape as the selected span, anywhere in the trace. */
   readonly nPlusOneGroup = computed(() => {
     const selected = this.selectedSpan();
     return selected ? findNPlusOneGroup(this.trace().spans, selected.span.spanId) : [];

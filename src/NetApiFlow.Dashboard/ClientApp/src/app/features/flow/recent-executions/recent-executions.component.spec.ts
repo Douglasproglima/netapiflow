@@ -144,7 +144,7 @@ describe('RecentExecutionsComponent', () => {
     httpMock.expectOne(() => true).flush({ totalCount: 0, items: [] });
     await fixture.whenStable();
 
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain('Nenhum trace registrado ainda.');
   });
 
@@ -208,7 +208,7 @@ describe('RecentExecutionsComponent', () => {
     expect(fixture.componentInstance.error()).toBeNull();
   });
 
-  it('re-fetches the list when a TraceCompleted event arrives (D-39)', async () => {
+  it('re-fetches the list when a TraceCompleted event arrives', async () => {
     const fixture = TestBed.createComponent(RecentExecutionsComponent);
     await fixture.whenStable();
     httpMock.expectOne(() => true).flush(PAGE);

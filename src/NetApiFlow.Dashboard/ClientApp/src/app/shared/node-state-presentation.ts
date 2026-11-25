@@ -2,7 +2,7 @@ import { NodeVisualState } from '../core/models';
 import { TranslationKey } from '../core/i18n/translations';
 
 /**
- * Cor nunca é o único sinal (seção 7.2 do prompt): every state also carries a distinct icon and
+ * Color is never the only signal: every state also carries a distinct icon and
  * a text label, so the six states stay distinguishable with color entirely removed (e.g. a user
  * with color blindness, or a black-and-white printout).
  */

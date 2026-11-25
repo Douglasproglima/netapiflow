@@ -9,11 +9,6 @@ namespace NetApiFlow;
 /// <summary>A tracked step opened by <see cref="Flow.Step"/>. Dispose it to close the span.</summary>
 public readonly struct FlowStep : IDisposable
 {
-    // Marks an exception instance as already attributed to the span where it first occurred, so
-    // outer layers that catch and rethrow the same instance (controller filters, MediatR behaviors,
-    // proxies) record the failure without each claiming to be the origin. Kept outside the
-    // exception, in a table keyed by instance identity, because the exception belongs to the
-    // caller: anything written to its Data would surface in their logs as a foreign entry.
     private static readonly ConditionalWeakTable<Exception, object> OriginClaimedExceptions = new();
 
     private static readonly object OriginClaimed = new();

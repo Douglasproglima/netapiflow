@@ -13,7 +13,7 @@ export interface GraphNode {
   durationMicros: number | null;
   /**
    * Total size of the `(component, operation)` group this node belongs to, when that group is a
-   * suspected N+1 (D-71: grouped across the whole trace, not by direct sibling, because each
+   * suspected N+1 (grouped across the whole trace, not by direct sibling, because each
    * query in a classic N+1 is a child of a different loop iteration, not of the same parent).
    * `null` when the node isn't part of such a group.
    */
@@ -84,14 +84,14 @@ const GHOST_ID_PREFIX = 'ghost-';
 
 /**
  * Minimum size of a `(component, operation)` group of `Database` steps to flag it as a suspected
- * N+1 (D-71). Fixed on purpose for this phase: a per-instance configuration knob is only worth
+ * N+1. Fixed on purpose: a per-instance configuration knob is only worth
  * adding if real usage shows this number wrong.
  */
 export const N_PLUS_ONE_THRESHOLD = 3;
 
 /**
  * A node this wide fits its component name and its operation + duration pair without
- * truncating either (D-34: a fixed card width used to force "/api/orders/{id:int}" and its
+ * truncating either (a fixed card width used to force "/api/orders/{id:int}" and its
  * duration to overlap). Capped at `NODE_MAX_WIDTH` so one pathologically long route can't blow
  * up the whole graph's layout; `nodeOperationLabel` in the SVG component still truncates with an
  * ellipsis for whatever doesn't fit past that cap.
@@ -143,8 +143,8 @@ interface MergedNode {
 
 /**
  * Pure function: spans in, a laid-out graph out. No Angular, no HTTP, no DOM — `@dagrejs/dagre`
- * computes node positions only, never renders anything (seção 4.2 do prompt forbids a ready-made
- * graph-rendering library; the SVG component owns rendering).
+ * computes node positions only, never renders anything (no ready-made graph-rendering library is
+ * allowed; the SVG component owns rendering).
  */
 export function buildGraph(input: GraphBuilderInput): GraphResult {
   const tree = buildMergedTree(input);
@@ -334,7 +334,7 @@ function buildChildrenByParent(spans: FlowSpan[]): Map<string | null, FlowSpan[]
 
 /**
  * A span is the trace's root when its `parentSpanId` is `null`, or when it doesn't match any
- * `spanId` in the same set — the backend normalizes a true root to `null` (docs/plano/contratos.md),
+ * `spanId` in the same set — the backend normalizes a true root to `null`,
  * but this stays robust even against a non-conforming store that leaves a dangling ambient parent
  * id (e.g. the host framework's own Activity) instead.
  */

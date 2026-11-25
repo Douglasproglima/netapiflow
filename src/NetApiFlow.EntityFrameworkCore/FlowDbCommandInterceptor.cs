@@ -132,12 +132,8 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
 
     private void StartStep(DbCommand command, CommandEventData eventData)
     {
-        // EF Core runs this once per attachment, so the same instance attached twice to one
-        // context (AddDbContext and AddDbContextFactory, for example) runs it twice for a single
-        // command, under the same CommandId. The slot is claimed before the step is opened, so
-        // the duplicate run records nothing at all: opening the step first and discarding it
-        // afterwards would still leave a zero-duration span in the graph.
-        if (!_steps.TryAdd(eventData.CommandId, default))
+        var alreadyRecordedByAnotherAttachment = !_steps.TryAdd(eventData.CommandId, default);
+        if (alreadyRecordedByAnotherAttachment)
         {
             return;
         }

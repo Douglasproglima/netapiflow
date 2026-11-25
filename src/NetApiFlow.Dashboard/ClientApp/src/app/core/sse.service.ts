@@ -16,13 +16,13 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 export const SSE_REFRESH_AUDIT_MS = 1500;
 
 /**
- * Connects to GET /stream (docs/plano/contratos.md, seção 2) with a real `EventSource`, parsing
+ * Connects to GET /stream with a real `EventSource`, parsing
  * each named event into a `FlowEvent`. Owns reconnection: on a dropped connection it reconnects
- * with exponential backoff, sending the last event id it saw as `?lastEventId=` (D-22) — the
+ * with exponential backoff, sending the last event id it saw as `?lastEventId=` — the
  * query string, not the `Last-Event-ID` header, because `EventSource` has no way to set a header
  * on a connection created by application code; only the browser's own automatic retry can do that.
- * The URL is relative (`api/stream`), resolved against whatever base path the host page sets
- * (risco R-03): never hardcode `/flow`.
+ * The URL is relative (`api/stream`), resolved against whatever base path the host page sets:
+ * never hardcode `/flow`.
  *
  * `connect`/`disconnect` are reference-counted: `LiveTracePlayerService` and an always-on event
  * feed can both want the stream open at the same time, each calling `connect()`/
@@ -108,7 +108,7 @@ export class SseService {
     };
 
     source.addEventListener('ping', () => {
-      // Handshake/heartbeat only (D-20): nothing to apply.
+      // Handshake/heartbeat only: nothing to apply.
     });
 
     for (const type of FLOW_EVENT_TYPES) {

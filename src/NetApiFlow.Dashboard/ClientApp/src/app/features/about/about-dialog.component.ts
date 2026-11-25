@@ -7,7 +7,7 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
 const REPOSITORY_URL = 'https://github.com/Douglasproglima/netapiflow';
 
 /**
- * "About" dialog (D-31): version, license, repository link and the apiflow credit
+ * "About" dialog: version, license, repository link and the apiflow credit
  * the README already requires, surfaced inside the dashboard itself too.
  */
 @Component({

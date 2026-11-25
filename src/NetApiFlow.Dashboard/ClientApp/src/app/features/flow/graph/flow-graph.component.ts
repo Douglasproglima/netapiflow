@@ -27,8 +27,8 @@ import { NodeVisualState } from '../../../core/models';
 const ZOOM_STEP_FACTOR = 1.3;
 
 /**
- * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
- * graph-rendering library, dagre is layout-only). Zoom and pan via d3-zoom.
+ * Renders the output of graph-builder as plain SVG (no ready-made graph-rendering library, dagre
+ * is layout-only). Zoom and pan via d3-zoom.
  */
 @Component({
   selector: 'app-flow-graph',

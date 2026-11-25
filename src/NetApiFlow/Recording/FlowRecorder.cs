@@ -7,7 +7,7 @@ using NetApiFlow.Sanitization;
 
 namespace NetApiFlow.Recording;
 
-/// <summary>Keeps in-memory state for traces that are still being recorded, within the limits of seção 6.7.</summary>
+/// <summary>Keeps in-memory state for traces that are still being recorded, within its fixed limits.</summary>
 internal sealed class FlowRecorder
 {
     /// <summary>Maximum number of traces tracked in memory at the same time.</summary>

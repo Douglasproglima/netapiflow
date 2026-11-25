@@ -10,7 +10,7 @@ namespace NetApiFlow.Instrumentation;
 
 /// <summary>
 /// Bridges <see cref="FlowActivitySource"/> activities into the <see cref="FlowRecorder"/>. Decides
-/// sampling eagerly (risk R-05): a span is only recorded when tracing is enabled and its trace is
+/// sampling eagerly: a span is only recorded when tracing is enabled and its trace is
 /// already tracked by the recorder.
 /// </summary>
 internal sealed partial class FlowActivityListener : IDisposable
@@ -136,9 +136,6 @@ internal sealed partial class FlowActivityListener : IDisposable
             : ActivitySamplingResult.AllDataAndRecorded;
     }
 
-    // Runs while sampling, where dropping is cheapest, and again once started: any other
-    // ActivityListener in the process that samples this source as recorded is enough for the
-    // activity to exist and reach every listener, whatever this one answered while sampling.
     private static bool IsDriverCommandAlreadyRecorded(string sourceName, Activity? enclosing) =>
         sourceName == NpgsqlActivityTagNames.SourceName && ExistingDatabaseStep.Covers(enclosing);
 
@@ -416,7 +413,7 @@ internal sealed partial class FlowActivityListener : IDisposable
     /// ambient parents NetApiFlow never recorded as a span (e.g. ASP.NET Core's own request
     /// Activity for the root span of a trace). Only a parent already present in this trace's own
     /// spans is a real NetApiFlow parent; anything else means this span is the trace's root, and
-    /// the API contract (docs/plano/contratos.md) requires a root span's <c>parentSpanId</c> to
+    /// the API contract requires a root span's <c>parentSpanId</c> to
     /// be <see langword="null"/>, not a dangling id the frontend can never resolve.
     /// </summary>
     private static string? ResolveParentSpanId(Activity activity, ActiveTrace trace)

@@ -16,7 +16,7 @@ export interface DiffRow {
   durationMicrosB: number | null;
   /** `durationMicrosB - durationMicrosA`, only when `matched` and both sides have a duration. */
   deltaMicros: number | null;
-  /** `not-executed` on the side that's missing this key (seção 7.2 do prompt: cor + ícone + texto). */
+  /** `not-executed` on the side that's missing this key. */
   stateA: NodeVisualState;
   stateB: NodeVisualState;
 }

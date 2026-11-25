@@ -109,7 +109,7 @@ public class FlowActivityListenerTests
     {
         // `root` mimics ASP.NET Core's own request Activity: a real ambient parent, but never
         // recorded as a NetApiFlow span (different ActivitySource, not listened to). The contract
-        // (docs/plano/contratos.md) requires the trace's root span to report `parentSpanId: null`
+        // requires the trace's root span to report `parentSpanId: null`
         // regardless, so the frontend's root-detection (`parentSpanId === null`) always finds one.
         var (recorder, subject, traceId, root) = Arrange();
         using var _ = subject;

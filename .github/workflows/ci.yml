@@ -139,6 +139,10 @@ jobs:
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet format NetApiFlow.slnx --verify-no-changes --no-restore
 
+      - name: No code of src/ or tests/ cites an ADR, a decision, a risk or a plan document
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: node scripts/check-citations.mjs
+
       - name: Build
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet build NetApiFlow.slnx -c Release --no-restore

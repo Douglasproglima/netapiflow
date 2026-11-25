@@ -161,7 +161,7 @@ describe('InsightsComponent', () => {
     flushInitial(httpMock, ROUTE_STATS, ENDPOINTS.slice(0, 2));
     await fixture.whenStable();
 
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain(
       'Toda rota rastreável foi executada nesta janela.',
     );
@@ -177,7 +177,7 @@ describe('InsightsComponent', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
 
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain('Falha ao carregar os insights.');
   });
 

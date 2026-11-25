@@ -16,8 +16,7 @@ using NetApiFlow.Routing;
 namespace NetApiFlow.Dashboard.Endpoints;
 
 /// <summary>
-/// Maps the fifteen REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>,
-/// seção 3).
+/// Maps the fifteen REST routes of the dashboard contract.
 /// </summary>
 internal static class DashboardApiEndpoints
 {
@@ -370,7 +369,7 @@ internal static class DashboardApiEndpoints
 
     /// <summary>
     /// Reads the core package version from <c>NetApiFlow</c>'s own
-    /// <see cref="AssemblyInformationalVersionAttribute"/> (D-33): the same value as
+    /// <see cref="AssemblyInformationalVersionAttribute"/>: the same value as
     /// <c>&lt;Version&gt;</c> in <c>Directory.Build.props</c>, stripped of the SourceLink commit
     /// suffix CI builds append after a <c>+</c>.
     /// </summary>

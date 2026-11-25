@@ -1,6 +1,6 @@
 namespace NetApiFlow;
 
-/// <summary>A single <c>ILogger</c> call correlated to the span active when it happened (ADR-0017).
+/// <summary>A single <c>ILogger</c> call correlated to the span active when it happened.
 /// Never populates <c>FlowSpan.Tags</c>: a separate field, its own opt-in, its own sanitization.</summary>
 public sealed record LogEntry
 {
