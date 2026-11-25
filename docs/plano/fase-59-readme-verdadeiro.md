@@ -1,5 +1,7 @@
 # Fase 59: o README e os textos dizem só o que o produto faz (D-210, nível 2)
 
+**Estado (25/11/2026):** **a 59A, o texto, está entregue em `develop` (#507, squash `827d67e`, D-299) e conferida pela auditoria com o pacote real.** Faltam a 59B (as citações) e a 59C (o desempenho), e a releitura da 59.5 na segunda passada.
+
 A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e seis afirmações como falsas ou
 imprecisas. Ninguém quebra por causa de uma frase, mas é no README que o usuário decide se confia no produto, e uma
 frase falsa vale mais que um bug que ele nunca vê. Esta fase deixa o texto verdadeiro.
@@ -116,7 +118,7 @@ Esta tarefa não mexe em lógica nem troca nome público: nenhum `PublicAPI.Ship
 
 ## Tarefa 59.3: o parágrafo do MCP
 
-O README do pacote (`src/NetApiFlow.Mcp/README.md`) só aponta para o README principal: a página que o nuget.org mostra não diz o que vale para o MCP **em si**. Depois das Fases 56 e 71 ela diz, em frases que um leitor que chegou direto na página do pacote entende sem sair dela: o portão (fora de `Development`, `404` sem autorização ou `IFlowAccessFilter`), a regra de `Host` e `Origin` (`403`), que as três tools existem só no `/flow/mcp`, o que acontece num app que hospeda o próprio MCP, e o que a 59.0 mediu para os verbos de `/flow/mcp` em `Production` (`GET` e `POST` dão `404`, `DELETE` e `PUT` dão `405`, D-298). O texto de referência é o parágrafo "Same security rule as the dashboard" do `README.md`, que a Fase 71 já reescreveu, e a Executora o resume sem copiá-lo inteiro.
+O README do pacote (`src/NetApiFlow.Mcp/README.md`) só aponta para o README principal: a página que o nuget.org mostra não diz o que vale para o MCP **em si**. Depois das Fases 56 e 71 ela diz, em frases que um leitor que chegou direto na página do pacote entende sem sair dela: o portão (fora de `Development`, `404` sem autorização ou `IFlowAccessFilter`), a regra de `Host` e `Origin` (`403`), que as três tools existem só no `/flow/mcp`, o que acontece num app que hospeda o próprio MCP, e o que a 59.0 mediu para os verbos de `/flow/mcp` em `Production`, que depende do modo de sessão e de o painel estar montado (D-299). O texto de referência é o parágrafo "Same security rule as the dashboard" do `README.md`, que a Fase 71 já reescreveu, e a Executora o resume sem copiá-lo inteiro.
 
 ## Tarefa 59.4: a tabela de performance, de novo
 
@@ -136,6 +138,17 @@ Se o número novo for pior que a promessa do README, vale o ponto de parada acim
 
 A auditoria relê cada frase tocada, nos dois idiomas, contra o app novo. A Executora entrega a tabela da 59.0 com a
 saída real e o diff do README, e **não** declara a fase pronta antes disso.
+
+## Resultado da 59A (D-299, 25/11/2026)
+
+Entregue em `develop` na #507 (squash `827d67e`), com a 59.0, a 59.1, a 59.3 e a 59.6. O relato é da Executora, no corpo da PR, e da auditoria, que conferiu com o pacote real `0.6.0-audit.18`. A Planejadora leu o corpo no head `679b37b` e não leu o último commit, `a107109`, que trata dos verbos do MCP.
+
+- **59.0:** 23 frases falsas ou imprecisas (texto corrigido nos dois idiomas), 3 verdadeiras hoje (1, 10 e 11) e nenhuma sem reprodução. A tabela com a saída real está em `tests/manual-verification/Fase59ReadmeVerdadeiroVerification/README.md`.
+- **59.1 e 59.3:** os READMEs e as páginas dos pacotes dizem o namespace de cada registro, o `schema.sql`, a versão do `SqlClient`, a licença do MediatR 13, os limites fixos, o aviso do OpenTelemetry 1.21.0 no `net8.0` e a regra do MCP.
+- **O Início rápido no `net8.0` (D-277):** a auditoria colou na ordem num app novo com Swashbuckle, com `OpenApiDocumentPath = "/swagger/v1/swagger.json"`, e compila com 0 avisos, e o Runner lista as rotas e abre o trace.
+- **O `/flow/mcp` em `Production`, por modo (D-299):** sem sessão, `POST` 404 e `GET`, `DELETE` e `PUT` 405. Com sessões, `POST`, `GET` e `DELETE` 404 e `PUT` 405. Com o painel em `/flow`, o `GET` é do painel.
+- **59.6:** `CONTRIBUTING`, `SECURITY.md` (o MCP no escopo), o template de PR e o `config.yml` do `ISSUE_TEMPLATE`.
+- **Aberto:** a 59.2 (59B), a 59.4 (59C) e a 59.5, a releitura da auditoria sobre o `develop` com a 59 inteira.
 
 ## Fora de escopo
 
