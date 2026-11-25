@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NetApiFlow.Domain;
 using NetApiFlow.Storage.PostgreSql;
 using Npgsql;
 using Shouldly;
@@ -83,6 +84,30 @@ public sealed class PostgreSqlRouteTemplateNormalizationTests(PostgreSqlContaine
 
         routeKey.ShouldBe("/api/orders/{id}");
     }
+
+    [Theory]
+    [InlineData("/api/orders/{id}")]
+    [InlineData("/api/orders/{id:int}")]
+    [InlineData("api/orders/{id}")]
+    public async Task QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceSavedWithTheConstraint(string route)
+    {
+        var store = BuildStore($"t{Guid.NewGuid():N}_");
+        await store.SaveAsync(CreateTrace("constrained", "/api/orders/{id:int}"), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("other", "/api/customers/{id:int}"), [], CancellationToken.None);
+
+        var result = await store.QueryAsync(new TraceQuery { RouteTemplate = route }, CancellationToken.None);
+
+        result.Items.Select(item => item.TraceId).ShouldBe(["constrained"]);
+    }
+
+    private static FlowTrace CreateTrace(string traceId, string routeTemplate) => new()
+    {
+        TraceId = traceId,
+        Method = "GET",
+        RouteTemplate = routeTemplate,
+        Status = FlowStatus.Success,
+        StartedAt = DateTime.UtcNow,
+    };
 
     private ITraceStore BuildStore(string tablePrefix)
     {
