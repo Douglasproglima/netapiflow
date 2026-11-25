@@ -1,6 +1,29 @@
-<section class="endpoint-form">
+<section
+  class="endpoint-form"
+  [class.endpoint-form--dialog]="asDialog()"
+  [cdkTrapFocus]="asDialog() && dialogOpen()"
+>
+  @if (asDialog()) {
+    <button
+      type="button"
+      class="endpoint-form__close"
+      [attr.aria-label]="'action.closePanel' | t"
+      (click)="dismissed.emit()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        width="18"
+        height="18"
+      >
+        <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+      </svg>
+    </button>
+  }
   <div class="endpoint-form__header">
-    <h2>{{ 'action.title' | t }}</h2>
+    <h2 [id]="titleId">{{ 'action.title' | t }}</h2>
     <p class="endpoint-form__intro">{{ 'action.intro' | t }}</p>
   </div>
 
@@ -50,12 +73,14 @@
             >
             @if (field.kind === 'body') {
               <textarea
+                #fieldControl
                 [id]="'endpoint-form-field-' + field.name"
                 [value]="fieldValue(field.name)"
                 (input)="onFieldInput(field.name, $event)"
               ></textarea>
             } @else {
               <input
+                #fieldControl
                 type="text"
                 [id]="'endpoint-form-field-' + field.name"
                 [value]="fieldValue(field.name)"
@@ -154,13 +179,19 @@
         <div class="endpoint-form__headers">
           <div class="endpoint-form__headers-head">
             <span>{{ 'action.headers.title' | t }}</span>
-            <button type="button" class="endpoint-form__headers-add" (click)="addHeader()">
+            <button
+              #addHeaderButton
+              type="button"
+              class="endpoint-form__headers-add"
+              (click)="addHeader()"
+            >
               {{ 'action.headers.add' | t }}
             </button>
           </div>
           @for (header of credentials.customHeaders(); track $index) {
             <div class="endpoint-form__header-row">
               <input
+                #headerNameInput
                 type="text"
                 [attr.placeholder]="'action.headers.namePlaceholder' | t"
                 [value]="header.name"
@@ -210,6 +241,7 @@
           'action.filterAria' | t
         }}</label>
         <input
+          #filterInput
           id="endpoint-form-filter"
           type="text"
           [attr.placeholder]="'action.filterPlaceholder' | t"
@@ -229,12 +261,14 @@
             @for (endpoint of endpoints(); track endpoint.method + ' ' + endpoint.path) {
               <li>
                 <button
+                  #endpointButton
                   type="button"
                   class="endpoint-form__endpoint"
                   [class.endpoint-form__endpoint--selected]="
                     selected()?.method === endpoint.method && selected()?.path === endpoint.path
                   "
-                  [attr.title]="endpoint.method + ' ' + endpoint.path"
+                  [attr.title]="endpointKey(endpoint)"
+                  [attr.data-endpoint]="endpointKey(endpoint)"
                   (click)="selectEndpoint(endpoint.method, endpoint.path)"
                 >
                   <span class="naf-tag" [class]="methodTagClass(endpoint.method)">{{
@@ -283,6 +317,7 @@
   @if (form(); as form) {
     <div class="endpoint-form__footer">
       <button
+        #sendButton
         mat-flat-button
         type="submit"
         form="endpoint-form-send"

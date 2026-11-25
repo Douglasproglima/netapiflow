@@ -1,4 +1,14 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChildren,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Params, ParamMap, Router, RouterLink } from '@angular/router';
@@ -220,6 +230,9 @@ export class HistoryComponent {
   private readonly config = inject(ConfigService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly sortButtons = viewChildren<ElementRef<HTMLButtonElement>>('sortButton');
+  private sortFieldToRefocus: TraceSortField | null = null;
 
   readonly methods = METHODS;
   readonly periodPresets = PERIOD_PRESETS;
@@ -372,6 +385,7 @@ export class HistoryComponent {
           this.result.set(result);
         }
         this.loading.set(false);
+        this.refocusSortButton();
       });
 
     effect(() => {
@@ -531,7 +545,23 @@ export class HistoryComponent {
         ? 'desc'
         : 'asc'
       : SORT_FIELD_DEFAULT_DIRECTION[field];
+    this.sortFieldToRefocus = field;
     this.patchFilters({ sort: field, order });
+  }
+
+  private refocusSortButton(): void {
+    const field = this.sortFieldToRefocus;
+    this.sortFieldToRefocus = null;
+    if (!field) {
+      return;
+    }
+    afterNextRender(
+      () =>
+        this.sortButtons()
+          .find((button) => button.nativeElement.dataset['sortField'] === field)
+          ?.nativeElement.focus(),
+      { injector: this.injector },
+    );
   }
 
   isActiveSort(field: TraceSortField): boolean {

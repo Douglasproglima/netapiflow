@@ -1911,5 +1911,91 @@
       "scenario": "nuspec:NetApiFlow.Testing"
     },
     "job": "real-package"
+  },
+  {
+    "id": "B13a-focus-ring-on-the-material-buttons",
+    "defect": "The Material buttons and menu items showed their keyboard focus only as a state layer of 12 percent, between 1.09 and 1.44 to 1 against the surface, and nothing else, below the 3 to 1 of WCAG",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "focus-ring:material-buttons-and-menu-items"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B13a-focus-color-reaches-3-to-1",
+    "defect": "The focus color of the brand was never measured against the surfaces it is drawn on",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "focus-ring:tokens-reach-3-to-1"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B13b-drawer-is-a-dialog",
+    "defect": "The Try an endpoint drawer had no dialog role, no name, no modal state, let Tab leave it and ignored Escape",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.dialog.spec.ts",
+      "test": "the endpoint form as the drawer dialog"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13b-drawer-gives-the-focus-back",
+    "defect": "Closing the Try an endpoint drawer dropped the focus on the body instead of returning it to the button that opened it",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/action-drawer.service.spec.ts",
+      "test": "ActionDrawerService the focus around opening and closing gives the focus back to the element that opened the drawer"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-runner-focuses-the-required-field",
+    "defect": "Picking an endpoint in the Runner dropped the focus on the body, and the next Tab went to Send request and skipped the required id field",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.focus.spec.ts",
+      "test": "keyboard focus in the endpoint form puts the focus on the required path field when an endpoint is picked"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-runner-back-keeps-the-place",
+    "defect": "Going back from the form to the list of endpoints dropped the focus on the body",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.focus.spec.ts",
+      "test": "keyboard focus in the endpoint form returns the focus to the endpoint that was open when going back to the list"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-header-removal-keeps-the-focus",
+    "defect": "Removing a custom header dropped the focus on the body",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.focus.spec.ts",
+      "test": "keyboard focus in the endpoint form moves the focus to the next header row"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-history-sort-keeps-the-focus",
+    "defect": "Sorting the history by a column dropped the focus on the body when the rows came back",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/history/history.component.spec.ts",
+      "test": "HistoryComponent puts the focus back on the sort button of the column that was sorted"
+    },
+    "job": "build-test"
   }
 ]

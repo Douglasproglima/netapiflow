@@ -489,6 +489,8 @@
                 <th class="history__col-status" [attr.aria-sort]="sortAriaSort('httpStatus')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="httpStatus"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('httpStatus')"
                     [attr.aria-label]="
@@ -523,6 +525,8 @@
                 <th class="history__col-method" [attr.aria-sort]="sortAriaSort('method')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="method"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('method')"
                     [attr.aria-label]="
@@ -557,6 +561,8 @@
                 <th class="history__col-route" [attr.aria-sort]="sortAriaSort('route')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="route"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('route')"
                     [attr.aria-label]="
@@ -589,6 +595,8 @@
                 <th class="history__col-started" [attr.aria-sort]="sortAriaSort('startedAt')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="startedAt"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('startedAt')"
                     [attr.aria-label]="
@@ -626,6 +634,8 @@
                 >
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="duration"
                     class="naf-sort-btn naf-sort-btn--numeric"
                     [class.naf-sort-btn--active]="isActiveSort('duration')"
                     [attr.aria-label]="

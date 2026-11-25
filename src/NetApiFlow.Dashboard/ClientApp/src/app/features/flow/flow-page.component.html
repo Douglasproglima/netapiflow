@@ -5,32 +5,19 @@
     <app-endpoint-form
       class="flow-workspace__action"
       [class.flow-workspace__action--open]="actionDrawer.open()"
+      [asDialog]="isActionDrawer()"
+      [dialogOpen]="actionDrawer.open()"
+      (dismissed)="actionDrawer.close()"
       (traceDispatched)="openTrace($event); actionDrawer.close()"
     />
     @if (isActionDrawer() && actionDrawer.open()) {
       <button
         type="button"
         class="flow-workspace__scrim"
-        [attr.aria-label]="'action.closePanel' | t"
+        tabindex="-1"
+        aria-hidden="true"
         (click)="actionDrawer.close()"
       ></button>
-      <button
-        type="button"
-        class="flow-workspace__action-close"
-        [attr.aria-label]="'action.closePanel' | t"
-        (click)="actionDrawer.close()"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          width="18"
-          height="18"
-        >
-          <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
-        </svg>
-      </button>
     }
 
     <div class="flow-workspace__center">

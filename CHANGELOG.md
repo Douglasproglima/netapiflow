@@ -189,6 +189,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.Dashboard`: the panel can be used from the keyboard where it used to stop. The focus of
+  the Material buttons and menu items was a faint tint, between 1.09 and 1.44 to 1 against the
+  surface, and is now a 2 px ring in the focus color of the brand, 4.2 to 1 in the dark theme and 6.5
+  to 1 in the light one. The "Try an endpoint" drawer is a dialog now: it has a name, takes the focus
+  when it opens, keeps it inside, closes with `Esc` and gives the focus back to the button that opened
+  it, and its close button moved inside it. The focus no longer falls on the page when you pick an
+  endpoint in the Runner, go back to its list, remove a custom header or sort the History by a
+  column. Picking an endpoint now puts the focus on its first field, so the next `Tab` no longer
+  skips the required `id` and lands on "Send request". The arrow keys in the language selector, a
+  link to skip to the content, `Esc` in the step panel and a live region are not part of this fix.
 - `NetApiFlow` with `Microsoft.Data.SqlClient`: several commands in one method record one step each
   again, and the code that follows them has the right parent. Since `ExternalActivitySource.SqlClient`
   exists, the step of a command stayed the current `Activity` of your code after its `await`, already
