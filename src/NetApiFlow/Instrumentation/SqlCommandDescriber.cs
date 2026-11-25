@@ -2,6 +2,11 @@ using System.Text.RegularExpressions;
 
 namespace NetApiFlow.Instrumentation;
 
+/// <summary>
+/// Derives "{CommandType} {MainTable}" from a SQL command text, never the parameter values.
+/// Deliberately duplicates <c>FlowDbCommandInterceptor.DescribeCommand</c>: the core package
+/// cannot depend on <c>NetApiFlow.EntityFrameworkCore</c>.
+/// </summary>
 internal static partial class SqlCommandDescriber
 {
     public static string Describe(string commandText)
@@ -18,6 +23,6 @@ internal static partial class SqlCommandDescriber
     [GeneratedRegex(@"^\s*(SELECT|INSERT|UPDATE|DELETE)\b", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex CommandTypeRegex();
 
-    [GeneratedRegex(@"\b(?:FROM|INTO|UPDATE)\s+(?:[`""\[]?\w+[`""\]]?\s*\.\s*)*[`""\[]?(\w+)[`""\]]?", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"\b(?:FROM|INTO|UPDATE)\s+[`""\[]?(\w+)[`""\]]?", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex MainTableRegex();
 }

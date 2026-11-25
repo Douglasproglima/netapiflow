@@ -295,7 +295,7 @@ public class FlowActivityListenerTests
         using (Flow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
         {
             using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
-            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u");
+            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT u.\"Id\" FROM \"Users\" AS u");
         }
 
         var spans = recorder.GetActiveTrace(traceId)!.Spans;
@@ -314,7 +314,7 @@ public class FlowActivityListenerTests
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
             npgsqlActivity.ShouldNotBeNull();
-            npgsqlActivity.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
+            npgsqlActivity.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
         }
 
         var spans = recorder.GetActiveTrace(traceId)!.Spans;
@@ -323,6 +323,69 @@ public class FlowActivityListenerTests
         spans[0].Operation.ShouldBe("SELECT Users");
         spans[0].Type.ShouldBe(ComponentType.Database);
         spans[0].Tags.Keys.ShouldNotContain("sql");
+    }
+
+    [Theory]
+    [InlineData("postgresql", "db.query.text", "SELECT Users")]
+    [InlineData("postgres", "db.statement", "SELECT Users")]
+    [InlineData("CONNECT custom", "db.query.text", "SELECT Users")]
+    [InlineData("CONNECT custom", "db.statement", "SELECT Users")]
+    public void ActivityStopped_WithNpgsqlCommandText_RecordsTheCommandWhateverItsNameAndConvention(string activityName, string textTag, string expectedOperation)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity(activityName))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag(textTag, "SELECT u.\"Id\" FROM \"Users\" AS u");
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.ShouldHaveSingleItem();
+        span.Component.ShouldBe("Npgsql");
+        span.Operation.ShouldBe(expectedOperation);
+        span.Status.ShouldBe(FlowStatus.Success);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivityStopped_WithNpgsqlConnectionOpen_RecordsNoSpanEvenWhenItFails(bool fails)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("CONNECT postgres"))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag("db.system.name", "postgresql");
+            if (fails)
+            {
+                npgsqlActivity.SetStatus(ActivityStatusCode.Error);
+                npgsqlActivity.SetTag("error.type", "28P01");
+            }
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ActivityStopped_WithNpgsqlActivityWithoutTextUnderTheDriverName_StaysAGenericSqlCommand()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (npgsqlSource.StartActivity("postgresql"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldHaveSingleItem().Operation.ShouldBe("SQL command");
     }
 
     [Fact]
@@ -340,7 +403,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, statement);
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, statement);
             npgsqlActivity.SetTag("db.connection_string", "Host=127.0.0.1;Port=5432;Database=app;Username=postgres");
             npgsqlActivity.SetTag("db.user", "postgres");
             npgsqlActivity.SetTag("net.peer.ip", "127.0.0.1");
@@ -361,7 +424,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT * FROM \"Missing\"");
             npgsqlActivity.SetStatus(ActivityStatusCode.Error, "relation \"Missing\" does not exist");
         }
 
@@ -381,7 +444,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT * FROM \"Missing\"");
             npgsqlActivity.SetTag("otel.status_code", "ERROR");
             npgsqlActivity.SetTag("otel.status_description", "42P01");
             npgsqlActivity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection

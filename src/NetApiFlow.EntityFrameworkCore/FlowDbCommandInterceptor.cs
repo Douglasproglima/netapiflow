@@ -177,6 +177,7 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
         }
     }
 
+    /// <summary>Derives "{CommandType} {MainTable}" from the command text, never the parameter values.</summary>
     internal static string DescribeCommand(string commandText)
     {
         var typeMatch = CommandTypeRegex().Match(commandText);
@@ -191,6 +192,6 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
     [GeneratedRegex(@"^\s*(SELECT|INSERT|UPDATE|DELETE)\b", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex CommandTypeRegex();
 
-    [GeneratedRegex(@"\b(?:FROM|INTO|UPDATE)\s+(?:[`""\[]?\w+[`""\]]?\s*\.\s*)*[`""\[]?(\w+)[`""\]]?", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"\b(?:FROM|INTO|UPDATE)\s+[`""\[]?(\w+)[`""\]]?", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex MainTableRegex();
 }
