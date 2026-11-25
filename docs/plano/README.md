@@ -16,6 +16,7 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | `roadmap-valor.md` | Backlog pós-`0.1.0` ranqueado por peso de valor de entrega (D-79). Arquivo vivo, não append-only |
 | `release-0.6.0.md` | A checklist do release da `0.6.0`, passo a passo, com os portões, a conferência do `release.yml` e a segunda passada (D-292) |
 | `advisories-0.6.0.md` | Os quatro advisories da `0.6.0` num lugar só, com nota e vetor, para o dono confirmar e a auditoria publicar (D-292) |
+| `release-0.6.0-notes.md` | A abertura, em inglês, do texto do GitHub Release da `0.6.0`, e como montá-lo a partir do `CHANGELOG.md` (D-303) |
 | `fase-0-fundacao.md` … `fase-19-npgsql-investigacao.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
 
 ## Estado das fases
