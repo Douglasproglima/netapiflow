@@ -87,4 +87,37 @@ A auditoria refaz com o pacote real, num app novo (`dotnet add package`), o que 
 | 13 | **O plano acrescenta:** a tela de Arquitetura (60.7) e a Minimal API sem `WithNetApiFlowTracking` | A Arquitetura com o pacote real, porque a demo não grava aquele mapa. E a observação da auditoria (25/11/2026): o pacote novo grava como etapa uma Minimal API sem `WithNetApiFlowTracking`, o que a `0.5.3` não gravava, por efeito da Fase 51. Conferir que isso está no CHANGELOG e que as rotas do próprio NetApiFlow seguem sem rastreio |
 | 14 | **O plano acrescenta:** o `route_key` com dado gravado pela `0.5.3` (60.10) | O filtro de rota (`?route=/orders/{id}`) sobre traces gravados pela `0.5.3` nos dois bancos, junto com a Fase 53, que já usa os dois bancos. A auditoria já conferiu no código da `v0.5.3` que a chave gravada é a mesma que a consulta nova calcula |
 
+## O registro da segunda passada
+
+Uma linha por item, para a auditoria preencher pelas mensagens dela. A Planejadora preencheu só o que já está nas mensagens (D-299, a leitura do `CHANGELOG`). Depois que as linhas estiverem cheias, a Planejadora marca os riscos e fecha as linhas do README.
+
+| # | Item | Medido em | Pacote | Resultado | Decisão |
+|---|---|---|---|---|---|
+| 1 | Fases 50 e 51: o Quick start colado na ordem do leitor, no `net10.0` (R-31 e R-32) |  |  |  |  |
+| 2 | Quick start no `net8.0`, com Swashbuckle (D-277) | 25/11/2026 | `0.6.0-audit.18` | Compila com 0 avisos. O Runner lista `GET /weatherforecast`, envia e abre o trace | Respondido (D-299) |
+| 3 | Fase 53: `UsePathBase`, `ExcludePaths` e as rotas do painel que não viram traces (R-33) |  |  |  |  |
+| 4 | Fase 53: a matriz de hospedagem (IIS in-process, IIS out-of-process e proxy com `X-Forwarded-Prefix`) |  |  |  |  |
+| 5 | Fase 55: a identidade da trace nos dois storages |  |  |  |  |
+| 6 | Fase 56, S6: `Host` e `Origin` alheios dão 403 no painel e no `/flow/mcp` |  |  |  |  |
+| 7 | Fase 56, S7: os cabeçalhos de segurança em `/flow`, e o painel atrás de proxy ou com host declarado |  |  |  |  |
+| 8 | Fase 57, F1a: a rota da trace vem do `EndpointMatched` |  |  |  |  |
+| 9 | Fase 57, F1b: o estado "Aguardando" e o blueprint do último sucesso anterior |  |  |  |  |
+| 10 | Fase 54: os 13 casos do S1 e do S2 contra a `0.6.0`, pelo coletor OTLP e pelo painel |  |  |  |  |
+| 11 | Cinco linhas sorteadas do `guards.json` |  |  |  |  |
+| 12 | Fase 60.7: a tela de Arquitetura |  |  |  |  |
+| 13 | A Minimal API sem `WithNetApiFlowTracking` e as rotas do próprio NetApiFlow sem rastreio |  |  | No CHANGELOG, as duas entradas existem (`### Added` e `### Changed`), lidas pela Planejadora em 25/11/2026. Falta medir as rotas do NetApiFlow |  |
+| 14 | O `route_key` com dado gravado pela `0.5.3`, nos dois bancos (60.10) |  |  |  |  |
+| 15 | Inventário do D-205: o mapa de cobertura do CI |  |  |  |  |
+| 16 | Inventário do D-205: as telas e a demo (faltam a 57 e a 60) |  |  |  |  |
+| 17 | Inventário do D-205: o README frase a frase (59.5), com o `OpenTelemetry.Instrumentation.AspNetCore` 1.21.0 no `net8.0` e a licença do MediatR 13 |  |  |  |  |
+| 18 | O custo do `Flow.Step` com `Enabled = true` e `false` contra a `0.5.3`, e a tabela de desempenho da 59C (59.4) |  |  |  |  |
+| 19 | Advisory 1 contra a `0.5.3` (S4), e o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0` |  |  |  |  |
+| 20 | Advisory 2 contra a `0.5.3` (S1 e S2, com um coletor) |  |  |  |  |
+| 21 | Advisory 3 contra a `0.5.3` (S6 e S7) |  |  |  |  |
+| 22 | Advisory 4 contra a `0.5.3` |  | `0.5.3` | Já reproduzido pela auditoria |  |
+| 23 | A corrida do campo de rota do Runner, com backend real (D-293) |  |  |  |  |
+| 24 | O `release.yml` na tag, passos 11 a 13 |  |  |  |  |
+| 25 | O `CHANGELOG` lido por quem atualiza da `0.5.3` (a lista da Planejadora, D-303) |  |  |  | A auditoria decide |
+| 26 | O texto do Release, `release-0.6.0-notes.md` |  |  |  |  |
+
 **O que a Planejadora faz depois dela:** marcar R-29 e R-30 (Fases 48 e 49, publicadas na `0.5.0` e na `0.5.1`, ainda `Planejado` na tabela) e R-31, R-32 e R-33 como Mitigado, citando o arquivo de teste que prova cada um, depois de conferir que ele existe e é real; fechar no README as linhas das Fases 50, 51, 53, 55, 56 e 57 (e a 54, se a auditoria disser); e registrar a 60, a 59 e o release.
