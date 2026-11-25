@@ -1,0 +1,43 @@
+@mixin stack-rows($table, $label-width: 6rem) {
+  @media (max-width: 767px) {
+    #{$table} thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    #{$table},
+    #{$table} tbody,
+    #{$table} tr,
+    #{$table} td {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    #{$table} tr {
+      padding: 0.625rem 1rem;
+      border-bottom: 1px solid var(--naf-border);
+    }
+
+    #{$table} td {
+      padding: 0.125rem 0;
+      border: 0;
+      text-align: left;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    #{$table} td[data-label]::before {
+      content: attr(data-label);
+      display: inline-block;
+      min-width: $label-width;
+      margin-right: 0.5rem;
+      color: var(--naf-text-muted);
+      font-size: 0.75rem;
+    }
+  }
+}

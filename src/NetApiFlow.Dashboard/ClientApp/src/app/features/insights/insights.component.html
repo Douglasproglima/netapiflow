@@ -33,22 +33,26 @@
       @if (slowestRoutes().length === 0) {
         <p class="insights__status">{{ 'insights.slowest.empty' | t }}</p>
       } @else {
-        <table class="insights__table">
-          <thead>
-            <tr>
-              <th>{{ 'insights.table.method' | t }}</th>
-              <th>{{ 'insights.table.route' | t }}</th>
-              <th>{{ 'insights.table.executions' | t }}</th>
-              <th>{{ 'insights.table.p95' | t }}</th>
+        <table class="insights__table" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th role="columnheader">{{ 'insights.table.method' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.route' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.executions' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.p95' | t }}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (stat of slowestRoutes(); track trackByRoute($index, stat)) {
-              <tr>
-                <td>{{ stat.method }}</td>
-                <td>{{ stat.routeTemplate }}</td>
-                <td>{{ stat.executionCount }}</td>
-                <td>{{ formatDuration(stat.p95DurationMicros) }}</td>
+              <tr role="row">
+                <td role="cell">{{ stat.method }}</td>
+                <td role="cell">{{ stat.routeTemplate }}</td>
+                <td role="cell" [attr.data-label]="'insights.table.executions' | t">
+                  {{ stat.executionCount }}
+                </td>
+                <td role="cell" [attr.data-label]="'insights.table.p95' | t">
+                  {{ formatDuration(stat.p95DurationMicros) }}
+                </td>
               </tr>
             }
           </tbody>
@@ -61,22 +65,26 @@
       @if (topErrors().length === 0) {
         <p class="insights__status">{{ 'insights.topErrors.empty' | t }}</p>
       } @else {
-        <table class="insights__table">
-          <thead>
-            <tr>
-              <th>{{ 'insights.table.method' | t }}</th>
-              <th>{{ 'insights.table.route' | t }}</th>
-              <th>{{ 'insights.table.errors' | t }}</th>
-              <th>{{ 'insights.table.executions' | t }}</th>
+        <table class="insights__table" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th role="columnheader">{{ 'insights.table.method' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.route' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.errors' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.executions' | t }}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (stat of topErrors(); track trackByRoute($index, stat)) {
-              <tr>
-                <td>{{ stat.method }}</td>
-                <td>{{ stat.routeTemplate }}</td>
-                <td>{{ stat.errorCount }}</td>
-                <td>{{ stat.executionCount }}</td>
+              <tr role="row">
+                <td role="cell">{{ stat.method }}</td>
+                <td role="cell">{{ stat.routeTemplate }}</td>
+                <td role="cell" [attr.data-label]="'insights.table.errors' | t">
+                  {{ stat.errorCount }}
+                </td>
+                <td role="cell" [attr.data-label]="'insights.table.executions' | t">
+                  {{ stat.executionCount }}
+                </td>
               </tr>
             }
           </tbody>
@@ -92,18 +100,18 @@
         @if (tailSamplingEnabled()) {
           <p class="insights__status">{{ 'insights.deadRoutes.tailSamplingCaveat' | t }}</p>
         }
-        <table class="insights__table">
-          <thead>
-            <tr>
-              <th>{{ 'insights.table.method' | t }}</th>
-              <th>{{ 'insights.table.route' | t }}</th>
+        <table class="insights__table" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th role="columnheader">{{ 'insights.table.method' | t }}</th>
+              <th role="columnheader">{{ 'insights.table.route' | t }}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (endpoint of deadRoutes(); track trackByEndpoint($index, endpoint)) {
-              <tr>
-                <td>{{ endpoint.method }}</td>
-                <td>{{ endpoint.routeTemplate }}</td>
+              <tr role="row">
+                <td role="cell">{{ endpoint.method }}</td>
+                <td role="cell">{{ endpoint.routeTemplate }}</td>
               </tr>
             }
           </tbody>
