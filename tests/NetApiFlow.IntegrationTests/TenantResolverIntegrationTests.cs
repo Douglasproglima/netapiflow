@@ -12,9 +12,9 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies <see cref="IFlowTenantResolver"/> is wired into <c>NetApiFlowMiddleware</c> (tarefa
-/// 3.8, D-21): when registered, its result becomes the trace's <c>tenant</c> tag; with nothing
-/// registered, no tag is added.
+/// Verifies <see cref="IFlowTenantResolver"/> is wired into <c>NetApiFlowMiddleware</c>: when
+/// registered, its result becomes the trace's <c>tenant</c> tag; with nothing registered, no tag is
+/// added.
 /// </summary>
 public class TenantResolverIntegrationTests
 {
