@@ -213,6 +213,8 @@ public sealed class SqlInStepController(SqlServerConnectionString connectionStri
 [Collection(SqlServerTestGroup.Name)]
 public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContainerFixture fixture)
 {
+    private static readonly JsonSerializerOptions WebOptions = new(JsonSerializerDefaults.Web);
+
     private async Task<(IHost Host, HttpClient Client)> StartHostAsync(
         bool withInterceptor = true,
         ExternalActivitySource externalSources = ExternalActivitySource.SqlClient)
@@ -283,7 +285,7 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
     {
         var response = await client.GetAsync(path);
         response.EnsureSuccessStatusCode();
-        var current = JsonSerializer.Deserialize<List<CurrentActivity>>(await response.Content.ReadAsStringAsync(), JsonSerializerOptions.Web)!;
+        var current = JsonSerializer.Deserialize<List<CurrentActivity>>(await response.Content.ReadAsStringAsync(), WebOptions)!;
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
         return (Flow.GetRecentTrace(host.Services, traceId)!.Spans, current);
     }

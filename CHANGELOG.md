@@ -177,6 +177,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow` with `Microsoft.Data.SqlClient`: several commands in one method record one step each
+  again, and the code that follows them has the right parent. Since `ExternalActivitySource.SqlClient`
+  exists, the step of a command stayed the current `Activity` of your code after its `await`, already
+  stopped. A repository with three queries recorded the first one only, because the stopped step then
+  covered the next ones, a Npgsql command that followed it disappeared from the trace, and the next
+  `Flow.Step` became a child of the finished SQL step. The same happened after a failed command, a
+  cancelled one and an `ExecuteReader`. The step is still opened in `WriteCommandBefore` and closed in
+  `WriteCommandAfter`, but it no longer replaces the current activity of the caller. A trace can have
+  more steps than before for the same request, and an N+1 made of SqlClient commands in one method now
+  lights the N+1 badge, which it could not before because only the first command was recorded.
 - `NetApiFlow` with Npgsql 10: a command is named after its SQL again, and `CaptureSqlText` records
   the text again. Npgsql 10 moved the text from `db.statement` to `db.query.text`, and only the old
   tag was read, so every command came out as `SQL command`. Both are read now, so Npgsql 8 and 9 keep
