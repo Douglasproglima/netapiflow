@@ -42,6 +42,10 @@ dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
 
+> **Update all the NetApiFlow packages together.** Each package asks for the core at exactly its own
+> version. If they do not match, NuGet tells you when it restores: `NU1605` (an error) when the core
+> is older than a package needs, and `NU1608` (a warning, worth turning into an error) when it is newer.
+
 Then add the NetApiFlow lines to the `Program.cs` the template generated. `AddOpenApi()` and
 `MapOpenApi()` are the template's own, so keep them: the dashboard's Runner lists your endpoints
 from your app's OpenAPI document, which is `/openapi/v1.json` unless you set `OpenApiDocumentPath`.

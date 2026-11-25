@@ -7,5 +7,7 @@ it to each `DbContext` with `options.AddInterceptors(sp.GetRequiredService<FlowD
 
 Works with EF Core 8.0.10 or later, on `net8.0` and on `net10.0`. Tested on EF Core 8, 9 and 10.
 
+Install it at the same version as `NetApiFlow`: this package asks for the core at exactly its own version.
+
 See the [project README](https://github.com/Douglasproglima/netapiflow#readme) for quick start
 and marking forms.

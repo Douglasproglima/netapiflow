@@ -70,6 +70,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow.Dashboard`, `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.Mcp`, `NetApiFlow.MediatR`,
+  `NetApiFlow.OpenTelemetry`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer` and
+  `NetApiFlow.Testing`: each package now asks for `NetApiFlow` at exactly its own version, `[0.6.0]` for
+  the 0.6.0 release, and no longer at that version or later. The packages are published together, and
+  the panel and the two storages use some internal types of the core, so a mix of releases could fail at
+  run time. Now NuGet says so when it restores: updating a package without the core gives `NU1605` (an
+  error), and updating the core without a package gives `NU1608` (only a warning, worth turning into an
+  error with `WarningsAsErrors`). Update all the NetApiFlow packages together. The packages already
+  published, up to 0.5.3, keep the open range, so they get none of this: with the 0.6.0 core and the
+  0.5.3 `NetApiFlow.Dashboard`, the restore passes with no message, and in the paths we exercised (the
+  panel API with a trace in flight, the detail of a live trace, the history, the metrics and clearing
+  the traces) nothing broke.
 - `NetApiFlow` and `NetApiFlow.EntityFrameworkCore`: a SQL step is named after its table, not its
   schema. `SELECT Id FROM dbo.Users` was the step `SELECT dbo`, and it is now `SELECT Users`. The same
   goes for `[dbo].[Users]`, `"public"."orders"`, `public.orders` and a name with three parts, for
