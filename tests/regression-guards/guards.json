@@ -2316,5 +2316,16 @@
       "test": "NetApiFlow.Storage.Tests.SqlServerRouteTemplateNormalizationTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceSavedWithTheConstraint"
     },
     "job": "build-test"
+  },
+  {
+    "id": "60B-listener-dispose-idempotent",
+    "defect": "Disposing an enabled listener twice decremented the listener counters twice, so with another enabled host and a disabled one in the same process the enabled host lost every step",
+    "fixedIn": "#512",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerDisposeTests.Dispose_CalledTwiceOnAnEnabledListener_DoesNotSilenceAnotherEnabledListener"
+    },
+    "job": "build-test"
   }
 ]
