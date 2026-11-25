@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -11,6 +11,7 @@ import { AboutDialogComponent } from './features/about/about-dialog.component';
 import { ActionDrawerService } from './core/action-drawer.service';
 import { ApiService } from './core/api.service';
 import { ConfigService } from './core/config.service';
+import { ImportedTraceService } from './core/imported-trace.service';
 import { SSE_REFRESH_AUDIT_MS, SseService } from './core/sse.service';
 import { formatDurationMicros } from './shared/duration-format';
 import { LanguageService } from './core/i18n/language.service';
@@ -51,6 +52,7 @@ export class App implements OnInit, OnDestroy {
   private readonly language = inject(LanguageService);
   private readonly theme = inject(ThemeService);
   readonly actionDrawer = inject(ActionDrawerService);
+  private readonly importedTrace = inject(ImportedTraceService);
 
   readonly isDemoMode = environment.isDemoMode;
   readonly version = signal<string | null>(null);
@@ -96,6 +98,8 @@ export class App implements OnInit, OnDestroy {
     ),
     { initialValue: this.router.url.split('?')[0] === '/' },
   );
+
+  readonly showingImportedTrace = computed(() => this.onFlowRoute() && this.importedTrace.active());
 
   constructor() {
     // Open by default on a wide screen, closed by default below 1024px — but only when crossing

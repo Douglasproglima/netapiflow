@@ -32,8 +32,13 @@ function operationLabelFor(
   totalExecutions: number,
   operation: string,
 ): string {
-  if (executionCount >= totalExecutions) {
+  if (executionCount === totalExecutions) {
     return operation;
+  }
+
+  if (executionCount > totalExecutions) {
+    const repeats = Math.round((executionCount / totalExecutions) * 10) / 10;
+    return `${operation} (×${repeats})`;
   }
 
   const percentage = Math.round((executionCount / totalExecutions) * 100);

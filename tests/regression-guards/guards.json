@@ -1997,5 +1997,247 @@
       "test": "HistoryComponent puts the focus back on the sort button of the column that was sorted"
     },
     "job": "build-test"
+  },
+  {
+    "id": "60A-slowest-step-own-time",
+    "defect": "The banner called the step that contains all the others the slowest one, because it picked the longest duration and not the most time of its own",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent the banner above the graph names the step with the most time of its own"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-error-origin-own-duration",
+    "defect": "The error origin banner showed the duration of the whole trace instead of the duration of the step that started the error",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent the banner above the graph shows the duration of the step that started the error"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-route-tooltip-header",
+    "defect": "The route in the header of the Flow screen was cut by the ellipsis with no tooltip",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent gives the route of the header a tooltip"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-unexplained-under-one-percent",
+    "defect": "The unexplained time badge said 0% of the time for 812 microseconds, which reads as a contradiction",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel says \"less than 1%\""
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-step-status-translated",
+    "defect": "The status of a step was shown as the raw English word in the Portuguese panel",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel shows the status"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-summary-label-translated",
+    "defect": "The request summary was named in English in the Portuguese panel",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel names the request summary"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-route-tooltip-summary",
+    "defect": "The route in the request summary was cut by the ellipsis with no tooltip",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel gives the route of the summary a tooltip"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-waterfall-rows-clickable",
+    "defect": "The steps list said to select a step to inspect it, but its rows could not be selected",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel asks to inspect a step"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-topbar-button-named",
+    "defect": "The button that opens the endpoint drawer had no accessible name on a narrow screen, where its text is hidden",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/app.flow-route.spec.ts",
+      "test": "the shell on the Flow route names the button that opens the endpoint drawer"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-imported-trace-chip",
+    "defect": "The connection chip said Live while an imported trace, which is not live, was on screen",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/app.flow-route.spec.ts",
+      "test": "the shell on the Flow route does not say"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-history-third-selection-notice",
+    "defect": "Picking a third execution to compare unchecked the oldest one in silence",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/history/history.component.spec.ts",
+      "test": "HistoryComponent picking a third execution to compare says the oldest execution was unchecked"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-history-slow-only-named-once",
+    "defect": "The Slow only switch was announced twice, by its aria-label and by a hidden copy of the same text",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/history/history.component.spec.ts",
+      "test": "HistoryComponent names the \"Slow only\" switch once"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-status-and-body",
+    "defect": "The Runner showed neither the HTTP status nor the body of the response",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response shows the status"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-trace-link",
+    "defect": "The trace id after a send was plain text, with no way to open the trace from the Runner screen",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response turns the trace id into a link"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-example",
+    "defect": "A POST started with an empty body even when the OpenAPI document gave an example for it",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response the body of a POST starts with the example"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-label-space",
+    "defect": "The label of a field ran the name and the kind of the field together",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response puts a space between the name of a field"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-architecture-repeat-count",
+    "defect": "A step that runs five times in each request looked the same as one that runs once",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/architecture/architecture-graph-builder.spec.ts",
+      "test": "buildArchitectureGraph how many times a step runs in each execution says how many times"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-architecture-no-legend",
+    "defect": "The Architecture map explained node states that a map of many executions does not have",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/architecture/architecture.component.spec.ts",
+      "test": "ArchitectureComponent draws no legend of node states"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-architecture-svg-keeps-styles",
+    "defect": "The exported Architecture SVG lost its font sizes and weights when opened outside the panel",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/architecture/architecture.component.spec.ts",
+      "test": "ArchitectureComponent the exported SVG, opened on its own keeps the"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-as-text",
+    "defect": "The body of the response of the Runner must be shown as text and never as markup",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response shows markup in the body as text and never as markup"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-cut",
+    "defect": "The body of the response of the Runner must be cut at 4000 characters before it is rendered, so that a large answer cannot freeze the tab",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response keeps only the first 4000 characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-not-stored",
+    "defect": "The body of the response of the Runner must stay in memory, out of every storage and out of the address",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response keeps the body out of every storage"
+    },
+    "job": "build-test"
   }
 ]

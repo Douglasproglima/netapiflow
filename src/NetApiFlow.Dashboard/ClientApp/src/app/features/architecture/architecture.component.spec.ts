@@ -283,6 +283,69 @@ describe('ArchitectureComponent', () => {
     click.mockRestore();
   });
 
+  describe('the exported SVG, opened on its own', () => {
+    async function exportedMarkupWith(computed: Record<string, string>): Promise<string> {
+      const fixture = TestBed.createComponent(ArchitectureComponent);
+      await fixture.whenStable();
+      httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+      httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
+      await fixture.whenStable();
+      await selectRouteWithGraph(fixture, httpMock);
+
+      const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        getPropertyValue: (property: string) => computed[property] ?? '',
+      } as CSSStyleDeclaration);
+
+      const exportPromise = fixture.componentInstance.exportSvg();
+      httpMock
+        .expectOne('node-states/completed.svg')
+        .flush('<svg xmlns="http://www.w3.org/2000/svg"><circle fill="#10B981"/></svg>');
+      await exportPromise;
+
+      return (createObjectURL.mock.calls[0][0] as Blob).text();
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([
+      ['font-size', '11px'],
+      ['font-weight', '600'],
+      ['stroke-width', '1.5'],
+      ['text-anchor', 'middle'],
+      ['opacity', '0.6'],
+    ])(
+      'keeps the %s of each element, which the stylesheet of the panel gave it',
+      async (property, value) => {
+        const markup = await exportedMarkupWith({ [property]: value });
+
+        expect(markup).toContain(`${property}: ${value}`);
+      },
+    );
+
+    it('carries no attribute that only the Angular stylesheet of the panel gives a meaning to', async () => {
+      const markup = await exportedMarkupWith({ fill: 'rgb(1, 2, 3)' });
+
+      expect(markup).not.toMatch(/_ngcontent|_nghost/);
+    });
+  });
+
+  it('draws no legend of node states, because a map of many executions has no states to explain', async () => {
+    const fixture = TestBed.createComponent(ArchitectureComponent);
+    await fixture.whenStable();
+    httpMock.expectOne((req) => req.url === 'api/endpoints').flush(ENDPOINTS);
+    httpMock.expectOne((req) => req.url === 'api/config').flush(CONFIG);
+    await fixture.whenStable();
+    await selectRouteWithGraph(fixture, httpMock);
+
+    expect(fixture.nativeElement.querySelector('.flow-graph__node')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.flow-graph__legend')).toBeNull();
+  });
+
   it('exportMermaid downloads the generated flowchart with a text MIME type', async () => {
     const fixture = TestBed.createComponent(ArchitectureComponent);
     await fixture.whenStable();

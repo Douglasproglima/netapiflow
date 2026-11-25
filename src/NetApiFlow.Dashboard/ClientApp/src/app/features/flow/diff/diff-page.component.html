@@ -68,19 +68,21 @@
 
       <div class="naf-card diff-page__table-wrap">
         <div class="diff-page__table-scroll">
-          <table class="diff-page__table">
-            <thead>
-              <tr>
-                <th class="diff-page__col-step">{{ 'diff.table.step' | t }}</th>
-                <th>A</th>
-                <th>B</th>
-                <th class="diff-page__col-delta">{{ 'diff.table.delta' | t }}</th>
+          <table class="diff-page__table" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th class="diff-page__col-step" role="columnheader">{{ 'diff.table.step' | t }}</th>
+                <th role="columnheader">A</th>
+                <th role="columnheader">B</th>
+                <th class="diff-page__col-delta" role="columnheader">
+                  {{ 'diff.table.delta' | t }}
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               @for (row of diffRows(); track row.key) {
-                <tr class="diff-page__row" [class]="'diff-page__row--' + row.kind">
-                  <td class="diff-page__col-step">
+                <tr class="diff-page__row" [class]="'diff-page__row--' + row.kind" role="row">
+                  <td class="diff-page__col-step" role="cell">
                     <span class="diff-page__step-content">
                       <span class="diff-page__step-component">{{ row.component }}</span>
                       <span class="naf-mono diff-page__step-operation">{{ row.operation }}</span>
@@ -91,7 +93,7 @@
                       }
                     </span>
                   </td>
-                  <td class="diff-page__col-side">
+                  <td class="diff-page__col-side" role="cell" data-label="A">
                     <span class="diff-page__side-content">
                       <img
                         [src]="stateIconSrc(row.stateA)"
@@ -105,7 +107,7 @@
                       }
                     </span>
                   </td>
-                  <td class="diff-page__col-side">
+                  <td class="diff-page__col-side" role="cell" data-label="B">
                     <span class="diff-page__side-content">
                       <img
                         [src]="stateIconSrc(row.stateB)"
@@ -119,7 +121,11 @@
                       }
                     </span>
                   </td>
-                  <td class="diff-page__col-delta naf-mono">
+                  <td
+                    class="diff-page__col-delta naf-mono"
+                    role="cell"
+                    [attr.data-label]="row.deltaMicros === null ? null : ('diff.table.delta' | t)"
+                  >
                     @if (row.deltaMicros !== null) {
                       {{ formatDelta(row.deltaMicros) }}
                     }

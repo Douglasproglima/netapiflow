@@ -1,5 +1,6 @@
 import {
   OpenApiDocument,
+  OpenApiOperation,
   OpenApiSecurityRequirement,
   OpenApiSecurityScheme,
 } from '../../core/models';
@@ -77,6 +78,7 @@ export interface FormField {
   kind: FormFieldKind;
   type: string;
   required: boolean;
+  example?: string;
 }
 
 export interface EndpointForm {
@@ -85,6 +87,13 @@ export interface EndpointForm {
   operationId: string | null;
   fields: FormField[];
   hasBody: boolean;
+}
+
+function bodyExampleOf(requestBody: OpenApiOperation['requestBody']): string | undefined {
+  const media = requestBody?.content?.['application/json'];
+  const namedExamples: Record<string, { value?: unknown }> = media?.examples ?? {};
+  const example = media?.example ?? Object.values(namedExamples)[0]?.value;
+  return example === undefined ? undefined : JSON.stringify(example, null, 2);
 }
 
 /**
@@ -113,11 +122,13 @@ export function buildEndpointForm(
 
   const hasBody = !!operation.requestBody;
   if (hasBody) {
+    const example = bodyExampleOf(operation.requestBody);
     fields.push({
       name: 'body',
       kind: 'body',
       type: 'object',
       required: operation.requestBody?.required ?? false,
+      ...(example === undefined ? {} : { example }),
     });
   }
 

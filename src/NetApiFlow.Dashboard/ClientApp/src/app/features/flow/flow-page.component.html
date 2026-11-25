@@ -55,7 +55,9 @@
           <div class="flow-workspace__graph-header">
             <h2>{{ 'graph.title' | t }}</h2>
             <span class="naf-tag" [class]="methodTagClass(trace.method)">{{ trace.method }}</span>
-            <span class="flow-workspace__route">{{ trace.routeTemplate }}</span>
+            <span class="flow-workspace__route" [attr.title]="trace.routeTemplate">{{
+              trace.routeTemplate
+            }}</span>
             <span class="flow-workspace__trace-id naf-mono"
               >{{ shortTraceId(trace.traceId) }}
               <button
@@ -156,7 +158,7 @@
                     : {
                         component: origin.component,
                         status: trace.httpStatus ?? '—',
-                        duration: formatDuration(trace.durationMicros),
+                        duration: formatDuration(origin.durationMicros),
                       }
               }}
             </button>
@@ -164,7 +166,7 @@
             <button
               type="button"
               class="flow-workspace__banner flow-workspace__banner--warning"
-              (click)="onNodeSelected(step.spanId)"
+              (click)="onNodeSelected(step.span.spanId)"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -179,7 +181,7 @@
               </svg>
               {{
                 'graph.slowestStep'
-                  | t: { component: step.component, duration: formatDuration(step.durationMicros) }
+                  | t: { component: step.span.component, duration: formatDuration(step.ownMicros) }
               }}
             </button>
           }

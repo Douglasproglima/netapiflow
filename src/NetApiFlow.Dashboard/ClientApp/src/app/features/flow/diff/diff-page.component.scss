@@ -1,3 +1,5 @@
+@use '../../../../styles/stack-table' as stack;
+
 .diff-page {
   padding: 1rem;
   display: flex;
@@ -160,3 +162,5 @@
 .diff-page__row--onlyInB td:nth-child(2) {
   opacity: 0.6;
 }
+
+@include stack.stack-rows('.diff-page__table', 5rem);

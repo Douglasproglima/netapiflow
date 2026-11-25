@@ -1,4 +1,13 @@
-import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -34,6 +43,8 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { TranslationKey } from '../../core/i18n/translations';
 import { parseTraceFile, traceExportFileName } from './trace-file';
 import { buildLocalSpanDetail } from './details/local-span-detail';
+import { ownTimeOfEachStep } from './own-time';
+import { ImportedTraceService } from '../../core/imported-trace.service';
 
 export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
@@ -111,6 +122,7 @@ export class FlowPageComponent {
   readonly isReplaying = signal(false);
 
   readonly importedTrace = signal<FlowTraceDetail | null>(null);
+  private readonly importedTraceState = inject(ImportedTraceService);
   readonly importErrorKey = signal<TranslationKey | null>(null);
 
   protected readonly unmatchedRouteTemplate = UNMATCHED_ROUTE_TEMPLATE;
@@ -216,6 +228,11 @@ export class FlowPageComponent {
     });
 
     effect(() => {
+      this.importedTraceState.active.set(this.importedTrace() !== null);
+    });
+    inject(DestroyRef).onDestroy(() => this.importedTraceState.active.set(false));
+
+    effect(() => {
       const traceId = this.traceId();
       this.selectedNodeId.set(null);
       this.selectedSpanDetail.set(null);
@@ -304,11 +321,12 @@ export class FlowPageComponent {
       return null;
     }
 
-    return (
-      trace.spans
-        .filter((span) => (span.durationMicros ?? 0) >= threshold)
-        .sort((a, b) => (b.durationMicros ?? 0) - (a.durationMicros ?? 0))[0] ?? null
-    );
+    const ownTimes = ownTimeOfEachStep(trace.spans);
+    const slowest = trace.spans
+      .map((span) => ({ span, ownMicros: ownTimes.get(span.spanId) ?? 0 }))
+      .filter((step) => step.ownMicros >= threshold)
+      .sort((a, b) => b.ownMicros - a.ownMicros)[0];
+    return slowest ?? null;
   });
 
   readonly replayStatusLine = computed(() => {
