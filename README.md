@@ -776,9 +776,10 @@ exception is logged at `Debug`.
 > `IFlowAccessFilter`, which sees the method of every request.
 >
 > **An app with a `FallbackPolicy` that requires an authenticated user** (common in JWT APIs) gets
-> **401** on the dashboard instead, in every environment: the authorization middleware answers
-> before the dashboard's own check, and a browser does not send a bearer token when it navigates
-> to `/flow`. In Development, let the dashboard through:
+> the challenge of its authentication scheme on the dashboard instead, in every environment: a
+> **401** with JWT bearer, a **302** to the login page with cookies. The authorization middleware
+> answers before the dashboard's own check, and a browser does not send a bearer token when it
+> navigates to `/flow`. In Development, let the dashboard through:
 >
 > ```csharp
 > var dashboard = app.MapNetApiFlowDashboard();
@@ -1142,7 +1143,7 @@ sanitizer below removes the shapes it lists and nothing more. Keep request data 
 messages.
 
 The sanitizer is on by default and it is a filter for known shapes, not a guarantee that no secret
-survives. What it removes: e-mail addresses, CPF, CNPJ, long numeric sequences, a JWT (three
+survives. What it removes: e-mail addresses, CPF, CNPJ, numeric sequences of 12 digits or more, a JWT (three
 base64url segments starting with `eyJ`), the password in a URL (`scheme://user:password@host`), and
 the value of any `key=value`, `key: value` or JSON `"key": "value"` pair whose key contains
 `password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (also `api_key` and `apikey`),
@@ -1221,13 +1222,14 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   `DecorateFlowTracked` and `TrackFlowByConvention` build their proxy with `DispatchProxy`, which
   emits a type at run time, and the last two also match implementation types by reflection. All
   three carry `[RequiresDynamicCode]` (and the last two also `[RequiresUnreferencedCode]`), so you
-  get an `IL3050`/`IL2026` warning at build time. If you publish anyway, the binary starts, and the
+  get an `IL3050`, `IL3053` or `IL2026` warning at build time. If you publish anyway, the binary starts, and the
   first call into a tracked service fails: the request answers 500 with
   `PlatformNotSupportedException: Dynamic code generation is not supported on this platform`. The
   marking form that stays safe under Native AOT and trimming is `Flow.Step(...)`: a host calling only
   `AddNetApiFlow()` and `Flow.Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
-  net10.0. The steps `Publish the core as native AOT` and `Publish the net8.0 core host as native AOT`
-  of `.github/workflows/ci.yml` prove it, and also prove that a Minimal API endpoint becomes an
+  net10.0. The steps `Publish the core as native AOT, any trim or AOT warning fails` and
+  `Publish the net8.0 core host as native AOT, any IL warning in the output fails` of
+  `.github/workflows/ci.yml` prove it, and also prove that a Minimal API endpoint becomes an
   `Endpoint` step in the native binary.
 - The `NetApiFlow.EntityFrameworkCore` interceptor is a separate question from the one above. The
   interceptor itself emits no warning, but EF Core states it is not fully compatible with Native

@@ -61,8 +61,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the script is, without failing the request. For an application whose database user cannot run DDL.
 - `NetApiFlow.Dashboard`: an application with an authorization `FallbackPolicy` that mounts the
   dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
-  it starts. Until now the dashboard answered 401 and nothing said why. The warning names the 401 and
-  how to fix it.
+  it starts. Until now the dashboard answered with the challenge of the authentication scheme of the
+  app (a 401 with JWT bearer, a redirect to the login page with cookies) and nothing said why. The
+  warning names the 401 and how to fix it.
 - `NetApiFlow` and `NetApiFlow.Dashboard`: `GET /flow/api/blueprint` takes an optional `before`, an
   ISO 8601 date and time, normally the `startedAt` of the trace being drawn. It answers with the last
   successful execution that started strictly before it, so a trace is never its own blueprint and a
@@ -335,7 +336,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: requests that carry the same `traceparent`, which is what happens when a service calls
   your API more than once, no longer lose traces or mix their steps. In sequence, the in-memory store
   kept only the last trace and PostgreSQL and SQL Server only the first, and at the same time the steps
-  of both requests went into one trace. Each request is its own trace now, and the client controls only
+  of both requests went into one trace. Each request is now its own trace, and the client controls only
   the tag `w3c.trace_id`: see the new trace id under Changed. This is a defect of correctness and not a
   vulnerability: a client can only collide with an id it chose itself, and it cannot read or delete the
   trace of someone else.
