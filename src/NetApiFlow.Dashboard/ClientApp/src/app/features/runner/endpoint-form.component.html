@@ -1,4 +1,8 @@
-<section class="endpoint-form" [class.endpoint-form--dialog]="asDialog()" [cdkTrapFocus]="false">
+<section
+  class="endpoint-form"
+  [class.endpoint-form--dialog]="asDialog()"
+  [cdkTrapFocus]="asDialog() && dialogOpen()"
+>
   @if (asDialog()) {
     <button
       type="button"
