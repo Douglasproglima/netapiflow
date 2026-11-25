@@ -88,9 +88,13 @@ mais `--source` com o caminho literal da pasta, nunca um nome registrado por `nu
 
 A partir da `0.6.0`, todo pacote que depende de outro pacote do NetApiFlow o pede na faixa **exata** do mesmo release (`[0.6.0]`), nunca `>= 0.6.0`. O `pack` de uma `ProjectReference` gera `>=` por padrão, então a faixa exata é configurada e **conferida por um teste que lê o `.nuspec` empacotado**. Pacote novo que nascer com `>=` falha o teste.
 
-Por quê: os pacotes são publicados juntos (D-01, ADR-0001), e o núcleo dá `InternalsVisibleTo` ao painel e aos dois storages. Com `>=`, quem atualiza só o núcleo pode cair em `MissingMethodException` com o satélite antigo, a mesma classe do D-140. Com a versão exata, o erro vira um erro de `restore`, claro.
+Por quê: os pacotes são publicados juntos (D-01, ADR-0001), e o núcleo dá `InternalsVisibleTo` ao painel e aos dois storages. Com `>=`, quem atualiza só o núcleo pode cair em `MissingMethodException` com o satélite antigo, a mesma classe do D-140. Com a versão exata, a mistura aparece no `restore` e não na execução, com a ressalva medida abaixo.
 
 Isto trava o nosso próprio núcleo ao mesmo release. **Não** sobe piso de dependência de terceiro (D-181). O README diz, na instalação, que os pacotes NetApiFlow se atualizam juntos.
+
+**O que o NuGet faz com a faixa exata (medido na 58.8, D-287).** Só um sentido vira erro. Satélite mais novo que o núcleo dá `NU1605`, erro. Núcleo mais novo que o satélite, que é o caso de quem atualiza só o núcleo, dá `NU1608`, só aviso. Não se força o `NU1608` a erro por um arquivo de props dentro dos pacotes, porque isso mudaria o build de todo consumidor e pegaria também pacote de terceiro. Quem quiser o erro usa `WarningsAsErrors`, e o CHANGELOG diz isso. O que já foi publicado, até a `0.5.3`, mantém a faixa aberta e não ganha nada disto.
+
+**O mecanismo depende de um alvo privado.** A faixa exata sai de um alvo em `src/Directory.Build.targets` que roda depois do `_GetProjectReferenceVersions`, e esse é um alvo interno do `pack` do NuGet, que um SDK futuro pode renomear. A rede é o teste do `.nuspec` (`scripts/nuspec-snapshot.mjs`), que o `release.yml` roda pelo `needs: real-package` do job de publicação: sem a faixa exata, o release para antes de publicar. Teste do `.nuspec` vermelho sem ninguém ter mexido no alvo é sinal de SDK novo.
 
 ## Release (ver também `docs/gitflow.md`)
 

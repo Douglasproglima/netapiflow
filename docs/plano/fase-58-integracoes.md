@@ -1,6 +1,6 @@
 # Fase 58: integrações que não mentem (D-210, F2, F3, F4, S8)
 
-**Estado (24/11/2026):** **as Partes A e C estão entregues em `develop` (#491, squash `9c29835`, D-285; #493, squash `fab8dc9`, D-286) e conferidas pela auditoria com o pacote real.** Falta a Parte B. O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
+**Estado (25/11/2026):** **entregue em `develop` e fechada: a auditoria refez com o pacote real (Parte A, #491, squash `9c29835`, D-285; Parte B, #495, squash `f0024d5`, D-287; Parte C, #493, squash `fab8dc9`, D-286).** O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
 
 Quatro pontos onde o NetApiFlow se integra com outra coisa, e a integração diz uma coisa e faz outra. O Npgsql 10 sai
 sem o SQL. A resposta 500 sai sem o cabeçalho de trace, e o Runner fica mudo. O MediatR precisa de uma chamada que o
@@ -151,6 +151,19 @@ O resultado, nos três, vai no relatório com a saída real.
   mudou para quem atualiza, e o que a 58.8 mediu sobre os satélites da `0.5.3`.
 - `.claude/rules/packaging.md` já tem a regra (D-231). A Executora não a altera.
 - D-181 não muda: isto só trava o nosso núcleo ao mesmo release, e não sobe piso de terceiro.
+
+## Resultado da Parte B (D-287, 25/11/2026)
+
+Entregue em `develop` na #495 (squash `f0024d5`). O relato é da Executora, no corpo da PR, e da auditoria, que fechou a 58.8 com o pacote `0.6.0-audit.13`. A Planejadora não repetiu as medições.
+
+- **58.6, o mecanismo:** um alvo em `src/Directory.Build.targets`, depois do `_GetProjectReferenceVersions`, faz o `pack` escrever `[0.6.0]`. Medido com `-p:Version=...-verify.<n>`, com o número real e do jeito do `release.yml`. O ponto de parada não foi atingido.
+- **A rede:** `scripts/nuspec-snapshot.mjs` exige `[<versão do próprio pacote>]` em toda dependência `NetApiFlow*`, antes do snapshot e antes do `--update`. O alvo é privado do NuGet e um SDK futuro pode renomeá-lo, e o `release.yml` roda o teste do `.nuspec` por `needs: real-package`, então o release para antes de publicar.
+- **Visto vermelho:** o `04714f0` falhou com as oito satélites nomeadas, e o `80cfc9a` ficou verde, com 176 guardas (oito linhas `S8-<Pacote>-asks-for-the-exact-core`).
+- **58.7, o inventário:** o painel usa `FlowRecorder` e `ActiveTrace`, e os storages usam `IntervalLogLimiter`. Os três `InternalsVisibleTo` ficam. Itens 57 e 58 do roadmap.
+- **58.8, o que o plano não previu:** `NU1605` (erro) quando o núcleo é mais velho que o satélite, e `NU1608` (aviso) quando é mais novo. O `NU1608` fica aviso, e o item 59 do roadmap pede a conferência na partida.
+- **58.8, o par da primeira atualização:** núcleo `0.6.0` com o painel `0.5.3` publicado, `restore` sem mensagem, rotas do painel e SSE iguais aos de um app `0.5.3` puro, sem exceção no log, conferido pela auditoria com o pacote real.
+- **58.9:** nota em destaque na instalação dos dois READMEs, uma linha em cada README de pacote, e `### Changed` no CHANGELOG.
+- **Aberto:** nada da fase. A auditoria a fechou.
 
 # Parte C: o SqlClient com vários comandos no mesmo método (D-284)
 
