@@ -100,6 +100,19 @@ with a trace, the Flow screen with the drawer open, History, Components and the 
 `1440x900` and at `390x844` (20 scans before, 20 after). Before each scan the page was probed for its
 width, its theme and that it had drawn.
 
+`detect-matrix.mjs` does it. It starts Edge headless with a debugging port, keeps one CDP session open
+(`Emulation.setEmulatedMedia` for the theme and `Emulation.setDeviceMetricsOverride` for the width, which
+last only while the session lives), loads each screen, clicks "Try an endpoint" for the drawer, reads
+`innerWidth`, `prefers-color-scheme` and the number of nodes, and only then runs `npx impeccable detect
+--json --cdp <port> --target <page>`. It needs Node 22 or later, for the global `WebSocket`, and the demo
+served on port 4871:
+
+```bash
+node detect-matrix.mjs <absolute path of ClientApp> <label> <absolute folder for the Edge profile>
+```
+
+It keeps its Edge profile in the folder of the third argument and does not delete it.
+
 | Finding | Before | After |
 |---|---|---|
 | Scans | 20 | 20 |
@@ -113,5 +126,6 @@ it was there before, and this change did not add or remove any finding.
 ## Files
 
 - `focus-contrast.js`, `keyboard-walk.js`: the two scripts above.
+- `detect-matrix.mjs`: the detector over the matrix above.
 - `serve-spa.py`: the static server with the fallback to `index.html`.
 - `antes-*.png`, `depois-*.png`: the screenshots, before and after.
