@@ -13,10 +13,31 @@
 }
 
 .endpoint-form {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: 100%;
+}
+
+.endpoint-form--dialog .endpoint-form__header {
+  padding-right: 3.5rem;
+}
+
+.endpoint-form__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface-2);
+  color: var(--naf-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
 }
 
 .endpoint-form__header {

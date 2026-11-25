@@ -114,32 +114,6 @@
   }
 }
 
-.flow-workspace__action-close {
-  position: fixed;
-  top: 68px;
-  // 100px drawer offset + 340px drawer width - 44px to sit just inside its right edge.
-  left: 396px;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1px solid var(--naf-border);
-  background: var(--naf-surface-2);
-  color: var(--naf-text);
-  display: grid;
-  place-items: center;
-  z-index: 41;
-  cursor: pointer;
-
-  @media (max-width: 1023px) {
-    left: auto;
-    right: 1.5rem;
-  }
-
-  @media (max-width: 767px) {
-    right: 1.25rem;
-  }
-}
-
 .flow-workspace__center {
   flex: 2 1 0;
   min-width: 0;

@@ -1,5 +1,19 @@
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, inject, output, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,15 +58,34 @@ import { TranslationKey } from '../../core/i18n/translations';
   selector: 'app-endpoint-form',
   templateUrl: './endpoint-form.component.html',
   styleUrl: './endpoint-form.component.scss',
-  imports: [MatButtonModule, TranslatePipe],
+  imports: [MatButtonModule, CdkTrapFocus, TranslatePipe],
+  host: {
+    '[attr.role]': 'asDialog() ? "dialog" : null',
+    '[attr.aria-modal]': 'asDialog() && dialogOpen() ? "true" : null',
+    '[attr.aria-labelledby]': 'asDialog() ? titleId : null',
+    '(document:keydown.escape)': 'dismissOnEscape($event)',
+  },
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
   private readonly config = inject(ConfigService);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   protected readonly credentials = inject(RunnerCredentialsService);
 
+  readonly asDialog = input(false);
+  readonly dialogOpen = input(false);
   readonly traceDispatched = output<string>();
+  readonly dismissed = output<void>();
+
+  readonly titleId = 'endpoint-form-title';
+
+  private readonly filterInput = viewChild<ElementRef<HTMLInputElement>>('filterInput');
+  private readonly endpointButtons = viewChildren<ElementRef<HTMLButtonElement>>('endpointButton');
+  private readonly fieldControls = viewChildren<ElementRef<HTMLElement>>('fieldControl');
+  private readonly sendButton = viewChild('sendButton', { read: ElementRef<HTMLElement> });
+  private readonly addHeaderButton = viewChild<ElementRef<HTMLButtonElement>>('addHeaderButton');
+  private readonly headerNameInputs = viewChildren<ElementRef<HTMLInputElement>>('headerNameInput');
 
   readonly loading = signal(true);
   readonly loadError = signal<TranslationKey | null>(null);
@@ -192,6 +225,38 @@ export class EndpointFormComponent {
         resolveAgainstHostRoot(this.hostPathBase(), config.openApiDocumentPath),
       );
     });
+
+    effect(() => {
+      if (this.asDialog() && this.dialogOpen()) {
+        this.focusAfterRender(() => this.firstControlOfCurrentView());
+      }
+    });
+  }
+
+  dismissOnEscape(event: Event): void {
+    if (this.asDialog() && this.dialogOpen() && !event.defaultPrevented) {
+      event.preventDefault();
+      this.dismissed.emit();
+    }
+  }
+
+  private focusAfterRender(target: () => ElementRef<HTMLElement> | undefined): void {
+    afterNextRender(() => target()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private firstControlOfCurrentView(): ElementRef<HTMLElement> | undefined {
+    return this.form() ? (this.fieldControls()[0] ?? this.sendButton()) : this.filterInput();
+  }
+
+  private endpointButtonOf(endpoint: { method: string; path: string }) {
+    const key = this.endpointKey(endpoint);
+    return this.endpointButtons().find(
+      (button) => button.nativeElement.dataset['endpoint'] === key,
+    );
+  }
+
+  protected endpointKey(endpoint: { method: string; path: string }): string {
+    return `${endpoint.method} ${endpoint.path}`;
   }
 
   /**
@@ -235,6 +300,7 @@ export class EndpointFormComponent {
     this.invalidFieldName.set(null);
     this.lastTraceId.set(null);
     this.missingTrace.set(null);
+    this.focusAfterRender(() => this.firstControlOfCurrentView());
   }
 
   /**
@@ -244,7 +310,11 @@ export class EndpointFormComponent {
    * form instead keeps the button reachable regardless of how many routes exist.
    */
   backToList(): void {
+    const leaving = this.selected();
     this.selected.set(null);
+    this.focusAfterRender(
+      () => (leaving ? this.endpointButtonOf(leaving) : undefined) ?? this.filterInput(),
+    );
   }
 
   fieldValue(name: string): string {
@@ -333,6 +403,12 @@ export class EndpointFormComponent {
 
   removeHeader(index: number): void {
     this.credentials.removeHeader(index);
+    this.focusAfterRender(
+      () =>
+        this.headerNameInputs()[index] ??
+        this.headerNameInputs()[index - 1] ??
+        this.addHeaderButton(),
+    );
   }
 
   setHeaderName(index: number, name: string): void {
