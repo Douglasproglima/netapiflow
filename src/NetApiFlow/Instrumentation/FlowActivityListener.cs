@@ -136,9 +136,6 @@ internal sealed partial class FlowActivityListener : IDisposable
             : ActivitySamplingResult.AllDataAndRecorded;
     }
 
-    // Runs while sampling, where dropping is cheapest, and again once started: any other
-    // ActivityListener in the process that samples this source as recorded is enough for the
-    // activity to exist and reach every listener, whatever this one answered while sampling.
     private static bool IsDriverCommandAlreadyRecorded(string sourceName, Activity? enclosing) =>
         sourceName == NpgsqlActivityTagNames.SourceName && ExistingDatabaseStep.Covers(enclosing);
 
