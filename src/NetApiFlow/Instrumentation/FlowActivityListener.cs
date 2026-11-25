@@ -268,7 +268,7 @@ internal sealed partial class FlowActivityListener : IDisposable
             return null;
         }
 
-        var span = BuildNpgsqlSpan(activity, traceId, trace);
+        var span = BuildNpgsqlSpan(activity, traceId, trace) with { StartedAt = DateTime.UtcNow };
         return _recorder.TryAddSpan(traceId, span) ? span : null;
     }
 
