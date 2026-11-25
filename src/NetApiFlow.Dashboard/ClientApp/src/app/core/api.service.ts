@@ -117,7 +117,7 @@ export class ApiService {
       body,
       headers,
       observe: 'response',
-      responseType: 'json' as 'text',
+      responseType: 'text',
     });
   }
 
