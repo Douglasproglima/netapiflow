@@ -7,12 +7,14 @@ namespace NetApiFlow.Mcp.Tools;
 [McpServerToolType]
 internal static class GetTraceTool
 {
+    public const string Name = "get_trace";
+
     /// <summary>Gets a single trace with its spans by id.</summary>
     /// <param name="traceId">The trace id.</param>
     /// <param name="store">Trace store to read from.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A <see cref="TraceLookupResult"/> describing whether the trace was found.</returns>
-    [McpServerTool(Name = "get_trace", ReadOnly = true)]
+    [McpServerTool(Name = Name, ReadOnly = true)]
     [Description("Gets a single NetApiFlow trace with its spans by id.")]
     public static async Task<TraceLookupResult> GetTrace(
         [Description("The trace id.")] string traceId,

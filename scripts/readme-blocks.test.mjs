@@ -109,6 +109,7 @@ test('assembleProgram_PutsEachBlockWhereTheTextSaysAndInThatOrder', () => {
     mcpUsings: blocks['mcp:usings'],
     registrations: blocks['quickstart:registrations'],
     mcpRegistration: blocks['mcp:registration'],
+    beforeBuild: ['UserServices.Add(builder.Services);'],
     afterBuild: ['UserPipeline.Configure(app);'],
     beforeRun: ['UserEndpoints.Map(app);'],
   });
@@ -120,6 +121,7 @@ test('assembleProgram_PutsEachBlockWhereTheTextSaysAndInThatOrder', () => {
     'WebApplication.CreateBuilder',
     'AddNetApiFlow()',
     'AddNetApiFlowMcp()',
+    'UserServices.Add(builder.Services);',
     'var app = builder.Build();',
     'UserPipeline.Configure(app);',
     'app.UseNetApiFlowMcp();',

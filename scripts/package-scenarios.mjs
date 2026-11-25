@@ -14,6 +14,9 @@ const INITIALIZE_BODY = JSON.stringify({
   params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'package-scenarios', version: '1.0.0' } },
 });
 const MCP_HEADERS = { 'content-type': 'application/json', accept: 'application/json, text/event-stream' };
+const TOOLS_LIST_BODY = JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+const NETAPIFLOW_TOOLS = ['get_component_stats', 'get_trace', 'list_recent_traces'];
+const USER_TOOL = 'user-tool';
 
 export const VARIANTS = {
   development: { environment: 'Development', variables: {} },
@@ -205,6 +208,23 @@ export const SCENARIOS = [
       }
     },
   },
+  {
+    id: 'j',
+    variant: 'production',
+    title: 'in Production, an app with its own MCP server does not serve the NetApiFlow tools on its /mcp, and /flow/mcp still answers 404',
+    run: async (app) => {
+      const initialize = await app.postAppMcp(INITIALIZE_BODY);
+      expectStatus(initialize, 200, 'POST /mcp initialize');
+      const session = initialize.headers['mcp-session-id'];
+      const tools = await app.postAppMcp(TOOLS_LIST_BODY, session);
+      expectStatus(tools, 200, 'POST /mcp tools/list');
+      const names = toolNamesOf(tools.text);
+      expect(names.includes(USER_TOOL), `the /mcp of the app lost its own tool ${USER_TOOL}: ${names.join(', ')}`);
+      const leaked = names.filter((name) => NETAPIFLOW_TOOLS.includes(name));
+      expect(leaked.length === 0, `the /mcp of the app serves NetApiFlow tools: ${leaked.join(', ')}`);
+      expectStatus(await app.postMcp({}), 404, 'POST /flow/mcp initialize');
+    },
+  },
 ];
 
 class ScenarioFailure extends Error {}
@@ -266,7 +286,18 @@ function clientFor(baseUrl) {
   return {
     ...client,
     postMcp: (headers) => client.send({ method: 'POST', path: '/flow/mcp', headers: { ...MCP_HEADERS, ...headers }, body: INITIALIZE_BODY }),
+    postAppMcp: (body, session) =>
+      client.send({ method: 'POST', path: '/mcp', headers: { ...MCP_HEADERS, ...(session ? { 'mcp-session-id': session } : {}) }, body }),
   };
+}
+
+export function toolNamesOf(text) {
+  const data = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.startsWith('data:'));
+  const message = JSON.parse(data ? data.slice('data:'.length) : text);
+  return (message.result?.tools ?? []).map((tool) => tool.name);
 }
 
 async function runScenarios(app, scenarios) {

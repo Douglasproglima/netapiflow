@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NetApiFlow.Mcp.Tools;
 
 namespace NetApiFlow.Mcp.Endpoints;
 
@@ -17,22 +18,33 @@ internal static class McpAccessGate
             return Results.Text(refusal, statusCode: StatusCodes.Status403Forbidden);
         }
 
+        if (NetApiFlowToolScope.CannotTellTheEndpoint(httpContext.RequestServices))
+        {
+            return Results.NotFound();
+        }
+
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
         {
             return await customFilter.AuthorizeAsync(httpContext)
-                ? await next(context)
+                ? await AdmitAsync(context, next)
                 : Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         var environment = httpContext.RequestServices.GetRequiredService<IHostEnvironment>();
         if (environment.IsDevelopment())
         {
-            return await next(context);
+            return await AdmitAsync(context, next);
         }
 
-        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await next(context) : Results.NotFound();
+        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await AdmitAsync(context, next) : Results.NotFound();
+    }
+
+    private static ValueTask<object?> AdmitAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        NetApiFlowMcpRequest.MarkCurrent();
+        return next(context);
     }
 
     private static bool IsGuardedByAuthorization(Endpoint? endpoint) =>

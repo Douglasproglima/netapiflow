@@ -8,6 +8,8 @@ namespace NetApiFlow.Mcp.Tools;
 [McpServerToolType]
 internal static class ListRecentTracesTool
 {
+    public const string Name = "list_recent_traces";
+
     /// <summary>Lists recent traces, most recent first, with optional filters.</summary>
     /// <param name="status">Filters by trace status: <c>Running</c>, <c>Success</c> or <c>Error</c>.</param>
     /// <param name="method">Filters by HTTP method, e.g. <c>GET</c>.</param>
@@ -17,7 +19,7 @@ internal static class ListRecentTracesTool
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The matching traces.</returns>
     /// <exception cref="McpException"><paramref name="status"/> or <paramref name="limit"/> is invalid.</exception>
-    [McpServerTool(Name = "list_recent_traces", ReadOnly = true)]
+    [McpServerTool(Name = Name, ReadOnly = true)]
     [Description("Lists recent NetApiFlow traces, most recent first, with optional filters.")]
     public static async Task<IReadOnlyList<FlowTraceSummary>> ListRecentTraces(
         ITraceStore store,

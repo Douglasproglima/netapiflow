@@ -826,6 +826,19 @@ trace nem dispara um replay via MCP.
 > [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção). Um agente de IA
 > lendo dado de trace tem o mesmo risco de exposição que o dashboard visual.
 >
+> As três tools só existem no endpoint do NetApiFlow. Uma aplicação que hospeda o próprio servidor
+> MCP (`AddMcpServer()` e `MapMcp(...)`) não as serve no endpoint dela, então elas continuam atrás da
+> regra acima, e o `/flow/mcp` não serve as tools da aplicação. O `/flow/mcp` só responde às três tools
+> e ao handshake. Prompts, resources, completions e qualquer outro método da aplicação recebem
+> `-32601 Method '...' is not available`, mesmo quando o `initialize` da aplicação anuncia essas
+> capabilities. Uma configuração é a exceção. Quando o
+> servidor MCP da aplicação guarda sessões (um `SessionMode` diferente de `Stateless`) e liga
+> `PerSessionExecutionContext = true`, a chamada de uma tool não carrega a requisição HTTP que a
+> enviou, e o NetApiFlow não consegue saber de qual endpoint ela veio. As tools do NetApiFlow passam
+> a não ser servidas em nenhum endpoint, o `/flow/mcp` responde 404, e a aplicação registra um aviso
+> na partida dizendo isso. Para tê-las de volta, desligue o `PerSessionExecutionContext` ou use o modo
+> stateless.
+>
 > O endpoint também recusa, com **403**, uma requisição cujo `Host` ou `Origin` não seja o dele. Em
 > Development o `Host` tem de ser `localhost`, `127.0.0.1`, `[::1]` ou um nome declarado em
 > `AllowedHosts`, e uma `Origin` tem de casar com o `Host` que a aplicação enxerga. Um cliente MCP

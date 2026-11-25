@@ -70,9 +70,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- `NetApiFlow.Mcp`: the MCP server answers `NetApiFlow` as its name in the `initialize` handshake.
-  Before, it answered the name of the host assembly of the app. An app that names its own MCP server
-  keeps its name.
+- `NetApiFlow.Mcp`: `/flow/mcp` answers `NetApiFlow` as the server name in `initialize` and
+  `server/discover`. Before, it answered the name of the host assembly of the app. The MCP endpoint of
+  an app that hosts its own server keeps its own name, or the default of the SDK when it sets none.
 - `NetApiFlow.Mcp`: the tool classes `GetTraceTool`, `ListRecentTracesTool`, `GetComponentStatsTool`
   and the result type `TraceLookupResult` are no longer public. They were meant to be called by an MCP
   client and not from code. The tools, their names and their answers stay the same.
@@ -286,6 +286,28 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- `NetApiFlow.Mcp`: the NetApiFlow tools are served only on the NetApiFlow MCP endpoint, and that
+  endpoint serves nothing of the app. From 0.2.0 to
+  0.5.3, an app that hosts its own MCP server (`AddMcpServer()` and `MapMcp(...)`) also served
+  `list_recent_traces`, `get_trace` and `get_component_stats` on its own endpoint, because the SDK has
+  one MCP server per process. That endpoint does not follow the rule of the dashboard, so in Production,
+  with no authorization configured, `/flow/mcp` answered 404 while the `/mcp` of the app answered
+  whoever could reach it: `list_recent_traces` gave the id, method, route, status and duration of the
+  traces, and `get_trace` the steps of a trace. NetApiFlow never records a body, an argument, a header,
+  a query string or SQL with its parameters, so none of those leaked. The same single server made
+  `/flow/mcp` serve what the app registered, under the rule of the dashboard: its tools, prompts,
+  resources and completions, and a tool of the app named like a NetApiFlow tool. Now each message is
+  checked against the endpoint it came through. The endpoint of the app no longer lists or calls the
+  NetApiFlow tools, even with a session opened on `/flow/mcp`, and keeps its own prompts, resources and
+  completions. `/flow/mcp` answers only `initialize`, `server/discover`, `ping`, `tools/list`,
+  `tools/call` and `logging/setLevel`, and only for the three NetApiFlow tools. Every other method gets
+  `-32601 Method '...' is not available`, including the ones a later protocol revision adds. A tool is
+  told apart by the method that runs it, not by its name, so when the app registers its own `get_trace`
+  first, `/flow/mcp` serves neither and one warning at startup names the tool to rename. An app that
+  does not host its own MCP server sees no change. When the MCP server
+  of the app keeps sessions and sets `PerSessionExecutionContext = true`, NetApiFlow cannot tell the
+  endpoint of a call, so its tools are served on no endpoint, `/flow/mcp` answers 404, and one warning
+  at startup says how to get them back.
 - `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: chaining `AllowAnonymous()` together with
   `RequireAuthorization(...)` no longer opens the dashboard and the MCP endpoint outside Development.
   The authorization middleware ignores the policy when an endpoint also allows anonymous access, and
