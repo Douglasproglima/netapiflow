@@ -18,6 +18,7 @@ internal sealed partial class FlowActivityListener : IDisposable
     private readonly FlowRecorder _recorder;
     private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ActivityListener _listener;
+    private readonly bool _registeredAsEnabled;
     private readonly ILogger<FlowActivityListener> _logger;
     private readonly IntervalLogLimiter _failureLog = new(TimeSpan.FromSeconds(30));
 #if NET8_0
@@ -30,6 +31,8 @@ internal sealed partial class FlowActivityListener : IDisposable
         _options = options;
         _logger = loggerFactory.CreateLogger<FlowActivityListener>();
         NullStepArgumentLog.Attach(_logger);
+        _registeredAsEnabled = options.Value.Enabled;
+        FlowActivitySource.RegisterListener(_registeredAsEnabled);
 
         _listener = new ActivityListener
         {
@@ -48,6 +51,7 @@ internal sealed partial class FlowActivityListener : IDisposable
     public void Dispose()
     {
         NullStepArgumentLog.Detach(_logger);
+        FlowActivitySource.UnregisterListener(_registeredAsEnabled);
         _listener.Dispose();
 #if NET8_0
         _httpClientActivityTagBackfill.Dispose();

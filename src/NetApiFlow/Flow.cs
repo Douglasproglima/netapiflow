@@ -22,7 +22,7 @@ public static class Flow
             return new FlowStep(null);
         }
 
-        if (!FlowActivitySource.Source.HasListeners())
+        if (FlowActivitySource.EveryRegisteredListenerIsDisabled || !FlowActivitySource.Source.HasListeners())
         {
             return new FlowStep(null);
         }
