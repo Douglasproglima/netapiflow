@@ -192,6 +192,10 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
 `InMemoryTraceStore`. Testes de SSE usam `HttpClient` com
 `HttpCompletionOption.ResponseHeadersRead` e leem o stream manualmente.
 
+## O vermelho de cada projeto: o passo de teste para no primeiro (D-295)
+
+O passo de teste do `ci.yml` roda os projetos com `set -e` e para no primeiro que falha, então um run vermelho mostra o vermelho de **um** projeto só. Quando um defeito é guardado por testes em mais de um projeto, a prova de "visto falhando antes" de cada um precisa do run dele. A correção entra em etapas, uma por run (um push por run, como na mutação), e cada run mostra o vermelho do projeto que ainda não foi corrigido. A auditoria lê esses vermelhos nos logs, e um projeto cujo vermelho nunca apareceu não tem prova.
+
 ## Regras
 
 - SUT sempre nomeado `_subject`.
