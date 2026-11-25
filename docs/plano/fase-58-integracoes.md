@@ -1,6 +1,6 @@
 # Fase 58: integrações que não mentem (D-210, F2, F3, F4, S8)
 
-**Estado (24/11/2026):** **a Parte A está entregue em `develop` (#491, squash `9c29835`, D-285) e conferida pela auditoria com o pacote real.** Falta a Parte C (58.11, D-284) e a B. O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
+**Estado (24/11/2026):** **as Partes A e C estão entregues em `develop` (#491, squash `9c29835`, D-285; #493, squash `fab8dc9`, D-286) e conferidas pela auditoria com o pacote real.** Falta a Parte B. O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
 
 Quatro pontos onde o NetApiFlow se integra com outra coisa, e a integração diz uma coisa e faz outra. O Npgsql 10 sai
 sem o SQL. A resposta 500 sai sem o cabeçalho de trace, e o Runner fica mudo. O MediatR precisa de uma chamada que o
@@ -178,6 +178,18 @@ O resultado, nos três, vai no relatório com a saída real.
 **Pronto quando:** os testes do item 1 vistos falhando antes e passando depois, o caso do item 3 verde, e o relatório com o `Activity.Current` depois de cada comando, antes e depois da correção.
 
 Branch `bugfix/58c-sqlclient-varios-comandos`, a partir de `develop` atualizado, **depois da 58A mergeada** e antes da Parte B. Abrir a PR e parar.
+
+## Resultado da Parte C (D-286, 25/11/2026)
+
+Entregue em `develop` na #493 (squash `fab8dc9`). O relato é da Executora, no corpo da PR, e da auditoria, que mediu com o pacote `0.6.0-audit.12` contra o SQL Server. A Planejadora não repetiu as medições.
+
+- **A correção:** um método no `SqlClientCommandListener` guarda o `Activity.Current` do chamador, abre o `Flow.Step` e o restaura logo depois, no mesmo contexto síncrono. O passo segue aberto no `WriteCommandBefore` e encerrado no `WriteCommandAfter`, no `WriteCommandError` ou no cancelamento. Sem API pública nova.
+- **Medido:** o `Activity.Current` do chamador fica certo depois de cada `await`, com três comandos, com falha, com `ExecuteReader` e com cancelamento. O EF Core nunca vazou, o Npgsql não é afetado e o `Execute*` síncrono nunca vazou. Custo: mais 1,4 B por comando (0,04%), sem lock.
+- **Visto vermelho:** oito testes por TFM no `d8a48b0`. Seis linhas `B12-sqlclient-*` no `guards.json`, e o CI com 168 de 168. Os testes do Npgsql e do síncrono, que nasceram verdes, ficam sem linha.
+- **O pacote real:** a auditoria mediu quatro passos filhos do controller com a falha como origem, o `Flow.Step` seguinte filho do controller e o `Activity.Current` no fim igual ao controller, também com Npgsql e EF Core no mesmo método.
+- **O cenário permanente não coube:** o job do pacote real não tem banco. A guarda é `SqlClient.IntegrationTests`, no ubuntu. Item 56 do roadmap.
+- **CHANGELOG:** `### Fixed`, e a frase da 58.10 do N+1 falso continua verdadeira.
+- **Aberto:** a Parte B (58.6 a 58.9).
 
 ## Fora de escopo
 
