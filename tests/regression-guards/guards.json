@@ -1732,5 +1732,38 @@
       "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlCommandNamedLikeAConnectionOpen_KeepsTheStartDurationParentAndOutcomeOfTheActivity"
     },
     "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-plain-text",
+    "defect": "Read as JSON by the real HTTP backend, a plain-text success became a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend takes a plain-text body for a success"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-html",
+    "defect": "Read as JSON by the real HTTP backend, an HTML success became a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend takes an HTML body for a success"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-trace-header",
+    "defect": "A plain-text success lost its trace id header because the answer was reported as a failure",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend keeps the trace id header of a plain-text success readable"
+    },
+    "job": "build-test"
   }
 ]
