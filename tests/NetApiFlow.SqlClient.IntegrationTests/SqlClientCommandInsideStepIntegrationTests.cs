@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -18,6 +20,8 @@ public sealed class SqlServerConnectionString(string value)
 {
     public string Value { get; } = value;
 }
+
+public sealed record CurrentActivity(string Label, string? Id, bool? IsStopped, string? Source);
 
 public interface IRawSqlUserRepository
 {
@@ -60,6 +64,143 @@ public sealed class SqlInStepController(SqlServerConnectionString connectionStri
         await using var command = new SqlCommand("SELECT count(*) FROM Users", connection);
         return Ok(await command.ExecuteScalarAsync());
     }
+
+    [HttpGet("several-commands")]
+    public async Task<IActionResult> SeveralCommands()
+    {
+        var seen = new List<CurrentActivity> { Snapshot("before") };
+        await using var connection = new SqlConnection(connectionString.Value);
+        await connection.OpenAsync();
+        foreach (var (label, table) in new[] { ("first", "Users"), ("second", "Orders"), ("third", "Users") })
+        {
+            await using var command = new SqlCommand($"SELECT count(*) FROM dbo.{table}", connection);
+            await command.ExecuteScalarAsync();
+            seen.Add(Snapshot(label));
+        }
+
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
+    [HttpGet("then-driver-activity")]
+    public async Task<IActionResult> ThenDriverActivity()
+    {
+        await using var connection = new SqlConnection(connectionString.Value);
+        await connection.OpenAsync();
+        await using (var command = new SqlCommand("SELECT count(*) FROM dbo.Users", connection))
+        {
+            await command.ExecuteScalarAsync();
+        }
+
+        using var npgsqlSource = new ActivitySource("Npgsql");
+        using (var activity = npgsqlSource.StartActivity("postgresql"))
+        {
+            activity?.SetTag("db.query.text", "SELECT \"Id\" FROM \"Orders\"");
+        }
+
+        return Ok();
+    }
+
+    [HttpGet("ef-then-raw")]
+    public async Task<IActionResult> EntityFrameworkThenRaw()
+    {
+        var seen = new List<CurrentActivity> { Snapshot("before") };
+        await using (var context = services.GetRequiredService<SqlServerTestDbContext>())
+        {
+            await context.Users.CountAsync();
+        }
+
+        seen.Add(Snapshot("after ef"));
+        await using var connection = new SqlConnection(connectionString.Value);
+        await connection.OpenAsync();
+        await using (var command = new SqlCommand("SELECT count(*) FROM dbo.Orders", connection))
+        {
+            await command.ExecuteScalarAsync();
+        }
+
+        seen.Add(Snapshot("after raw"));
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
+    [HttpGet("failing-command")]
+    public async Task<IActionResult> FailingCommand()
+    {
+        var seen = new List<CurrentActivity> { Snapshot("before") };
+        await using var connection = new SqlConnection(connectionString.Value);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("SELECT * FROM dbo.TableThatDoesNotExist", connection);
+        try
+        {
+            await command.ExecuteScalarAsync();
+        }
+        catch (SqlException)
+        {
+        }
+
+        seen.Add(Snapshot("after failure"));
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
+    [HttpGet("reader-command")]
+    public async Task<IActionResult> ReaderCommand()
+    {
+        var seen = new List<CurrentActivity> { Snapshot("before") };
+        await using var connection = new SqlConnection(connectionString.Value);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("SELECT Id FROM dbo.Users", connection);
+        await using (var reader = await command.ExecuteReaderAsync())
+        {
+            seen.Add(Snapshot("reader open"));
+            while (await reader.ReadAsync())
+            {
+            }
+        }
+
+        seen.Add(Snapshot("reader closed"));
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
+    [HttpGet("cancelled-command")]
+    public async Task<IActionResult> CancelledCommand()
+    {
+        var seen = new List<CurrentActivity> { Snapshot("before") };
+        await using var connection = new SqlConnection(connectionString.Value);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("WAITFOR DELAY '00:00:10'; SELECT 1", connection);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+        try
+        {
+            await command.ExecuteScalarAsync(cancellation.Token);
+        }
+        catch (Exception exception) when (exception is OperationCanceledException or SqlException)
+        {
+        }
+
+        seen.Add(Snapshot("after cancellation"));
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
+    private static CurrentActivity Snapshot(string label) =>
+        new(label, Activity.Current?.Id, Activity.Current?.IsStopped, Activity.Current?.Source.Name);
 
     [HttpGet("ef")]
     public async Task<IActionResult> EntityFramework()
@@ -136,6 +277,15 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
         response.EnsureSuccessStatusCode();
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
         return Flow.GetRecentTrace(host.Services, traceId)!.Spans;
+    }
+
+    private static async Task<(IReadOnlyList<FlowSpan> Spans, IReadOnlyList<CurrentActivity> Current)> GetWithCurrentActivityAsync(IHost host, HttpClient client, string path)
+    {
+        var response = await client.GetAsync(path);
+        response.EnsureSuccessStatusCode();
+        var current = JsonSerializer.Deserialize<List<CurrentActivity>>(await response.Content.ReadAsStringAsync(), JsonSerializerOptions.Web)!;
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        return (Flow.GetRecentTrace(host.Services, traceId)!.Spans, current);
     }
 
     private static FlowSpan SingleDriverSpan(IReadOnlyList<FlowSpan> spans) =>
@@ -246,5 +396,94 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
         var spans = await GetAsync(host, client, "/api/sql-in-step/raw");
 
         spans.ShouldNotContain(span => span.Component == "SqlClient");
+    }
+
+    [Fact]
+    public async Task SeveralCommandsInOneMethod_RecordOneStepEachUnderTheCallerInOrder()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var (spans, _) = await GetWithCurrentActivityAsync(host, client, "/api/sql-in-step/several-commands");
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        var commands = spans.Where(span => span.Component == "SqlClient").OrderBy(span => span.Sequence).ToList();
+        commands.Select(command => command.Operation).ShouldBe(["SELECT Users", "SELECT Orders", "SELECT Users"]);
+        commands.ShouldAllBe(command => command.ParentSpanId == controller.SpanId && command.Status == FlowStatus.Success);
+    }
+
+    [Fact]
+    public async Task AfterACommand_TheActivityCurrentToTheCallerIsStillTheCallersOwn()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var (_, current) = await GetWithCurrentActivityAsync(host, client, "/api/sql-in-step/several-commands");
+
+        var before = current.Single(entry => entry.Label == "before");
+        current.Where(entry => entry.Label != "before").ShouldAllBe(entry => entry.Id == before.Id && entry.IsStopped == false && entry.Source == before.Source);
+    }
+
+    [Fact]
+    public async Task AStepOpenedAfterTheCommands_IsAChildOfTheCallerAndNotOfAFinishedSqlStep()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var (spans, _) = await GetWithCurrentActivityAsync(host, client, "/api/sql-in-step/several-commands");
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        spans.Single(span => span.Component == "Service").ParentSpanId.ShouldBe(controller.SpanId);
+    }
+
+    [Fact]
+    public async Task ADriverActivityAfterASqlClientCommand_IsStillRecorded()
+    {
+        var (host, client) = await StartHostAsync(externalSources: ExternalActivitySource.SqlClient | ExternalActivitySource.Npgsql);
+        using var _ = host;
+        using var __ = client;
+
+        var spans = await GetAsync(host, client, "/api/sql-in-step/then-driver-activity");
+
+        spans.Select(span => span.Component).Where(component => component is "SqlClient" or "Npgsql").ShouldBe(["SqlClient", "Npgsql"]);
+    }
+
+    [Fact]
+    public async Task AnEfCoreQueryThenARawCommandInOneMethod_RecordTwoStepsAndLeaveTheCallerActivityCurrent()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var (spans, current) = await GetWithCurrentActivityAsync(host, client, "/api/sql-in-step/ef-then-raw");
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        spans.Where(span => span.Type == ComponentType.Database).Select(span => span.Component).ShouldBe(["EntityFrameworkCore", "SqlClient"]);
+        spans.Where(span => span.Type == ComponentType.Database).ShouldAllBe(span => span.ParentSpanId == controller.SpanId);
+        spans.Single(span => span.Component == "Service").ParentSpanId.ShouldBe(controller.SpanId);
+        var before = current.Single(entry => entry.Label == "before");
+        current.Where(entry => entry.Label != "before").ShouldAllBe(entry => entry.Id == before.Id);
+    }
+
+    [Theory]
+    [InlineData("failing-command")]
+    [InlineData("reader-command")]
+    [InlineData("cancelled-command")]
+    public async Task WhateverTheOutcomeOfTheCommand_TheCallerActivityStaysCurrentAndTheNextStepIsItsChild(string route)
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var (spans, current) = await GetWithCurrentActivityAsync(host, client, $"/api/sql-in-step/{route}");
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        var before = current.Single(entry => entry.Label == "before");
+        current.Where(entry => entry.Label != "before").ShouldAllBe(entry => entry.Id == before.Id && entry.IsStopped == false);
+        spans.Single(span => span.Component == "Service").ParentSpanId.ShouldBe(controller.SpanId);
+        spans.Single(span => span.Component == "SqlClient").ParentSpanId.ShouldBe(controller.SpanId);
     }
 }
