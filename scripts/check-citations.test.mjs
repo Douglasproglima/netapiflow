@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EXCEPTIONS, findCitations, report } from './check-citations.mjs';
+import { EXCEPTIONS, EXCLUDED_FOLDERS, findCitations, report } from './check-citations.mjs';
 
 const filesWith = (contents) => ({
   files: Object.keys(contents),
@@ -78,4 +78,16 @@ test('the report names every finding and says how to fix it', () => {
 
 test('the report of a clean tree says so', () => {
   assert.match(report([]), /No citation/);
+});
+
+test('a line of a test project that cites a decision is reported', () => {
+  const findings = citationsIn({ 'tests/NetApiFlow.Tests/FlowTests.cs': '// D-22: EventSource cannot set headers' });
+
+  assert.deepEqual(findings.map((finding) => [finding.file, finding.line]), [['tests/NetApiFlow.Tests/FlowTests.cs', 1]]);
+});
+
+test('the verification and regression guard folders are not read', () => {
+  for (const folder of EXCLUDED_FOLDERS) {
+    assert.deepEqual(citationsIn({ [`${folder}notes.md`]: 'see ADR-0007 and D-35' }), [], folder);
+  }
 });

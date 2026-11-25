@@ -204,7 +204,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   URL, query string included, can be exported. It says what was measured: on .NET 10 the span carries
   `http://host/target?*`, on .NET 8 `http://host/target`, and neither exports the query string or the
   fragment. The XML docs of the public API no longer cite ADRs, decisions, risks or plan documents, and the
-  build fails if a new one is added to `src/`.
+  build fails if a new one is added to `src/` or `tests/`.
 - The README, the Portuguese README and the package READMEs now say what the product does. Every sentence
   of the audit's list was measured against a new app first, and the table is in
   `tests/manual-verification/Fase59ReadmeVerdadeiroVerification/`. The corrections: the Quick start on

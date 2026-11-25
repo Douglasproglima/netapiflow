@@ -11,6 +11,10 @@ const CHECKED_EXTENSIONS = new Set([
 
 const GENERATED_FILES = new Set(['package-lock.json']);
 
+const CHECKED_FOLDERS = ['src', 'tests'];
+
+export const EXCLUDED_FOLDERS = ['tests/manual-verification/', 'tests/regression-guards/'];
+
 export const EXCEPTIONS = new Map([
   [
     'src/NetApiFlow.Dashboard/ClientApp/scripts/generate-design-md.js',
@@ -28,7 +32,10 @@ export const EXCEPTIONS = new Map([
 
 export function isChecked(file) {
   const name = file.split('/').pop();
-  return CHECKED_EXTENSIONS.has(extname(file)) && !GENERATED_FILES.has(name) && !EXCEPTIONS.has(file);
+  return CHECKED_EXTENSIONS.has(extname(file))
+    && !GENERATED_FILES.has(name)
+    && !EXCEPTIONS.has(file)
+    && !EXCLUDED_FOLDERS.some((folder) => file.startsWith(folder));
 }
 
 export function findCitations(files, readText) {
@@ -43,18 +50,18 @@ export function findCitations(files, readText) {
   return findings;
 }
 
-export function listTrackedSourceFiles(root) {
-  const output = execFileSync('git', ['ls-files', '-z', '--', 'src'], { cwd: root, encoding: 'utf8' });
+export function listTrackedFiles(root) {
+  const output = execFileSync('git', ['ls-files', '-z', '--', ...CHECKED_FOLDERS], { cwd: root, encoding: 'utf8' });
   return output.split('\0').filter(Boolean);
 }
 
 export function report(findings) {
   if (findings.length === 0) {
-    return 'No citation of an ADR, a decision, a risk or a plan document in src/.';
+    return 'No citation of an ADR, a decision, a risk or a plan document in src/ or tests/.';
   }
   const lines = findings.map((finding) => `${finding.file}:${finding.line}: ${finding.text}`);
   return [
-    `${findings.length} line(s) of src/ cite an ADR, a decision, a risk or a plan document:`,
+    `${findings.length} line(s) of src/ or tests/ cite an ADR, a decision, a risk or a plan document:`,
     ...lines,
     'Say the reason in words and drop the number. An exception goes in EXCEPTIONS of scripts/check-citations.mjs, one line per file, with the reason.',
   ].join('\n');
@@ -62,7 +69,7 @@ export function report(findings) {
 
 function main() {
   const root = process.cwd();
-  const findings = findCitations(listTrackedSourceFiles(root), (file) => readFileSync(`${root}/${file}`, 'utf8'));
+  const findings = findCitations(listTrackedFiles(root), (file) => readFileSync(`${root}/${file}`, 'utf8'));
   console.log(report(findings));
   process.exitCode = findings.length === 0 ? 0 : 1;
 }
