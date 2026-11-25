@@ -1,6 +1,6 @@
 # Fase 60: o acabamento que um revisor vê no primeiro dia (D-210 nível 3, D-236 B12 e B14)
 
-**Estado (25/11/2026):** **as Partes A e B estão entregues em `develop` (#502, squash `0c839d3`, D-294; #504, squash `7934db6`, D-296) e conferidas pela auditoria com o pacote real. A fase está fechada, a Arquitetura (60.7) incluída, conferida na segunda passada (D-306).**
+**Estado (25/11/2026):** **as Partes A e B estão entregues em `develop` (#502, squash `0c839d3`, D-294; #504, squash `7934db6`, D-296) e conferidas pela auditoria com o pacote real. A fase está fechada, a Arquitetura (60.7) incluída, conferida na segunda passada (D-306). A Parte C (60.13, a Arquitetura da demo) está entregue (#523, squash `fe2bc5c`, D-314).**
 
 O nível 3 da auditoria de base, mais dois itens da varredura final (B12, o filtro de rota do MCP, e B14, os samples). Nada
 aqui derruba o produto, mas é o que um purista abre primeiro: o celular, textos que se contradizem, o Runner pela metade,
@@ -139,6 +139,14 @@ Entregue em `develop` na #504 (squash `7934db6`). O relato é da Executora, no c
 - **O `verify-built-demo.mjs`** passa a abrir também Insights, Arquitetura e Sobre, que é o que teria pego o defeito.
 - **Uma linha no `guards.json`** e **uma entrada em `### Fixed`** do `CHANGELOG`, que mantém inteiras as nove frases do `comparison` (D-310). Como a PR mexe em código, o job roda.
 - **Ponto de parada:** se a correção pedir desenho novo, a Executora para e pergunta.
+
+## Resultado da Parte C (D-314, 25/11/2026)
+
+Entregue em `develop` na #523 (squash `fe2bc5c`), pela `EXECUTORA-RELEASE`. O relato é da auditoria, que a mergeou com 9 checks verdes. A Planejadora não leu o diff.
+
+- **60.13:** a tela Arquitetura da demo estática passa a abrir para toda rota. A correção tira `from` e `to` da chave só em `api/architecture`: o fallback do manifesto daria o mesmo mapa às 6 rotas, e tirar o `from` de todas mudaria a chave de `api/traces`.
+- **Visto vermelho:** o run `45718648579` falhou só no teste novo do "Test dashboard UI", mais o `built-demo` com `FAIL screen /architecture`. O run `45719650856` ficou verde, com 215 guardas e o `built-demo` com "screens: 0 errors in 6 of 6" (agora abre Insights, Arquitetura e Sobre).
+- **Fechado:** a Tarefa 60.13 e o portão 3 da checklist.
 
 ## O que **não** está aqui, e onde está
 

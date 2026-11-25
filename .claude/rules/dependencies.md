@@ -77,3 +77,5 @@ Duas coisas que não são óbvias:
 - Com `target-branch` apontando para `develop`, as opções do Dependabot não se aplicam às
   atualizações de segurança, que sempre usam a branch padrão (GitHub Docs, "Dependabot options
   reference", seção `target-branch`). O `ignore` acima não esconde PR de segurança.
+
+**Projeto de verificação que fixa o próprio NetApiFlow publicado, de propósito (D-313).** `tests/manual-verification/Fase59DesempenhoVerification` compara o `Flow.Step` com o `NetApiFlow` `0.5.3` publicado, e por isso fixa essa versão. O Dependabot pode propor subir essa linha, o que trocaria a linha de base da comparação sem ninguém ver. O `dependabot.yml` só vale a partir da `main`, e a auditoria decidiu que pôr `NetApiFlow*` no `ignore` entra na `0.7.0`. Até lá, uma PR do Dependabot que suba o `NetApiFlow` desse projeto se fecha, e não se mergeia.
