@@ -48,7 +48,7 @@ export function describeResponse(
     status,
     content: {
       kind: 'text',
-      text: body.slice(0, RESPONSE_BODY_LIMIT),
+      text: body,
       truncated: body.length > RESPONSE_BODY_LIMIT,
     },
   };
