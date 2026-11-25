@@ -297,6 +297,8 @@ dá o mesmo resultado de antes.
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
 
+**Passos de SQL de fonte externa (Fase 58, D-285).** O texto do comando vem de `db.query.text` (Npgsql 10) e, na falta dela, de `db.statement` (Npgsql 8 e 9). O nome do passo de um comando SQL é o verbo e a **tabela**, o último identificador do nome com ou sem schema (`dbo.Users`, `[dbo].[Users]`, `"public"."orders"` e `master.dbo.Users` dão a tabela), só com identificador e nunca com valor, e o núcleo e o `NetApiFlow.EntityFrameworkCore` usam a mesma regra. A abertura de conexão do Npgsql 10 (atividade sem texto SQL e com nome começando por `CONNECT `) nunca vira passo: sem texto ela é ignorada, também quando falha (a falha é da etapa que a abriu, como no Npgsql 8 e 9), e uma atividade de comando que o app renomeou para `CONNECT ...` e que traz texto é adicionada como passo completo quando termina. O SqlClient não emite `ActivitySource`, e a conexão dele nunca é passo.
+
 **Identidade da trace (ADR-0028).** `FlowTrace.TraceId` é um id próprio de cada requisição rastreada, aleatório, de
 32 caracteres hexadecimais, gerado pelo NetApiFlow. **Não** é o W3C trace id: este fica na tag `w3c.trace_id` da
 trace, e toda atividade do NetApiFlow carrega a tag `netapiflow.trace_id`. O cabeçalho `X-NetApiFlow-TraceId`, o

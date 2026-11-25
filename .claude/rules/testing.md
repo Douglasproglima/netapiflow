@@ -136,6 +136,12 @@ teste de interop passava, e todo SQL direto dentro de um controller sumia do tra
 a forma de rodar: os dois projetos de interop precisam executar no CI (`ci.yml`, fora do Windows).
 Teste que existe e não roda não prova nada, e o do SqlClient nunca rodou no CI desde que existe.
 
+## Interop com driver: vários comandos no mesmo método, como um repositório faz (D-284)
+
+Teste de interop que roda cada comando no próprio método async esconde o vazamento de contexto. O `AsyncLocal` é isolado por método async: um passo de SQL que deixa o `Activity.Current` preso no contexto de quem chamou só aparece quando o mesmo método roda dois comandos, ou um comando e um `Flow.Step` depois dele. A auditoria achou assim, com o pacote real, que o SqlClient gravava um passo só para quatro comandos e punha o pai errado em tudo que vinha depois, e os testes passavam desde sempre porque cada um usava o próprio `RunAsync`.
+
+O teste de interop de um driver tem pelo menos um caso com vários comandos no mesmo método async, e afirma o `Activity.Current` depois do `await`, o pai de cada passo e a ordem. Medido pela auditoria. A Planejadora não repetiu.
+
 ## O teste com o pacote real inclui o caminho do usuário (D-186)
 
 Antes de publicar, o teste com o pacote real não termina no registro das opções. Ele segue o caminho de

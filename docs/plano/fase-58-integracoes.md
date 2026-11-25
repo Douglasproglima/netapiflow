@@ -1,6 +1,6 @@
 # Fase 58: integrações que não mentem (D-210, F2, F3, F4, S8)
 
-**Estado (24/11/2026):** liberada para a Executora, Parte A primeiro. O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
+**Estado (24/11/2026):** **a Parte A está entregue em `develop` (#491, squash `9c29835`, D-285) e conferida pela auditoria com o pacote real.** Falta a Parte C (58.11, D-284) e a B. O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
 
 Quatro pontos onde o NetApiFlow se integra com outra coisa, e a integração diz uma coisa e faz outra. O Npgsql 10 sai
 sem o SQL. A resposta 500 sai sem o cabeçalho de trace, e o Runner fica mudo. O MediatR precisa de uma chamada que o
@@ -8,10 +8,11 @@ README não cita. E os pacotes do próprio NetApiFlow não garantem que andam ju
 
 Vai no `0.6.0` (D-210, D-232). São defeitos antigos e não regressões, então não são hotfix (D-205).
 
-Duas partes, duas PRs, como a Fase 50:
+Duas partes, como a Fase 50, mais a 58.11 (D-284): três PRs.
 
 - **Parte A (58.0 a 58.5):** F2, F3 e F4, as integrações com terceiros.
 - **Parte B (58.6 a 58.9):** S8, os pacotes do NetApiFlow entre si (D-231).
+- **Parte C (58.11):** o SqlClient com vários comandos no mesmo método, achado da auditoria na 58A (D-284). Vem depois da 58A e antes da B.
 
 ## Os achados e o que a Planejadora conferiu
 
@@ -21,6 +22,7 @@ Duas partes, duas PRs, como a Fase 50:
 | F3 | O Runner fica mudo quando a resposta não traz `X-NetApiFlow-TraceId` | **Reproduzi no `0.5.2`** o 500 sem o cabeçalho. A parte do cabeçalho é a Tarefa 50.13. O que fica aqui é o Runner dizer por quê |
 | F4 | O README não diz que o `NetApiFlow.MediatR` exige `AddNetApiFlowMediatR()` | **Reproduzido pela auditoria** no `0.5.2`. Não reproduzi |
 | S8 | Os pacotes satélites pedem o núcleo `>=` a uma versão, e o núcleo dá `InternalsVisibleTo` ao painel e aos dois storages: atualizar só o núcleo pode quebrar o satélite antigo com `MissingMethodException`, a classe do D-140 | **Código:** li `src/NetApiFlow/AssemblyInfo.cs`: `InternalsVisibleTo` para `NetApiFlow.Dashboard`, `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`. **Auditoria:** os `.nuspec` publicados da `0.5.2` do painel, do MCP, do EF Core e do Testing dizem `<dependency id="NetApiFlow" version="0.5.2"/>`, que no NuGet é `>= 0.5.2`. **Ninguém reproduziu a quebra ainda:** a Tarefa 58.8 mede |
+| 58.11 | O `SqlClientCommandListener` abre o passo no `WriteCommandBefore` e o deixa como `Activity.Current` do código do usuário: vários comandos no mesmo método gravam um passo só, e o que vem depois fica com o pai errado | **Reproduzido pela auditoria** com o pacote `0.6.0-audit.11` e na `0.5.3` (D-284). A Planejadora não reproduziu e não leu o código. Entra por decisão do dono, na Tarefa 58.11 |
 
 ## Ponto de parada
 
@@ -81,6 +83,34 @@ chamado"). A auditoria roda de novo o roteiro do F4 e confere as três frases.
 
 Com `dbo.Users`, o rótulo sai `SELECT dbo` (o schema, não a tabela). Isso mistura componentes diferentes num só e pode gerar um **N+1 falso**. Corrige junto do Npgsql (58.1). A Executora reproduz com o `Microsoft.Data.SqlClient` `6.1.8`, mede o texto bruto do comando, e o rótulo passa a usar a tabela, com e sem schema (`dbo.Users`, `[dbo].[Users]`, `Users`). Teste que **falha hoje** em `SqlClient.IntegrationTests`, e um teste de que duas tabelas de um mesmo schema **não** disparam o selo de N+1.
 
+## Resultado da Parte A (D-285, 24/11/2026)
+
+Entregue em `develop` na #491 (squash `9c29835`). O relato abaixo é da Executora, no corpo da PR, e da auditoria, que mediu com o pacote `0.6.0-audit.11`. A Planejadora não repetiu as medições.
+
+**A tabela de tags (58.0), medida em host real, `net10.0`, PostgreSQL 16:**
+
+| O que | Npgsql 8.0.5 e 9.0.4 | Npgsql 10.0.0 e 10.0.3 |
+|---|---|---|
+| Texto do comando | `db.statement` | `db.query.text` |
+| Nome da atividade do comando | o nome do banco (`postgres`) | `postgresql`, ou o que o `ConfigureCommandSpanNameProvider` devolver; `COPY FROM` para um COPY |
+| Sistema e banco | `db.system`, `db.name` | `db.system.name`, `db.namespace` |
+| Servidor | `net.peer.name`, `net.peer.ip`, `net.peer.port` | `server.address`, `server.port` |
+| Usuário | `db.user` | não manda |
+| Connection string e id da conexão | `db.connection_string`, `db.connection_id` | `db.npgsql.data_source`, `db.npgsql.connection_id` |
+| Comando que falha | `Activity.Status` sem valor, `otel.status_code=ERROR`, `otel.status_description=<SQLSTATE>`, evento `exception` | `Activity.Status` Error, `error.type` e `db.response.status_code` iguais ao SQLSTATE, evento `exception` |
+| Abertura de conexão | nenhuma atividade | `CONNECT <banco>`, sem tag de texto SQL, também quando falha (`Status` Error, `error.type=28P01`) |
+
+O NetApiFlow lê uma só dessas tags, o texto do comando. As outras não são lidas, ou já funcionam (`NpgsqlCommandFailure` lê o status nativo primeiro e cai no `otel.status_code`). O `Microsoft.Data.SqlClient` 6.1.8 não emite `ActivitySource`, só os eventos do `SqlClientDiagnosticListener`, e o NetApiFlow escuta os três de comando, então a conexão nunca é passo.
+
+- **58.1:** o texto vem de `db.query.text` e, na falta dela, de `db.statement`.
+- **58.2:** o `CONNECT` não abre passo no início, e não há passo retirado. O critério, o desvio do pedido de "retirar" e o custo estão na D-285.
+- **58.3:** o projeto `NetApiFlow.Npgsql10.IntegrationTests`, só em `net10.0`, nas duas listas do `ci.yml` e do `release.yml` e no `.slnx`. O Npgsql 8 fica fora da matriz (D-284, item 55 do roadmap).
+- **58.4:** o Runner nomeia as causas de uma resposta sem trace, nos dois idiomas, e lê a resposta como texto. O 5xx sem cabeçalho é o limite da 50.13, e a nota o diz.
+- **58.5:** a linha do `AddNetApiFlowMediatR()` nos três READMEs.
+- **58.10:** o rótulo é a tabela, no núcleo e no EF Core, juntos.
+- **Testes e guardas:** cada correção vista falhando antes (sete corridas vermelhas listadas no corpo da PR), os guardas que nasceram verdes provados por mutação, 26 linhas novas no `guards.json` e o CI com 162 de 162.
+- **Aberto:** a Parte C (58.11, D-284) e a Parte B. O detector do dashboard não rodou numa build do `develop`.
+
 # Parte B: os pacotes do NetApiFlow entre si (D-231)
 
 ## Tarefa 58.6: os satélites pedem o núcleo na versão exata
@@ -122,6 +152,33 @@ O resultado, nos três, vai no relatório com a saída real.
 - `.claude/rules/packaging.md` já tem a regra (D-231). A Executora não a altera.
 - D-181 não muda: isto só trava o nosso núcleo ao mesmo release, e não sobe piso de terceiro.
 
+# Parte C: o SqlClient com vários comandos no mesmo método (D-284)
+
+## Tarefa 58.11: o passo do SqlClient não pode ficar como `Activity.Current` do código do usuário
+
+**O achado, da auditoria.** Pacote `0.6.0-audit.11` contra a `0.5.3`, num app novo com controller, Postgres 16 e SQL Server 2022, com `ExternalSources` em Npgsql e SqlClient e `CaptureSqlText` ligado. **É idêntico na `0.5.3`: defeito antigo,** que entra por decisão do dono (D-284).
+
+- Depois de um `ExecuteScalarAsync`, o `Activity.Current` do controller é `SqlClient.SELECT ...` com `IsStopped = true`.
+- Quatro comandos SqlClient no mesmo método gravam um passo só: o `ExistingDatabaseStep.Covers` descarta os outros três.
+- Num mesmo método, um comando SqlClient, um comando Npgsql e um `Flow.Step("Service", "Work")`: o comando Npgsql some da trace, e o `Service.Work` vira filho do passo SQL.
+- **A causa, pela leitura da auditoria (a Planejadora não leu o código):** o `SqlClientCommandListener` abre o passo por `Flow.Step` dentro do `WriteCommandBefore`, que roda no contexto de quem chamou, e só o encerra no `WriteCommandAfter`, em outro contexto. A atividade do passo segue como `Activity.Current` no código do usuário depois do `await`.
+- **Por que os testes não pegam:** cada comando roda no próprio método async (`RunAsync`), que isola o `AsyncLocal`. Um repositório Dapper com duas consultas no mesmo método perde a segunda, e o que vem depois fica com o pai errado.
+
+**O que a Executora faz:**
+
+1. **Reproduzir antes de corrigir,** em `SqlClient.IntegrationTests`, com host real e **vários comandos no mesmo método**, e não um método async por comando. (a) Três comandos em sequência dão três passos, filhos do mesmo pai e na ordem. (b) Depois do `await` de cada comando, o `Activity.Current` é o do código do usuário, e não a atividade parada do passo SQL. (c) Um `Flow.Step` aberto depois dos comandos é filho do código do usuário, e não do passo SQL. Visto falhando antes.
+2. **Corrigir pela raiz:** o passo aberto no `WriteCommandBefore` não pode deixar o `Activity.Current` do contexto de quem chamou apontando para ele. A Planejadora palpita que guardar e restaurar o `Activity.Current` ao abrir o passo resolve (o passo mantém o pai certo e continua sendo encerrado no `WriteCommandAfter`), mas é palpite: a Executora mede o mecanismo e diz qual escolheu. Medir também com erro (`WriteCommandError`), com cancelamento e com `ExecuteReader`, onde o `After` pode vir depois.
+3. **A cobertura pelo passo do EF Core não muda.** Um comando de EF Core com o listener do SqlClient ligado continua gravando um passo só, e não dois (ADR-0018, `ExistingDatabaseStep.Covers`). Teste que prova isso depois da correção. O que muda é que um passo SQL já parado deixa de cobrir os comandos seguintes do mesmo método.
+4. **O Npgsql não é afetado** (a auditoria mediu: o `CONNECT custom` ficou entre os irmãos, com o pai certo). Uma asserção sobre o `Activity.Current` depois de um comando Npgsql, no teste do mesmo método, confirma.
+5. **Custo no caminho quente:** nenhuma alocação nova por comando além da que já existe, e nenhum lock. A Executora mede e diz o número.
+6. **Ponto de parada:** se a correção pedir API pública nova, ou mudar o jeito de abrir o passo para além de não vazar o `Activity.Current` (por exemplo trocar o listener por um `ActivityListener`), **para e relata**.
+7. **`CHANGELOG.md`, `### Fixed`, em inglês:** vários comandos no mesmo método passam a gravar um passo cada, e o código depois deles passa a ter o pai certo. A linha da 58.10 ("no longer light a false N+1 badge") só vale para o SqlClient depois desta tarefa, e a Executora confere que as duas frases não se contradizem.
+8. **A linha do `guards.json`** e a seção "Consumidores do contrato" na PR. O cenário permanente do job do pacote real só entra se o job tiver SQL Server. Se não tiver, o teste de host real de `SqlClient.IntegrationTests`, que roda no CI com contêiner, é a guarda, e o relatório diz por que o cenário não cabe.
+
+**Pronto quando:** os testes do item 1 vistos falhando antes e passando depois, o caso do item 3 verde, e o relatório com o `Activity.Current` depois de cada comando, antes e depois da correção.
+
+Branch `bugfix/58c-sqlclient-varios-comandos`, a partir de `develop` atualizado, **depois da 58A mergeada** e antes da Parte B. Abrir a PR e parar.
+
 ## Fora de escopo
 
 - O aviso de log do MediatR (item 29 do roadmap).
@@ -134,11 +191,11 @@ O resultado, nos três, vai no relatório com a saída real.
 - Cada achado com código tem teste **visto falhando antes**.
 - A correção do S8 e cada achado com código entram com a sua linha em `tests/regression-guards/guards.json` (D-266), e a auditoria o
   cobra na PR. O snapshot dos `.nuspec` já mostra a mudança do S8.
-- A auditoria reconfere cada frase de README tocada e refaz F2, F3, F4 e S8 com o pacote real.
+- A auditoria reconfere cada frase de README tocada e refaz F2, F3, F4, S8 e o achado da 58.11 com o pacote real.
 
 ## Versionamento e fluxo
 
-- `0.6.0`. Parte A: `bugfix/58a-integracoes`. Parte B: `bugfix/58b-pacotes-de-um-release`. As duas a partir de
+- `0.6.0`. Parte A: `bugfix/58a-integracoes`. Parte B: `bugfix/58b-pacotes-de-um-release`. Parte C: `bugfix/58c-sqlclient-varios-comandos`, depois da 58A mergeada e antes da B. As três a partir de
   `develop` atualizado. A 58.4 espera a 50.13 e a Parte B da Fase 50 em `develop`.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor. Abrir a PR e parar.
 

@@ -54,6 +54,7 @@ O princípio é o do D-172: o pacote pede a **menor versão que funciona**.
   `Microsoft.Data.SqlClient` `6.1.8` só em `NetApiFlow.SqlClient.IntegrationTests` (D-172). A exceção
   são os pacotes de teste que dividem família com um piso (`Microsoft.EntityFrameworkCore.Sqlite`,
   por exemplo): ficam fora do Dependabot junto com a família e sobem à mão.
+- **Segundo precedente (D-285):** `Npgsql.EntityFrameworkCore.PostgreSQL` tem duas linhas `PackageVersion`, escolhidas por `$(MSBuildProjectName)`: `9.0.4` para os projetos de sempre e `10.0.0` para `NetApiFlow.Npgsql10.IntegrationTests`, que só existe em `net10.0` porque o provider 10 não tem `net8.0`. O `Npgsql` `10.0.0` chega pelo provider, sem referência direta e com a pinagem transitiva desligada, e a linha do `Npgsql` `8.0.5`, piso do `NetApiFlow.Storage.PostgreSql`, fica como está. Sem `VersionOverride`.
 
 ## Atualização
 
