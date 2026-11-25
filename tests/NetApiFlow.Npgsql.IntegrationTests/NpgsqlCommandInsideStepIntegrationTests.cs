@@ -29,10 +29,46 @@ public sealed class RawUserRepository(NpgsqlDataSource dataSource) : IRawUserRep
     }
 }
 
+public sealed record NpgsqlServer(string ConnectionString);
+
 [ApiController]
 [Route("api/sql-in-step")]
-public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRepository repository, IServiceProvider services) : ControllerBase
+public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRepository repository, IServiceProvider services, NpgsqlServer server) : ControllerBase
 {
+    public const string RenamedCommandSpan = "CONNECT custom";
+
+    [HttpGet("fresh-connections")]
+    public async Task<IActionResult> FreshConnections()
+    {
+        await using var unpooled = NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(server.ConnectionString) { Pooling = false }.ConnectionString);
+        await using (var count = unpooled.CreateCommand("SELECT count(*) FROM \"Users\""))
+        {
+            await count.ExecuteScalarAsync();
+        }
+
+        await using var first = unpooled.CreateCommand("SELECT \"Id\" FROM \"Users\" ORDER BY \"Id\" LIMIT 1");
+        return Ok(await first.ExecuteScalarAsync());
+    }
+
+    [HttpGet("wrong-password")]
+    public async Task<IActionResult> WrongPassword()
+    {
+        var wrongPassword = new NpgsqlConnectionStringBuilder(server.ConnectionString) { Pooling = false, Password = "not-the-password" };
+        await using var connection = new NpgsqlConnection(wrongPassword.ConnectionString);
+        await connection.OpenAsync();
+        return Ok();
+    }
+
+    [HttpGet("renamed-command")]
+    public async Task<IActionResult> RenamedCommand()
+    {
+        var builder = new NpgsqlDataSourceBuilder(server.ConnectionString);
+        builder.ConfigureTracing(tracing => tracing.ConfigureCommandSpanNameProvider(_ => RenamedCommandSpan));
+        await using var renamed = builder.Build();
+        await using var command = renamed.CreateCommand("SELECT count(*) FROM \"Users\"");
+        return Ok(await command.ExecuteScalarAsync());
+    }
+
     [HttpGet("raw")]
     public async Task<IActionResult> Raw()
     {
@@ -84,6 +120,7 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
                     });
                     services.AddNetApiFlowEntityFrameworkCore();
                     services.AddSingleton(fixture.DataSource);
+                    services.AddSingleton(new NpgsqlServer(fixture.ConnectionString));
                     services.AddFlowTracked<IRawUserRepository, RawUserRepository>(ComponentType.Repository, ServiceLifetime.Singleton);
                     services.AddTransient(serviceProvider => withInterceptor
                         ? NpgsqlTestDbContext.Create(fixture.DataSource, serviceProvider.GetRequiredService<FlowDbCommandInterceptor>())
@@ -117,6 +154,24 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
         response.EnsureSuccessStatusCode();
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
         return Flow.GetRecentTrace(host.Services, traceId)!.Spans;
+    }
+
+    private static async Task<FlowTraceDetail> GetFailedTraceAsync(IHost host, HttpClient client, string path)
+    {
+        var response = await client.GetAsync(path);
+        response.IsSuccessStatusCode.ShouldBeFalse();
+        var store = host.Services.GetRequiredService<ITraceStore>();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (true)
+        {
+            var failed = await store.QueryAsync(new TraceQuery { Status = FlowStatus.Error }, timeout.Token);
+            if (failed.Items.FirstOrDefault(summary => summary.RouteTemplate.EndsWith(path.Split('/').Last(), StringComparison.Ordinal)) is { } summary)
+            {
+                return (await store.GetAsync(summary.TraceId, timeout.Token))!;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(50), timeout.Token);
+        }
     }
 
     private static FlowSpan SingleDriverSpan(IReadOnlyList<FlowSpan> spans) =>
@@ -249,4 +304,51 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
 
         spans.ShouldNotContain(span => span.Component == "Npgsql");
     }
+
+    [Fact]
+    public async Task CommandsOnFreshPhysicalConnections_RecordOnlyTheCommandsAndNoQueryShapeReachesTheNPlusOneThreshold()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var spans = await GetAsync(host, client, "/api/sql-in-step/fresh-connections");
+
+        var driverSpans = spans.Where(span => span.Component == "Npgsql").ToList();
+        driverSpans.Select(span => span.Operation).ShouldBe(["SELECT Users", "SELECT Users"]);
+        spans.Where(span => span.Type == ComponentType.Database)
+            .GroupBy(span => (span.Component, span.Operation))
+            .ShouldAllBe(group => group.Count() < NPlusOneThreshold);
+    }
+
+    [Fact]
+    public async Task ConnectionRefusedForAWrongPassword_FailsTheStepThatOpenedItAndRecordsNoConnectionStep()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var trace = await GetFailedTraceAsync(host, client, "/api/sql-in-step/wrong-password");
+
+        trace.Trace.Status.ShouldBe(FlowStatus.Error);
+        trace.Spans.Single(span => span.Type == ComponentType.Controller).Status.ShouldBe(FlowStatus.Error);
+        trace.Spans.ShouldNotContain(span => span.Component == "Npgsql");
+    }
+
+    [Fact]
+    public async Task CommandTheAppNamesLikeAConnection_IsStillRecordedWithItsSql()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var spans = await GetAsync(host, client, "/api/sql-in-step/renamed-command");
+
+        var span = SingleDriverSpan(spans);
+        span.Operation.ShouldBe("SELECT Users");
+        span.Status.ShouldBe(FlowStatus.Success);
+        span.ParentSpanId.ShouldBe(spans.Single(candidate => candidate.Type == ComponentType.Controller).SpanId);
+    }
+
+    private const int NPlusOneThreshold = 3;
 }
