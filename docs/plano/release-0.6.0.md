@@ -2,7 +2,7 @@
 
 **O release sai hoje, 25/11/2026, com o dono presente (decisão dele, relato da auditoria, D-307).** A ordem: a 59C entra, a auditoria termina a releitura 59.5 do README, e então a `/release` por esta checklist. **Ninguém abre o `release/0.6.0` antes de a auditoria dizer "pode abrir".**
 
-Quem segue: a `AUDITORIA`, com a `EXECUTORA-RELEASE` nos passos de código (D-272, D-273). Esta página junta a skill `/release` (`.claude/skills/release/SKILL.md`) com o que é específico da `0.6.0`. Em conflito, vale a skill
+Quem segue: a `AUDITORIA`, com a `EXECUTORA-RELEASE` nos passos de código (D-272, D-273). A `EXECUTORA-RELEASE` é uma sessão nova, que o dono vai abrir (D-308). Esta página junta a skill `/release` (`.claude/skills/release/SKILL.md`) com o que é específico da `0.6.0`. Em conflito, vale a skill
 para o passo e esta página para o que a `0.6.0` muda. Nenhum passo público (push, PR, merge, tag, Release, advisory) sem a confirmação de quem pediu.
 
 ## Antes de abrir a branch: os portões
@@ -28,7 +28,7 @@ Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `g
 | 2 | A segunda passada | Feita, menos a releitura 59.5 do README e a tabela de custo da 59C. O registro está na seção abaixo |
 | 3 | A auditoria de base | Fechadas as matrizes de integrações e de autorização, `PathBase` e proxy, as telas e a demo e o mapa de cobertura do CI (D-305 e D-306). **Falta o README frase a frase (59.5)** |
 | 4 | Os advisories | Severidade decidida pelo dono e faixa reproduzida contra a `0.5.3` nos quatro (D-305). Liberados para publicar |
-| 5 | O Trusted Publishing do nuget.org | **Não conferido.** A política é do dono ou da auditoria, e hoje ele está presente |
+| 5 | O Trusted Publishing do nuget.org | **Conferido pelo dono** em 25/11/2026 (relato da auditoria): a política continua certa, sem mudança desde a `0.5.3` (D-308) |
 | 6 | O `develop` verde | O último `CI` do `develop` (`3b7a341`) está em `success`. O `develop` exige 8 checks e a `main` 5 |
 | 7 | O `CHANGELOG` | Lido por quem atualiza e ajustado (D-304). Falta a entrada da 59C, se ela trouxer uma |
 | 8 | A Tarefa 62.4 | Pronta para o dia, depois da publicação |
@@ -52,7 +52,7 @@ O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `D
 ### B. A `AUDITORIA`, a PR para a `main`
 
 8. A PR roda os checks. A `main` exige 5 (`pr-lint`, `secret-scan`, `detect-changes`, `build-test` no ubuntu e no windows). Olhar também `real-package / real-package`, `real-package / comparison` e `built-demo`, que rodam na PR mas ainda não são obrigatórios na `main`. Merge em squash.
-9. **Logo depois do merge,** tornar obrigatórios na `main` os três checks `real-package / real-package`, `real-package / comparison` e `built-demo` (D-261, D-262, D-270), com a autorização do dono. A `main` passa de 5 para 8, igual ao `develop`.
+9. **Logo depois do merge,** tornar obrigatórios na `main` os três checks `real-package / real-package`, `real-package / comparison` e `built-demo` (D-261, D-262, D-270), com a autorização do dono, dada em 25/11/2026 (relato da auditoria, D-308). A `main` passa de 5 para 8, igual ao `develop`.
    Ficaram de fora até aqui porque o `ci.yml` da `main` era o antigo, e um `hotfix/*` nasce da `main` e nunca produziria os checks. Conferir depois: `gh api repos/Douglasproglima/netapiflow/branches/main/protection/required_status_checks`.
 
 ### C. A tag e o `release.yml`
@@ -129,7 +129,7 @@ Uma linha por item, para a auditoria preencher pelas mensagens dela. A Planejado
 | 15 | Inventário do D-205: o mapa de cobertura do CI |  |  |  |  |
 | 16 | Inventário do D-205: as telas e a demo (faltam a 57 e a 60) |  |  |  |  |
 | 17 | Inventário do D-205: o README frase a frase (59.5), com o `OpenTelemetry.Instrumentation.AspNetCore` 1.21.0 no `net8.0` e a licença do MediatR 13 |  |  |  |  |
-| 18 | O custo do `Flow.Step` com `Enabled = true` e `false` contra a `0.5.3`, e a tabela de desempenho da 59C (59.4) |  |  |  |  |
+| 18 | O custo do `Flow.Step` com `Enabled = true` e `false` contra a `0.5.3`, e a tabela de desempenho da 59C (59.4) | 25/11/2026 | `0.5.3` e o `develop`, em três rodadas | Com `Enabled = true` dentro de uma requisição, o `Flow.Step` ficou de 20 a 25 ns acima da `0.5.3` (cerca de 10%), com faixas sobrepostas, nas três rodadas. Com `Enabled = false` ficou muito mais barato | Não bloqueia: vira uma frase honesta no README e o item 65 do roadmap, da `0.7.0`, para achar a causa |
 | 19 | Advisory 1 contra a `0.5.3` (S4), e o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0` | 25/11/2026 | `0.1.0`, `0.2.0`, `0.5.3` e `0.6.0-audit.20` | App novo em Production com cookie auth, `RequireAuthorization()` mais `AllowAnonymous()` no painel e no MCP, anônimo. Dashboard `0.1.0` (core `0.1.0`): API do painel 200, e esta versão não tem MCP. `0.2.0` (core, Dashboard e Mcp): painel 200 e MCP `initialize` 200. `0.5.3`: painel 200 e MCP 200. `0.6.0`: painel 404 e MCP 404. Controle, só `RequireAuthorization()`: 302 (login) em todas | A faixa vale da `0.1.0` (painel) e da `0.2.0` (MCP) até a `0.5.3`. Advisory 1 liberado |
 | 20 | Advisory 2 contra a `0.5.3` (S1 e S2, com um coletor) | 25/11/2026 | `0.5.3` | Os 13 casos, com um coletor OTLP real. Na `0.5.3`, o OTLP vaza 13 de 13 (o caso 0 sai com 735 caracteres e o caso 12 com 313, sem corte), e o painel vaza 10 de 12 formas de segredo: só o 8 (`Password=` de connection string) e o 0 (`password=` simples) saem limpos, e o 12 sai limpo porque o corte comeu o segredo. Bate linha a linha com a tabela da auditoria na `0.5.2` | Advisory 2 reproduzido na `0.5.3`, faixa até a `0.5.3` confirmada, e liberado |
 | 21 | Advisory 3 contra a `0.5.3` (S6 e S7) | 25/11/2026 | `0.5.3` | A `0.5.3` aceita tudo: Host evil, Origin evil e Origin null dão 200, o `DELETE` com Origin evil dá 204, o MCP com Origin evil dá 200, e não há nenhum cabeçalho de proteção. Reproduz o advisory 3 na `0.5.3` | S6 e S7 fechados, e o advisory 3 liberado para publicar |
