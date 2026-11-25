@@ -298,6 +298,29 @@ describe('HistoryComponent', () => {
     req.flush(EMPTY_PAGE);
   });
 
+  it('puts the focus back on the sort button of the column that was sorted, once the rows are back', async () => {
+    await mount();
+    flushConfig();
+    flushTraces({ items: [makeSummary('t1')], totalCount: 1 });
+    await harness.fixture.whenStable();
+    httpMock.expectOne((r) => r.url === 'api/deploys').flush([]);
+    await harness.fixture.whenStable();
+    const sortButton = (field: string) =>
+      harness.routeNativeElement!.querySelector<HTMLButtonElement>(
+        `.history__col-${field} .naf-sort-btn`,
+      )!;
+
+    sortButton('route').focus();
+    sortButton('route').click();
+    await harness.fixture.whenStable();
+    httpMock
+      .expectOne((r) => r.params.get('sort') === 'route')
+      .flush({ items: [makeSummary('t1')], totalCount: 1 });
+    await harness.fixture.whenStable();
+
+    expect(document.activeElement).toBe(sortButton('route'));
+  });
+
   it('clicking the active column again flips its direction', async () => {
     const component = await mount();
     flushConfig();
