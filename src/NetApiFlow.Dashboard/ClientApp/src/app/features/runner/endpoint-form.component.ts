@@ -430,7 +430,7 @@ export class EndpointFormComponent {
     this.dispatch(this.api.callEndpoint(form.method, fullPath, body, headers));
   }
 
-  private dispatch(request: Observable<HttpResponse<unknown>>): void {
+  private dispatch(request: Observable<HttpResponse<string>>): void {
     this.sending.set(true);
     this.sendError.set(null);
     this.missingTrace.set(null);
