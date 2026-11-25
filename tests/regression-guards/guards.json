@@ -1831,5 +1831,85 @@
       "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.WhateverTheOutcomeOfTheCommand_TheCallerActivityStaysCurrentAndTheNextStepIsItsChild"
     },
     "job": "build-test"
+  },
+  {
+    "id": "S8-Dashboard-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Dashboard asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Dashboard"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-EntityFrameworkCore-asks-for-the-exact-core",
+    "defect": "NetApiFlow.EntityFrameworkCore asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.EntityFrameworkCore"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Mcp-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Mcp asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Mcp"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-MediatR-asks-for-the-exact-core",
+    "defect": "NetApiFlow.MediatR asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.MediatR"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-OpenTelemetry-asks-for-the-exact-core",
+    "defect": "NetApiFlow.OpenTelemetry asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.OpenTelemetry"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Storage.PostgreSql-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Storage.PostgreSql asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Storage.PostgreSql"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Storage.SqlServer-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Storage.SqlServer asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Storage.SqlServer"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Testing-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Testing asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Testing"
+    },
+    "job": "real-package"
   }
 ]
