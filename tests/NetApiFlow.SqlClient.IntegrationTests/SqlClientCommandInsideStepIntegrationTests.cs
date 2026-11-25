@@ -85,6 +85,26 @@ public sealed class SqlInStepController(SqlServerConnectionString connectionStri
         return Ok(seen);
     }
 
+    [HttpGet("several-synchronous-commands")]
+    public IActionResult SeveralSynchronousCommands()
+    {
+        var seen = new List<CurrentActivity> { Snapshot("before") };
+        using var connection = new SqlConnection(connectionString.Value);
+        connection.Open();
+        foreach (var (label, table) in new[] { ("first", "Users"), ("second", "Orders"), ("third", "Users") })
+        {
+            using var command = new SqlCommand($"SELECT count(*) FROM dbo.{table}", connection);
+            command.ExecuteScalar();
+            seen.Add(Snapshot(label));
+        }
+
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
     [HttpGet("then-driver-activity")]
     public async Task<IActionResult> ThenDriverActivity()
     {
@@ -487,5 +507,23 @@ public sealed class SqlClientCommandInsideStepIntegrationTests(SqlServerContaine
         current.Where(entry => entry.Label != "before").ShouldAllBe(entry => entry.Id == before.Id && entry.IsStopped == false);
         spans.Single(span => span.Component == "Service").ParentSpanId.ShouldBe(controller.SpanId);
         spans.Single(span => span.Component == "SqlClient").ParentSpanId.ShouldBe(controller.SpanId);
+    }
+
+    [Fact]
+    public async Task SeveralSynchronousCommandsInOneMethod_RecordOneStepEachAndLeaveTheCallerActivityCurrent()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var (spans, current) = await GetWithCurrentActivityAsync(host, client, "/api/sql-in-step/several-synchronous-commands");
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        var commands = spans.Where(span => span.Component == "SqlClient").OrderBy(span => span.Sequence).ToList();
+        commands.Select(command => command.Operation).ShouldBe(["SELECT Users", "SELECT Orders", "SELECT Users"]);
+        commands.ShouldAllBe(command => command.ParentSpanId == controller.SpanId && command.Status == FlowStatus.Success);
+        spans.Single(span => span.Component == "Service").ParentSpanId.ShouldBe(controller.SpanId);
+        var before = current.Single(entry => entry.Label == "before");
+        current.Where(entry => entry.Label != "before").ShouldAllBe(entry => entry.Id == before.Id && entry.IsStopped == false);
     }
 }
