@@ -125,6 +125,7 @@ Entregue em `develop` na #504 (squash `7934db6`). O relato é da Executora, no c
 - **60.10:** `?route=/orders/{id}` sobre traces `/orders/{id:int}` acha 3 (0 na `0.5.3`), no REST, no MCP e no Histórico, em memória e nos dois bancos. A auditoria conferiu no código da `v0.5.3` que o `route_key` já era gravado normalizado, e refaz com um banco gravado pela `0.5.3` na segunda passada.
 - **60.11:** os READMEs dos dois samples, com cada comando executado, e a correção do id do Aspire.
 - **Visto vermelho:** em etapas, 4 por TFM em `NetApiFlow.Tests`, 1 em `IntegrationTests` e 4 em `Storage.Tests`, e 213 guardas no verde. O vermelho do MCP foi visto local, e a causa está coberta pela linha `60B-route-filter-in-memory`, que tem o vermelho no CI.
+- **O `Dispose()` do `FlowActivityListener` (D-302, #512):** o segundo `Dispose()` descontava de novo os contadores da 60.9b e podia silenciar os outros hosts do processo. Defeito da 60.9b ainda não publicada, corrigido com um `Interlocked.Exchange`, visto vermelho no run `45677973121` e guardado pela linha `60B-listener-dispose-idempotent`.
 - **Aberto:** a tela de Arquitetura (60.7), com o pacote real, na segunda passada.
 
 ## O que **não** está aqui, e onde está
