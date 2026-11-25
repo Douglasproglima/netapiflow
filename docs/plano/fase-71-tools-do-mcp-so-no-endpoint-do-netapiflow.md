@@ -1,5 +1,7 @@
 # Fase 71: as tools do NetApiFlow só existem no endpoint do NetApiFlow (D-278, S9, R-36)
 
+**Estado (24/11/2026):** entregue em `develop` (#487, squash `0793930`) e registrada na D-282. Falta o que não é da Executora: o advisory, que a auditoria publica junto do Release (o rascunho está na Tarefa 71.3), e o critério final da fase, a reprodução da auditoria com o pacote real num app novo, que ela ainda não relatou.
+
 Um app que hospeda o próprio servidor MCP (`AddMcpServer().WithHttpTransport()` e `MapMcp("/mcp")`) e usa o `NetApiFlow.Mcp`
 serve as tools do NetApiFlow no endpoint dele. A auditoria reproduziu com o pacote real, na `0.5.3` publicada e na head da #481:
 em `Production`, sem nenhuma autorização configurada, o `/flow/mcp` responde `404` ao `initialize`, como o README promete, mas o `/mcp`
@@ -59,8 +61,24 @@ A Executora mediu sem código, e a Planejadora e a auditoria leram o relatório 
 - **Reproduzido** na `0.2.0` e na `0.5.3` publicadas e no `develop`, nos dois TFMs e nos dois modos do servidor. **O intervalo afetado é de `0.2.0` a `0.5.3`, todas as versões publicadas do `NetApiFlow.Mcp`:** o registro das tools é idêntico desde o `b1a933d`, e o SDK é o 2.3.1 em todas.
 - **O espelho existe:** o `/flow/mcp` lista e chama a `app-tool` do próprio app.
 - **O SDK não tem servidor separado por endpoint.** O `ConfigureSessionOptions` não serve no modo padrão: roda só no `initialize`, e uma sessão aberta no `/flow/mcp` é aceita no `/mcp`. Os filtros de `tools/list` e `tools/call`, com `IHttpContextAccessor`, veem o endpoint da requisição atual nos dois modos e nos dois TFMs.
-- **O desenho:** os filtros, com uma marca interna no grupo do `MapNetApiFlowMcp`, e nenhuma API pública. A decisão vale a cada requisição.
+- **O desenho:** os filtros, com uma marca interna no grupo do `MapNetApiFlowMcp`, e nenhuma API pública. A decisão vale a cada requisição. **Trocado na segunda rodada de medição (D-282): veja a seção seguinte.**
 - **A exceção:** com `PerSessionExecutionContext = true` sem `Stateless`, o filtro recebe `HttpContext` nulo, e falhando fechado as três tools somem também do `/flow/mcp` desse app. Decidir por sessão, no `initialize`, reabriria o furo da sessão trocada de endpoint. A opção é opcional no SDK (o padrão é `false`) e só existe em app que já tem MCP próprio.
+
+## O que foi entregue (D-282, 24/11/2026)
+
+A segunda rodada de medição, feita antes do código final, trocou o desenho da D-281. **Os critérios da 71.1 continuam valendo.** Onde dizem "sem `HttpContext`", leia "sem a marca do gate". O relato abaixo é da Executora, no corpo da #487, e a Planejadora não repetiu as medições.
+
+- **Por que o `HttpContext` caiu.** A `notifications/initialized` chegou ao filtro com `HttpContext` nulo em 1 ou 2 de cada 20 sessões nos modos com sessão, e no SSE legado as mensagens carregam o `HttpContext` do `GET /sse`. Uma `AsyncLocal` ligada pelo gate chegou em 100% das mensagens do `/flow/mcp` e em nenhuma do `/mcp`.
+- **A marca.** O `McpAccessGate` liga a `AsyncLocal` interna `NetApiFlowMcpRequest` só depois de liberar o acesso, nunca num caminho de `403` ou `404`. O `IHttpContextAccessor` deixou de ser registrado.
+- **A lista de permitidos.** O `/flow/mcp` responde só `initialize`, `server/discover`, `ping`, `tools/list`, `tools/call` e `logging/setLevel`, mais as notificações `initialized`, `cancelled` e `progress`. O resto recebe `-32601`, e a notificação fora da lista é descartada. Isso fecha o espelho de prompts, resources e completions, o `subscriptions/listen` da revisão `2026-07-28` e os métodos que uma revisão futura criar.
+- **A tool pelo método, não pelo nome.** O filtro confere todo `tools/call`, em todo endpoint, pelo método que o executaria. No `/flow/mcp` só roda uma tool declarada pelo `NetApiFlow.Mcp`, e fora dele essa tool recebe `-32602`. O filtro de lista segue a mesma regra. O `AddCallToolFilter` saiu, porque derrubava o MCP inteiro de um app com `CallToolWithAlternateHandler` (A1). Uma tool do app com o nome de uma nossa (A2) fica no endpoint do app, e a partida avisa a colisão.
+- **O nome do servidor.** Um filtro de saída dá `NetApiFlow` só às respostas do `/flow/mcp`. O `ServerInfo ??=` global saiu: o endpoint de um app mantém o nome dele ou o padrão do SDK, como na `0.5.3`.
+- **`PerSessionExecutionContext = true` com sessões:** o `/flow/mcp` responde `404`, as tools ficam fora de todo endpoint e a partida avisa, com as duas saídas (D-281).
+- **Sem API pública nova.** Nenhuma linha do `PublicAPI.Unshipped.txt` mudou.
+- **Resíduos aceitos pela auditoria (R-36):** o `initialize` do `/flow/mcp` ainda anuncia as capabilities do app, e toda chamada a elas responde `-32601`; um filtro de mensagem do app registrado antes do `AddNetApiFlowMcp` roda por fora do nosso; no SSE legado (`EnableLegacySse`, obsoleto e desligado por padrão) a sessão leva o contexto do `GET /sse`, e uma sessão aberta no `GET /flow/mcp/sse` já passou pelo gate.
+- **Testes e guardas.** Teste de host real visto falhando antes (47 por TFM no `13dfe0e`), nos dois TFMs e nos três modos de sessão, com o cliente oficial na `2025-06-18` e na revisão que ele negocia por padrão. Os guardas que nasceram verdes foram provados por mutação (A, B e C). O cenário `j` do pacote real, dezessete linhas novas no `guards.json` na segunda rodada (sobre as dez da primeira) e o CI com 136 de 136.
+- **Medido pela auditoria:** o teste do prefixo existe (`/flow/mcp-app` e `/flow/mcpx`, nos três modos), e com o pacote real um `MapMcp("/flow/mcp-app")` serve só o app, mantém os resources e os prompts dele e não tem as nossas tools.
+- **CHANGELOG.** `### Security` conta o espelho, a lista de permitidos e a tool identificada pelo método. Não há linha em `### Fixed` para o A1 nem para o nome do servidor, porque nenhum dos dois chegou a uma versão publicada.
 
 ## Tarefa 71.1: as tools só no endpoint do NetApiFlow
 
@@ -94,6 +112,65 @@ O desenho é o que a 71.0 escolher. Os critérios, todos testados:
 ## Tarefa 71.3: o advisory (D-279)
 
 O dono decidiu publicar um quarto GitHub Security Advisory junto do release da `0.6.0`, como os outros três (D-203, D-206 e o da Fase 56). **A Planejadora escreve o rascunho nesta fase, depois da correção,** no molde da Tarefa 50.10 (título, pacote e versões afetadas, CWE, descrição, impacto, o que não é afetado, a correção e o contorno, em inglês e sem dado de app real). **A severidade e o vetor CVSS a auditoria propõe depois da correção, com o pacote real,** como fez nos outros, e o dono confirma. As versões afetadas são de `0.2.0` a `0.5.3`, todas as publicadas do `NetApiFlow.Mcp` (o registro é idêntico desde o `b1a933d`, reproduzido na `0.2.0` publicada, nos dois TFMs). **O rascunho conta os dois lados:** as traces vazam pelo `/mcp` do app, sem a regra de autorização do painel; e quem tem acesso ao `/flow/mcp` alcança as tools do app, que podem ser de escrita, com a regra do painel em vez da regra do app. Quem publica é a auditoria, junto do Release (D-198), e a Executora não publica nada.
+
+### O rascunho (D-282)
+
+Esta seção é só o rascunho, em inglês e sem dado de app real. Quem publica é a auditoria, junto do Release (D-198).
+
+**O que foi verificado para escrever o texto, e o que não foi:**
+
+- O nuget.org lista o `NetApiFlow.Mcp` de `0.2.0` a `0.5.3`, e o `AddNetApiFlowMcp` da tag `v0.2.0` é o mesmo registro sem filtro (`git show v0.2.0`). Isso é da auditoria.
+- **Reproduzido de verdade** na `0.5.3` pela auditoria, e na `0.2.0` e na `0.5.3` publicadas pela Executora (a 71.0). Nas versões entre as duas, o intervalo vale por construção. A Planejadora não reproduziu nada.
+- **A conta do CVSS 3.1, feita por script pela Planejadora:** 5,3 para o vetor abaixo, e 4,3 se o `/mcp` do app exigir autenticação (`PR:L`). O mesmo script reproduz os 4,2 do vetor do advisory da Fase 56.
+- **O vetor conta só o lado das traces,** como a auditoria propôs. O espelho (as tools do app chamadas pelo `/flow/mcp`) exigiria `PR:L` e depende de o app ter tools que escrevem. Entra no texto, e a auditoria decide se entra na nota.
+- **A CWE e a mitigação para quem fica na `0.5.3`:** a CWE é proposta da Planejadora, e a mitigação (`RequireAuthorization()` no `MapMcp` do app) é da auditoria. Nenhuma das duas foi testada pela Planejadora.
+
+**Texto (campos do formulário de advisory do GitHub):**
+
+> **Title:** The MCP tools of NetApiFlow are served on the MCP endpoint of the application, outside the access rule of the
+> dashboard
+>
+> **Ecosystem and packages:** NuGet. `NetApiFlow.Mcp`, affected `>= 0.2.0, <= 0.5.3`. Patched version: `0.6.0`.
+>
+> **CWE:** CWE-862, Missing Authorization. CWE-863, Incorrect Authorization.
+>
+> **Severity:** Moderate. CVSS 3.1 base score 5.3, `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N`. The score applies when the
+> MCP endpoint of the application is anonymous. When that endpoint requires authentication, the privileges required are low
+> and the score is 4.3.
+>
+> **Description:** `NetApiFlow.Mcp` adds three read-only tools to the MCP server of the process: `list_recent_traces`,
+> `get_trace` and `get_component_stats`. The MCP SDK it uses, `ModelContextProtocol.AspNetCore`, has one MCP server per
+> process, so every endpoint mapped with `MapMcp` serves everything that server has. In an application that hosts its own MCP
+> server in the same process, the three tools were served on the endpoint of the application, outside the access rule that
+> protects the NetApiFlow endpoint (`/flow/mcp`): not found outside the Development environment unless authorization is
+> configured, `Host` and `Origin` checks, and any `IFlowAccessFilter`. `list_recent_traces` returns the id, method, route
+> template, status and duration of recent requests, and `get_trace` returns a trace with its steps (component names and SQL
+> text without parameter values). The reverse also held: the NetApiFlow endpoint listed and ran the tools of the application,
+> and served its prompts, resources and completions, under the access rule of the dashboard instead of the rule of the
+> application.
+>
+> **Trigger:** The application hosts its own MCP server in the same process (`AddMcpServer` and `MapMcp`) and also calls
+> `AddNetApiFlowMcp`.
+>
+> **Impact:** Anyone who can reach the MCP endpoint of the application can read the metadata of recent requests and their
+> traces, even where the NetApiFlow endpoint is closed. NetApiFlow never records request bodies, headers, query strings,
+> method arguments or SQL parameter values, so none of those are exposed. The three tools only read. Through the reverse path,
+> a client admitted to the NetApiFlow endpoint could call the tools of the application, which may write, under the rule of the
+> dashboard.
+>
+> **Not affected:** Applications that do not host their own MCP server in the same process. For them the NetApiFlow endpoint
+> was, and is, the only place where the tools exist.
+>
+> **Patches:** From `0.6.0`, the three tools exist only on the NetApiFlow endpoint, and the decision is made for every request.
+> The endpoint of the application does not serve them. The NetApiFlow endpoint answers only the handshake, `ping`,
+> `logging/setLevel`, `tools/list` and `tools/call` for its three tools. Any other method gets `-32601`, so the prompts,
+> resources and completions of the application are not reachable through it. A tool of the application with the same name as
+> a NetApiFlow tool stays on the endpoint of the application, and a warning is logged at startup. When the application sets
+> `PerSessionExecutionContext = true` with sessions, the tools are not served on any endpoint, the NetApiFlow endpoint answers
+> 404, and a warning at startup names the two ways out (`Stateless = true`, or `PerSessionExecutionContext = false`).
+>
+> **Workarounds:** Require authorization on the MCP endpoint of the application (`MapMcp(...).RequireAuthorization()`), or do not
+> host the MCP server of the application in the same process as `NetApiFlow.Mcp`. Upgrade to `0.6.0`.
 
 ## Fora de escopo
 
