@@ -1,6 +1,6 @@
 # Fase 59: o README e os textos dizem só o que o produto faz (D-210, nível 2)
 
-**Estado (25/11/2026):** **as 59A e 59B estão entregues em `develop` (#507, squash `827d67e`, D-299; #510, squash `4526950`, D-300) e conferidas pela auditoria.** Falta a 59C (o desempenho). A releitura 59.5 está feita (D-309).
+**Estado (25/11/2026):** **as 59A, 59B e 59C estão entregues em `develop` (#507, squash `827d67e`, D-299; #510, squash `4526950`, D-300; #524, squash `6b26662`, D-313) e conferidas pela auditoria. A fase está fechada.** A releitura 59.5 está feita (D-309).
 
 A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e seis afirmações como falsas ou
 imprecisas. Ninguém quebra por causa de uma frase, mas é no README que o usuário decide se confia no produto, e uma
@@ -161,6 +161,16 @@ Entregue em `develop` na #510 (squash `4526950`), com a 59.2. O relato é da Exe
 - **O XML doc de `IncludeHttpClientSource`** diz o que foi medido (a query não sai). Só existe em `NetApiFlowOtlpExportOptions`.
 - **O detector:** o `dist` do `ClientApp` idêntico byte a byte entre o `develop` e a PR, o que a auditoria aceitou como prova.
 - **Aberto:** a 59.4 (59C) e a 59.5. Fora da 59: o `Dispose()` do `FlowActivityListener` que não é idempotente, em PR própria.
+
+## Resultado da 59C (D-313, 25/11/2026)
+
+Entregue em `develop` na #524 (squash `6b26662`), com a 59.4. O relato é da Executora, no corpo da PR, e da auditoria, que leu o diff do README e disse que a tabela bate com o relatório. A Planejadora leu o corpo, mas não o diff nem os números.
+
+- **A tabela de desempenho** medida de novo nos dois TFMs, com o relatório versionado em `docs/benchmarks/0.6.0.md` (hardware, sistema, runtimes, commit do harness, carga da máquina, método, as tabelas com mediana e faixa, cada rodada do caso principal e o que o relatório não mostra). Uma rodada concorrente (`NestedConcurrent`, 16 requisições ao mesmo tempo).
+- **O README**, nos dois idiomas: a máquina nomeada, o "ordem de grandeza", e `Enabled` acrescentando de 13 a 14 µs no Simple e de 16 a 23 µs no Nested, contra 20 e 32 da tabela antiga. **A frase dos "cerca de 32 µs" estava errada:** era o overhead total do cenário Nested da tabela da `0.1.0` (43,84 contra 11,79 µs), e não um acréscimo ao Simple.
+- **O `Flow.Step` contra a `0.5.3` publicada**, em 8 rodadas pareadas com `Enabled = true` e 3 com `Enabled = false`. Com `Enabled = false`, muito mais barato nos dois TFMs. Com `Enabled = true` dentro de uma requisição, o `net8.0` ficou mais alto em 8 de 8 rodadas (mediana +41 ns, cerca de 15%) e o `net10.0` dentro do ruído (+9 ns). A alocação é igual. **A auditoria decidiu que não bloqueia:** o total por requisição ficou abaixo do que o README prometia, e o .NET 8 saiu de suporte este mês. Item 65 do roadmap.
+- **O que não ficou limpo, dito no corpo da PR:** a máquina não estava ociosa (carga de 18% a 96%), a tabela de overhead tem só duas rodadas por TFM, uma execução duplicada foi descartada e refeita, e os casos `Disabled` têm 3 rodadas.
+- **Aberto fora desta fase:** o `dependabot.yml` pode propor subir o `NetApiFlow` `0.5.3` que o projeto `Fase59DesempenhoVerification` fixa de propósito (`dependencies.md`), e a auditoria decidiu que o `ignore` entra na `0.7.0` (item 70 do roadmap). O site pode repetir a tabela antiga (a Tarefa 62.4 confere).
 
 ## Fora de escopo
 
