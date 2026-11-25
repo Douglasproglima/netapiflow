@@ -10,6 +10,7 @@ const STORED = 0;
 const DEFLATED = 8;
 const VERSION_PLACEHOLDER = '{version}';
 const NO_TARGET_FRAMEWORK = '(any framework)';
+const OWN_PACKAGE_ID = 'NetApiFlow';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const defaultSnapshotDirectory = join(repoRoot, 'tests/nuspec-snapshot');
@@ -204,16 +205,50 @@ export function lineDiff(approved, actual) {
   return result;
 }
 
-export async function snapshotsOfFeed(feedDirectory) {
+export async function nuspecsOfFeed(feedDirectory) {
   const names = (await readdir(feedDirectory)).filter((name) => name.endsWith('.nupkg')).sort();
-  const snapshots = new Map();
+  const nuspecs = new Map();
 
   for (const name of names) {
-    const text = normalizeNuspec(readNuspec(await readFile(join(feedDirectory, name))));
+    const xml = readNuspec(await readFile(join(feedDirectory, name)));
+    nuspecs.set(elementText(xml, 'id'), xml);
+  }
+
+  return nuspecs;
+}
+
+export async function snapshotsOfFeed(feedDirectory) {
+  const snapshots = new Map();
+
+  for (const xml of (await nuspecsOfFeed(feedDirectory)).values()) {
+    const text = normalizeNuspec(xml);
     snapshots.set(/^id: (.+)$/m.exec(text)[1], text);
   }
 
   return snapshots;
+}
+
+export function findDependenciesOnOurPackagesThatAreNotExact(xml) {
+  const id = elementText(xml, 'id');
+  const exactRange = `[${elementText(xml, 'version')}]`;
+  const problems = new Set();
+
+  for (const [, attributes] of xml.matchAll(/<dependency\s+([^>]*?)\/?>/g)) {
+    const dependencyId = attribute(attributes, 'id');
+    const range = attribute(attributes, 'version');
+    if (isOurPackage(dependencyId) && range !== exactRange) {
+      problems.add(
+        `${id} depends on ${dependencyId} ${range}, which accepts any later release. `
+          + `It must ask for exactly ${exactRange}: the packages are published together, and a mix of releases should fail at restore, not at run time.`,
+      );
+    }
+  }
+
+  return [...problems];
+}
+
+function isOurPackage(id) {
+  return id === OWN_PACKAGE_ID || id.startsWith(`${OWN_PACKAGE_ID}.`);
 }
 
 export function findProblems(actual, approved) {
@@ -251,6 +286,12 @@ async function approvedSnapshots(snapshotDirectory) {
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const snapshotDirectory = options.snapshots ?? defaultSnapshotDirectory;
+
+  const notExact = [...(await nuspecsOfFeed(options.feed)).values()].flatMap(findDependenciesOnOurPackagesThatAreNotExact);
+  if (notExact.length > 0) {
+    console.error(notExact.join('\n'));
+    process.exit(1);
+  }
 
   if (options.update) {
     await mkdir(snapshotDirectory, { recursive: true });

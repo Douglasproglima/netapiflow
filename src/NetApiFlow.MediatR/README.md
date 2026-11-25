@@ -12,5 +12,7 @@ builder.Services.AddMediatR(config => config.RegisterServicesFromAssemblyContain
 builder.Services.AddNetApiFlowMediatR();
 ```
 
+Install it at the same version as `NetApiFlow`: this package asks for the core at exactly its own version.
+
 See the [project README](https://github.com/Douglasproglima/netapiflow#readme) for quick start
 and marking forms.

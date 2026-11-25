@@ -2,8 +2,8 @@ id: NetApiFlow.Storage.SqlServer
 dependencies:
   net10.0:
     Microsoft.Data.SqlClient 5.2.2 (exclude=Build,Analyzers)
-    NetApiFlow {version} (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
   net8.0:
     Microsoft.Data.SqlClient 5.2.2 (exclude=Build,Analyzers)
-    NetApiFlow {version} (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
 frameworkReferences: (none)

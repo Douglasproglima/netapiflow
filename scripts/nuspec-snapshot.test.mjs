@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { deflateRawSync } from 'node:zlib';
-import { findProblems, lineDiff, normalizeNuspec, readNuspec } from './nuspec-snapshot.mjs';
+import { findDependenciesOnOurPackagesThatAreNotExact, findProblems, lineDiff, normalizeNuspec, readNuspec } from './nuspec-snapshot.mjs';
 
 const NUSPEC = `<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
@@ -142,4 +142,63 @@ test('findProblems_WhenAFloorChanged_ShowsTheDiff', () => {
   assert.match(problem, /A declares something different/);
   assert.match(problem, /- {5}X 8\.0\.10/);
   assert.match(problem, /\+ {5}X 9\.0\.22/);
+});
+
+function nuspecDepending(...dependencies) {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>NetApiFlow.Dashboard</id>
+    <version>0.6.0</version>
+    <dependencies>
+      <group targetFramework="net8.0">
+${dependencies.map(([id, range]) => `        <dependency id="${id}" version="${range}" exclude="Build,Analyzers" />`).join('\n')}
+      </group>
+      <group targetFramework="net10.0">
+${dependencies.map(([id, range]) => `        <dependency id="${id}" version="${range}" exclude="Build,Analyzers" />`).join('\n')}
+      </group>
+    </dependencies>
+  </metadata>
+</package>`;
+}
+
+test('findDependenciesOnOurPackagesThatAreNotExact_WhenTheCoreIsAskedForExactly_ReportsNothing', () => {
+  assert.deepEqual(findDependenciesOnOurPackagesThatAreNotExact(NUSPEC), []);
+});
+
+test('findDependenciesOnOurPackagesThatAreNotExact_WhenTheCoreIsAskedForAFloor_NamesThePackageAndTheDependencyOnceForAllTheFrameworks', () => {
+  const problems = findDependenciesOnOurPackagesThatAreNotExact(nuspecDepending(['NetApiFlow', '0.6.0']));
+
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /NetApiFlow\.Dashboard depends on NetApiFlow 0\.6\.0, which accepts any later release/);
+  assert.match(problems[0], /exactly \[0\.6\.0\]/);
+});
+
+test('findDependenciesOnOurPackagesThatAreNotExact_WhenAnotherOfOurPackagesIsAskedForAFloor_ReportsIt', () => {
+  const problems = findDependenciesOnOurPackagesThatAreNotExact(nuspecDepending(['NetApiFlow.Dashboard.Extras', '[0.5.9]']));
+
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /depends on NetApiFlow\.Dashboard\.Extras \[0\.5\.9\]/);
+});
+
+test('findDependenciesOnOurPackagesThatAreNotExact_WhenAPackageOfAThirdPartyHasAFloor_ReportsNothing', () => {
+  assert.deepEqual(
+    findDependenciesOnOurPackagesThatAreNotExact(nuspecDepending(['Microsoft.Extensions.FileProviders.Embedded', '8.0.34'])),
+    [],
+  );
+});
+
+test('findDependenciesOnOurPackagesThatAreNotExact_WhenANameOnlyStartsLikeOursWithoutADot_IsNotOurs', () => {
+  assert.deepEqual(findDependenciesOnOurPackagesThatAreNotExact(nuspecDepending(['NetApiFlowLike', '1.0.0'])), []);
+});
+
+test('findDependenciesOnOurPackagesThatAreNotExact_WhenThePackageHasNoDependencies_ReportsNothing', () => {
+  assert.deepEqual(findDependenciesOnOurPackagesThatAreNotExact(nuspecDepending()), []);
+});
+
+test('findDependenciesOnOurPackagesThatAreNotExact_ForAPreRelease_ExpectsTheExactPreReleaseRange', () => {
+  const prerelease = NUSPEC.replace('<id>NetApiFlow.EntityFrameworkCore</id>', '<id>NetApiFlow.Mcp</id>');
+
+  assert.deepEqual(findDependenciesOnOurPackagesThatAreNotExact(prerelease), []);
+  assert.equal(findDependenciesOnOurPackagesThatAreNotExact(prerelease.replaceAll('[0.6.0-ci.7]', '0.6.0-ci.7')).length, 1);
 });

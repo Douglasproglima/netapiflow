@@ -43,6 +43,10 @@ dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
 
+> **Atualize todos os pacotes NetApiFlow juntos.** Cada pacote pede o núcleo exatamente na sua própria
+> versão. Se não combinarem, o NuGet avisa na hora do restore: `NU1605` (um erro) quando o núcleo é mais
+> velho do que o pacote precisa, e `NU1608` (um aviso, que vale tratar como erro) quando é mais novo.
+
 Depois acrescente as linhas do NetApiFlow ao `Program.cs` que o modelo gerou. `AddOpenApi()` e
 `MapOpenApi()` são do próprio modelo, então mantenha as duas: o Runner do dashboard lista os seus
 endpoints a partir do documento OpenAPI da sua aplicação, que é `/openapi/v1.json` a menos que você

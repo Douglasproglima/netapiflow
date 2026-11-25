@@ -19,5 +19,7 @@ response.GetFlowTrace(factory.Services)
 No assertion library is pulled in: a failure throws `FlowAssertionException`, which every test
 framework already reports as a failed test.
 
+Install it at the same version as `NetApiFlow`: this package asks for the core at exactly its own version.
+
 See the [project README](https://github.com/Douglasproglima/netapiflow#readme) for quick start
 and marking forms.

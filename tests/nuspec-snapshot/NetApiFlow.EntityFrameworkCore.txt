@@ -3,9 +3,9 @@ dependencies:
   net10.0:
     Microsoft.EntityFrameworkCore 8.0.10 (exclude=Build,Analyzers)
     Microsoft.EntityFrameworkCore.Relational 8.0.10 (exclude=Build,Analyzers)
-    NetApiFlow {version} (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
   net8.0:
     Microsoft.EntityFrameworkCore 8.0.10 (exclude=Build,Analyzers)
     Microsoft.EntityFrameworkCore.Relational 8.0.10 (exclude=Build,Analyzers)
-    NetApiFlow {version} (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
 frameworkReferences: (none)

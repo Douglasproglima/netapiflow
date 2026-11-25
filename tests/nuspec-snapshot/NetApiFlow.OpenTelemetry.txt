@@ -1,11 +1,11 @@
 id: NetApiFlow.OpenTelemetry
 dependencies:
   net10.0:
-    NetApiFlow {version} (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
     OpenTelemetry.Exporter.OpenTelemetryProtocol 1.20.1 (exclude=Build,Analyzers)
     OpenTelemetry.Extensions.Hosting 1.20.1 (exclude=Build,Analyzers)
   net8.0:
-    NetApiFlow {version} (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
     OpenTelemetry.Exporter.OpenTelemetryProtocol 1.20.1 (exclude=Build,Analyzers)
     OpenTelemetry.Extensions.Hosting 1.20.1 (exclude=Build,Analyzers)
 frameworkReferences: (none)
