@@ -398,7 +398,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
     /// <summary>
     /// Builds the <c>ORDER BY</c> clause from <paramref name="query"/>'s already-parsed sort enum,
-    /// never from concatenated query-string text (D-41). Ties break by <c>started_at</c>
+    /// never from concatenated query-string text. Ties break by <c>started_at</c>
     /// descending, then <c>trace_id</c>, so paginating a result set with repeated values never
     /// skips or repeats a row across pages. <c>UPPER()</c> keeps route/method ordering consistent
     /// regardless of the server's configured collation.

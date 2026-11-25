@@ -53,6 +53,6 @@ public sealed record FlowSpan
     /// <summary>Explicit tags attached to the span via <c>FlowStep.Tag(...)</c>.</summary>
     public IReadOnlyDictionary<string, string> Tags { get; init; } = EmptyTags;
 
-    /// <summary><c>ILogger</c> calls correlated to this span (ADR-0017).</summary>
+    /// <summary><c>ILogger</c> calls correlated to this span.</summary>
     public IReadOnlyList<LogEntry> Logs { get; init; } = EmptyLogs;
 }

@@ -7,7 +7,7 @@ namespace NetApiFlow.Dashboard.Sse;
 /// <summary>
 /// Fans out <see cref="FlowEvent"/>s to every connected <c>GET /stream</c> client, keeping a
 /// circular replay buffer for <c>Last-Event-ID</c> reconnection and enforcing the
-/// client and per-client queue limits of risco R-10.
+/// client and per-client queue limits.
 /// </summary>
 internal sealed class SseBroadcaster : IFlowEventListener
 {
