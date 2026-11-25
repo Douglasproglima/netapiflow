@@ -1,5 +1,7 @@
 # Fase 58: integrações que não mentem (D-210, F2, F3, F4, S8)
 
+**Estado (24/11/2026):** liberada para a Executora, Parte A primeiro. O plano foi escrito quando a última versão publicada era a `0.5.2`. Hoje é a `0.5.3` (a de `tests/real-package/previous-published-version.txt`), e as referências operacionais da 58.8 e do ponto de parada foram atualizadas. Os `0.5.2` das linhas dos achados são onde cada um foi reproduzido, e ficam como estão.
+
 Quatro pontos onde o NetApiFlow se integra com outra coisa, e a integração diz uma coisa e faz outra. O Npgsql 10 sai
 sem o SQL. A resposta 500 sai sem o cabeçalho de trace, e o Runner fica mudo. O MediatR precisa de uma chamada que o
 README não cita. E os pacotes do próprio NetApiFlow não garantem que andam juntos.
@@ -25,7 +27,7 @@ Duas partes, duas PRs, como a Fase 50:
 - Se a 58.0 achar que o `CONNECT` do Npgsql não se distingue de um comando por critério estável (nome da atividade e
   tags iguais nas versões 8, 9 e 10), **para e relata**. A decisão é da Planejadora.
 - Se a 58.6 não achar jeito de gerar a faixa exata no `.nuspec` sem reescrever o `pack`, para e relata.
-- Se a 58.8 mostrar que o par núcleo novo com painel `0.5.2` quebra, **não é motivo para parar**: é o que se queria
+- Se a 58.8 mostrar que o par núcleo novo com painel `0.5.3` quebra, **não é motivo para parar**: é o que se queria
   medir, e vai para o README e o CHANGELOG.
 
 # Parte A: as integrações com terceiros
@@ -101,9 +103,9 @@ registro por item, e o que for público de fato fica documentado.
 
 ## Tarefa 58.8: o teste com o pacote real, entre versões
 
-Com o pacote do núcleo empacotado localmente como `0.6.0-verify.<n>` e os satélites **publicados** da `0.5.2`:
+Com o pacote do núcleo empacotado localmente como `0.6.0-verify.<n>` e os satélites **publicados** da `0.5.3`, a última publicada:
 
-1. Instalar o núcleo novo com o `NetApiFlow.Dashboard` `0.5.2` e registrar o que acontece: o restore passa? O app sobe?
+1. Instalar o núcleo novo com o `NetApiFlow.Dashboard` `0.5.3` e registrar o que acontece: o restore passa? O app sobe?
    Aparece `MissingMethodException` ou `TypeLoadException`?
 2. Instalar o conjunto inteiro do mesmo release e confirmar que funciona.
 3. Instalar o núcleo de um release com um satélite de outro e confirmar que o `restore` falha com a mensagem do NuGet
@@ -116,7 +118,7 @@ O resultado, nos três, vai no relatório com a saída real.
 - `README.md` e `README.pt-BR.md`, na seção de instalação, em destaque e numa frase: **atualize todos os pacotes
   NetApiFlow juntos**, e o que o NuGet diz quando as versões não combinam. Uma linha em cada README de pacote.
 - `CHANGELOG.md`, em inglês, `### Changed`: os pacotes satélites passam a exigir a versão exata do núcleo. O que
-  mudou para quem atualiza, e o que a 58.8 mediu sobre os satélites da `0.5.2`.
+  mudou para quem atualiza, e o que a 58.8 mediu sobre os satélites da `0.5.3`.
 - `.claude/rules/packaging.md` já tem a regra (D-231). A Executora não a altera.
 - D-181 não muda: isto só trava o nosso núcleo ao mesmo release, e não sobe piso de terceiro.
 
