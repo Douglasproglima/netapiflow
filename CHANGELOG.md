@@ -400,6 +400,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow.Dashboard`: a step name cut with an ellipsis now shows its full text in a tooltip, on the
   graph node and on the waterfall label of the details panel. Before, two routes of the same group
   looked alike once the end of the name was cut. A node whose operation fits shows no tooltip.
+- `NetApiFlow.Dashboard` demo: the Architecture screen loads the recorded map of each route again. The
+  screen asks for a time window and the demo only knew the recording made without one, so every route
+  ended in "Failed to load the architecture map."
 
 ### Security
 

@@ -423,6 +423,17 @@
     "job": "built-demo"
   },
   {
+    "id": "Demo-architecture-asks-for-a-time-window",
+    "defect": "The Architecture screen of the demo failed for every route, because the screen sends a time window the recorded key does not have",
+    "fixedIn": "#523",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/demo-fixture.interceptor.spec.ts",
+      "test": "demoFixtureInterceptor matches the architecture recording for every time window the screen asks for"
+    },
+    "job": "build-test"
+  },
+  {
     "id": "EfFloor-moved-to-9",
     "defect": "The package asked for EF Core 9.0.22, which broke an app on EF Core 8 with a provider of EF 8",
     "fixedIn": "#323",

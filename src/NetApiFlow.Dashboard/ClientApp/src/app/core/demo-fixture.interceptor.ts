@@ -14,6 +14,9 @@ export const DEMO_FIXTURES_PATH = 'assets/demo-fixtures';
 export const DEMO_MANIFEST_PATH = `${DEMO_FIXTURES_PATH}/manifest.json`;
 export const TRACE_ID_HEADER = 'X-NetApiFlow-TraceId';
 
+const ROUTES_RECORDED_WITHOUT_TIME_WINDOW = new Set(['api/architecture']);
+const TIME_WINDOW_PARAMETERS = ['from', 'to'];
+
 export interface DemoSampleResponse {
   method: string;
   template: string;
@@ -217,9 +220,14 @@ function normalizeKey(url: string): string {
   }
 
   const canonical = [...new URLSearchParams(query).entries()]
+    .filter(([name]) => !isTimeWindowParameterOfRecordedRoute(path, name))
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => `${name}=${value}`)
     .join('&');
 
-  return `${path}?${canonical}`;
+  return canonical ? `${path}?${canonical}` : path;
+}
+
+function isTimeWindowParameterOfRecordedRoute(path: string, name: string): boolean {
+  return ROUTES_RECORDED_WITHOUT_TIME_WINDOW.has(path) && TIME_WINDOW_PARAMETERS.includes(name);
 }
