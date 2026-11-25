@@ -129,6 +129,10 @@ describe('FlowDetailsPanelComponent', () => {
   });
 
   describe('the texts of the panel', () => {
+    afterEach(() => {
+      localStorage.clear();
+    });
+
     async function render(
       language: 'pt-BR' | 'en',
       trace: FlowTraceDetail,

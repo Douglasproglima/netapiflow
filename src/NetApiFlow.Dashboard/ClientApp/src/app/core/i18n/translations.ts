@@ -98,6 +98,11 @@ const en = {
   'action.noTraceHeaderServerError':
     'No trace to open: the server answered {status} without the X-NetApiFlow-TraceId header. An unhandled exception with no exception handler (UseExceptionHandler) ends the response before the header is written, which is what happens in Production. EmitTraceIdHeader being off, or the route not being traced, also explain it.',
   'action.traceConfirmation': 'Trace: {traceId}',
+  'action.response.status': 'HTTP {status}',
+  'action.response.body': 'Response body',
+  'action.response.truncated': 'Cut at {limit} characters.',
+  'action.response.empty': '(empty body)',
+  'action.response.notShown': '(content {type}, not shown)',
   'action.closePanel': 'Close the action panel',
 
   'graph.title': 'Request path',
@@ -105,7 +110,7 @@ const en = {
   'graph.replay': 'Replay',
   'graph.copyTraceId': 'Copy trace ID',
   'graph.errorOrigin': 'Error origin: {component} · HTTP {status} · {duration}',
-  'graph.slowestStep': 'Slowest step: {component} · {duration}',
+  'graph.slowestStep': 'Slowest step: {component} · {duration} own time',
   'graph.empty.title': 'No request is currently in progress.',
   'graph.empty.hint': 'Send a request from "Try an endpoint" or call your API directly.',
   'graph.notFound.title': 'Trace not found.',
@@ -137,6 +142,11 @@ const en = {
   'node.state.notExecuted': 'Not executed',
   'node.state.cancelled': 'Cancelled',
   'node.state.timeout': 'Timeout',
+  'status.running': 'Running',
+  'status.success': 'Success',
+  'status.error': 'Error',
+  'status.cancelled': 'Cancelled',
+  'status.timeout': 'Timeout',
   'node.nPlusOneBadge': '×{count}',
   'node.nPlusOneAria': 'Suspected N+1, {count} queries with the same shape in this trace',
 
@@ -187,6 +197,7 @@ const en = {
   'details.span.nPlusOne': 'Suspected N+1: {count} queries with this same shape in this trace.',
   'details.span.nPlusOneJump': 'Jump to the first one',
   'details.backToSummary': 'Back to trace summary',
+  'details.summary.aria': 'Request summary',
   'details.unexplainedTime':
     '{percent}% of the time ({unexplained} of {total}) is not covered by any recorded step.',
 
@@ -335,6 +346,8 @@ const en = {
   'history.compare.count': '{count}/2 selected',
   'history.compare.action': 'Compare',
   'history.compare.routeMismatch': 'The two selected executions are not the same route.',
+  'history.compare.thirdDropped':
+    'Only two executions can be compared at a time: the oldest one was unchecked.',
 
   'diff.title': 'Compare executions',
   'diff.vs': 'vs',
@@ -441,6 +454,11 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.demoCannotSend':
     'Esta demo mostra execuções gravadas e não envia requisições de verdade.',
   'action.traceConfirmation': 'Trace: {traceId}',
+  'action.response.status': 'HTTP {status}',
+  'action.response.body': 'Corpo da resposta',
+  'action.response.truncated': 'Cortado em {limit} caracteres.',
+  'action.response.empty': '(corpo vazio)',
+  'action.response.notShown': '(conteúdo {type}, não exibido)',
   'action.closePanel': 'Fechar o painel de ação',
 
   'graph.title': 'Caminho da requisição',
@@ -448,7 +466,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'graph.replay': 'Replay',
   'graph.copyTraceId': 'Copiar ID do trace',
   'graph.errorOrigin': 'Origem do erro: {component} · HTTP {status} · {duration}',
-  'graph.slowestStep': 'Etapa mais lenta: {component} · {duration}',
+  'graph.slowestStep': 'Etapa mais lenta: {component} · {duration} de tempo próprio',
   'graph.empty.title': 'Nenhuma requisição em andamento no momento.',
   'graph.empty.hint':
     'Envie uma requisição usando "Testar um endpoint" ou chame sua API diretamente.',
@@ -480,6 +498,11 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.state.notExecuted': 'Não executado',
   'node.state.cancelled': 'Cancelado',
   'node.state.timeout': 'Tempo esgotado',
+  'status.running': 'Em execução',
+  'status.success': 'Sucesso',
+  'status.error': 'Erro',
+  'status.cancelled': 'Cancelado',
+  'status.timeout': 'Tempo esgotado',
   'node.nPlusOneBadge': '×{count}',
   'node.nPlusOneAria': 'Possível N+1, {count} consultas com o mesmo formato neste trace',
 
@@ -530,6 +553,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'details.span.nPlusOne': 'Possível N+1: {count} consultas com esse mesmo formato neste trace.',
   'details.span.nPlusOneJump': 'Pular para a primeira',
   'details.backToSummary': 'Voltar ao resumo do trace',
+  'details.summary.aria': 'Resumo da requisição',
   'details.unexplainedTime':
     '{percent}% do tempo ({unexplained} de {total}) não está coberto por nenhuma etapa registrada.',
 
@@ -678,6 +702,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'history.compare.count': '{count}/2 selecionadas',
   'history.compare.action': 'Comparar',
   'history.compare.routeMismatch': 'As duas execuções selecionadas não são da mesma rota.',
+  'history.compare.thirdDropped':
+    'Só dá para comparar duas execuções por vez: a mais antiga foi desmarcada.',
 
   'diff.title': 'Comparar execuções',
   'diff.vs': 'vs',

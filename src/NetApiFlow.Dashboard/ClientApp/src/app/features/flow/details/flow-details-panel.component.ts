@@ -5,6 +5,7 @@ import { httpMethodTagClass } from '../../../shared/http-method-style';
 import { buildWaterfall, computeUnexplainedTime } from './waterfall';
 import { findNPlusOneGroup } from '../graph/graph-builder';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { statusLabelKey } from '../../../shared/status-label';
 
 const W3C_TRACE_ID_TAG = 'w3c.trace_id';
 
@@ -38,12 +39,15 @@ export class FlowDetailsPanelComponent {
       return null;
     }
 
+    const roundedPercent = unexplained.unexplainedPercent.toFixed(0);
     return {
-      percent: unexplained.unexplainedPercent.toFixed(0),
+      percent: roundedPercent === '0' && unexplained.unexplainedMicros > 0 ? '<1' : roundedPercent,
       unexplained: this.formatDuration(unexplained.unexplainedMicros),
       total: this.formatDuration(this.trace().durationMicros),
     };
   });
+
+  readonly statusLabelKey = statusLabelKey;
 
   readonly executedCount = computed(() => this.trace().spans.length);
 

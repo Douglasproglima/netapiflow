@@ -827,6 +827,10 @@ describe('FlowPageComponent', () => {
   }
 
   describe('the banner above the graph', () => {
+    afterEach(() => {
+      localStorage.clear();
+    });
+
     async function slowestStepBanner(
       spans: FlowTraceDetail['spans'],
       durationMicros: number,
