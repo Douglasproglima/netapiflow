@@ -180,6 +180,7 @@ html {
   --mat-button-protected-label-text-weight: 600;
   --mat-button-tonal-label-text-weight: 600;
   --mat-button-text-label-text-weight: 600;
+  --mat-menu-item-focus-state-layer-color: transparent;
 
   // `color-scheme` is what the browser reads to pick the native scrollbar/form-control
   // rendering; `light dark` here is the default (no saved preference), telling the browser both
@@ -203,6 +204,16 @@ html[data-theme='light'] {
 html[data-theme='dark'] {
   @include naf-mat-theme-dark;
   color-scheme: dark;
+}
+
+.mat-mdc-button-base:focus-visible {
+  outline: 2px solid var(--naf-focus);
+  outline-offset: 2px;
+}
+
+.mat-mdc-menu-item.mat-focus-indicator:focus-visible {
+  outline: 2px solid var(--naf-focus);
+  outline-offset: -2px;
 }
 
 body {
