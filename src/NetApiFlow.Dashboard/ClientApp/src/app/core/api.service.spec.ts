@@ -270,4 +270,17 @@ describe('ApiService', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
     req.flush(null, { status: 200, statusText: 'OK' });
   });
+
+  it('callEndpoint reads the answer as text, so a plain-text success is never taken for a failure', () => {
+    const outcomes: string[] = [];
+    service.callEndpoint('GET', '/api/untraced').subscribe({
+      next: (response) => outcomes.push(`success ${response.status}`),
+      error: () => outcomes.push('failure'),
+    });
+
+    const req = httpMock.expectOne('/api/untraced');
+    expect(req.request.responseType).toBe('text');
+    req.flush('untraced', { status: 200, statusText: 'OK' });
+    expect(outcomes).toEqual(['success 200']);
+  });
 });
