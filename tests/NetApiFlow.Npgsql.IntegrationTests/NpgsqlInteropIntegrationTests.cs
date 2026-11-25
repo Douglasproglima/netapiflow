@@ -50,6 +50,23 @@ public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture
         span.Tags.Keys.ShouldNotContain("sql");
     }
 
+    [Theory]
+    [InlineData("SELECT \"Id\" FROM public.\"Users\" LIMIT 1")]
+    [InlineData("SELECT \"Id\" FROM \"public\".\"Users\" LIMIT 1")]
+    public async Task RawNpgsqlCommand_WithASchemaPrefix_IsNamedAfterTheTable(string commandText)
+    {
+        var (recorder, listener, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = listener;
+        using var __ = root;
+
+        using (var command = fixture.DataSource.CreateCommand(commandText))
+        {
+            await command.ExecuteScalarAsync();
+        }
+
+        DatabaseSpansOf(recorder, traceId).Single().Operation.ShouldBe("SELECT Users");
+    }
+
     [Fact]
     public async Task RawNpgsqlCommand_WithDefaultExternalSources_RecordsNoSpan()
     {
