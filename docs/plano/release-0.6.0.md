@@ -98,11 +98,11 @@ Uma linha por item, para a auditoria preencher pelas mensagens dela. A Planejado
 | 3 | Fase 53: `UsePathBase`, `ExcludePaths` e as rotas do painel que não viram traces (R-33) |  |  |  |  |
 | 4 | Fase 53: a matriz de hospedagem (IIS in-process, IIS out-of-process e proxy com `X-Forwarded-Prefix`) |  |  |  |  |
 | 5 | Fase 55: a identidade da trace nos dois storages |  |  |  |  |
-| 6 | Fase 56, S6: `Host` e `Origin` alheios dão 403 no painel e no `/flow/mcp` |  |  |  |  |
-| 7 | Fase 56, S7: os cabeçalhos de segurança em `/flow`, e o painel atrás de proxy ou com host declarado |  |  |  |  |
+| 6 | Fase 56, S6: `Host` e `Origin` alheios dão 403 no painel e no `/flow/mcp` | 25/11/2026 | `0.6.0-audit.20` (develop `5bb0c45`) contra a `0.5.3` | Em Development: `GET /flow/` com Host `localhost` 200, com `evil.example` 403, e com `192.168.1.13` não declarado 403. API: Host evil 403, Origin evil 403, Origin null 403. `DELETE`: Origin evil 403, Origin igual 204, também com https (o esquema não entra). MCP `initialize`: Origin evil 403, Host evil 403, sem Origin 200. Host declarado em `AllowedHosts`: `192.168.1.13` dá 200 | S6 fechado |
+| 7 | Fase 56, S7: os cabeçalhos de segurança em `/flow`, e o painel atrás de proxy ou com host declarado | 25/11/2026 | `0.6.0-audit.20` (develop `5bb0c45`) contra a `0.5.3` | Em `/flow/`: nosniff, Referrer-Policy no-referrer, X-Frame-Options DENY e a CSP completa, e na resposta 403 também XFO DENY e `frame-ancestors 'none'`. Proxy: sem `UseForwardedHeaders`, o `DELETE` com Origin público dá 403, como o README diz. Com `UseForwardedHeaders(XForwardedHost)`, dá 204, em Development e em Production. Production com `IFlowAccessFilter` aberto: Host alheio passa (segue o `AllowedHosts` do app), mas Origin evil dá 403 | S7 fechado |
 | 8 | Fase 57, F1a: a rota da trace vem do `EndpointMatched` |  |  |  |  |
 | 9 | Fase 57, F1b: o estado "Aguardando" e o blueprint do último sucesso anterior |  |  |  |  |
-| 10 | Fase 54: os 13 casos do S1 e do S2 contra a `0.6.0`, pelo coletor OTLP e pelo painel |  |  |  |  |
+| 10 | Fase 54: os 13 casos do S1 e do S2 contra a `0.6.0`, pelo coletor OTLP e pelo painel | 25/11/2026 | `0.6.0-audit.20` (develop `5bb0c45`) | Os 13 casos literais do plano, por `MarkError` num passo manual, com um coletor OTLP real (http/protobuf). Na `0.6.0`: 0 vazamentos no painel e 0 no OTLP, e as mensagens com no máximo 300 caracteres nas duas saídas | Fase 54 fechada |
 | 11 | Cinco linhas sorteadas do `guards.json` |  |  |  |  |
 | 12 | Fase 60.7: a tela de Arquitetura |  |  |  |  |
 | 13 | A Minimal API sem `WithNetApiFlowTracking` e as rotas do próprio NetApiFlow sem rastreio |  |  | No CHANGELOG, as duas entradas existem (`### Added` e `### Changed`), lidas pela Planejadora em 25/11/2026. Falta medir as rotas do NetApiFlow |  |
@@ -111,13 +111,13 @@ Uma linha por item, para a auditoria preencher pelas mensagens dela. A Planejado
 | 16 | Inventário do D-205: as telas e a demo (faltam a 57 e a 60) |  |  |  |  |
 | 17 | Inventário do D-205: o README frase a frase (59.5), com o `OpenTelemetry.Instrumentation.AspNetCore` 1.21.0 no `net8.0` e a licença do MediatR 13 |  |  |  |  |
 | 18 | O custo do `Flow.Step` com `Enabled = true` e `false` contra a `0.5.3`, e a tabela de desempenho da 59C (59.4) |  |  |  |  |
-| 19 | Advisory 1 contra a `0.5.3` (S4), e o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0` |  |  |  |  |
-| 20 | Advisory 2 contra a `0.5.3` (S1 e S2, com um coletor) |  |  |  |  |
-| 21 | Advisory 3 contra a `0.5.3` (S6 e S7) |  |  |  |  |
+| 19 | Advisory 1 contra a `0.5.3` (S4), e o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0` | 25/11/2026 | `0.1.0`, `0.2.0`, `0.5.3` e `0.6.0-audit.20` | App novo em Production com cookie auth, `RequireAuthorization()` mais `AllowAnonymous()` no painel e no MCP, anônimo. Dashboard `0.1.0` (core `0.1.0`): API do painel 200, e esta versão não tem MCP. `0.2.0` (core, Dashboard e Mcp): painel 200 e MCP `initialize` 200. `0.5.3`: painel 200 e MCP 200. `0.6.0`: painel 404 e MCP 404. Controle, só `RequireAuthorization()`: 302 (login) em todas | A faixa vale da `0.1.0` (painel) e da `0.2.0` (MCP) até a `0.5.3`. Advisory 1 liberado |
+| 20 | Advisory 2 contra a `0.5.3` (S1 e S2, com um coletor) | 25/11/2026 | `0.5.3` | Os 13 casos, com um coletor OTLP real. Na `0.5.3`, o OTLP vaza 13 de 13 (o caso 0 sai com 735 caracteres e o caso 12 com 313, sem corte), e o painel vaza 10 de 12 formas de segredo: só o 8 (`Password=` de connection string) e o 0 (`password=` simples) saem limpos, e o 12 sai limpo porque o corte comeu o segredo. Bate linha a linha com a tabela da auditoria na `0.5.2` | Advisory 2 reproduzido na `0.5.3`, faixa até a `0.5.3` confirmada, e liberado |
+| 21 | Advisory 3 contra a `0.5.3` (S6 e S7) | 25/11/2026 | `0.5.3` | A `0.5.3` aceita tudo: Host evil, Origin evil e Origin null dão 200, o `DELETE` com Origin evil dá 204, o MCP com Origin evil dá 200, e não há nenhum cabeçalho de proteção. Reproduz o advisory 3 na `0.5.3` | S6 e S7 fechados, e o advisory 3 liberado para publicar |
 | 22 | Advisory 4 contra a `0.5.3` |  | `0.5.3` | Já reproduzido pela auditoria |  |
 | 23 | A corrida do campo de rota do Runner, com backend real (D-293) |  |  |  |  |
 | 24 | O `release.yml` na tag, passos 11 a 13 |  |  |  |  |
-| 25 | O `CHANGELOG` lido por quem atualiza da `0.5.3` (a lista da Planejadora, D-303) |  |  |  | A auditoria decide |
+| 25 | O `CHANGELOG` lido por quem atualiza da `0.5.3` (a lista da Planejadora, D-303) | 25/11/2026 | | A auditoria decidiu os itens 1 a 13 e 15 da lista, e a Planejadora os aplicou em `CHANGELOG.md` (D-304). A mensagem do painel para um trace sem etapas já diz o padrão novo e `Flow.Step` | Decidido |
 | 26 | O texto do Release, `release-0.6.0-notes.md` |  |  |  |  |
 
 **O que a Planejadora faz depois dela:** marcar R-29 e R-30 (Fases 48 e 49, publicadas na `0.5.0` e na `0.5.1`, ainda `Planejado` na tabela) e R-31, R-32 e R-33 como Mitigado, citando o arquivo de teste que prova cada um, depois de conferir que ele existe e é real; fechar no README as linhas das Fases 50, 51, 53, 55, 56 e 57 (e a 54, se a auditoria disser); e registrar a 60, a 59 e o release.
