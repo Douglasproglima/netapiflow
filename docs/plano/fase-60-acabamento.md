@@ -1,6 +1,6 @@
 # Fase 60: o acabamento que um revisor vê no primeiro dia (D-210 nível 3, D-236 B12 e B14)
 
-**Estado (25/11/2026):** **as Partes A e B estão entregues em `develop` (#502, squash `0c839d3`, D-294; #504, squash `7934db6`, D-296) e conferidas pela auditoria com o pacote real. A fase está fechada, menos a Arquitetura (60.7), que entra na segunda passada.**
+**Estado (25/11/2026):** **as Partes A e B estão entregues em `develop` (#502, squash `0c839d3`, D-294; #504, squash `7934db6`, D-296) e conferidas pela auditoria com o pacote real. A fase está fechada, a Arquitetura (60.7) incluída, conferida na segunda passada (D-306).**
 
 O nível 3 da auditoria de base, mais dois itens da varredura final (B12, o filtro de rota do MCP, e B14, os samples). Nada
 aqui derruba o produto, mas é o que um purista abre primeiro: o celular, textos que se contradizem, o Runner pela metade,
@@ -126,7 +126,7 @@ Entregue em `develop` na #504 (squash `7934db6`). O relato é da Executora, no c
 - **60.11:** os READMEs dos dois samples, com cada comando executado, e a correção do id do Aspire.
 - **Visto vermelho:** em etapas, 4 por TFM em `NetApiFlow.Tests`, 1 em `IntegrationTests` e 4 em `Storage.Tests`, e 213 guardas no verde. O vermelho do MCP foi visto local, e a causa está coberta pela linha `60B-route-filter-in-memory`, que tem o vermelho no CI.
 - **O `Dispose()` do `FlowActivityListener` (D-302, #512):** o segundo `Dispose()` descontava de novo os contadores da 60.9b e podia silenciar os outros hosts do processo. Defeito da 60.9b ainda não publicada, corrigido com um `Interlocked.Exchange`, visto vermelho no run `45677973121` e guardado pela linha `60B-listener-dispose-idempotent`.
-- **Aberto:** a tela de Arquitetura (60.7), com o pacote real, na segunda passada.
+- **Fechado na segunda passada (D-306):** a tela de Arquitetura (60.7) desenha a rota sem legenda, e o SVG exportado leva estilos e fontes inline.
 
 ## O que **não** está aqui, e onde está
 
