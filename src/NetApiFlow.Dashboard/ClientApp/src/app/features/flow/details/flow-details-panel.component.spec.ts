@@ -107,7 +107,7 @@ describe('FlowDetailsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
     expect(text).toContain('GET');
     expect(text).toContain('/api/orders/{id}');
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(text).toContain('Etapas');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(1);
   });
@@ -229,7 +229,7 @@ describe('FlowDetailsPanelComponent', () => {
     });
   });
 
-  describe('unexplained time badge (D-78)', () => {
+  describe('unexplained time badge', () => {
     it('shows the badge with the percent and both absolute durations for a finished trace', async () => {
       const trace = makeTrace();
       trace.durationMicros = 100_000;
@@ -277,7 +277,7 @@ describe('FlowDetailsPanelComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(0);
   });
 
-  describe('span logs (ADR-0017)', () => {
+  describe('span logs', () => {
     it('shows no logs section when the span has no correlated logs', async () => {
       const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
       fixture.componentRef.setInput('trace', makeTrace());
@@ -326,7 +326,7 @@ describe('FlowDetailsPanelComponent', () => {
     });
   });
 
-  describe('N+1 group (D-71)', () => {
+  describe('N+1 group', () => {
     it('shows the N+1 message and jumps to the first sibling when a flagged span is selected', async () => {
       const trace = makeTrace();
       trace.spans.push(dbSpan('q1', 1), dbSpan('q2', 2), dbSpan('q3', 3));

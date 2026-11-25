@@ -132,7 +132,7 @@ describe('buildGraph', () => {
     expect(byIdTb['leaf'].x).not.toBe(byIdLr['leaf'].x);
   });
 
-  it('finds the root even when its parentSpanId is a dangling, non-null ambient id (D-31)', () => {
+  it('finds the root even when its parentSpanId is a dangling, non-null ambient id', () => {
     // Real data shape: the root span's parentSpanId points at ASP.NET Core's own Activity, which
     // is never one of NetApiFlow's own spans — not `null` as the earlier synthetic fixtures above
     // always assumed.
@@ -513,7 +513,7 @@ describe('buildGraph', () => {
     expect(missedBranch?.state).toBe('not-executed');
   });
 
-  describe('N+1 detection (D-71)', () => {
+  describe('N+1 detection', () => {
     it('marks every member of a (component, operation) group spread under different parents once it reaches the threshold', () => {
       const spans: FlowSpan[] = [
         span({

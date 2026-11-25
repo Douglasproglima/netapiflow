@@ -11,7 +11,7 @@ describe('LanguageService', () => {
     vi.restoreAllMocks();
   });
 
-  it('defaults to pt-BR when there is no saved preference (D-35, never navigator.language)', () => {
+  it('defaults to pt-BR when there is no saved preference (never navigator.language)', () => {
     const service = TestBed.inject(LanguageService);
 
     expect(service.language()).toBe('pt-BR');

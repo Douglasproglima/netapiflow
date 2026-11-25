@@ -49,7 +49,7 @@ import { ImportedTraceService } from '../../core/imported-trace.service';
 export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
 /**
- * Default screen (`/flow`, D-23): a dense workspace, metric cards always visible on
+ * Default screen (`/flow`): a dense workspace, metric cards always visible on
  * top, the action panel (shared `EndpointFormComponent`) on the left, the graph with replay
  * controls at the center, the details panel on the right, and the live event feed at the bottom.
  * With no `?trace=` query param the center column lists the traces currently in progress; with

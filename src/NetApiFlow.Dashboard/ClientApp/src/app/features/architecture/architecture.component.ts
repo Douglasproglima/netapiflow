@@ -83,7 +83,7 @@ function inlineComputedPresentation(live: Element, cloned: Element): void {
 
 /**
  * Generalizes /blueprint (last successful execution of a route) to the union of every
- * execution of a route within a window (D-83): same question ("what does this route normally
+ * execution of a route within a window: same question ("what does this route normally
  * do"), answered from GET /architecture instead of a single trace.
  */
 @Component({

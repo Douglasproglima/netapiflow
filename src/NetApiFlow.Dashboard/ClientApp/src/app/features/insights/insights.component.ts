@@ -19,8 +19,8 @@ function routeKey(method: string, routeTemplate: string): string {
 }
 
 /**
- * Aggregated view across every traceable route, from GET /metrics/routes and GET /endpoints
- * (D-81): slowest routes and top errors are two sortings of the same payload, dead routes is the
+ * Aggregated view across every traceable route, from GET /metrics/routes and GET /endpoints.
+ * Slowest routes and top errors are two sortings of the same payload, dead routes is the
  * frontend cross-reference between the two endpoints, not a field of either.
  */
 @Component({

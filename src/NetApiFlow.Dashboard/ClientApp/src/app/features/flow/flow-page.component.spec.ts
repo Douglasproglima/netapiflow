@@ -784,7 +784,7 @@ describe('FlowPageComponent', () => {
     await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(true);
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain('Pausar ao vivo');
 
     fixture.componentInstance.toggleLivePause();

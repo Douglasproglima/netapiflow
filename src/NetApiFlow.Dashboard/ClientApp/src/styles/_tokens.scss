@@ -70,7 +70,7 @@
   }
 }
 
-// Manual override (D-36): picking a theme writes `data-theme` on <html> (ThemeService) and wins
+// Manual override: picking a theme writes `data-theme` on <html> (ThemeService) and wins
 // over `prefers-color-scheme` from then on, regardless of which way the OS preference points.
 :root[data-theme='light'] {
   --naf-bg: #ffffff;

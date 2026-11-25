@@ -9,7 +9,7 @@ import { FlowEvent, FlowTraceDetail } from '../../../core/models';
  * deduplicated by eventId, and converges to the correct final state even if events arrive out of
  * order (each span/trace update is only applied if its eventId is not older than the last one
  * already applied to that same span/trace). On every reconnect (SseService's own exponential
- * backoff, D-22), it reloads the consolidated trace via GET /traces/{traceId} before resuming
+ * backoff), it reloads the consolidated trace via GET /traces/{traceId} before resuming
  * live updates, so nothing is silently lost across the gap.
  */
 @Injectable()

@@ -58,7 +58,7 @@ describe('ComponentsComponent', () => {
     httpMock.expectOne('api/metrics/components').flush([]);
     await fixture.whenStable();
 
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain(
       'Nenhuma métrica de componente registrada ainda.',
     );
@@ -72,7 +72,7 @@ describe('ComponentsComponent', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
     await fixture.whenStable();
 
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain(
       'Falha ao carregar as métricas de componentes.',
     );
