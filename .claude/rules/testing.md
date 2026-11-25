@@ -196,6 +196,12 @@ Sobem a API de teste inteira com `WebApplicationFactory<Program>`, validando o p
 
 O passo de teste do `ci.yml` roda os projetos com `set -e` e para no primeiro que falha, então um run vermelho mostra o vermelho de **um** projeto só. Quando um defeito é guardado por testes em mais de um projeto, a prova de "visto falhando antes" de cada um precisa do run dele. A correção entra em etapas, uma por run (um push por run, como na mutação), e cada run mostra o vermelho do projeto que ainda não foi corrigido. A auditoria lê esses vermelhos nos logs, e um projeto cujo vermelho nunca apareceu não tem prova.
 
+## O texto do `CHANGELOG.md` é contrato do job `comparison` (D-310)
+
+O `tests/real-package/expected-differences.json` guarda, em cada linha, uma frase que tem de aparecer **palavra por palavra** na seção `[Unreleased]` do `CHANGELOG.md` (o espaço em branco é normalizado). O job `comparison` falha com `NOT ANNOUNCED` quando a frase some. Reescrever uma entrada do `CHANGELOG`, mesmo só para dizer melhor, pode tirar a frase, e foi o que aconteceu com "Each request is now its own trace" na D-304.
+
+Um PR que só mexe no `CHANGELOG.md` conta como só de documentação para o `detect-changes` do `ci.yml`, que só liga o `real-package` para os READMEs, então o job não roda e a falha aparece no PR seguinte que não é só de documentação. Antes de editar uma entrada do `[Unreleased]`, conferir as frases de `expected-differences.json` contra o texto novo. Hoje são nove linhas e cinco frases distintas.
+
 ## Regras
 
 - SUT sempre nomeado `_subject`.

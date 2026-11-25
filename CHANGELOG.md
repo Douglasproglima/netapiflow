@@ -336,7 +336,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow`: requests that carry the same `traceparent`, which is what happens when a service calls
   your API more than once, no longer lose traces or mix their steps. In sequence, the in-memory store
   kept only the last trace and PostgreSQL and SQL Server only the first, and at the same time the steps
-  of both requests went into one trace. Each request is its own trace now, and the client controls only
+  of both requests went into one trace. Each request is now its own trace, and the client controls only
   the tag `w3c.trace_id`: see the new trace id under Changed. This is a defect of correctness and not a
   vulnerability: a client can only collide with an id it chose itself, and it cannot read or delete the
   trace of someone else.
