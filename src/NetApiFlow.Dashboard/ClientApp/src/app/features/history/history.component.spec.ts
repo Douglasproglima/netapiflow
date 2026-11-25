@@ -497,6 +497,85 @@ describe('HistoryComponent', () => {
     expect(component.canCompare()).toBe(true);
   });
 
+  describe('picking a third execution to compare', () => {
+    async function mountWithThreeRows(): Promise<HTMLElement> {
+      await mount();
+      flushConfig();
+      flushTraces({
+        items: [makeSummary('t1'), makeSummary('t2'), makeSummary('t3')],
+        totalCount: 3,
+      });
+      await harness.fixture.whenStable();
+      httpMock.expectOne((r) => r.url === 'api/deploys').flush([]);
+      await harness.fixture.whenStable();
+      return harness.routeNativeElement as HTMLElement;
+    }
+
+    function checkbox(page: HTMLElement, index: number): HTMLInputElement {
+      return page.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[index];
+    }
+
+    function notice(page: HTMLElement): string | undefined {
+      return page.querySelector('.history__selection-notice')?.textContent?.trim();
+    }
+
+    it('says the oldest execution was unchecked, instead of unchecking it in silence', async () => {
+      const page = await mountWithThreeRows();
+
+      for (const index of [0, 1, 2]) {
+        checkbox(page, index).click();
+        await harness.fixture.whenStable();
+      }
+
+      expect(checkbox(page, 0).checked).toBe(false);
+      expect(notice(page)).toBe(
+        'Só dá para comparar duas execuções por vez: a mais antiga foi desmarcada.',
+      );
+      expect(page.querySelector('.history__selection-notice')?.getAttribute('role')).toBe('status');
+    });
+
+    it('says nothing while two or fewer executions are selected', async () => {
+      const page = await mountWithThreeRows();
+
+      checkbox(page, 0).click();
+      checkbox(page, 1).click();
+      await harness.fixture.whenStable();
+
+      expect(notice(page)).toBeUndefined();
+    });
+
+    it('stops saying it once the selection changes again', async () => {
+      const page = await mountWithThreeRows();
+      for (const index of [0, 1, 2]) {
+        checkbox(page, index).click();
+        await harness.fixture.whenStable();
+      }
+
+      checkbox(page, 1).click();
+      await harness.fixture.whenStable();
+
+      expect(notice(page)).toBeUndefined();
+    });
+  });
+
+  it('names the "Slow only" switch once, by the label that the page shows', async () => {
+    await mount();
+    flushConfig();
+    flushTraces();
+    await harness.fixture.whenStable();
+    const page = harness.routeNativeElement as HTMLElement;
+    const slowOnly = page.querySelector<HTMLButtonElement>('#history-slow-only')!;
+
+    expect(slowOnly.hasAttribute('aria-label')).toBe(false);
+    expect([...slowOnly.labels!].map((label) => label.textContent?.trim())).toContain('Só lentas');
+    const mentions = [...page.querySelectorAll('*')].filter((element) =>
+      [...element.childNodes].some(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.includes('Só lentas'),
+      ),
+    );
+    expect(mentions).toHaveLength(1);
+  });
+
   it('unselects an execution clicked a second time', async () => {
     const component = await mount();
     flushConfig();

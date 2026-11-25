@@ -229,7 +229,10 @@ export interface OpenApiOperation {
   parameters?: OpenApiParameter[];
   requestBody?: {
     required?: boolean;
-    content?: Record<string, { schema?: unknown }>;
+    content?: Record<
+      string,
+      { schema?: unknown; example?: unknown; examples?: Record<string, { value?: unknown }> }
+    >;
   };
   security?: OpenApiSecurityRequirement[];
 }

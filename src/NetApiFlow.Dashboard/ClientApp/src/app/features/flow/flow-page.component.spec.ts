@@ -797,6 +797,184 @@ describe('FlowPageComponent', () => {
     expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(false);
   });
 
+  function stepOf(
+    spanId: string,
+    parentSpanId: string | null,
+    component: string,
+    durationMicros: number,
+    overrides: Partial<FlowTraceDetail['spans'][number]> = {},
+  ): FlowTraceDetail['spans'][number] {
+    return {
+      ...makeTrace('t1').spans[0],
+      spanId,
+      parentSpanId,
+      component,
+      durationMicros,
+      ...overrides,
+    };
+  }
+
+  async function openTraceWith(
+    fixture: ComponentFixture<FlowPageComponent>,
+    trace: FlowTraceDetail,
+  ): Promise<void> {
+    await fixture.whenStable();
+    flushAllConfigRequests(250_000);
+    httpMock.expectOne('api/traces/t1').flush(trace);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+  }
+
+  describe('the banner above the graph', () => {
+    async function slowestStepBanner(
+      spans: FlowTraceDetail['spans'],
+      durationMicros: number,
+    ): Promise<HTMLElement | null> {
+      configure('t1');
+      const fixture = TestBed.createComponent(FlowPageComponent);
+      const trace = makeTrace('t1');
+      trace.durationMicros = durationMicros;
+      trace.spans = spans;
+      await openTraceWith(fixture, trace);
+      return fixture.nativeElement.querySelector('.flow-workspace__banner--warning');
+    }
+
+    it('names the step with the most time of its own, which is a parent when the time is spent in its own code', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 1_000_000),
+          stepOf('controller', 'root', 'OrdersController', 900_000),
+          stepOf('repository', 'controller', 'OrderRepository', 5_000),
+        ],
+        1_000_000,
+      );
+
+      expect(banner?.textContent).toContain('OrdersController');
+      expect(banner?.textContent).toContain('895 ms');
+      expect(banner?.textContent).not.toContain('Endpoint');
+    });
+
+    it('names the slowest leaf when the parents only wait for it', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('controller', 'root', 'OrdersController', 399_000),
+          stepOf('repository', 'controller', 'OrderRepository', 390_000),
+          stepOf('cache', 'controller', 'OrderCache', 5_000),
+        ],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('OrderRepository');
+      expect(banner?.textContent).toContain('390 ms');
+    });
+
+    it('says in Portuguese that the time shown is the time of the step itself', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('repository', 'root', 'OrderRepository', 390_000),
+        ],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('tempo próprio');
+    });
+
+    it('says in English that the time shown is the time of the step itself', async () => {
+      configure('t1');
+      TestBed.inject(LanguageService).setLanguage('en');
+      const fixture = TestBed.createComponent(FlowPageComponent);
+      const trace = makeTrace('t1');
+      trace.durationMicros = 400_000;
+      trace.spans = [
+        stepOf('root', null, 'Endpoint', 400_000),
+        stepOf('repository', 'root', 'OrderRepository', 390_000),
+      ];
+      await openTraceWith(fixture, trace);
+
+      expect(
+        fixture.nativeElement.querySelector('.flow-workspace__banner--warning').textContent,
+      ).toContain('own time');
+    });
+
+    it('gives a parent whose parallel children outlast it a time of its own of zero', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('first', 'root', 'FirstCall', 380_000),
+          stepOf('second', 'root', 'SecondCall', 370_000),
+        ],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('FirstCall');
+      expect(banner?.textContent).toContain('380 ms');
+      expect(banner?.textContent).not.toContain('Endpoint');
+    });
+
+    it('shows no banner when no step has enough time of its own, even though the sum is slow', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('a', 'root', 'CallA', 100_000),
+          stepOf('b', 'root', 'CallB', 100_000),
+          stepOf('c', 'root', 'CallC', 100_000),
+          stepOf('d', 'root', 'CallD', 100_000),
+        ],
+        400_000,
+      );
+
+      expect(banner).toBeNull();
+    });
+
+    it('keeps the only step as the slowest one', async () => {
+      const banner = await slowestStepBanner(
+        [stepOf('only', null, 'OrdersController', 400_000)],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('OrdersController');
+      expect(banner?.textContent).toContain('400 ms');
+    });
+
+    it('shows the duration of the step that started the error, not the duration of the whole trace', async () => {
+      configure('t1');
+      const fixture = TestBed.createComponent(FlowPageComponent);
+      const trace = makeTrace('t1');
+      trace.status = 'Error';
+      trace.httpStatus = 500;
+      trace.durationMicros = 400_000;
+      trace.spans = [
+        stepOf('root', null, 'Endpoint', 400_000, { status: 'Error' }),
+        stepOf('repository', 'root', 'OrderRepository', 12_000, {
+          status: 'Error',
+          isErrorOrigin: true,
+        }),
+      ];
+      await openTraceWith(fixture, trace);
+
+      const banner: HTMLElement = fixture.nativeElement.querySelector(
+        '.flow-workspace__banner--danger',
+      );
+      expect(banner.textContent).toContain('OrderRepository');
+      expect(banner.textContent).toContain('12 ms');
+      expect(banner.textContent).not.toContain('400 ms');
+    });
+  });
+
+  it('gives the route of the header a tooltip with the whole route, since the ellipsis cuts it', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    const trace = makeTrace('t1');
+    trace.routeTemplate = '/api/orders/{id:int}/items/{itemId:int}/history/{year:int}';
+    await openTraceWith(fixture, trace);
+
+    const route: HTMLElement = fixture.nativeElement.querySelector('.flow-workspace__route');
+    expect(route.getAttribute('title')).toBe(trace.routeTemplate);
+  });
+
   it('toggles and closes the action drawer', async () => {
     configure(null);
     const fixture = TestBed.createComponent(FlowPageComponent);

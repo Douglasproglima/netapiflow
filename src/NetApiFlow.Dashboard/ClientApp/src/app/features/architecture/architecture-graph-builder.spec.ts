@@ -113,4 +113,36 @@ describe('buildArchitectureGraph', () => {
       byComponent(resultLr, 'OrdersController').x,
     );
   });
+
+  describe('how many times a step runs in each execution', () => {
+    function labelOf(executionCount: number, totalExecutions: number): string {
+      const result = buildArchitectureGraph(
+        {
+          totalExecutions,
+          nodes: [
+            { component: 'Database', operation: 'SELECT items', type: 'Database', executionCount },
+          ],
+          edges: [],
+        },
+        'LR',
+      );
+      return result.nodes[0].operation;
+    }
+
+    it('says how many times a step runs in each execution when it runs more than once', () => {
+      expect(labelOf(15, 3)).toBe('SELECT items (×5)');
+    });
+
+    it('rounds a repeat that is not a whole number to one decimal', () => {
+      expect(labelOf(7, 3)).toBe('SELECT items (×2.3)');
+    });
+
+    it('says nothing of repeats for a step that runs once in every execution', () => {
+      expect(labelOf(3, 3)).toBe('SELECT items');
+    });
+
+    it('keeps saying how often a step that is skipped sometimes runs', () => {
+      expect(labelOf(1, 3)).toBe('SELECT items (33%)');
+    });
+  });
 });

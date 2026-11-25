@@ -128,6 +128,103 @@ describe('FlowDetailsPanelComponent', () => {
     );
   });
 
+  describe('the texts of the panel', () => {
+    async function render(
+      language: 'pt-BR' | 'en',
+      trace: FlowTraceDetail,
+      selectedSpan: SpanDetail | null = null,
+    ) {
+      TestBed.inject(LanguageService).setLanguage(language);
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', trace);
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      fixture.componentRef.setInput('selectedSpan', selectedSpan);
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    it('says "less than 1%" when the share of time no step covers rounds to zero', async () => {
+      const trace = makeTrace();
+      trace.durationMicros = 402_300;
+      trace.spans[0].endedAt = '2026-01-01T00:00:00.401488Z';
+      trace.spans[0].durationMicros = 401_488;
+
+      const fixture = await render('en', trace);
+
+      const text: string = fixture.nativeElement.querySelector(
+        '.flow-details__unexplained',
+      ).textContent;
+      expect(text).toContain('<1% of the time');
+      expect(text).toContain('812 µs');
+      expect(text).not.toContain('0% of the time');
+    });
+
+    it('still rounds a share of 1% or more to a whole number', async () => {
+      const trace = makeTrace();
+      trace.durationMicros = 100_000;
+      trace.spans[0].endedAt = '2026-01-01T00:00:00.090000Z';
+      trace.spans[0].durationMicros = 90_000;
+
+      const fixture = await render('en', trace);
+
+      expect(
+        fixture.nativeElement.querySelector('.flow-details__unexplained').textContent,
+      ).toContain('10% of the time');
+    });
+
+    it.each([
+      ['Success', 'Sucesso', 'Success'],
+      ['Error', 'Erro', 'Error'],
+      ['Timeout', 'Tempo esgotado', 'Timeout'],
+      ['Cancelled', 'Cancelado', 'Cancelled'],
+      ['Running', 'Em execução', 'Running'],
+    ] as const)(
+      'shows the status %s of a step as "%s" in Portuguese and "%s" in English',
+      async (status, pt, en) => {
+        const detail = makeSpanDetail();
+        detail.span.status = status;
+        const statusOf = (fixture: { nativeElement: HTMLElement }) => {
+          const label = [...fixture.nativeElement.querySelectorAll('dt')].find(
+            (dt) => dt.textContent?.trim() === 'Status',
+          );
+          return label?.nextElementSibling?.textContent?.trim();
+        };
+
+        expect(statusOf(await render('pt-BR', makeTrace(), detail))).toBe(pt);
+        expect(statusOf(await render('en', makeTrace(), detail))).toBe(en);
+      },
+    );
+
+    it('names the request summary in the language of the panel', async () => {
+      const section = (fixture: { nativeElement: HTMLElement }) =>
+        fixture.nativeElement.querySelector('section.flow-details')!.getAttribute('aria-label');
+
+      expect(section(await render('pt-BR', makeTrace()))).toBe('Resumo da requisição');
+      expect(section(await render('en', makeTrace()))).toBe('Request summary');
+    });
+
+    it('gives the route of the summary a tooltip with the whole route, since the ellipsis cuts it', async () => {
+      const trace = makeTrace();
+      trace.routeTemplate = '/api/orders/{id:int}/items/{itemId:int}/history/{year:int}';
+
+      const fixture = await render('en', trace);
+
+      expect(
+        fixture.nativeElement.querySelector('.flow-details__route').getAttribute('title'),
+      ).toBe(trace.routeTemplate);
+    });
+
+    it('asks to inspect a step when its row of the waterfall is clicked', async () => {
+      const fixture = await render('en', makeTrace());
+      const jumped: string[] = [];
+      fixture.componentInstance.jumpToSpan.subscribe((spanId) => jumped.push(spanId));
+
+      fixture.nativeElement.querySelector('.flow-waterfall__row button').click();
+
+      expect(jumped).toEqual(['root']);
+    });
+  });
+
   describe('unexplained time badge (D-78)', () => {
     it('shows the badge with the percent and both absolute durations for a finished trace', async () => {
       const trace = makeTrace();
