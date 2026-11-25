@@ -13,6 +13,7 @@ import {
   demoFixtureInterceptor,
   resetDemoManifestCache,
 } from './demo-fixture.interceptor';
+import { StatsQuery } from './models';
 
 const MANIFEST = {
   routes: {
@@ -172,6 +173,24 @@ describe('demoFixtureInterceptor', () => {
       .flush({ nodes: [], edges: [], totalExecutions: 0 });
 
     expect(await result).toBeTruthy();
+  });
+
+  it('matches the architecture recording for every time window the screen asks for', async () => {
+    const timeWindows: StatsQuery[] = [
+      { from: '2026-11-24T22:56:36.448Z' },
+      { from: '2026-11-18T22:56:36.448Z' },
+      { from: '2026-10-26T22:56:36.448Z', to: '2026-11-25T22:56:36.448Z' },
+    ];
+    const results = timeWindows.map((timeWindow) =>
+      firstValue(api.getArchitecture('GET', '/api/orders/{id}', timeWindow)),
+    );
+    flushManifest();
+
+    const requests = httpMock.match('assets/demo-fixtures/architecture_get.json');
+    expect(requests.length).toBe(timeWindows.length);
+    requests.forEach((request) => request.flush({ nodes: [], edges: [], totalExecutions: 0 }));
+
+    expect((await Promise.all(results)).length).toBe(timeWindows.length);
   });
 
   it('falls back to a recorded trace for an id the recording never captured', async () => {
