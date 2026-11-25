@@ -2239,5 +2239,82 @@
       "test": "what the Runner shows of the response keeps the body out of every storage"
     },
     "job": "build-test"
+  },
+  {
+    "id": "60B-assert-at-most-singular",
+    "defect": "The ShouldCallAtMost failure message said \"1 Database calls\" for a limit of 1",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Testing.FlowTraceAssertionsTests.ShouldCallAtMost_WhenTheLimitIsOne_ThrowsWithTheSingularCall"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-disabled-tracing-other-listener",
+    "defect": "With Enabled = false, another ActivityListener on the NetApiFlow source still received every step, because Flow.Step kept opening activities",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DisabledTracingWithAnotherListenerTests.Request_WhenTracingIsDisabledAndAnotherListenerSamplesTheSource_CreatesNoNetApiFlowActivity"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-in-memory",
+    "defect": "The in-memory store filtered the history by the exact route text, so /api/orders/{id} found nothing for a trace recorded as /api/orders/{id:int}",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Storage.InMemoryTraceStoreTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-rest",
+    "defect": "GET /flow/api/traces?route=/api/widgets/{id} returned an empty list for a trace recorded with the constraint",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RouteConstraintComparisonIntegrationTests.TraceHistory_FilteredByTheRouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-mcp",
+    "defect": "The route argument of list_recent_traces returned nothing for the example route of the tool itself when the trace had a constraint",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.ListRecentTracesToolTests.ListRecentTraces_FilteredByTheRouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-postgresql",
+    "defect": "The PostgreSQL store compared the route filter with the stored route key without normalizing the filter, so a route without the constraint found nothing",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlRouteTemplateNormalizationTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceSavedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-sqlserver",
+    "defect": "The SQL Server store compared the route filter with the stored route key without normalizing the filter, so a route without the constraint found nothing",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerRouteTemplateNormalizationTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceSavedWithTheConstraint"
+    },
+    "job": "build-test"
   }
 ]

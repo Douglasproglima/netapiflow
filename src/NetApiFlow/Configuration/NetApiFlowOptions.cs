@@ -12,7 +12,12 @@ public sealed class NetApiFlowOptions
     /// </summary>
     internal string DashboardBasePath { get; set; } = "/flow";
 
-    /// <summary>Whether tracing is active. Default: <see langword="true"/>.</summary>
+    /// <summary>
+    /// Whether tracing is active. When <see langword="false"/>, NetApiFlow records nothing and
+    /// <see cref="Flow.Step(string, string, ComponentType)"/> opens no <see cref="System.Diagnostics.Activity"/>, so no other
+    /// <see cref="System.Diagnostics.ActivityListener"/> in the process, such as an OpenTelemetry pipeline that
+    /// listens to the <c>NetApiFlow</c> source, receives its steps either. Default: <see langword="true"/>.
+    /// </summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>Duration above which a span is considered slow. Default: 250 ms.</summary>

@@ -80,6 +80,21 @@ public class InMemoryTraceStoreTests
         (await _subject.GetAsync("trace-4", CancellationToken.None)).ShouldNotBeNull();
     }
 
+    [Theory]
+    [InlineData("/api/orders/{id}")]
+    [InlineData("/api/orders/{id:int}")]
+    [InlineData("api/orders/{id}")]
+    [InlineData("/api/orders/{id}/")]
+    public async Task QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint(string route)
+    {
+        await _subject.SaveAsync(CreateTrace("constrained", DateTime.UtcNow) with { RouteTemplate = "/api/orders/{id:int}" }, [], CancellationToken.None);
+        await _subject.SaveAsync(CreateTrace("other", DateTime.UtcNow) with { RouteTemplate = "/api/customers/{id:int}" }, [], CancellationToken.None);
+
+        var result = await _subject.QueryAsync(new TraceQuery { RouteTemplate = route }, CancellationToken.None);
+
+        result.Items.Select(item => item.TraceId).ShouldBe(["constrained"]);
+    }
+
     [Fact]
     public async Task GetRouteStatsAsync_GroupsByMethodAndRouteTemplate()
     {

@@ -200,6 +200,24 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow`: `Enabled = false` now keeps every step silent. Before, another `ActivityListener` on
+  the `NetApiFlow` source, such as an OpenTelemetry pipeline that adds it, still received the
+  controller, service and handler steps, although NetApiFlow recorded no trace. Now no step is opened at
+  all. If you relied on those steps reaching your exporter with NetApiFlow disabled, keep `Enabled` on.
+- `NetApiFlow`, `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: filtering the trace
+  history by route ignores the constraint. `/api/orders/{id}` finds the traces recorded as
+  `/api/orders/{id:int}`, in `GET /flow/api/traces?route=` and in the `route` argument of the
+  `list_recent_traces` MCP tool, with the in-memory store, PostgreSQL and SQL Server. Before, only the
+  exact template with the constraint matched, so the example that the tool itself gives returned nothing.
+  The stored data does not change.
+- `NetApiFlow.Testing`: the message of `ShouldCallAtMost` uses the singular for a limit of 1, as in
+  "Expected at most 1 Database call, found 2.". Before it said "1 Database calls". The README quotes the
+  new message.
+- Samples: the README of `SampleApi.Controllers` no longer tells you to run `dotnet run` without `-f`,
+  which fails on a project that targets two frameworks, and no longer cites `GET /api/orders`, which
+  answers 404. It starts PostgreSQL with a `docker run`, lists the six requests that show each scenario,
+  and says that the Aspire Dashboard asks for a login token and that its trace id is the "W3C trace"
+  field of NetApiFlow. `SampleApi.MinimalMediatR` now has a README. Every command in both was run.
 - `NetApiFlow.Dashboard`, on a phone: Compare, Insights and History stack their rows instead of
   scrolling sideways, so the B and Delta columns, the p95 and the Compare button are no longer off the
   screen, and the route of a History row wraps instead of ending in an ellipsis. The "Try an endpoint"

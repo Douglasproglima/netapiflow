@@ -105,6 +105,29 @@ public class FlowTraceAssertionsTests
     }
 
     [Fact]
+    public void ShouldCallAtMost_WhenTheLimitIsOne_ThrowsWithTheSingularCall()
+    {
+        var trace = TraceWith(
+            FlowStatus.Success,
+            Span("Db", "SELECT Orders", ComponentType.Database),
+            Span("Db", "SELECT Users", ComponentType.Database));
+
+        var thrown = Should.Throw<FlowAssertionException>(() => trace.ShouldCallAtMost(ComponentType.Database, 1));
+
+        thrown.Message.ShouldBe("Expected at most 1 Database call, found 2.");
+    }
+
+    [Fact]
+    public void ShouldCallAtMost_WhenTheLimitIsZero_ThrowsWithThePluralCalls()
+    {
+        var trace = TraceWith(FlowStatus.Success, Span("Db", "SELECT Orders", ComponentType.Database));
+
+        var thrown = Should.Throw<FlowAssertionException>(() => trace.ShouldCallAtMost(ComponentType.Database, 0));
+
+        thrown.Message.ShouldBe("Expected at most 0 Database calls, found 1.");
+    }
+
+    [Fact]
     public void ShouldNeverCall_WhenTheComponentIsAbsent_ReturnsTheTrace()
     {
         var trace = TraceWith(FlowStatus.Success, Span("OrderService", "GetAsync"));

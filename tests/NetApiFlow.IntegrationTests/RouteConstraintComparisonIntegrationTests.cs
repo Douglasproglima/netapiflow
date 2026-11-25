@@ -93,4 +93,28 @@ public class RouteConstraintComparisonIntegrationTests
         using var blueprintDoc = JsonDocument.Parse(await blueprintResponse.Content.ReadAsStringAsync());
         blueprintDoc.RootElement.GetProperty("traceId").GetString().ShouldBe(traceId);
     }
+
+    [Theory]
+    [InlineData("/api/widgets/{id}")]
+    [InlineData("/api/widgets/{id:int}")]
+    [InlineData("api/widgets/{id}")]
+    public async Task TraceHistory_FilteredByTheRouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint(string queriedRoute)
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<ITraceStore>();
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/widgets/7");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        await WaitForPersistedTraceAsync(store, traceId);
+
+        var history = await client.GetAsync($"/flow/api/traces?route={Uri.EscapeDataString(queriedRoute)}");
+
+        history.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var document = JsonDocument.Parse(await history.Content.ReadAsStringAsync());
+        document.RootElement.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("traceId").GetString())
+            .ShouldContain(traceId);
+    }
 }

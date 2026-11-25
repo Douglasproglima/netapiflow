@@ -332,7 +332,7 @@ casam só pelo componente quando a operação é omitida, ou pelo par exato quan
 O pacote não referencia nada além do próprio `NetApiFlow`, então não impõe biblioteca de asserção
 nenhuma ao seu projeto de teste. Uma asserção que falha lança `FlowAssertionException` com
 mensagem dizendo o que esperava e o que achou, por exemplo
-`Expected at most 1 Database calls, found 5.`. Qualquer framework de teste reporta isso como
+`Expected at most 1 Database call, found 5.`. Qualquer framework de teste reporta isso como
 falha. O `GetFlowTrace` lança a mesma exceção, em vez de devolver `null`, quando a resposta não
 traz o header `X-NetApiFlow-TraceId` ou a trace já saiu do buffer.
 
