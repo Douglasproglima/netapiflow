@@ -1189,21 +1189,36 @@ against a minimal ASP.NET Core pipeline with NetApiFlow **absent** (package not 
 (no steps marked) and `Nested` (four nested `Flow.Step` calls, mirroring a
 Controller→Service→Repository→Database chain).
 
-| Scenario | Simple (mean) | Nested, 4 steps (mean) |
-|---|---|---|
-| Absent (package not installed) | 6.22 μs | 11.79 μs |
-| Disabled (`Enabled = false`) | 9.17 μs | 12.84 μs |
-| Enabled (default options) | 27.00 μs | 43.84 μs |
+| Scenario | Simple, .NET 8 | Simple, .NET 10 | Nested, 4 steps, .NET 8 | Nested, 4 steps, .NET 10 |
+|---|---|---|---|---|
+| Absent (package not installed) | 5.9 μs | 5.4 μs | 7.3 μs | 7.4 μs |
+| Disabled (`Enabled = false`) | 6.9 μs | 5.9 μs | 9.0 μs | 7.8 μs |
+| Enabled (default options) | 18.7 μs | 19.6 μs | 29.9 μs | 23.1 μs |
 
-So tracing a request with default options costs roughly 20 μs on an endpoint with no steps
-marked, and about 32 μs more with four nested steps, on this hardware. Turning tracing off
-(`Enabled = false`) keeps most of that cost away (listener registration itself has a small,
-near-constant overhead) without removing the package.
+Mean time per request, median of two rounds, on a 12th Gen Intel Core i7-1255U laptop (10 cores,
+12 threads) running Windows 10, with .NET 8.0.34 and .NET 10.0.15. The machine was shared with
+other programs, so the rounds differ from each other: the enabled `Simple` request took between
+15.7 and 23.5 μs on .NET 10. Read the numbers as an order of magnitude.
 
-Method: each scenario (absent/disabled/enabled) runs as its own process, isolating .NET's
-process-wide `ActivitySource` listener registration so one scenario can't bias another. Full
-BenchmarkDotNet reports, including hardware and runtime details, are generated under
-`tests/NetApiFlow.Benchmarks/BenchmarkDotNet.Artifacts/results/` on every run.
+Tracing a request with default options adds about 13 to 14 μs to an endpoint with no steps
+marked, and about 16 to 23 μs to the endpoint with four nested steps. Turning tracing off
+(`Enabled = false`) keeps almost all of that away (0.4 to 1.7 μs) without removing the package.
+With 16 requests in flight at once, the time per request is lower because they overlap, and
+tracing adds about 4 to 5 μs per request.
+
+`Flow.Step` itself, compared with the published 0.5.3 on the same machine:
+
+- With `Enabled = false` a step is much cheaper now: about 0.5 ns and no allocation outside a
+  traced request, against 68 to 84 ns and 232 bytes in 0.5.3.
+- With `Enabled = true`, a step inside a traced request cost about 41 ns more than in 0.5.3 on
+  .NET 8 (about 15%, and higher in 8 of 8 rounds). On .NET 10 the difference was within the noise
+  of the machine.
+- The memory allocated per step is the same.
+
+Method: each scenario runs as its own process, isolating .NET's process-wide `ActivitySource`
+listener registration so one scenario can't bias another. The full report has every table with
+its ranges, the hardware, the machine load and the commands to repeat the measurement:
+[docs/benchmarks/0.6.0.md](docs/benchmarks/0.6.0.md).
 
 ## Known limitations
 
