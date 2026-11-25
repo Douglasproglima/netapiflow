@@ -41,10 +41,7 @@ internal class FlowInterceptorProxy : DispatchProxy
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
 
-        // Captured so Activity.Current can be restored once the synchronous part of this call
-        // returns, instead of staying pinned to this step until it completes asynchronously later
-        // (which would make unrelated concurrent calls parent themselves under this step by mistake).
-        var callerActivity = Activity.Current;
+        var activityToRestoreAfterTheSynchronousCall = Activity.Current;
         var step = Flow.Step(_component, targetMethod.Name, _componentType);
 
         object? result;
@@ -71,7 +68,7 @@ internal class FlowInterceptorProxy : DispatchProxy
         if (returnType == typeof(Task))
         {
             var wrapped = WrapTask((Task)result!, step);
-            Activity.Current = callerActivity;
+            Activity.Current = activityToRestoreAfterTheSynchronousCall;
             return wrapped;
         }
 
@@ -79,7 +76,7 @@ internal class FlowInterceptorProxy : DispatchProxy
         {
             var elementType = returnType.GetGenericArguments()[0];
             var wrapped = WrapTaskGenericMethod.MakeGenericMethod(elementType).Invoke(null, [result, step]);
-            Activity.Current = callerActivity;
+            Activity.Current = activityToRestoreAfterTheSynchronousCall;
             return wrapped;
         }
 
@@ -88,7 +85,7 @@ internal class FlowInterceptorProxy : DispatchProxy
 #pragma warning disable CA2012 // The boxed ValueTask from reflection is passed straight through to WrapValueTask, which consumes it exactly once via AsTask().
             var wrapped = WrapValueTask((ValueTask)result!, step);
 #pragma warning restore CA2012
-            Activity.Current = callerActivity;
+            Activity.Current = activityToRestoreAfterTheSynchronousCall;
             return wrapped;
         }
 
@@ -96,7 +93,7 @@ internal class FlowInterceptorProxy : DispatchProxy
         {
             var elementType = returnType.GetGenericArguments()[0];
             var wrapped = WrapValueTaskGenericMethod.MakeGenericMethod(elementType).Invoke(null, [result, step]);
-            Activity.Current = callerActivity;
+            Activity.Current = activityToRestoreAfterTheSynchronousCall;
             return wrapped;
         }
 
@@ -130,16 +127,14 @@ internal class FlowInterceptorProxy : DispatchProxy
 
     private static ValueTask WrapValueTask(ValueTask valueTask, FlowStep step)
     {
-        // A ValueTask can only be consumed once, so it is always materialized into a Task here
-        // (via AsTask()) rather than branching on IsCompleted and reusing the original struct.
-        var task = valueTask.AsTask();
-        return new ValueTask(WrapTask(task, step));
+        var materializedTask = valueTask.AsTask();
+        return new ValueTask(WrapTask(materializedTask, step));
     }
 
     private static ValueTask<T> WrapValueTaskGeneric<T>(ValueTask<T> valueTask, FlowStep step)
     {
-        var task = valueTask.AsTask();
-        return new ValueTask<T>(WrapTaskGeneric(task, step));
+        var materializedTask = valueTask.AsTask();
+        return new ValueTask<T>(WrapTaskGeneric(materializedTask, step));
     }
 
     private static void CloseSpan(Task task, FlowStep step)

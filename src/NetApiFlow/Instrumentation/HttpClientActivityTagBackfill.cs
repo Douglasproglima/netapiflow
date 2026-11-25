@@ -40,11 +40,11 @@ internal sealed partial class HttpClientActivityTagBackfill
         }
     }
 
+    private bool ShouldIgnoreDeliveryAfterDisposal => _disposed;
+
     public void OnNext(KeyValuePair<string, object?> value)
     {
-        // Disposing the subscription does not synchronously stop delivery, and a tag written here
-        // after disposal lands on whatever activity happens to be current by then.
-        if (_disposed || !_options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient))
+        if (ShouldIgnoreDeliveryAfterDisposal || !_options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient))
         {
             return;
         }

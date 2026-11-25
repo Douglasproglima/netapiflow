@@ -90,11 +90,11 @@ internal sealed partial class FlowAuthorizationFilterListener
         }
     }
 
+    private bool ShouldIgnoreDeliveryAfterDisposal => _disposed;
+
     public void OnNext(KeyValuePair<string, object?> value)
     {
-        // Disposing the subscription does not synchronously stop delivery, and a step opened here
-        // after disposal would never be closed by anything.
-        if (_disposed)
+        if (ShouldIgnoreDeliveryAfterDisposal)
         {
             return;
         }
