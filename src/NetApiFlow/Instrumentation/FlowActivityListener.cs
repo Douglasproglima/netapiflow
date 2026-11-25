@@ -140,7 +140,8 @@ internal sealed partial class FlowActivityListener : IDisposable
 
     private void OnActivityStarted(Activity activity)
     {
-        if (IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent))
+        if (IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent)
+            || NpgsqlActivityTagNames.IsNamedLikeAConnectionOpen(activity))
         {
             return;
         }
@@ -236,7 +237,8 @@ internal sealed partial class FlowActivityListener : IDisposable
         }
 
         var spanId = activity.SpanId.ToString();
-        var existing = trace.Spans.FirstOrDefault(s => s.SpanId == spanId);
+        var existing = trace.Spans.FirstOrDefault(s => s.SpanId == spanId)
+            ?? StartCommandNamedLikeAConnectionOpen(activity, traceId, trace);
         if (existing is null)
         {
             return;
@@ -255,6 +257,19 @@ internal sealed partial class FlowActivityListener : IDisposable
         {
             PropagateErrorToAncestors(trace, activity.Parent);
         }
+    }
+
+    private FlowSpan? StartCommandNamedLikeAConnectionOpen(Activity activity, string traceId, ActiveTrace trace)
+    {
+        if (!NpgsqlActivityTagNames.IsNamedLikeAConnectionOpen(activity)
+            || NpgsqlActivityTagNames.StatementOf(activity) is null
+            || IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent))
+        {
+            return null;
+        }
+
+        var span = BuildNpgsqlSpan(activity, traceId, trace);
+        return _recorder.TryAddSpan(traceId, span) ? span : null;
     }
 
     private (FlowSpan Span, bool IsErrorOrigin) CompleteFlowSpan(Activity activity, FlowSpan existing)
@@ -361,7 +376,7 @@ internal sealed partial class FlowActivityListener : IDisposable
     /// </summary>
     private (FlowSpan Span, bool IsErrorOrigin) CompleteNpgsqlSpan(Activity activity, FlowSpan existing)
     {
-        var statement = activity.GetTagItem(NpgsqlActivityTagNames.Statement) as string;
+        var statement = NpgsqlActivityTagNames.StatementOf(activity);
         var failure = NpgsqlCommandFailure.From(activity);
 
         var updated = existing with

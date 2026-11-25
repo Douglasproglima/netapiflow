@@ -295,7 +295,7 @@ public class FlowActivityListenerTests
         using (Flow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
         {
             using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
-            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u");
+            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT u.\"Id\" FROM \"Users\" AS u");
         }
 
         var spans = recorder.GetActiveTrace(traceId)!.Spans;
@@ -314,7 +314,7 @@ public class FlowActivityListenerTests
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
             npgsqlActivity.ShouldNotBeNull();
-            npgsqlActivity.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
+            npgsqlActivity.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
         }
 
         var spans = recorder.GetActiveTrace(traceId)!.Spans;
@@ -403,7 +403,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, statement);
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, statement);
             npgsqlActivity.SetTag("db.connection_string", "Host=127.0.0.1;Port=5432;Database=app;Username=postgres");
             npgsqlActivity.SetTag("db.user", "postgres");
             npgsqlActivity.SetTag("net.peer.ip", "127.0.0.1");
@@ -424,7 +424,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT * FROM \"Missing\"");
             npgsqlActivity.SetStatus(ActivityStatusCode.Error, "relation \"Missing\" does not exist");
         }
 
@@ -444,7 +444,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT * FROM \"Missing\"");
             npgsqlActivity.SetTag("otel.status_code", "ERROR");
             npgsqlActivity.SetTag("otel.status_description", "42P01");
             npgsqlActivity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection
