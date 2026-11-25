@@ -1,5 +1,7 @@
 # O release da `0.6.0`: a checklist, passo a passo (D-292)
 
+**O release sai hoje, 25/11/2026, com o dono presente (decisão dele, relato da auditoria, D-307).** A ordem: a 59C entra, a auditoria termina a releitura 59.5 do README, e então a `/release` por esta checklist. **Ninguém abre o `release/0.6.0` antes de a auditoria dizer "pode abrir".**
+
 Quem segue: a `AUDITORIA`, com a `EXECUTORA-RELEASE` nos passos de código (D-272, D-273). Esta página junta a skill `/release` (`.claude/skills/release/SKILL.md`) com o que é específico da `0.6.0`. Em conflito, vale a skill
 para o passo e esta página para o que a `0.6.0` muda. Nenhum passo público (push, PR, merge, tag, Release, advisory) sem a confirmação de quem pediu.
 
@@ -16,6 +18,23 @@ para o passo e esta página para o que a `0.6.0` muda. Nenhum passo público (pu
 | 7 | O `[Unreleased]` do `CHANGELOG.md` lido contra o que entrou: cada fase da `0.6.0` aparece, cada advisory tem a linha em `### Security`, e o que muda para quem atualiza está em `### Changed` | A auditoria lê, a Planejadora conferiu a forma |
 | 8 | A Tarefa 62.4 (o site) pronta para o dia da publicação. Ela é **depois** da publicação, e não antes | A auditoria |
 
+## O estado dos portões, hoje
+
+Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `gh` mostram. A auditoria é quem confirma cada um.
+
+| # | Portão | Estado |
+|---|---|---|
+| 1 | A fila de fases fechada | 68 e 60 (A e B) fechadas, e 59A e 59B fechadas. **Falta a 59C**, que a Executora faz |
+| 2 | A segunda passada | Feita, menos a releitura 59.5 do README e a tabela de custo da 59C. O registro está na seção abaixo |
+| 3 | A auditoria de base | Fechadas as matrizes de integrações e de autorização, `PathBase` e proxy, as telas e a demo e o mapa de cobertura do CI (D-305 e D-306). **Falta o README frase a frase (59.5)** |
+| 4 | Os advisories | Severidade decidida pelo dono e faixa reproduzida contra a `0.5.3` nos quatro (D-305). Liberados para publicar |
+| 5 | O Trusted Publishing do nuget.org | **Não conferido.** A política é do dono ou da auditoria, e hoje ele está presente |
+| 6 | O `develop` verde | O último `CI` do `develop` (`3b7a341`) está em `success`. O `develop` exige 8 checks e a `main` 5 |
+| 7 | O `CHANGELOG` | Lido por quem atualiza e ajustado (D-304). Falta a entrada da 59C, se ela trouxer uma |
+| 8 | A Tarefa 62.4 | Pronta para o dia, depois da publicação |
+
+O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `Directory.Build.props`, `previous-published-version.txt` em `0.5.3` e `expected-differences.json` com 9 linhas.
+
 ## Os passos
 
 ### A. A `EXECUTORA-RELEASE`, na branch `release/0.6.0` (passos 1 a 9 da skill)
@@ -23,7 +42,7 @@ para o passo e esta página para o que a `0.6.0` muda. Nenhum passo público (pu
 1. `git status` limpo em `develop`, `git pull --ff-only`, e a versão confirmada: `0.6.0` (minor, pré-1.0).
 2. **O teste com o pacote real (D-176), antes de abrir a branch.** Pacote empacotado de verdade com `-p:Version=0.6.0-verify.<n>` (nunca `0.6.0`, D-153 e D-174), em `tests/manual-verification/`: `AddNetApiFlow()` sem lambda, em `Development`, com storage real, uma requisição real.
    Mais o caminho do usuário (D-186): um `dotnet new webapi` novo, o README ao pé da letra no `net10.0` **e no `net8.0`** (o template do `net8.0` usa Swashbuckle, D-277), e cada tela do painel e da demo num navegador de verdade.
-3. `git switch -c release/0.6.0`. No `CHANGELOG.md`, `[Unreleased]` vira `[0.6.0] - <data>`, e `[Unreleased]` fica vazio.
+3. `git switch -c release/0.6.0`. No `CHANGELOG.md`, a seção `## [Unreleased]` vira `## [0.6.0] - 2026-11-25` (a data do dia da tag, e o arquivo não tem links de comparação no rodapé, então nada mais muda), e `## [Unreleased]` fica sem nenhuma subseção.
 4. `<Version>` em `Directory.Build.props` para `0.6.0`, e no mesmo commit o `"version"` de `src/NetApiFlow.Dashboard/ClientApp/src/assets/demo-fixtures/config.json` (o `DemoFixtureVersionTests` deixa a PR vermelha se divergirem).
 5. `dotnet pack NetApiFlow.slnx -c Release`: os 9 pacotes, `.nupkg` e `.snupkg`, com `0.6.0` no nome. Contar os 9.
 6. **O que NÃO se mexe antes da tag.** `tests/real-package/previous-published-version.txt` fica em `0.5.3`, e `expected-differences.json` fica **cheio** (hoje 9 linhas): o job `comparison` roda na tag e faz parte do `needs` da publicação (D-260).
