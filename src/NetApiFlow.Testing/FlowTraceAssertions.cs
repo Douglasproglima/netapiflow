@@ -55,7 +55,7 @@ public static class FlowTraceAssertions
         var found = trace.Spans.Count(span => span.Type == type);
         if (found > maxCount)
         {
-            throw new FlowAssertionException($"Expected at most {maxCount} {type} calls, found {found}.");
+            throw new FlowAssertionException($"Expected at most {maxCount} {type} {(maxCount == 1 ? "call" : "calls")}, found {found}.");
         }
 
         return trace;

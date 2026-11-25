@@ -329,7 +329,7 @@ component alone when the operation is left out, or on the exact pair when it is 
 The package references nothing but `NetApiFlow` itself, so it imposes no assertion library on
 your test project. A failed assertion throws `FlowAssertionException` with a message saying what
 was expected and what was found, for example
-`Expected at most 1 Database calls, found 5.`; every test framework reports that as a failure.
+`Expected at most 1 Database call, found 5.`; every test framework reports that as a failure.
 `GetFlowTrace` throws the same exception instead of returning `null` when the response carries no
 `X-NetApiFlow-TraceId` header or the trace already left the buffer.
 
