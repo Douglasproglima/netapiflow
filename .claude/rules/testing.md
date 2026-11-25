@@ -159,6 +159,14 @@ Toda tarefa que muda o que o painel pede à API, ou o que ela responde, abre a d
 
 **Um 404 sintético da demo é barulhento (D-264).** O interceptor escreve `The demo has no recording for <url>` no console quando não há gravação. Sem isso a demo respondia 404 calada, o painel seguia mudo e uma demo quebrada passava verde. O job `built-demo` do `ci.yml` abre cada trace do manifest e as telas `/history`, `/components` e `/runner` num Chrome sem janela, em todo PR que não é só de documentação, e falha com qualquer erro de console, HTTP 400 ou mais ou pedido sem resposta.
 
+## Teste de MCP: o cliente oficial, na revisão que ele negocia, e a medida em muitas sessões (D-282)
+
+Teste de host do MCP não fica só com um cliente escrito à mão e uma revisão do protocolo. Ele roda também com o cliente oficial do SDK (`ModelContextProtocol`), na revisão que ele negocia por padrão: hoje `2026-07-28` em `Stateless` e em `StatefulForInitializeClients`, e `2025-11-25` em `Stateful`, nos três modos de sessão e nos dois TFMs. Cada revisão traz métodos que a anterior não tem (o `subscriptions/listen` da `2026-07-28`, por exemplo), e uma lista de permitidos provada numa revisão só não prova as outras.
+
+Um critério que depende da ordem ou do momento das mensagens se mede em muitas sessões, e não em uma. A `notifications/initialized` chegou ao filtro sem `HttpContext` em 1 ou 2 de cada 20 sessões nos modos com sessão, porque o POST dela responde `202` antes de a mensagem ser tratada. Uma sessão só dava verde na maioria das vezes.
+
+Medido pela Executora na Fase 71 e lido pela Planejadora no corpo da #487. A Planejadora não repetiu a medição.
+
 ## Clone ou worktree novo: construir o Angular antes
 
 Todo teste cujo host usa o Dashboard ou os samples (o `IntegrationTests` e o `PrePipelineInteropSpike`,
