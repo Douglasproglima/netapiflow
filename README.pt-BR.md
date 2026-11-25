@@ -1208,21 +1208,36 @@ contra um pipeline mínimo do ASP.NET Core com o NetApiFlow **ausente** (pacote 
 (nenhuma etapa marcada) e `Nested` (quatro chamadas aninhadas de `Flow.Step`, espelhando
 uma cadeia Controller→Service→Repository→Database).
 
-| Cenário | Simple (média) | Nested, 4 etapas (média) |
-|---|---|---|
-| Ausente (pacote não instalado) | 6,22 μs | 11,79 μs |
-| Desligado (`Enabled = false`) | 9,17 μs | 12,84 μs |
-| Ligado (opções padrão) | 27,00 μs | 43,84 μs |
+| Cenário | Simple, .NET 8 | Simple, .NET 10 | Nested, 4 etapas, .NET 8 | Nested, 4 etapas, .NET 10 |
+|---|---|---|---|---|
+| Ausente (pacote não instalado) | 5,9 μs | 5,4 μs | 7,3 μs | 7,4 μs |
+| Desligado (`Enabled = false`) | 6,9 μs | 5,9 μs | 9,0 μs | 7,8 μs |
+| Ligado (opções padrão) | 18,7 μs | 19,6 μs | 29,9 μs | 23,1 μs |
 
-Ou seja, rastrear uma requisição com opções padrão custa cerca de 20 μs num endpoint sem
-nenhuma etapa marcada, e mais uns 32 μs com quatro etapas aninhadas, neste hardware. Desligar o
-rastreamento (`Enabled = false`) mantém a maior parte desse custo longe (o próprio registro do
-listener tem um overhead pequeno e quase constante) sem precisar remover o pacote.
+Tempo médio por requisição, mediana de duas rodadas, num notebook Intel Core i7-1255U de 12ª
+geração (10 núcleos, 12 threads) com Windows 10, com .NET 8.0.34 e .NET 10.0.15. A máquina estava
+dividida com outros programas, então as rodadas diferem entre si: a requisição `Simple` ligada
+levou entre 15,7 e 23,5 μs no .NET 10. Leia os números como ordem de grandeza.
 
-Método: cada cenário (ausente/desligado/ligado) roda no seu próprio processo, isolando o registro
-do listener de `ActivitySource` do .NET, que é por processo: assim um cenário não contamina o
-outro. Os relatórios completos do BenchmarkDotNet, com hardware e runtime, são gerados em
-`tests/NetApiFlow.Benchmarks/BenchmarkDotNet.Artifacts/results/` a cada execução.
+Rastrear uma requisição com opções padrão soma cerca de 13 a 14 μs num endpoint sem nenhuma
+etapa marcada, e cerca de 16 a 23 μs no endpoint com quatro etapas aninhadas. Desligar o
+rastreamento (`Enabled = false`) mantém quase tudo isso longe (0,4 a 1,7 μs) sem precisar remover
+o pacote. Com 16 requisições ao mesmo tempo, o tempo por requisição é menor porque elas se
+sobrepõem, e o rastreamento soma cerca de 4 a 5 μs por requisição.
+
+O `Flow.Step` em si, comparado com a 0.5.3 publicada, na mesma máquina:
+
+- Com `Enabled = false` um passo ficou muito mais barato: cerca de 0,5 ns e nenhuma alocação fora
+  de uma requisição rastreada, contra 68 a 84 ns e 232 bytes na 0.5.3.
+- Com `Enabled = true`, um passo dentro de uma requisição rastreada custou cerca de 41 ns a mais
+  que na 0.5.3 no .NET 8 (cerca de 15%, e mais alto em 8 de 8 rodadas). No .NET 10 a diferença
+  ficou dentro do ruído da máquina.
+- A memória alocada por passo é a mesma.
+
+Método: cada cenário roda no seu próprio processo, isolando o registro do listener de
+`ActivitySource` do .NET, que é por processo: assim um cenário não contamina o outro. O relatório
+completo (em inglês) tem todas as tabelas com as faixas, o hardware, a carga da máquina e os
+comandos para repetir a medição: [docs/benchmarks/0.6.0.md](docs/benchmarks/0.6.0.md).
 
 ## Limitações conhecidas
 
