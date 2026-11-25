@@ -9,6 +9,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `NetApiFlow.Dashboard`: the Runner shows what the request got back. After a send it shows
+  `HTTP <status>`, also for a 4xx and a 5xx, the trace id as a link that opens the trace, and the body of
+  the response in a folded "Response body" block. The body is shown as text only, never as markup, cut at
+  4000 characters, and nothing from the headers of the response is shown. It stays in the memory of the
+  page: it goes away at the next send, when you pick another endpoint and when you leave the screen. A
+  response that is not text says its type and shows nothing. A `POST` starts with the `example` that the
+  OpenAPI document gives for its request body, when it gives one.
 - `NetApiFlow`: the class `Flow`, the new name of the entry point for marking a step by hand:
   `Flow.Step("OrderRepository", "Find")`, `Flow.CurrentTraceId` and `Flow.GetRecentTrace`. It needs
   only `using NetApiFlow;` and works from a top-level `Program.cs` too, where `NetApiFlow.Step(...)`
@@ -70,6 +77,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow.Dashboard`: "Slowest step" names the step that spent the most time in its own code, which
+  is its duration minus the duration of its direct children, and the banner says "own time". Before, it
+  named the longest duration, which was always the step that contains all the others. The slow threshold
+  now applies to that time of its own, so a trace whose steps only wait for each other shows no banner.
 - `NetApiFlow.Dashboard`, `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.Mcp`, `NetApiFlow.MediatR`,
   `NetApiFlow.OpenTelemetry`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer` and
   `NetApiFlow.Testing`: each package now asks for `NetApiFlow` at exactly its own version, `[0.6.0]` for
@@ -189,6 +200,24 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow.Dashboard`, on a phone: Compare, Insights and History stack their rows instead of
+  scrolling sideways, so the B and Delta columns, the p95 and the Compare button are no longer off the
+  screen, and the route of a History row wraps instead of ending in an ellipsis. The "Try an endpoint"
+  drawer now ends 1 rem above the bottom of the window in every width where it appears, and "Send
+  request" is no longer 5 px from the edge, below the screen: it did not scroll into view, not even with
+  `Tab`.
+- `NetApiFlow.Dashboard`, texts and states: "Error origin" shows the duration of the step that started
+  the error and not the duration of the trace. A share of time no step covers that rounds to 0 reads
+  "<1%". The status of a step and the name of the request summary are translated. The route in the header
+  of the Flow screen and in the summary has a tooltip with the whole route. The "Steps" list of the
+  summary can be clicked to inspect a step. The button that opens the endpoint drawer has a name on a
+  narrow screen. The connection chip no longer says "Live" while an imported trace is on screen, and says
+  "Imported trace". The labels of the fields of the Runner are no longer glued ("idpath"). In the History,
+  picking a third execution to compare says that the oldest one was unchecked, and the "Slow only" switch
+  is named once.
+- `NetApiFlow.Dashboard`, Architecture: a step that runs more than once in each execution says how many
+  times (`SELECT items (×5)`), the map no longer explains node states that it does not have, and the
+  exported SVG keeps its font sizes, weights and line widths when it is opened on its own.
 - `NetApiFlow.Dashboard`: the panel can be used from the keyboard where it used to stop. The focus of
   the Material buttons and menu items was a faint tint, between 1.09 and 1.44 to 1 against the
   surface, and is now a 2 px ring in the focus color of the brand, 4.2 to 1 in the dark theme and 6.5
