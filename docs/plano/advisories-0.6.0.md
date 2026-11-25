@@ -4,24 +4,26 @@ Um lugar só, para o dono confirmar de uma vez antes do release. Quem publica é
 
 Os textos abaixo são os campos do formulário de advisory do GitHub, em inglês e sem dado de app real. **Daqui em diante esta página é a versão que se publica.** O rascunho de cada fase (Tarefa 50.10, Fase 54, Fase 56 e Tarefa 71.3) é o histórico de como ele foi escrito, e uma correção nova entra aqui.
 
-## O que o dono confirma
+## A severidade de cada um, e o que falta
+
+Os quatro têm a severidade decidida pelo dono. Os dois últimos foram confirmados em 25/11/2026, relato da auditoria, e a Planejadora não leu a escolha na sessão dele.
 
 | # | Advisory | Nota e vetor | Quem decidiu a severidade | O que falta antes de publicar |
 |---|---|---|---|---|
 | 1 | 50.10: os portões do painel e do MCP confiam em `RequireAuthorization()` mesmo com `AllowAnonymous()` (D-199, D-206) | **Média 4,8**, `CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N` | O dono, no D-206 ("Média, texto completo") | A auditoria reproduz o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0` antes de publicar (D-203, D-206), e a faixa vai até a `0.5.3` pela identidade do código |
 | 2 | Fase 54: segredos na mensagem de exceção saem sem filtro no OTLP e filtrados pela metade no painel (D-221, D-223) | **Média 5,3**, `CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N` | O dono, no D-223 ("o texto verdadeiro decide o número") | A faixa vai até a `0.5.3` pela identidade do código. Reproduzido só na `0.5.2`, pela auditoria |
-| 3 | Fase 56: o painel e o MCP abertos aceitam qualquer página (DNS rebinding) e o painel pode ser emoldurado (D-224, D-226) | **Média 4,2**, `CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N` | **O dono escolheu "severidade baixa" (D-226), e o texto verdadeiro dá 4,2.** Baixa (3,1) só sai ignorando o `DELETE /flow/api/traces`, que é integridade. A auditoria leva ao dono a diferença | **O dono confirma: Média 4,2 ou Baixa 3,1.** E o S6 e o S7 refeitos com o pacote real na segunda passada, sem o que este não sai (D-249) |
-| 4 | Fase 71: as tools do `NetApiFlow.Mcp` aparecem no endpoint MCP do próprio app (D-278, D-279, D-282, D-283) | **Média 5,3**, `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N`. Com o `/mcp` do app exigindo autenticação, `PR:L` e **4,3** | O dono decidiu que haverá advisory (D-279). **A nota é proposta da Planejadora e da auditoria, e ele não a confirmou** | **O dono confirma a Média 5,3 e as duas CWE (862, o lado das traces, e 863, o espelho).** O espelho fica fora da nota (D-283) |
+| 3 | Fase 56: o painel e o MCP abertos aceitam qualquer página (DNS rebinding) e o painel pode ser emoldurado (D-224, D-226) | **Média 4,2**, `CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N` | **O dono, em 25/11/2026: Média 4,2.** A escolha substitui a "severidade baixa" do D-226, porque o `DELETE /flow/api/traces` conta como integridade (Baixa, 3,1, só saía ignorando-o) | O S6 e o S7 refeitos com o pacote real na segunda passada, sem o que este não sai (D-249), e reproduzidos contra a `0.5.3` publicada |
+| 4 | Fase 71: as tools do `NetApiFlow.Mcp` aparecem no endpoint MCP do próprio app (D-278, D-279, D-282, D-283) | **Média 5,3**, `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N`. Com o `/mcp` do app exigindo autenticação, `PR:L` e **4,3** | **O dono, em 25/11/2026: Média 5,3, CWE-862 (o lado das traces) e CWE-863 (o espelho), versões `0.2.0` a `0.5.3`.** O espelho fica fora da nota (D-283) | Nada: já reproduzido na `0.5.3` pela auditoria |
 
 As quatro notas foram recalculadas por script pela Planejadora em 25/11/2026, pela fórmula do CVSS 3.1: 4,8, 5,3, 4,2 e 5,3 (4,3 com `PR:L`). A conta bate com cada rascunho.
 
 ## A faixa de versões vai até a `0.5.3`
 
-Os rascunhos 1, 2 e 3 foram escritos quando a última versão publicada era a `0.5.2`, e diziam `<= 0.5.2`. A `0.5.3` (o hotfix do `RetentionService`, D-235) saiu depois. `git diff v0.5.2 v0.5.3 --stat -- src` lista cinco arquivos: `PersistenceWriter.cs`, `RetentionInterval.cs`, `RetentionService.cs`, `NetApiFlowServiceCollectionExtensions.cs` e o `config.json` da demo. Nenhum é um portão, o sanitizador ou a superfície HTTP, então os três defeitos existem na `0.5.3` pela identidade do código, e os textos abaixo dizem `<= 0.5.3`. A Planejadora não reproduziu nada na `0.5.3`. A auditoria reproduz numa delas, ou aceita a identidade e diz isso ao dono. O rascunho 4 já nasceu com `<= 0.5.3`.
+Os rascunhos 1, 2 e 3 foram escritos quando a última versão publicada era a `0.5.2`, e diziam `<= 0.5.2`. A `0.5.3` (o hotfix do `RetentionService`, D-235) saiu depois. `git diff v0.5.2 v0.5.3 --stat -- src` lista cinco arquivos: `PersistenceWriter.cs`, `RetentionInterval.cs`, `RetentionService.cs`, `NetApiFlowServiceCollectionExtensions.cs` e o `config.json` da demo. Nenhum é um portão, o sanitizador ou a superfície HTTP, então os três defeitos existem na `0.5.3` pela identidade do código, e os textos abaixo dizem `<= 0.5.3`. A Planejadora não reproduziu nada na `0.5.3`. **A auditoria não aceita a faixa só pela identidade do código, porque reproduzir é barato, e reproduz cada um contra a `0.5.3` publicada na segunda passada:** o 1 é o S4 (`RequireAuthorization()` com `AllowAnonymous()`), o 2 é o S1 e o S2 (o sanitizador e o OTLP com um coletor) e o 3 é o S6 e o S7. Para o 1, faz também o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0` (D-203, D-206). O 4 já foi reproduzido na `0.5.3`. O rascunho 4 já nasceu com `<= 0.5.3`.
 
 ## Ordem e condição de publicação
 
-1. O dono confirma a tabela acima, uma linha por vez.
+1. O dono já decidiu a severidade dos quatro (25/11/2026).
 2. Os pacotes `0.6.0` estão no nuget.org e o Release do GitHub existe (`/release`, passos 10 e 11).
 3. A auditoria cria cada advisory como rascunho privado no repositório, cola os campos abaixo, confere a faixa e a versão corrigida (`0.6.0`) e publica. O 3 só depois da segunda passada do S6 e do S7.
 4. A auditoria diz à Planejadora o número de cada advisory (GHSA), e a Planejadora o registra e o põe no `SECURITY.md` ou no CHANGELOG, se o dono quiser.
