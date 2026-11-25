@@ -2206,5 +2206,38 @@
       "test": "ArchitectureComponent the exported SVG, opened on its own keeps the"
     },
     "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-as-text",
+    "defect": "The body of the response of the Runner must be shown as text and never as markup",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response shows markup in the body as text and never as markup"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-cut",
+    "defect": "The body of the response of the Runner must be cut at 4000 characters before it is rendered, so that a large answer cannot freeze the tab",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response keeps only the first 4000 characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-not-stored",
+    "defect": "The body of the response of the Runner must stay in memory, out of every storage and out of the address",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response keeps the body out of every storage"
+    },
+    "job": "build-test"
   }
 ]
