@@ -1765,5 +1765,71 @@
       "test": "ApiService callEndpoint against the real HTTP backend keeps the trace id header of a plain-text success readable"
     },
     "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-several-commands-one-step-each",
+    "defect": "Several SqlClient commands in one method recorded one step only, because the first stopped step covered the next ones",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.SeveralCommandsInOneMethod_RecordOneStepEachUnderTheCallerInOrder"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-caller-activity-stays-current",
+    "defect": "After a SqlClient command the current activity of the caller was the stopped step of the command",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.AfterACommand_TheActivityCurrentToTheCallerIsStillTheCallersOwn"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-next-step-parent",
+    "defect": "A step opened after SqlClient commands became a child of the finished SQL step",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.AStepOpenedAfterTheCommands_IsAChildOfTheCallerAndNotOfAFinishedSqlStep"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-driver-activity-after-command",
+    "defect": "A Npgsql command after a SqlClient command in one method disappeared from the trace",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.ADriverActivityAfterASqlClientCommand_IsStillRecorded"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-ef-then-raw",
+    "defect": "An EF Core query followed by a raw SqlClient command left the next step with the SQL step as parent",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.AnEfCoreQueryThenARawCommandInOneMethod_RecordTwoStepsAndLeaveTheCallerActivityCurrent"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-failure-reader-cancellation",
+    "defect": "After a failed, a cancelled or an ExecuteReader SqlClient command the stopped step stayed the current activity of the caller",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.WhateverTheOutcomeOfTheCommand_TheCallerActivityStaysCurrentAndTheNextStepIsItsChild"
+    },
+    "job": "build-test"
   }
 ]

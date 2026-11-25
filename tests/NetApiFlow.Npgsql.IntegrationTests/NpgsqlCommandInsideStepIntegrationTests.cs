@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -31,11 +32,34 @@ public sealed class RawUserRepository(NpgsqlDataSource dataSource) : IRawUserRep
 
 public sealed record NpgsqlServer(string ConnectionString);
 
+public sealed record NpgsqlCurrentActivity(string Label, string? Id, bool? IsStopped);
+
 [ApiController]
 [Route("api/sql-in-step")]
 public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRepository repository, IServiceProvider services, NpgsqlServer server) : ControllerBase
 {
     public const string RenamedCommandSpan = "CONNECT custom";
+
+    [HttpGet("several-commands")]
+    public async Task<IActionResult> SeveralCommands()
+    {
+        var seen = new List<NpgsqlCurrentActivity> { Snapshot("before") };
+        foreach (var label in new[] { "first", "second", "third" })
+        {
+            await using var command = dataSource.CreateCommand("SELECT count(*) FROM \"Users\"");
+            await command.ExecuteScalarAsync();
+            seen.Add(Snapshot(label));
+        }
+
+        using (Flow.Step("Service", "Work", ComponentType.Service))
+        {
+        }
+
+        return Ok(seen);
+    }
+
+    private static NpgsqlCurrentActivity Snapshot(string label) =>
+        new(label, Activity.Current?.Id, Activity.Current?.IsStopped);
 
     [HttpGet("fresh-connections")]
     public async Task<IActionResult> FreshConnections()
@@ -131,6 +155,8 @@ public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRep
 [Collection(NpgsqlTestGroup.Name)]
 public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixture fixture)
 {
+    private static readonly JsonSerializerOptions WebOptions = new(JsonSerializerDefaults.Web);
+
     private async Task<(IHost Host, HttpClient Client)> StartHostAsync(
         bool withInterceptor = true,
         ExternalActivitySource externalSources = ExternalActivitySource.Npgsql)
@@ -423,4 +449,25 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
     }
 
     private const int NPlusOneThreshold = 3;
+
+    [Fact]
+    public async Task SeveralCommandsInOneMethod_RecordOneStepEachAndLeaveTheCallerActivityCurrent()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var response = await client.GetAsync("/api/sql-in-step/several-commands");
+        response.EnsureSuccessStatusCode();
+        var current = JsonSerializer.Deserialize<List<NpgsqlCurrentActivity>>(await response.Content.ReadAsStringAsync(), WebOptions)!;
+        var spans = Flow.GetRecentTrace(host.Services, response.Headers.GetValues("X-NetApiFlow-TraceId").Single())!.Spans;
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        var commands = spans.Where(span => span.Component == "Npgsql").OrderBy(span => span.Sequence).ToList();
+        commands.Count.ShouldBe(3);
+        commands.ShouldAllBe(command => command.ParentSpanId == controller.SpanId);
+        spans.Single(span => span.Component == "Service").ParentSpanId.ShouldBe(controller.SpanId);
+        var before = current.Single(entry => entry.Label == "before");
+        current.Where(entry => entry.Label != "before").ShouldAllBe(entry => entry.Id == before.Id && entry.IsStopped == false);
+    }
 }

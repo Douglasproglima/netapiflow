@@ -133,10 +133,7 @@ internal sealed partial class SqlClientCommandListener
             return;
         }
 
-        var step = Flow.Step(
-            SqlClientDiagnosticNames.Component,
-            SqlCommandDescriber.Describe(command.CommandText),
-            ComponentType.Database);
+        var step = OpenStepLeavingTheCallerActivityCurrent(SqlCommandDescriber.Describe(command.CommandText));
 
         if (step.IsNoOp)
         {
@@ -149,6 +146,14 @@ internal sealed partial class SqlClientCommandListener
         }
 
         _pendingSteps[operationId] = step;
+    }
+
+    private static FlowStep OpenStepLeavingTheCallerActivityCurrent(string operation)
+    {
+        var callerActivity = Activity.Current;
+        var step = Flow.Step(SqlClientDiagnosticNames.Component, operation, ComponentType.Database);
+        Activity.Current = callerActivity;
+        return step;
     }
 
     private void OnCommandCompleted(IReadOnlyList<KeyValuePair<string, object>> payload, Exception? exception)
