@@ -352,6 +352,43 @@ public class FlowActivityListenerTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public void ActivityStopped_WithNpgsqlCommandNamedLikeAConnectionOpen_KeepsTheStartDurationParentAndOutcomeOfTheActivity(bool fails)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+        var startedTwoSecondsAgo = DateTime.UtcNow.AddSeconds(-2);
+        DateTime activityStart;
+
+        using (Flow.Step("OrderRepository", "Find", ComponentType.Repository))
+        {
+            using var npgsqlActivity = npgsqlSource.StartActivity("CONNECT custom");
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetStartTime(startedTwoSecondsAgo);
+            activityStart = npgsqlActivity.StartTimeUtc;
+            npgsqlActivity.SetTag(NpgsqlActivityTagNames.QueryText, "SELECT u.\"Id\" FROM \"Users\" AS u");
+            if (fails)
+            {
+                npgsqlActivity.SetStatus(ActivityStatusCode.Error, "relation \"Users\" does not exist");
+            }
+        }
+
+        var spans = recorder.GetActiveTrace(traceId)!.Spans;
+        var repository = spans.Single(span => span.Type == ComponentType.Repository);
+        var command = spans.Single(span => span.Component == "Npgsql");
+        command.StartedAt.ShouldBe(activityStart);
+        command.DurationMicros.ShouldNotBeNull().ShouldBeGreaterThanOrEqualTo(2_000_000);
+        (command.EndedAt!.Value - command.StartedAt).TotalMicroseconds.ShouldBe(command.DurationMicros.Value, tolerance: 1);
+        command.ParentSpanId.ShouldBe(repository.SpanId);
+        command.Sequence.ShouldBeGreaterThan(repository.Sequence);
+        command.Status.ShouldBe(fails ? FlowStatus.Error : FlowStatus.Success);
+        command.IsErrorOrigin.ShouldBe(fails);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void ActivityStopped_WithNpgsqlConnectionOpen_RecordsNoSpanEvenWhenItFails(bool fails)
     {
         var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });

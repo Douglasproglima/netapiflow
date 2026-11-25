@@ -1721,5 +1721,16 @@
       "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_WhenItFails_IsTheErrorOriginLikeANormalCommand"
     },
     "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-renamed-command-real-start-and-duration",
+    "defect": "A command the app names CONNECT ... is added when it ends, so it must still carry the start, duration, parent and outcome of its own activity",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlCommandNamedLikeAConnectionOpen_KeepsTheStartDurationParentAndOutcomeOfTheActivity"
+    },
+    "job": "build-test"
   }
 ]
