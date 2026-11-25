@@ -59,12 +59,6 @@ import { TranslationKey } from '../../core/i18n/translations';
   templateUrl: './endpoint-form.component.html',
   styleUrl: './endpoint-form.component.scss',
   imports: [MatButtonModule, CdkTrapFocus, TranslatePipe],
-  host: {
-    '[attr.role]': 'asDialog() ? "dialog" : null',
-    '[attr.aria-modal]': 'asDialog() && dialogOpen() ? "true" : null',
-    '[attr.aria-labelledby]': 'asDialog() ? titleId : null',
-    '(document:keydown.escape)': 'dismissOnEscape($event)',
-  },
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
@@ -227,9 +221,7 @@ export class EndpointFormComponent {
     });
 
     effect(() => {
-      if (this.asDialog() && this.dialogOpen()) {
-        this.focusAfterRender(() => this.firstControlOfCurrentView());
-      }
+      this.dialogOpen();
     });
   }
 
