@@ -325,6 +325,69 @@ public class FlowActivityListenerTests
         spans[0].Tags.Keys.ShouldNotContain("sql");
     }
 
+    [Theory]
+    [InlineData("postgresql", "db.query.text", "SELECT Users")]
+    [InlineData("postgres", "db.statement", "SELECT Users")]
+    [InlineData("CONNECT custom", "db.query.text", "SELECT Users")]
+    [InlineData("CONNECT custom", "db.statement", "SELECT Users")]
+    public void ActivityStopped_WithNpgsqlCommandText_RecordsTheCommandWhateverItsNameAndConvention(string activityName, string textTag, string expectedOperation)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity(activityName))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag(textTag, "SELECT u.\"Id\" FROM \"Users\" AS u");
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.ShouldHaveSingleItem();
+        span.Component.ShouldBe("Npgsql");
+        span.Operation.ShouldBe(expectedOperation);
+        span.Status.ShouldBe(FlowStatus.Success);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivityStopped_WithNpgsqlConnectionOpen_RecordsNoSpanEvenWhenItFails(bool fails)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("CONNECT postgres"))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag("db.system.name", "postgresql");
+            if (fails)
+            {
+                npgsqlActivity.SetStatus(ActivityStatusCode.Error);
+                npgsqlActivity.SetTag("error.type", "28P01");
+            }
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ActivityStopped_WithNpgsqlActivityWithoutTextUnderTheDriverName_StaysAGenericSqlCommand()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (npgsqlSource.StartActivity("postgresql"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldHaveSingleItem().Operation.ShouldBe("SQL command");
+    }
+
     [Fact]
     public void ActivityStopped_WithNpgsqlActivityAndCaptureSqlText_RecordsTheCommandTextAsATag()
     {
