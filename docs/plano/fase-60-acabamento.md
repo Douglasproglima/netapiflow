@@ -36,6 +36,8 @@ Cada tarefa **reproduz antes de corrigir** e tem o teste que a mostra falhando. 
 "Etapa mais lenta" aponta a **raiz** e não a folha. "Origem do erro" mostra a duração da **trace**, não a da etapa. "0% do
 tempo (812 µs de 402,3 ms)" lê contraditório. "Status Success" sem tradução.
 
+**O critério de cada texto (D-290).** "Etapa mais lenta" é a **folha** mais lenta: o span sem filhos de maior duração, ainda sujeito ao limiar de lento que já existe. A raiz contém tudo e nunca é a resposta, a não ser que seja o único span. A duração mostrada é a da folha, a mesma da cascata. "Origem do erro" mostra a duração do span que é a origem. "0% do tempo" passa a "<1%" quando a porcentagem arredonda para 0 e o tempo é maior que zero. "Status Success" é traduzido pelo dicionário do painel, para todos os status que a tela exibir. Se a reprodução mostrar que o defeito é outro, a Executora relata o que mediu antes de mudar.
+
 ## 60.3 O Runner
 
 Sem o status HTTP e sem o corpo da resposta. "Trace: <id>" não é link, e o `/runner` sozinho, depois de enviar, **navega para o
@@ -43,6 +45,8 @@ grafo ou tem o link** (vale para o produto, não só para a demo). Rótulos cola
 corpo. Mensagem genérica no 500 (liga com a Tarefa 58.4). **A corrida do formulário:** o campo de rota preenchido poucas dezenas de
 milissegundos depois de escolher o endpoint volta vazio, e o envio diz "Preencha o parâmetro de rota" (1 em 25 no `develop`, 3 em 25 num
 branch, causa não determinada): medir, achar a causa e corrigir.
+
+**O desenho do que faltava (D-290).** A Executora propôs, e a Planejadora aprovou com ajustes, o menor bloco possível, no rodapé do formulário e compacto, para o botão de enviar continuar à vista (60.12). Uma linha `HTTP <status> · Trace: <id>`, com o id como link do app (`routerLink`, nunca um `/flow` escrito à mão, por causa do `PathBase`) para o grafo. Sem navegação automática depois de enviar: o status e o corpo têm de ficar à vista. O status aparece também nas falhas 4xx e 5xx, e a falha de rede mantém o texto da 58.4, sem "HTTP 0". Abaixo, um `<details>` fechado, "Corpo da resposta", com o texto em mono 12, altura máxima de 10rem com rolagem, cortado em 4000 caracteres com um aviso, e "(corpo vazio)" quando não há corpo. Sem formatar JSON e sem botão de copiar. Resposta que não é texto (content-type fora de `text/*`, JSON e XML): se o content-type já estiver à mão, `(conteúdo <tipo>, não exibido)`. O corpo fica só na memória do componente: some no próximo envio e ao sair da tela, nunca em `localStorage`, na URL ou em log, e um teste prova isso. Textos nos dois idiomas, pelo dicionário. **O exemplo de corpo do POST** vem do `example` do `requestBody` do OpenAPI quando ele existir, e sem `example` o campo fica vazio como hoje: esqueleto gerado do schema é desenho novo e fica para a `0.7.0`. **A mensagem genérica no 500** já foi trocada pela 58.4: a Executora confere que o painel mostra a causa e não mexe mais.
 
 ## 60.4 Rótulos
 
