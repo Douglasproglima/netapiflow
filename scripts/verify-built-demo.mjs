@@ -16,10 +16,26 @@ const POLL_MS = 100;
 const VIEWPORT = { width: 1280, height: 800 };
 
 const TRACE_READY = "document.querySelectorAll('.flow-graph__node').length > 0";
+const CHOOSE_FIRST_ARCHITECTURE_ROUTE =
+  "(() => { const select = document.querySelector('app-architecture select'); select.value = select.options[1].value; select.dispatchEvent(new Event('change', { bubbles: true })); })()";
+const OPEN_ABOUT_DIALOG = "document.querySelector('button.app-rail__item').click()";
+
 const SCREENS = [
   { path: '/history', ready: "document.querySelectorAll('app-history tr').length > 1" },
   { path: '/components', ready: "document.querySelectorAll('app-components mat-card').length > 0" },
   { path: '/runner', ready: "document.querySelector('app-runner app-endpoint-form') !== null" },
+  { path: '/insights', ready: "document.querySelectorAll('app-insights tbody tr').length > 0" },
+  {
+    path: '/architecture',
+    ready: "document.querySelectorAll('app-architecture option').length > 1",
+    followUps: [{ run: CHOOSE_FIRST_ARCHITECTURE_ROUTE, ready: "document.querySelectorAll('app-architecture .flow-graph__node').length > 0" }],
+  },
+  {
+    path: '/',
+    name: 'the About dialog',
+    ready: "document.querySelector('button.app-rail__item') !== null",
+    followUps: [{ run: OPEN_ABOUT_DIALOG, ready: "document.querySelector('mat-dialog-container') !== null" }],
+  },
 ];
 
 const MIME_TYPES = {
@@ -118,20 +134,21 @@ async function untilQuiet(watcher) {
   }
 }
 
-async function visit(browser, url, ready) {
+async function visit(browser, url, ready, followUps = []) {
   const watcher = createPageWatcher();
   browser.onEvent((message) => watcher.onEvent(message));
   await browser.send('Page.navigate', { url });
 
-  const outcome = await untilTrue(browser, ready, `the page did not draw what marks it as ready (${ready}) in ${READY_TIMEOUT_MS} ms`);
+  const outcomes = [await untilTrue(browser, ready, `the page did not draw what marks it as ready (${ready}) in ${READY_TIMEOUT_MS} ms`)];
   await untilQuiet(watcher);
 
-  const problems = [...watcher.problems, ...watcher.unanswered()];
-  if (outcome !== true) {
-    problems.push(outcome);
+  for (const followUp of followUps) {
+    await browser.evaluate(followUp.run);
+    outcomes.push(await untilTrue(browser, followUp.ready, `the page did not draw what marks the next step as ready (${followUp.ready}) in ${READY_TIMEOUT_MS} ms`));
+    await untilQuiet(watcher);
   }
 
-  return problems;
+  return [...watcher.problems, ...watcher.unanswered(), ...outcomes.filter((outcome) => outcome !== true)];
 }
 
 async function startStaticServer(directory) {
@@ -193,9 +210,10 @@ async function main() {
     }
 
     for (const screen of SCREENS) {
-      const problems = await visit(browser, `${server.url}${screen.path}`, screen.ready);
-      screens.push({ name: screen.path, problems });
-      console.log(`${problems.length === 0 ? 'OK  ' : 'FAIL'} screen ${screen.path}${problems.length > 0 ? `\n       ${problems.join('\n       ')}` : ''}`);
+      const name = screen.name ?? screen.path;
+      const problems = await visit(browser, `${server.url}${screen.path}`, screen.ready, screen.followUps);
+      screens.push({ name, problems });
+      console.log(`${problems.length === 0 ? 'OK  ' : 'FAIL'} screen ${name}${problems.length > 0 ? `\n       ${problems.join('\n       ')}` : ''}`);
     }
   } finally {
     await browser.close();
