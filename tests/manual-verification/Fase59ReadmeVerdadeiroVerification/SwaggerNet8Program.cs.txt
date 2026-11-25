@@ -1,0 +1,27 @@
+using NetApiFlow;
+using NetApiFlow.Dashboard;
+using NetApiFlow.Dashboard.Endpoints;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddNetApiFlow(options =>
+{
+    if (Environment.GetEnvironmentVariable("SWASH_PATH") == "1")
+    {
+        options.OpenApiDocumentPath = "/swagger/v1/swagger.json";
+    }
+});
+builder.Services.AddNetApiFlowDashboard();
+
+var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapNetApiFlowDashboard();
+app.MapGet("/hello", () => "Hello");
+app.MapGet("/orders/{id:int}", (int id) => $"order-{id}");
+app.Run();

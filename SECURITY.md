@@ -31,3 +31,8 @@ the dashboard is only reachable in `Development` environments (see
 [docs/adr/0006-dashboard-restrito-a-development.md](docs/adr/0006-dashboard-restrito-a-development.md)).
 A report that the dashboard can be reached in another environment without explicit configuration
 is treated as a security issue.
+
+The MCP server (`NetApiFlow.Mcp`, at `/flow/mcp`) is in scope, with the same rule as the dashboard. A
+report that it answers, or serves trace data, outside `Development` without `.RequireAuthorization(...)`
+or an `IFlowAccessFilter`, or that it accepts a request with a `Host` or `Origin` that is not its own, is
+treated as a security issue.

@@ -200,6 +200,22 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The README, the Portuguese README and the package READMEs now say what the product does. Every sentence
+  of the audit's list was measured against a new app first, and the table is in
+  `tests/manual-verification/Fase59ReadmeVerdadeiroVerification/`. The corrections: the Quick start on
+  .NET 8 (the template has no `AddOpenApi()`, and the Runner needs `OpenApiDocumentPath`); the `using` of
+  the storage packages and of `Microsoft.AspNetCore.Mvc.Testing`, and `public partial class Program` on
+  .NET 8; what OTLP exports (nothing for a disabled or excluded request, the sampler of the host does not
+  apply, no `SERVER` span and how to add it, and the query string that `IncludeHttpClientSource` did not
+  export); what `CapturePrePipelineSteps` shows, `IAsyncEnumerable` and Native AOT (the first call into a
+  tracked service answers 500); the buffer of 500 traces of `Flow.GetRecentTrace`; the retention pass every
+  5 minutes; the `SqlClient` 5.2.2 of `NetApiFlow.Storage.SqlServer`; the license of MediatR 13 and later;
+  the routes that write in the dashboard; the fixed limits; `IFlowTenantResolver`; and the status codes of
+  the MCP route outside `Development`. The Portuguese README now writes "trace" in the masculine
+  everywhere, as the screen does.
+- `CONTRIBUTING.md` lists the prerequisites and `npm run format:check`, `SECURITY.md` puts the MCP server in
+  scope, the pull request template asks for `format:check`, and the issue templates link to the security
+  policy.
 - `NetApiFlow`: `Enabled = false` now keeps every step silent. Before, another `ActivityListener` on
   the `NetApiFlow` source, such as an OpenTelemetry pipeline that adds it, still received the
   controller, service and handler steps, although NetApiFlow recorded no trace. Now no step is opened at
