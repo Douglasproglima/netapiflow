@@ -128,6 +128,18 @@ Entregue em `develop` na #504 (squash `7934db6`). O relato é da Executora, no c
 - **O `Dispose()` do `FlowActivityListener` (D-302, #512):** o segundo `Dispose()` descontava de novo os contadores da 60.9b e podia silenciar os outros hosts do processo. Defeito da 60.9b ainda não publicada, corrigido com um `Interlocked.Exchange`, visto vermelho no run `45677973121` e guardado pela linha `60B-listener-dispose-idempotent`.
 - **Fechado na segunda passada (D-306):** a tela de Arquitetura (60.7) desenha a rota sem legenda, e o SVG exportado leva estilos e fontes inline.
 
+# Parte C: a demo estática e a tela Arquitetura (D-312)
+
+## 60.13 A tela Arquitetura da demo estática falha para toda rota
+
+**O achado, da `EXECUTORA-RELEASE`, no ensaio da demo (25/11/2026, `develop` `70b6e03`, `0.6.0-verify.1`).** Na demo estática, a tela Arquitetura mostra "Falha ao carregar o mapa de arquitetura" para toda rota. A tela manda `from=<agora menos 7 dias>`, o manifesto da demo grava a chave sem `from`, e o interceptor só casa a chave exata. Os seis fixtures existem. **Vem desde a `0.5.2`: é defeito antigo,** e a demo do site já o tem. O CI não pegou porque o `verify-built-demo.mjs` só abre `/history`, `/components` e `/runner`. **Entra na `0.6.0` por decisão do dono (D-312),** exceção única ao congelamento, como a 58.11 (D-284) e a 60.12 (D-289), relatada pela auditoria.
+
+- **Uma PR pequena da `EXECUTORA-RELEASE`,** em `bugfix/demo-architecture-key`, com o teste vermelho no CI primeiro.
+- **A correção no interceptor ou no manifesto,** a que for menor e mais honesta. A regra de `testing.md` (a demo responde com a semântica nova e não ignora o parâmetro) vale: se a correção ignorar o `from` na chave, a Executora diz por quê, porque o fixture é de uma janela e a tela mostra a janela gravada.
+- **O `verify-built-demo.mjs`** passa a abrir também Insights, Arquitetura e Sobre, que é o que teria pego o defeito.
+- **Uma linha no `guards.json`** e **uma entrada em `### Fixed`** do `CHANGELOG`, que mantém inteiras as nove frases do `comparison` (D-310). Como a PR mexe em código, o job roda.
+- **Ponto de parada:** se a correção pedir desenho novo, a Executora para e pergunta.
+
 ## O que **não** está aqui, e onde está
 
 | Item | Onde |

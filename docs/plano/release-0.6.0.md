@@ -24,9 +24,9 @@ Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `g
 
 | # | Portão | Estado |
 |---|---|---|
-| 1 | A fila de fases fechada | 68 e 60 (A e B) fechadas, e 59A e 59B fechadas. **Falta a 59C**, que a Executora faz |
+| 1 | A fila de fases fechada | 68 e 60 (A e B) fechadas, e 59A e 59B fechadas. **Faltam a 59C**, que a Executora faz, **e a PR `bugfix/demo-architecture-key`** (a Tarefa 60.13, D-312), que a `EXECUTORA-RELEASE` faz |
 | 2 | A segunda passada | Feita, menos a tabela de custo da 59C. A releitura 59.5 do README está feita (D-309). O registro está na seção abaixo |
-| 3 | A auditoria de base | Fechadas as matrizes de integrações e de autorização, `PathBase` e proxy, o README frase a frase (59.5), o mapa de cobertura do CI (com a lacuna dos bancos e dos storages sem cenário com o pacote, item 56 do roadmap) e as telas. **Falta a demo estática**, que a `EXECUTORA-RELEASE` roda agora e a auditoria fecha quando ela relatar (D-311) |
+| 3 | A auditoria de base | Fechadas as matrizes de integrações e de autorização, `PathBase` e proxy, o README frase a frase (59.5), o mapa de cobertura do CI (com a lacuna dos bancos e dos storages sem cenário com o pacote, item 56 do roadmap) e as telas. **Falta a demo estática**, que fecha com a PR `bugfix/demo-architecture-key` (a tela Arquitetura da demo falha para toda rota, D-312) |
 | 4 | Os advisories | Severidade decidida pelo dono e faixa reproduzida contra a `0.5.3` nos quatro (D-305). Liberados para publicar |
 | 5 | O Trusted Publishing do nuget.org | **Conferido pelo dono** em 25/11/2026 (relato da auditoria): a política continua certa, sem mudança desde a `0.5.3` (D-308) |
 | 6 | O `develop` verde | O último `CI` do `develop` (`3b7a341`) está em `success`. O `develop` exige 8 checks e a `main` 5 |
