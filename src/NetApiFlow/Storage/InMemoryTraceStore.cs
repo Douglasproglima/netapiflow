@@ -22,11 +22,12 @@ internal sealed class InMemoryTraceStore : ITraceStore
 
     public ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken)
     {
+        var routeKey = query.RouteTemplate is null ? null : RouteTemplateNormalizer.NormalizeForComparison(query.RouteTemplate);
         var matching = _entries.Values
             .Select(e => e.Trace)
             .Where(trace => query.Status is null || trace.Status == query.Status)
             .Where(trace => query.Method is null || string.Equals(trace.Method, query.Method, StringComparison.OrdinalIgnoreCase))
-            .Where(trace => query.RouteTemplate is null || trace.RouteTemplate == query.RouteTemplate)
+            .Where(trace => routeKey is null || RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate) == routeKey)
             .Where(trace => query.Tenant is null || trace.Tags.GetValueOrDefault("tenant") == query.Tenant)
             .Where(trace => query.From is null || trace.StartedAt >= query.From)
             .Where(trace => query.To is null || trace.StartedAt <= query.To)
