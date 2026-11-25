@@ -1,5 +1,7 @@
 # Fase 60: o acabamento que um revisor vê no primeiro dia (D-210 nível 3, D-236 B12 e B14)
 
+**Estado (25/11/2026):** **a Parte A está entregue em `develop` (#502, squash `0c839d3`, D-294) e conferida pela auditoria com o pacote real.** Falta a Parte B (60.9 a 60.11).
+
 O nível 3 da auditoria de base, mais dois itens da varredura final (B12, o filtro de rota do MCP, e B14, os samples). Nada
 aqui derruba o produto, mas é o que um purista abre primeiro: o celular, textos que se contradizem, o Runner pela metade,
 um README de sample que não roda.
@@ -82,6 +84,18 @@ A 3ª caixa marcada desmarca outra em silêncio. "Só lentas" aparece duplicado.
 - **A correção é pequena, e o mecanismo é da Executora.** A auditoria sugeriu a altura da gaveta descontando o topo em que ela começa, ou o rodapé do formulário com o botão fixo no fundo da gaveta. O que não pode acontecer é o botão ficar fora da janela em qualquer largura em que a gaveta apareça. Ponto de parada: se a correção pedir um desenho novo, a Executora para e pergunta.
 - **O teste:** o jsdom não calcula layout, então um teste de unidade não vê este defeito. A prova é o roteiro de navegador, que mede o retângulo do botão em 390, 768 e 1023, nos dois temas, na pasta `tests/manual-verification/`, no molde da Fase 68, com a captura de antes e de depois. Se algum teste de CI conseguir guardar o defeito (por exemplo, uma checagem do CSS da gaveta), a Executora o propõe, e a linha do `guards.json` só entra se uma mutação a derrubar (D-276).
 - **Sem regressão na Fase 68:** o foco preso, o `Esc` e a devolução do foco da gaveta seguem como a #497 deixou, e o detector não acusa `low-contrast` nem `undersized-ui-text`.
+
+## Resultado da Parte A (D-294, 25/11/2026)
+
+Entregue em `develop` na #502 (squash `0c839d3`), com a 60.12. O relato é da Executora, no corpo da PR, e da auditoria, que conferiu com o pacote real `0.6.0-audit.16`, sem e com `UsePathBase`. A Planejadora não repetiu as medições.
+
+- **60.12:** o botão "Enviar requisição" passou de 5 de 44 px visíveis para 44 de 44, em `390x844`, `768x1024` e `1023x768`, nos dois temas. A causa era o `height: 100%` do host da gaveta, que vence o `bottom`.
+- **60.1, 60.4 a 60.8:** feitos como no plano, com as linhas que empilham no celular, o `title` das rotas, a lista "Etapas" que seleciona, o chip "Trace importado", a legenda fora do mapa, o `(×5)` no N+1, o SVG exportado limpo e o aviso do Histórico.
+- **60.2:** a "Etapa mais lenta" é a de maior tempo próprio (a auditoria mediu Service, 413,2 ms), a origem do erro mostra a duração do próprio passo, `<1%` e o status traduzido.
+- **60.3:** o bloco da resposta (status, link por `routerLink`, corpo em texto cortado em 4000 caracteres, sem cabeçalhos), o `example` do OpenAPI no POST. **A corrida do campo de rota saiu da `0.6.0`** (D-293, item 62 do roadmap): 100 tentativas, nenhuma reprodução.
+- **Visto vermelho:** 50 testes em 8 arquivos no `9294ec9`, e a mutação do `e024ed8` derrubou 4 dos testes de proteção do corpo. 22 linhas `60A-*`, 206 guardas.
+- **O detector:** zero `low-contrast` e zero `undersized-ui-text`, antes e depois, em 24 varreduras cada.
+- **Aberto:** a Parte B (60.9 a 60.11) e a tela de Arquitetura, que entra na segunda passada com o pacote real.
 
 # Parte B: a API, o MCP e os samples
 

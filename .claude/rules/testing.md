@@ -165,6 +165,8 @@ Toda tarefa que muda o que o painel pede à API, ou o que ela responde, abre a d
 
 **Um 404 sintético da demo é barulhento (D-264).** O interceptor escreve `The demo has no recording for <url>` no console quando não há gravação. Sem isso a demo respondia 404 calada, o painel seguia mudo e uma demo quebrada passava verde. O job `built-demo` do `ci.yml` abre cada trace do manifest e as telas `/history`, `/components` e `/runner` num Chrome sem janela, em todo PR que não é só de documentação, e falha com qualquer erro de console, HTTP 400 ou mais ou pedido sem resposta.
 
+**A demo entrega o corpo já interpretado (D-294).** No Runner da demo, a resposta chega como o objeto gravado e não como texto, e o código do painel que supõe `string` quebra (`slice is not a function`, achado na 60.3). O teste de unidade com texto real não viu isso, e quem viu foi rodar o roteiro contra a demo construída. Código do painel que lê o corpo da resposta do Runner aceita qualquer forma de corpo e tem teste para o corpo já interpretado.
+
 ## Teste de MCP: o cliente oficial, na revisão que ele negocia, e a medida em muitas sessões (D-282)
 
 Teste de host do MCP não fica só com um cliente escrito à mão e uma revisão do protocolo. Ele roda também com o cliente oficial do SDK (`ModelContextProtocol`), na revisão que ele negocia por padrão: hoje `2026-07-28` em `Stateless` e em `StatefulForInitializeClients`, e `2025-11-25` em `Stateful`, nos três modos de sessão e nos dois TFMs. Cada revisão traz métodos que a anterior não tem (o `subscriptions/listen` da `2026-07-28`, por exemplo), e uma lista de permitidos provada numa revisão só não prova as outras.
