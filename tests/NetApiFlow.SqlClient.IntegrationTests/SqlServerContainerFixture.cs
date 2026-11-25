@@ -19,6 +19,7 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
         await using var create = new SqlCommand(
             """
             CREATE TABLE Users (Id int IDENTITY(1,1) PRIMARY KEY, Email nvarchar(200) NOT NULL);
+            CREATE TABLE Orders (Id int IDENTITY(1,1) PRIMARY KEY, Total int NOT NULL);
             INSERT INTO Users (Email) VALUES (@email);
             """,
             connection);
