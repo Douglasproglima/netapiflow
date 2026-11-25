@@ -66,6 +66,7 @@ Medido pela Executora em 20/11/2026, no Windows 10, com o `impeccable` da versã
      porta está livre antes de cada execução.
 - **Saída vazia só vale como "zero achados" com a sonda do passo 5.** Uma matriz feita sem ela deu zeros
   vazios que não significavam nada.
+- **Um script pronto (D-288).** `tests/manual-verification/Fase68AcessibilidadeVerification/detect-matrix.mjs` faz os passos acima nas cinco telas (Fluxo com uma trace, Fluxo com a gaveta aberta, Histórico, Componentes e Runner), em dois temas e dois tamanhos (`1440x900` e `390x844`), com a sonda de cada execução. Recebe a pasta do `ClientApp`, um rótulo e uma pasta temporária, e espera a demo estática servida em `localhost:4871` pelo `serve-spa.py` da mesma pasta (o README dela diz como). É um ponto de partida medido pela Executora, não uma regra de produto.
 - **No Git Bash, um argumento que começa com `/` é reescrito** (`/history` vira
   `C:/Program Files/Git/history`). Rodar com `MSYS_NO_PATHCONV=1`.
 - **O painel redireciona `/flow?trace=` para `/flow/?trace=`.** O `--target` do detector precisa casar com a URL

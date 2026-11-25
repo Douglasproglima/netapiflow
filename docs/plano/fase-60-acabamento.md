@@ -8,7 +8,7 @@ Vai no `0.6.0` (D-236). Vem **perto do fim**, depois das Fases 57 e 68 (as três
 
 ## Duas PRs, como a Fase 50
 
-- **Parte A, o painel (60.1 a 60.8):** só `ClientApp`.
+- **Parte A, o painel (60.1 a 60.8 e 60.12):** só `ClientApp`.
 - **Parte B, a API, o MCP e os samples (60.9 a 60.11).**
 
 Cada tarefa **reproduz antes de corrigir** e tem o teste que a mostra falhando. Tarefa de painel roda o detector
@@ -65,6 +65,15 @@ Legenda com estados que não existem num mapa estático. N+1 sem contagem. O SVG
 ## 60.8 Histórico
 
 A 3ª caixa marcada desmarca outra em silêncio. "Só lentas" aparece duplicado.
+
+## 60.12 O botão de enviar do Runner fica à vista no celular (D-289)
+
+**O achado, da auditoria (25/11/2026).** Pacote `0.6.0-audit.15` e a `0.5.3` publicada, o mesmo app nos dois. **É idêntico na `0.5.3`: defeito antigo,** que entra por decisão do dono (D-289), exceção única ao congelamento, como a 58.11 (D-284). Em `390x844`, a gaveta "Testar um endpoint" começa em `y=56` e tem 844 de altura, então os últimos 56 px ficam abaixo da tela. Num `POST /orders`, o "Enviar requisição" fica entre `y=839` e `y=883` numa janela de 844: só 5 px visíveis. Receber o foco por `Tab` não o rola para a vista, e o scroll do documento fica em 0. Quem usa o teclado chega ao botão sem enxergá-lo, e no toque ele quase não aparece. É o critério 2.4.11 da WCAG 2.2 (foco não encoberto) e, mais que isso, o Runner no celular sem o botão de enviar à vista. A captura da auditoria é dela (`send390-audit.png`, fora do repositório). **A Planejadora não mediu.**
+
+- **Reproduzir primeiro,** em navegador de verdade, nos dois temas: em `390x844`, e em 768 e 1023, onde a gaveta também aparece. Num endpoint `POST` com corpo e num `GET` sem corpo. O número que vale é o retângulo do "Enviar requisição" contra a janela, antes e depois, e se ele chega à vista por `Tab` e por rolagem da gaveta.
+- **A correção é pequena, e o mecanismo é da Executora.** A auditoria sugeriu a altura da gaveta descontando o topo em que ela começa, ou o rodapé do formulário com o botão fixo no fundo da gaveta. O que não pode acontecer é o botão ficar fora da janela em qualquer largura em que a gaveta apareça. Ponto de parada: se a correção pedir um desenho novo, a Executora para e pergunta.
+- **O teste:** o jsdom não calcula layout, então um teste de unidade não vê este defeito. A prova é o roteiro de navegador, que mede o retângulo do botão em 390, 768 e 1023, nos dois temas, na pasta `tests/manual-verification/`, no molde da Fase 68, com a captura de antes e de depois. Se algum teste de CI conseguir guardar o defeito (por exemplo, uma checagem do CSS da gaveta), a Executora o propõe, e a linha do `guards.json` só entra se uma mutação a derrubar (D-276).
+- **Sem regressão na Fase 68:** o foco preso, o `Esc` e a devolução do foco da gaveta seguem como a #497 deixou, e o detector não acusa `low-contrast` nem `undersized-ui-text`.
 
 # Parte B: a API, o MCP e os samples
 
