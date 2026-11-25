@@ -27,9 +27,6 @@ const DOC: OpenApiDocument = {
   },
 };
 
-const ORDER_BY_ID = 'GET /api/orders/{id}';
-const LIST_ORDERS = 'GET /api/orders';
-
 describe('the endpoint form as the drawer dialog', () => {
   let httpMock: HttpTestingController;
   let fixture: ComponentFixture<EndpointFormComponent>;
