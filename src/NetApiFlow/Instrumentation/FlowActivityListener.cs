@@ -141,7 +141,7 @@ internal sealed partial class FlowActivityListener : IDisposable
     private void OnActivityStarted(Activity activity)
     {
         if (IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent)
-            || NpgsqlActivityTagNames.IsNamedLikeAConnectionOpen(activity))
+            || activity.Source.Name == NpgsqlActivityTagNames.SourceName)
         {
             return;
         }
@@ -261,7 +261,7 @@ internal sealed partial class FlowActivityListener : IDisposable
 
     private FlowSpan? StartCommandNamedLikeAConnectionOpen(Activity activity, string traceId, ActiveTrace trace)
     {
-        if (!NpgsqlActivityTagNames.IsNamedLikeAConnectionOpen(activity)
+        if (activity.Source.Name != NpgsqlActivityTagNames.SourceName
             || NpgsqlActivityTagNames.StatementOf(activity) is null
             || IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent))
         {

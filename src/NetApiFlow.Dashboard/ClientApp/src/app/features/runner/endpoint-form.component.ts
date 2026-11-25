@@ -448,7 +448,7 @@ export class EndpointFormComponent {
   }
 
   private explainMissingTrace(status: number): void {
-    if (environment.isDemoMode || status === 0) {
+    if (status === 0) {
       return;
     }
 
@@ -467,8 +467,7 @@ export class EndpointFormComponent {
     this.lastTraceId.set(traceId);
     if (traceId) {
       this.traceDispatched.emit(traceId);
-    } else {
-      this.explainMissingTrace(status);
     }
+    this.explainMissingTrace(status);
   }
 }
