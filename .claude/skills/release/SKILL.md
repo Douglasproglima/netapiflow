@@ -4,6 +4,8 @@ description: Calcula a próxima versão SemVer, abre release/<versao> a partir d
 argument-hint: "[major|minor|patch]"
 ---
 
+Para a `0.6.0`, a checklist passo a passo, com os portões e a conferência do `release.yml`, está em `docs/plano/release-0.6.0.md`.
+
 Prepare a release: $ARGUMENTS (padrão: `minor`, a menos que haja breaking change na API pública
 listada em `docs/plano/contratos.md` desde a última release, caso em que é `major`, mas
 `MAJOR` fica em `0` até a `1.0.0`, seção 12 do `netapiflow-prompt.md`, então antes da v1.0.0 uma
@@ -15,7 +17,7 @@ para. A `AUDITORIA` faz os merges, a tag, o Release, o back-merge, os advisories
 em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
 
 0. **Para a `0.6.0`:** confirme com a `AUDITORIA` que a auditoria de base está fechada
-   (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. Confirme também a Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia).
+   (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. A Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia) é **depois da publicação**: confirme só que ela está pronta para o dia.
 1. Rode `git status` em `develop`. Working tree precisa estar limpo.
 2. Leia `CHANGELOG.md`, seção `[Unreleased]`, e `docs/plano/README.md` para confirmar quais fases
    foram concluídas desde a última tag (`git tag --sort=-v:refname | head -1`).
@@ -94,7 +96,8 @@ em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
     não tem passo no release.
     **No mesmo PR, apagar todo `CompatibilitySuppressions.xml` do repositório (D-278),** hoje só o de `src/NetApiFlow.Mcp/`. Com a
     baseline na `0.6.0`, em que as tools do MCP já são `internal`, a supressão é desnecessária, e o `pack` falha com "Supressões
-    desnecessárias encontradas", que é erro e não aviso (medido pela auditoria).
+    desnecessárias encontradas", que é erro e não aviso (medido pela auditoria). A baseline do `pack` lê o `previous-published-version.txt`, então a troca da versão e
+    a exclusão da supressão vão **na mesma PR**: uma sem a outra quebra o `pack`.
 
 Nunca criar a tag nem publicar sem confirmação explícita de quem pediu, mesmo que os passos
 anteriores já tenham sido aprovados.

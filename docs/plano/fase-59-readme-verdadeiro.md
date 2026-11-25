@@ -108,7 +108,7 @@ quem instala o pacote, contra a regra de ouro do `CLAUDE.md`.
   `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk R-[0-9]` em `src/`). Se um achado não for citação de verdade (um texto de fixture, por exemplo), a exceção fica numa lista, uma linha por arquivo, dentro do próprio script, com o motivo.
 - **Rodada de prova vermelha:** mostrar a checagem falhando numa citação plantada e passando depois de removê-la.
 
-Esta tarefa não mexe em lógica nem troca nome público: o `PublicAPI.Unshipped.txt` não muda. Para dispensar um `//`, é permitido renomear uma variável local ou um membro privado e extrair uma constante, desde que o diff seja só isso e os testes existentes passem. O que não couber nisso volta à auditoria, que decide se vai para a `0.7.0` (a regra da fase: o texto muda, o código não).
+Esta tarefa não mexe em lógica nem troca nome público: nenhum `PublicAPI.Shipped.txt` nem `PublicAPI.Unshipped.txt` muda no diff, e essa é a prova (D-291). O XML doc dos membros públicos fica, porque a regra de .NET o exige: remove-se só a citação de fase, ADR ou risco de dentro dele. Para dispensar um `//`, é permitido renomear uma variável local ou um membro privado e extrair uma constante, desde que o diff seja só isso e os testes existentes passem. O que não couber nisso volta à auditoria, que decide se vai para a `0.7.0` (a regra da fase: o texto muda, o código não).
 
 ## Tarefa 59.3: o parágrafo do MCP
 
