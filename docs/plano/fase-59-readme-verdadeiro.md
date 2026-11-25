@@ -58,7 +58,7 @@ reproduz uma a uma antes de mexer no texto.
 Mais itens que não são frases, e que a mesma fase leva:
 
 - **A tabela de performance** (59.4).
-- **As citações internas e os comentários que a regra de ouro manda resolver** (59.2): 39 citações de `ADR-`, `D-` ou `risk R-` (a auditoria contou, a Executora conta de novo) e 64 comentários `//`, mais os XML docs que só repetem o nome.
+- **As citações internas e os comentários que a regra de ouro manda resolver** (59.2): as citações de `ADR-`, `D-` ou `risk R-` e os comentários `//`, mais os XML docs que só repetem o nome. A varredura de 20/11/2026 contou 39 e 64. A Planejadora contou de novo em 25/11/2026, no `develop` em `833a3d9`: 70 linhas com o padrão nos arquivos rastreados de `src/` (15 em `.cs`, 14 delas em `///`, e o resto em TypeScript, SCSS e JS) e 55 linhas `//` em `.cs`, 27 delas só em `DashboardSseEndpoint.cs`. A Executora conta de novo antes de começar.
 - **O `CONTRIBUTING`, o `SECURITY.md` e o template de PR** (59.6).
 - **O parágrafo do README do MCP** que só aponta para o painel (59.3).
 
@@ -78,8 +78,7 @@ A tabela preenchida vai no relatório da 59.0. **Pronto quando:** as 26 linhas c
 
 Para cada linha classificada como "corrige o texto": `README.md` e `README.pt-BR.md` dizem a mesma coisa, em frases
 curtas e sem floreio (`.claude/rules/writing-style.md`). Cada correção cita o que foi medido, não o que se supõe. A
-frase 9, "there is a check in the repository that proves it", só entra verdadeira depois de a 50.12 estar em
-`develop`.
+frase 9, "there is a check in the repository that proves it", pode entrar verdadeira: a 50.12 já está em `develop` (o `ci.yml` publica o núcleo em AOT e falha com aviso), e a Executora aponta o passo do workflow.
 
 A linha 17 padroniza o gênero de "trace" no masculino, em todo o `README.pt-BR.md`, como a UI.
 
@@ -89,7 +88,7 @@ A linha 17 padroniza o gênero de "trace" no masculino, em todo o `README.pt-BR.
 
 ## Tarefa 59.6: os arquivos de comunidade
 
-- **`CONTRIBUTING`:** os pré-requisitos (a versão do Node da `.nvmrc` e o Docker), o `npm run format:check`, e tirar o "Phase 4".
+- **`CONTRIBUTING`:** os pré-requisitos (a versão do Node da `.nvmrc` do `ClientApp`, em `src/NetApiFlow.Dashboard/ClientApp/.nvmrc`, e o Docker), o `npm run format:check`, e tirar o "Phase 4".
 - **Template de PR:** com o `format:check`.
 - **`SECURITY.md`:** o escopo inclui o MCP.
 - **`.github/ISSUE_TEMPLATE/config.yml`** com `contact_links` para a política de segurança.
@@ -98,31 +97,28 @@ O canal privado de vulnerabilidade, o `secret scanning`, o `push protection` e a
 
 ## Tarefa 59.2: zerar as citações no XML doc, e travar no CI
 
-Há **39** citações de `ADR-`, `D-` ou `risk R-` sob `src/` (a contagem é da varredura final de 20/11/2026, a anterior era de
-28 em `///` no commit `f6d6649`, e a Executora conta de novo antes de começar), mais **64 comentários `//`** que a regra de ouro
+Hoje são 70 linhas com `ADR-`, `D-` ou `risk R-` em `src/` (a contagem da lista acima, e a Executora conta de novo antes de começar), mais 55 linhas `//` em `.cs` que a regra de ouro
 manda resolver e os XML docs que só repetem o nome do membro. Cada comentário `//` se resolve com um nome melhor, um método
 extraído ou uma constante, e **só então** é apagado (regra de ouro do `CLAUDE.md`). Exemplos: `TailSamplingOptions.cs:3`, `LogCorrelationOptions.cs:5`,
 `FlowActivityListener.cs:12`, `FlowTraceDetail.cs:5`. Várias estão em membros públicos e aparecem no IntelliSense de
 quem instala o pacote, contra a regra de ouro do `CLAUDE.md`.
 
-- Zerar as 28. Onde a citação carrega um porquê real, reescrever **o porquê** sem o número.
-- Pôr no CI uma checagem que falhe com o padrão (por exemplo `grep` nos `///` por
-  `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk R-[0-9]`).
+- Zerar todas as que a contagem da Executora achar, em C#, TypeScript, SCSS e JS. Onde a citação carrega um porquê real, reescrever **o porquê** sem o número. Nome de teste que cita decisão ou fase é citação também: renomear pelo comportamento que o teste prova.
+- Pôr no CI uma checagem que falhe com o padrão (por exemplo `git grep -nE` por
+  `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk R-[0-9]` em `src/`). Se um achado não for citação de verdade (um texto de fixture, por exemplo), a exceção fica numa lista, uma linha por arquivo, dentro do próprio script, com o motivo.
 - **Rodada de prova vermelha:** mostrar a checagem falhando numa citação plantada e passando depois de removê-la.
 
-Esta tarefa **não** troca nenhum nome nem mexe em lógica: só comentário XML.
+Esta tarefa não mexe em lógica nem troca nome público: o `PublicAPI.Unshipped.txt` não muda. Para dispensar um `//`, é permitido renomear uma variável local ou um membro privado e extrair uma constante, desde que o diff seja só isso e os testes existentes passem. O que não couber nisso volta à auditoria, que decide se vai para a `0.7.0` (a regra da fase: o texto muda, o código não).
 
 ## Tarefa 59.3: o parágrafo do MCP
 
-O parágrafo "Same security rule as the dashboard" do README do MCP só aponta para a seção do painel. Depois da Fase 56
-ele diz o que vale para o MCP **em si** (a validação de `Origin` e `Host`, e o portão), em frases que um leitor que
-chegou direto na página do pacote entende sem sair dela.
+O README do pacote (`src/NetApiFlow.Mcp/README.md`) só aponta para o README principal: a página que o nuget.org mostra não diz o que vale para o MCP **em si**. Depois das Fases 56 e 71 ela diz, em frases que um leitor que chegou direto na página do pacote entende sem sair dela: o portão (fora de `Development`, `404` sem autorização ou `IFlowAccessFilter`), a regra de `Host` e `Origin` (`403`), que as três tools existem só no `/flow/mcp`, o que acontece num app que hospeda o próprio MCP, e que `GET` e `DELETE` em `/flow/mcp` respondem `405` em `Production` (D-240; a 59.0 confere isso num app novo). O texto de referência é o parágrafo "Same security rule as the dashboard" do `README.md`, que a Fase 71 já reescreveu, e a Executora o resume sem copiá-lo inteiro.
 
 ## Tarefa 59.4: a tabela de performance, de novo
 
 A tabela do README é da `0.1.0`, nunca foi medida de novo, o hardware não é dito e o relatório não está no repositório.
 "32 µs more" é o overhead total do cenário Nested. Medir no estado da `0.6.0` (esta tarefa é a **última** da fase, depois
-das mudanças de custo das Fases 53, 55 e 57):
+das mudanças de custo das Fases 53, 55, 57, 58, 64 e 65):
 
 - `tests/NetApiFlow.Benchmarks` com `[MemoryDiagnoser]`, nos dois TFMs.
 - **Uma rodada concorrente**, além da sequencial.
@@ -148,15 +144,16 @@ saída real e o diff do README, e **não** declara a fase pronta antes disso.
 
 - Cada frase da tabela com a saída real da reprodução, e a frase final conferida pela auditoria.
 - Build, testes e formato limpos. A checagem de citação no CI passa e foi vista falhando.
+- O Início rápido no `net8.0` (D-277) e cada chamada de registro de pacote do README, colados num `dotnet new webapi` novo, compilam com 0 avisos, e a Executora diz se colou à mão ou com um script.
 - `grep -rn "—"` sem ocorrência nos textos em português e nos READMEs.
 
 ## Versionamento e fluxo
 
-- `0.6.0`. Branch `chore/59-readme-verdadeiro` a partir de `develop` atualizado, **depois** das Fases 53, 55, 56, 57 e 58.
+- `0.6.0`. Branch `chore/59-readme-verdadeiro` a partir de `develop` atualizado, **depois** das Fases 53, 55, 56, 57, 58, 60, 68 e 71.
   A 59.4 é a última tarefa.
 - Commits pequenos, em inglês, uma linha, sem linha de coautor. Abrir a PR e parar.
 
 ## Relatório final
 
-A tabela de 26 linhas com a classificação e a saída real. Os 28 comentários, antes e depois. A saída da checagem de
+A tabela de 26 linhas com a classificação e a saída real. As contagens de citações e de comentários `//`, antes e depois. A saída da checagem de
 citação, vermelha e verde. O relatório de performance e o hardware.
