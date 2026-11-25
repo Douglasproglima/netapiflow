@@ -23,9 +23,13 @@ does not serve the tools of your app.
 The MCP server follows the same rule as the dashboard. An AI agent that reads trace data is the same
 exposure risk as the visual dashboard.
 
-- **Outside `Development`**, a `GET` or a `POST` on `/flow/mcp` answers `404`, unless you configure
-  `.RequireAuthorization(...)` on the endpoint or register an `IFlowAccessFilter`. A `DELETE` or a `PUT`
-  answers `405` in `Production`, which tells that the route exists, although it serves nothing.
+- **Outside `Development`**, every request that the endpoint serves answers `404`, unless you configure
+  `.RequireAuthorization(...)` on the endpoint or register an `IFlowAccessFilter`. A method that the
+  endpoint does not serve answers `405`, which tells that the route exists. By default, with no session,
+  the endpoint serves only `POST`, so `GET`, `DELETE` and `PUT` answer `405`. If your app keeps MCP
+  sessions, it serves `GET` and `DELETE` too, and only `PUT` answers `405`. When the dashboard is mounted
+  at `/flow`, a `GET` on `/flow/mcp` is answered by the dashboard, and it is a `404` outside
+  `Development`.
 - **`Host` and `Origin`.** The endpoint refuses a request whose `Host` or `Origin` is not its own, with a
   `403`. In `Development` the `Host` must be `localhost`, `127.0.0.1`, `[::1]` or a name declared in
   `AllowedHosts`. An MCP client that is not a browser, such as the MCP Inspector or the official C#

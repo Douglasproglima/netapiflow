@@ -912,12 +912,15 @@ Three read-only tools, backed by the same `ITraceStore` the dashboard reads from
 `get_trace` and `get_component_stats`. No write tool exists in this version: nothing deletes a
 trace or triggers a replay through MCP.
 
-> **Same security rule as the dashboard.** Outside `IHostEnvironment.IsDevelopment()`, a `GET` or a
-> `POST` on the MCP route responds **404** unless you explicitly configure `.RequireAuthorization(...)`
-> or a custom `IFlowAccessFilter`, exactly like
-> [Dashboard security in production](#dashboard-security-in-production). A `DELETE` or a `PUT` on it
-> responds **405** in `Production`, which tells that the route exists, although it serves nothing. An AI
-> agent reading trace data is the same exposure risk as the visual dashboard.
+> **Same security rule as the dashboard.** Outside `IHostEnvironment.IsDevelopment()`, every request
+> that the MCP endpoint serves responds **404** unless you explicitly configure
+> `.RequireAuthorization(...)` or a custom `IFlowAccessFilter`, exactly like
+> [Dashboard security in production](#dashboard-security-in-production). A method that the endpoint does
+> not serve responds **405**, which tells that the route exists. By default, with no session, the endpoint
+> serves only `POST`, so `GET`, `DELETE` and `PUT` answer 405. If your app keeps MCP sessions, the
+> endpoint serves `GET` and `DELETE` too, and only `PUT` answers 405. When the dashboard is mounted at
+> `/flow`, a `GET` on `/flow/mcp` is answered by the dashboard, and it is a 404 outside `Development`.
+> An AI agent reading trace data is the same exposure risk as the visual dashboard.
 >
 > The three tools exist only on the NetApiFlow endpoint. An app that hosts its own MCP server
 > (`AddMcpServer()` and `MapMcp(...)`) does not serve them on its own endpoint, so they stay behind

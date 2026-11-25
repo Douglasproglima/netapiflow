@@ -922,11 +922,14 @@ Três tools só leitura, sobre o mesmo `ITraceStore` que o dashboard lê: `list_
 `get_trace` e `get_component_stats`. Nenhuma tool de escrita existe nesta versão. Nada apaga um
 trace nem dispara um replay via MCP.
 
-> **Mesma regra de segurança do dashboard.** Fora de `IHostEnvironment.IsDevelopment()`, um `GET`
-> ou um `POST` na rota do MCP responde **404**, a menos que você configure explicitamente
+> **Mesma regra de segurança do dashboard.** Fora de `IHostEnvironment.IsDevelopment()`, toda
+> requisição que o endpoint do MCP atende responde **404**, a menos que você configure explicitamente
 > `.RequireAuthorization(...)` ou um `IFlowAccessFilter` próprio, igual a
-> [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção). Um `DELETE` ou um `PUT`
-> nela responde **405** em `Production`, o que mostra que a rota existe, embora não sirva nada. Um
+> [Segurança do dashboard em produção](#segurança-do-dashboard-em-produção). Um método que o endpoint
+> não atende responde **405**, o que mostra que a rota existe. Por padrão, sem sessão, o endpoint atende
+> só `POST`, então `GET`, `DELETE` e `PUT` respondem 405. Se a sua aplicação mantém sessões de MCP, o
+> endpoint atende também `GET` e `DELETE`, e só o `PUT` responde 405. Quando o dashboard está montado em
+> `/flow`, um `GET` em `/flow/mcp` é respondido pelo dashboard, e dá 404 fora de `Development`. Um
 > agente de IA lendo dado de trace tem o mesmo risco de exposição que o dashboard visual.
 >
 > As três tools só existem no endpoint do NetApiFlow. Uma aplicação que hospeda o próprio servidor

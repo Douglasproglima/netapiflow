@@ -250,9 +250,26 @@ build.
 
 ### 26. "every MCP route responds 404" outside `Development`. False.
 
-`Production`: `GET /flow/mcp` 404, `POST` 404, `DELETE` **405**, `PUT` **405**. `GET /flow` and
-`GET /flow/api/traces` 404. The audit measured 405 for `GET` too, and here it is 404. The 405 of the other
-verbs tells that the route exists.
+A minimal app with `AddNetApiFlowMcp`, `MapNetApiFlowMcp` and the SDK `ModelContextProtocol.AspNetCore` 2.3.1,
+with no authorization. The status of each verb on `/flow/mcp`, with `Accept: application/json, text/event-stream`:
+
+| Dashboard | Environment | Session mode | GET | POST | DELETE | PUT |
+|---|---|---|---|---|---|---|
+| not mounted | `Production` | default | 405 | 404 | 405 | 405 |
+| not mounted | `Production` | `Stateful` | 404 | 404 | 404 | 405 |
+| not mounted | `Development` | default | 405 | 500 | 405 | 405 |
+| mounted | `Production` | default | **404** | 404 | 405 | 405 |
+| mounted | `Production` | `Stateless`, `StatefulForInitializeClients`, `Stateful` | 404 | 404 | 405 (`Stateless`) or 404 | 405 |
+| mounted | `Development` | default | **200** | 500 | 405 | 405 |
+
+Every request that the endpoint serves is 404, and a verb it does not serve is 405. By default the endpoint
+serves only `POST`, and with sessions it serves `GET` and `DELETE` too. With the dashboard mounted, `GET
+/flow/mcp` is not a request of the MCP endpoint at all: the dashboard answers it, with its own 404 in
+`Production` and with the page of the dashboard (200) in `Development`.
+
+My first run had the dashboard mounted and gave `GET` 404, and I took it for the rule of the MCP route. The
+audit measured an app without the dashboard (`GET` 405 by default, 404 with sessions) and the two agree once
+the dashboard is accounted for. The `POST` 500 in `Development` is a request with no body.
 
 ## The quick start on `net8.0` (D-277)
 
