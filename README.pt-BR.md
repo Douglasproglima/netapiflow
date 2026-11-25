@@ -124,7 +124,7 @@ Início rápido já tem. O `using NetApiFlow;` cobre `.WithNetApiFlowTracking()`
 | `AddFlowTracked<TInterface, TImpl>(...)` | Envolve toda chamada à implementação de uma interface numa etapa, via proxy dinâmico | Uma interface de repositório/serviço já registrada no DI |
 | `TrackFlowByConvention()` | Envolve em etapas as interfaces `*Service`, `*Repository` e `*Handler` do seu código, cada uma com o seu tipo de componente | Um app em camadas: uma linha depois dos seus registros |
 | `DecorateFlowTracked(predicate, ...)` | O mesmo de cima, aplicado em lote a todo registro que bater com um predicado | Muitas interfaces que seguem uma convenção de nome que você mesmo escolhe |
-| `NetApiFlow.MediatR` | Um pipeline behavior que envolve todo `IRequest` tratado pelo MediatR | Projetos que já usam MediatR para comandos/queries |
+| `NetApiFlow.MediatR` | Um pipeline behavior que envolve todo `IRequest` tratado pelo MediatR. Registre com `builder.Services.AddNetApiFlowMediatR()` (namespace `NetApiFlow.MediatR`), ao lado do seu `AddMediatR(...)`. Sem essa chamada, nenhuma etapa do MediatR é gravada | Projetos que já usam MediatR para comandos/queries |
 | `NetApiFlow.EntityFrameworkCore` | Um `DbCommandInterceptor` que marca cada comando SQL como uma etapa `Database` | Projetos que usam EF Core |
 
 Forma manual, usada explicitamente:

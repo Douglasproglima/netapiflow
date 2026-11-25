@@ -93,6 +93,10 @@ const en = {
   'action.emptyPathParam': 'Fill in the "{name}" path parameter before sending.',
   'action.requestFailed': 'Request failed.',
   'action.demoCannotSend': 'This demo shows recorded runs and does not send real requests.',
+  'action.noTraceHeader':
+    'No trace to open: the response came without the X-NetApiFlow-TraceId header. Either EmitTraceIdHeader is off, or this route is not traced (IncludePaths, ExcludePaths or WithoutNetApiFlowTracking).',
+  'action.noTraceHeaderServerError':
+    'No trace to open: the server answered {status} without the X-NetApiFlow-TraceId header. An unhandled exception with no exception handler (UseExceptionHandler) ends the response before the header is written, which is what happens in Production. EmitTraceIdHeader being off, or the route not being traced, also explain it.',
   'action.traceConfirmation': 'Trace: {traceId}',
   'action.closePanel': 'Close the action panel',
 
@@ -430,6 +434,10 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.invalidJson': 'O corpo não é um JSON válido.',
   'action.emptyPathParam': 'Preencha o parâmetro de rota "{name}" antes de enviar.',
   'action.requestFailed': 'A requisição falhou.',
+  'action.noTraceHeader':
+    'Sem trace para abrir: a resposta veio sem o cabeçalho X-NetApiFlow-TraceId. Ou o EmitTraceIdHeader está desligado, ou esta rota não é rastreada (IncludePaths, ExcludePaths ou WithoutNetApiFlowTracking).',
+  'action.noTraceHeaderServerError':
+    'Sem trace para abrir: o servidor respondeu {status} sem o cabeçalho X-NetApiFlow-TraceId. Uma exceção sem tratador (UseExceptionHandler) encerra a resposta antes de o cabeçalho ser escrito, que é o que acontece em Production. O EmitTraceIdHeader desligado, ou a rota não rastreada, também explicam.',
   'action.demoCannotSend':
     'Esta demo mostra execuções gravadas e não envia requisições de verdade.',
   'action.traceConfirmation': 'Trace: {traceId}',

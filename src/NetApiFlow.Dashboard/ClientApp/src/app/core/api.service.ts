@@ -112,8 +112,13 @@ export class ApiService {
     path: string,
     body?: unknown,
     headers?: HttpHeaders,
-  ): Observable<HttpResponse<unknown>> {
-    return this.http.request(method, path, { body, headers, observe: 'response' });
+  ): Observable<HttpResponse<string>> {
+    return this.http.request(method, path, {
+      body,
+      headers,
+      observe: 'response',
+      responseType: 'text',
+    });
   }
 
   /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */

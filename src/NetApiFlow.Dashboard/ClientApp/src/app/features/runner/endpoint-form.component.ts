@@ -181,6 +181,8 @@ export class EndpointFormComponent {
   readonly invalidFieldName = signal<string | null>(null);
   readonly lastTraceId = signal<string | null>(null);
 
+  readonly missingTrace = signal<{ key: TranslationKey; status: number } | null>(null);
+
   private readonly hostPathBase = signal('');
 
   constructor() {
@@ -232,6 +234,7 @@ export class EndpointFormComponent {
     this.sendError.set(null);
     this.invalidFieldName.set(null);
     this.lastTraceId.set(null);
+    this.missingTrace.set(null);
   }
 
   /**
@@ -427,18 +430,31 @@ export class EndpointFormComponent {
     this.dispatch(this.api.callEndpoint(form.method, fullPath, body, headers));
   }
 
-  private dispatch(request: Observable<HttpResponse<unknown>>): void {
+  private dispatch(request: Observable<HttpResponse<string>>): void {
     this.sending.set(true);
     this.sendError.set(null);
+    this.missingTrace.set(null);
     request.subscribe({
-      next: (response) => this.onDispatched(response.headers.get('X-NetApiFlow-TraceId')),
+      next: (response) =>
+        this.onDispatched(response.headers.get('X-NetApiFlow-TraceId'), response.status),
       error: (error: HttpErrorResponse) => {
         const traceIdOfFailedRequest = error.headers.get('X-NetApiFlow-TraceId');
         if (!traceIdOfFailedRequest) {
           this.sendError.set(this.messageForFailureWithoutTrace());
         }
-        this.onDispatched(traceIdOfFailedRequest);
+        this.onDispatched(traceIdOfFailedRequest, error.status);
       },
+    });
+  }
+
+  private explainMissingTrace(status: number): void {
+    if (environment.isDemoMode || status === 0) {
+      return;
+    }
+
+    this.missingTrace.set({
+      key: status >= 500 ? 'action.noTraceHeaderServerError' : 'action.noTraceHeader',
+      status,
     });
   }
 
@@ -446,11 +462,13 @@ export class EndpointFormComponent {
     return environment.isDemoMode ? 'action.demoCannotSend' : 'action.requestFailed';
   }
 
-  private onDispatched(traceId: string | null): void {
+  private onDispatched(traceId: string | null, status: number): void {
     this.sending.set(false);
     this.lastTraceId.set(traceId);
     if (traceId) {
       this.traceDispatched.emit(traceId);
+    } else {
+      this.explainMissingTrace(status);
     }
   }
 }

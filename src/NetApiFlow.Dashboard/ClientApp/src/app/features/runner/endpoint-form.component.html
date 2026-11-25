@@ -298,6 +298,12 @@
         </p>
       }
 
+      @if (missingTrace(); as missing) {
+        <p class="endpoint-form__status endpoint-form__status--note" role="status">
+          {{ missing.key | t: { status: missing.status } }}
+        </p>
+      }
+
       @if (lastTraceId(); as traceId) {
         <p class="endpoint-form__trace-id">
           {{ 'action.traceConfirmation' | t: { traceId } }}

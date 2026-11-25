@@ -1479,5 +1479,291 @@
       "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.AppWithItsOwnServerName_KeepsItAndTheNetApiFlowEndpointIsCalledNetApiFlow"
     },
     "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-sql-text",
+    "defect": "On Npgsql 10 a raw command was named SQL command, because only db.statement was read",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlInteropIntegrationTests.RawNpgsqlCommand_WithoutEntityFrameworkCore_RecordsExactlyOneDatabaseSpan"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-capture-sql",
+    "defect": "On Npgsql 10 CaptureSqlText recorded no SQL text",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlInteropIntegrationTests.RawNpgsqlCommand_WithCaptureSqlText_RecordsTheCommandTextWithoutTheParameterValue"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-concurrent-requests",
+    "defect": "On Npgsql 10 concurrent requests recorded a second Npgsql step per command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.ConcurrentRequestsInsideAController_EachRecordTheirOwnDriverSpan"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-connect-no-n-plus-one",
+    "defect": "On Npgsql 10 each physical connection open became a SQL command step, and a few of them lit the N+1 badge",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandsOnFreshPhysicalConnections_RecordOnlyTheCommandsAndNoQueryShapeReachesTheNPlusOneThreshold"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-connect-wrong-password",
+    "defect": "On Npgsql 10 a refused connection showed up as its own failed step instead of failing the step that opened it",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.ConnectionRefusedForAWrongPassword_FailsTheStepThatOpenedItAndRecordsNoConnectionStep"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command",
+    "defect": "On Npgsql 10 a command the app names CONNECT ... lost its SQL name",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_IsStillRecordedWithItsSql"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-command-text-conventions",
+    "defect": "The Npgsql command text was read only from db.statement, never from db.query.text",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlCommandText_RecordsTheCommandWhateverItsNameAndConvention"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-connection-open-dropped",
+    "defect": "The Npgsql connection open was recorded as a SQL command step, also when it failed",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlConnectionOpen_RecordsNoSpanEvenWhenItFails"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-textless-activity-stays-a-command",
+    "defect": "Classifying the connection open by the missing SQL text alone would drop a command that comes without text",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlActivityWithoutTextUnderTheDriverName_StaysAGenericSqlCommand"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-sql-step-name-table",
+    "defect": "A SQL step was named after the schema (SELECT dbo), in the core and in EF Core",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.SqlCommandDescriberTests.Describe_WithCommandText_MatchesTheEntityFrameworkCoreInterceptor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-sqlclient-schema-prefix",
+    "defect": "A SqlClient command on dbo.Users was named SELECT dbo",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientInteropIntegrationTests.RawSqlCommand_WhateverTheSchemaPrefix_IsNamedAfterTheTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-sqlclient-same-schema-no-n-plus-one",
+    "defect": "Commands on two tables of one schema shared the name SELECT dbo and lit a false N+1",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientInteropIntegrationTests.RawSqlCommands_OnTwoTablesOfTheSameSchema_NeverReachTheNPlusOneThreshold"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-efcore-default-schema",
+    "defect": "An EF Core query with a default schema was named SELECT dbo",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientInteropIntegrationTests.EfCoreQuery_WithADefaultSchema_IsNamedAfterTheTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-npgsql-schema-prefix",
+    "defect": "An Npgsql command on public.\"Users\" was named SELECT public",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlInteropIntegrationTests.RawNpgsqlCommand_WithASchemaPrefix_IsNamedAfterTheTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-header-option",
+    "defect": "The Runner said nothing when a success came back without the trace id header",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id names the trace id header option when a success comes back without the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-untraced-route",
+    "defect": "The Runner said nothing when the route was not traced",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id names the options that keep a route out of tracing when a success comes back without the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-server-error",
+    "defect": "The Runner did not say why a 500 opened no trace",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id names the missing exception handler when a server error comes back without the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-no-note-with-header",
+    "defect": "The note about a missing trace must not show when the header is there",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id explains nothing when the response carries the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-demo-message",
+    "defect": "The demo keeps its own message and no note about a missing trace",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id keeps to the demo message in the demo"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-plain-text-success",
+    "defect": "The Runner reported a plain-text success as a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.spec.ts",
+      "test": "ApiService callEndpoint reads the answer as text, so a plain-text success is never taken for a failure"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command-like-the-others",
+    "defect": "A command the app names CONNECT ... must keep the start, duration, parent and order of a normal command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_BetweenTwoNormalCommands_IsRecordedLikeThem"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command-error-origin",
+    "defect": "A failing command the app names CONNECT ... must be the error origin like a normal command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_WhenItFails_IsTheErrorOriginLikeANormalCommand"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-renamed-command-real-start-and-duration",
+    "defect": "A command the app names CONNECT ... is added when it ends, so it must still carry the start, duration, parent and outcome of its own activity",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlCommandNamedLikeAConnectionOpen_KeepsTheStartDurationParentAndOutcomeOfTheActivity"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-plain-text",
+    "defect": "Read as JSON by the real HTTP backend, a plain-text success became a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend takes a plain-text body for a success"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-html",
+    "defect": "Read as JSON by the real HTTP backend, an HTML success became a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend takes an HTML body for a success"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-trace-header",
+    "defect": "A plain-text success lost its trace id header because the answer was reported as a failure",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend keeps the trace id header of a plain-text success readable"
+    },
+    "job": "build-test"
   }
 ]

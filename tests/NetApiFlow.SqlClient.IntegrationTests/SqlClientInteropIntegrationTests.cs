@@ -133,6 +133,66 @@ public sealed class SqlClientInteropIntegrationTests(SqlServerContainerFixture f
         }
     }
 
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Users WHERE Email = @email")]
+    [InlineData("SELECT Id FROM [dbo].[Users] WHERE Email = @email")]
+    [InlineData("SELECT Id FROM Users WHERE Email = @email")]
+    [InlineData("SELECT Id FROM master.dbo.Users WHERE Email = @email")]
+    public async Task RawSqlCommand_WhateverTheSchemaPrefix_IsNamedAfterTheTable(string commandText)
+    {
+        using var arrangement = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.SqlClient });
+
+        await RunAsync(commandText);
+
+        DatabaseSpansOf(arrangement.Recorder, arrangement.TraceId).ShouldHaveSingleItem().Operation.ShouldBe("SELECT Users");
+    }
+
+    [Fact]
+    public async Task RawSqlCommands_OnTwoTablesOfTheSameSchema_NeverReachTheNPlusOneThreshold()
+    {
+        using var arrangement = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.SqlClient });
+
+        await RunAsync("SELECT Id FROM dbo.Users WHERE Email = @email");
+        await RunAsync("SELECT Id FROM dbo.Orders WHERE Total = 0");
+        await RunAsync("SELECT Id FROM dbo.Users WHERE Id = 0");
+        await RunAsync("SELECT Id FROM dbo.Orders WHERE Id = 0");
+
+        DatabaseSpansOf(arrangement.Recorder, arrangement.TraceId)
+            .GroupBy(span => (span.Component, span.Operation))
+            .ShouldAllBe(group => group.Count() < NPlusOneThreshold);
+    }
+
+    [Fact]
+    public async Task EfCoreQuery_WithADefaultSchema_IsNamedAfterTheTable()
+    {
+        var options = new NetApiFlowOptions();
+        using var arrangement = Arrange(options);
+        var contextOptions = new DbContextOptionsBuilder<SchemaQualifiedDbContext>()
+            .UseSqlServer(fixture.ConnectionString)
+            .AddInterceptors(new FlowDbCommandInterceptor(Options.Create(options)))
+            .Options;
+
+        await using (var context = new SchemaQualifiedDbContext(contextOptions))
+        {
+            await context.Users.Select(user => user.Id).FirstOrDefaultAsync();
+        }
+
+        var span = DatabaseSpansOf(arrangement.Recorder, arrangement.TraceId).ShouldHaveSingleItem();
+        span.Component.ShouldBe("EntityFrameworkCore");
+        span.Operation.ShouldBe("SELECT Users");
+    }
+
+    private const int NPlusOneThreshold = 3;
+
+    private async Task RunAsync(string commandText)
+    {
+        await using var connection = new SqlConnection(fixture.ConnectionString);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(commandText, connection);
+        command.Parameters.AddWithValue("email", SqlServerContainerFixture.UserEmail);
+        await command.ExecuteScalarAsync();
+    }
+
     private async Task QueryUserWithRawCommandAsync()
     {
         await using var connection = new SqlConnection(fixture.ConnectionString);
@@ -203,6 +263,17 @@ public sealed class SqlServerTestUser
     public int Id { get; set; }
 
     public string Email { get; set; } = string.Empty;
+}
+
+public sealed class SchemaQualifiedDbContext(DbContextOptions<SchemaQualifiedDbContext> options) : DbContext(options)
+{
+    public DbSet<SqlServerTestUser> Users => Set<SqlServerTestUser>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema("dbo");
+        modelBuilder.Entity<SqlServerTestUser>().ToTable("Users");
+    }
 }
 
 public sealed class SqlServerTestDbContext(DbContextOptions<SqlServerTestDbContext> options) : DbContext(options)
