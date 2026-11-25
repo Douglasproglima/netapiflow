@@ -70,6 +70,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `NetApiFlow` and `NetApiFlow.EntityFrameworkCore`: a SQL step is named after its table, not its
+  schema. `SELECT Id FROM dbo.Users` was the step `SELECT dbo`, and it is now `SELECT Users`. The same
+  goes for `[dbo].[Users]`, `"public"."orders"`, `public.orders` and a name with three parts, for
+  SqlClient, Npgsql and EF Core with `HasDefaultSchema`. If you already record schema-qualified SQL
+  with 0.5.3, the history and the statistics per component show the old name and the new one as two
+  different steps. Two tables of the same schema no longer share one name, so they no longer light a
+  false N+1 badge.
 - `NetApiFlow.Mcp`: `/flow/mcp` answers `NetApiFlow` as the server name in `initialize` and
   `server/discover`. Before, it answered the name of the host assembly of the app. The MCP endpoint of
   an app that hosts its own server keeps its own name, or the default of the SDK when it sets none.
@@ -170,6 +177,21 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `NetApiFlow` with Npgsql 10: a command is named after its SQL again, and `CaptureSqlText` records
+  the text again. Npgsql 10 moved the text from `db.statement` to `db.query.text`, and only the old
+  tag was read, so every command came out as `SQL command`. Both are read now, so Npgsql 8 and 9 keep
+  working. The connection open of Npgsql 10 (`CONNECT <database>`) is no longer recorded as a second
+  `Database` step, which also lit a false N+1 badge, and a refused connection now fails the step that
+  opened it, as on Npgsql 8 and 9. A command your app names `CONNECT ...` through
+  `ConfigureCommandSpanNameProvider` is still recorded, with its SQL.
+- `NetApiFlow.Dashboard`: the Runner says why a response opened no trace. When the response comes
+  without the `X-NetApiFlow-TraceId` header, it names the causes that fit: `EmitTraceIdHeader` turned
+  off, or a route that is not traced, and for a 5xx, an exception with no exception handler, which
+  ends the response before the header is written. Before, it said nothing.
+- `NetApiFlow.Dashboard`: the Runner no longer reports a plain-text success as "Request failed". It
+  read every answer as JSON, so a `200` with a text body failed to parse.
+- `NetApiFlow.MediatR`: the README, the Portuguese README and the package README now say that
+  `AddNetApiFlowMediatR()` is required. Without it, no MediatR step is recorded.
 - `NetApiFlow`: a null argument to `Step`, `FlowStep.Tag` or `FlowStep.MarkError` no longer breaks
   the request or the step. `MarkError(null)` threw an `ArgumentNullException` into your code, and a
   tag with a null key made the step lose every tag it had. Now a null component or operation records
