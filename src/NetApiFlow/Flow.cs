@@ -6,7 +6,6 @@ using NetApiFlow.Recording;
 namespace NetApiFlow;
 
 /// <summary>Entry point for manually marking a tracked step: <c>Flow.Step("OrderRepository", "Find")</c>.</summary>
-// kept for ADR-0099
 public static class Flow
 {
     /// <summary>Marks the start of a tracked step. Dispose the returned <see cref="FlowStep"/> to close it.
