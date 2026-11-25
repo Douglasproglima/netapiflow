@@ -522,7 +522,6 @@ export class EndpointFormComponent {
         this.response.set(
           describeResponse(response.status, response.headers.get('Content-Type'), response.body),
         );
-        sessionStorage.setItem('last-response-body', String(response.body));
         this.onDispatched(response.headers.get('X-NetApiFlow-TraceId'), response.status);
       },
       error: (error: HttpErrorResponse) => {

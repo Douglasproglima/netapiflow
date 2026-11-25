@@ -351,7 +351,7 @@
             <summary>{{ 'action.response.body' | t }}</summary>
             @switch (response.content.kind) {
               @case ('text') {
-                <pre class="endpoint-form__response-text" [innerHTML]="response.content.text"></pre>
+                <pre class="endpoint-form__response-text">{{ response.content.text }}</pre>
                 @if (response.content.truncated) {
                   <p class="endpoint-form__response-note">
                     {{ 'action.response.truncated' | t: { limit: responseBodyLimit } }}
