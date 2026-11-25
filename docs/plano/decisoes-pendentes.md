@@ -28,3 +28,13 @@ confirmar aqui, ou editar o arquivo ele mesmo.
 - **Recomendação da Planejadora:** confirmada a leitura acima, alinhar `git-workflow.md` ao texto do
   dono: push de branch e abertura de PR são livres para a Planejadora e a Executora, e merge, tag,
   Release e publicação de pacote seguem com a auditoria e o dono.
+
+## O comentário no código: o `CLAUDE.md` do projeto e a regra global do dono se contradizem
+
+O `CLAUDE.md` do repositório diz, na regra de ouro, que comentário só existe no último caso, para um porquê que nenhum nome resolve (uma decisão contraintuitiva, uma restrição externa, uma condição de corrida, uma fonte de pesquisa). A regra global do dono (`~/.claude/CLAUDE.md`) diz que não se escreve comentário nenhum, que o fato que não cabe no código vai para a mensagem de commit, para um teste com nome descritivo ou para `docs/`, e que ela está acima do `CLAUDE.md` de projeto.
+
+Na 59B (D-300) a auditoria aplicou a global: os três blocos de `//` que sobravam viraram teste, e `src/**/*.cs` não tem mais nenhum `//`. A Planejadora tinha aplicado a do projeto e mudou. Falta o dono dizer qual vale para este repositório, porque quem lê o `CLAUDE.md` do projeto (um colaborador, outra IA) lê uma regra mais folgada do que a que se cumpre.
+
+- **Opção A, alinhar o `CLAUDE.md` do projeto à global:** nenhum comentário, e o porquê vai para um teste com nome descritivo, para o commit ou para `docs/`. É o que a 59B já fez no código.
+- **Opção B, manter o `CLAUDE.md` como está, e a global só para as sessões do dono:** o repositório fica com a regra mais folgada para quem contribui, e as sessões dele seguem a estrita.
+- **Recomendação da Planejadora:** a opção A. Uma regra que o repositório descreve e que o código não cumpre confunde quem lê, e a 59B mostrou que os porquês cabem em testes. Quem edita o `CLAUDE.md` é o dono.

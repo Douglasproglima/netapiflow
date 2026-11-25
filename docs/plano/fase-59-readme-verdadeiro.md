@@ -1,6 +1,6 @@
 # Fase 59: o README e os textos dizem só o que o produto faz (D-210, nível 2)
 
-**Estado (25/11/2026):** **a 59A, o texto, está entregue em `develop` (#507, squash `827d67e`, D-299) e conferida pela auditoria com o pacote real.** Faltam a 59B (as citações) e a 59C (o desempenho), e a releitura da 59.5 na segunda passada.
+**Estado (25/11/2026):** **as 59A e 59B estão entregues em `develop` (#507, squash `827d67e`, D-299; #510, squash `4526950`, D-300) e conferidas pela auditoria.** Falta a 59C (o desempenho), e a releitura da 59.5 na segunda passada.
 
 A auditoria de base leu o README frase por frase contra um app novo e mediu cerca de vinte e seis afirmações como falsas ou
 imprecisas. Ninguém quebra por causa de uma frase, mas é no README que o usuário decide se confia no produto, e uma
@@ -114,7 +114,7 @@ quem instala o pacote, contra a regra de ouro do `CLAUDE.md`.
   `ADR-[0-9]|\bD-[0-9]{2,3}\b|risk R-[0-9]` em `src/`). Se um achado não for citação de verdade (um texto de fixture, por exemplo), a exceção fica numa lista, uma linha por arquivo, dentro do próprio script, com o motivo.
 - **Rodada de prova vermelha:** mostrar a checagem falhando numa citação plantada e passando depois de removê-la.
 
-Esta tarefa não mexe em lógica nem troca nome público: nenhum `PublicAPI.Shipped.txt` nem `PublicAPI.Unshipped.txt` muda no diff, e essa é a prova (D-291). O XML doc dos membros públicos fica, porque a regra de .NET o exige: remove-se só a citação de fase, ADR ou risco de dentro dele. Uma exceção: o XML doc de `IncludeHttpClientSource` (em `NetApiFlowOptions` e em `NetApiFlowOtlpExportOptions`) tem duas frases falsas, que dizem que a URL inteira, com a query, pode ser exportada (e citam `R-16`). A 59.0 mediu que a query não sai, e a 59B corrige as duas frases junto com a citação. Para dispensar um `//`, é permitido renomear uma variável local ou um membro privado e extrair uma constante, desde que o diff seja só isso e os testes existentes passem. O que não couber nisso volta à auditoria, que decide se vai para a `0.7.0` (a regra da fase: o texto muda, o código não).
+Esta tarefa não mexe em lógica nem troca nome público: nenhum `PublicAPI.Shipped.txt` nem `PublicAPI.Unshipped.txt` muda no diff, e essa é a prova (D-291). O XML doc dos membros públicos fica, porque a regra de .NET o exige: remove-se só a citação de fase, ADR ou risco de dentro dele. Uma exceção: o XML doc de `IncludeHttpClientSource` (em `NetApiFlowOtlpExportOptions`, o único lugar em que existe) tem duas frases falsas, que dizem que a URL inteira, com a query, pode ser exportada (e citam `R-16`). A 59.0 mediu que a query não sai, e a 59B corrige as duas frases junto com a citação. **Como ficou (D-300).** A checagem é `scripts/check-citations.mjs`, cobre `src/` e `tests/` (menos `tests/manual-verification` e `tests/regression-guards`) e pega também `R-NN`, "do prompt", `docs/plano` e `docs/adr`, com três exceções de ferramenta de design. As referências ao guia de design ("guide seção N") ficam, porque o guia é fonte da regra. Todo `//` que explicava um porquê virou um teste com nome descritivo, provado por mutação, e o comentário saiu: a regra global do dono está acima do `CLAUDE.md` do projeto. Para dispensar um `//`, é permitido renomear uma variável local ou um membro privado e extrair uma constante, desde que o diff seja só isso e os testes existentes passem. O que não couber nisso volta à auditoria, que decide se vai para a `0.7.0` (a regra da fase: o texto muda, o código não).
 
 ## Tarefa 59.3: o parágrafo do MCP
 
@@ -149,6 +149,18 @@ Entregue em `develop` na #507 (squash `827d67e`), com a 59.0, a 59.1, a 59.3 e a
 - **O `/flow/mcp` em `Production`, por modo (D-299):** sem sessão, `POST` 404 e `GET`, `DELETE` e `PUT` 405. Com sessões, `POST`, `GET` e `DELETE` 404 e `PUT` 405. Com o painel em `/flow`, o `GET` é do painel.
 - **59.6:** `CONTRIBUTING`, `SECURITY.md` (o MCP no escopo), o template de PR e o `config.yml` do `ISSUE_TEMPLATE`.
 - **Aberto:** a 59.2 (59B), a 59.4 (59C) e a 59.5, a releitura da auditoria sobre o `develop` com a 59 inteira.
+
+## Resultado da 59B (D-300, 25/11/2026)
+
+Entregue em `develop` na #510 (squash `4526950`), com a 59.2. O relato é da Executora, no corpo da PR, e da auditoria. A Planejadora leu o corpo no head `13b0eb7`, e o merge foi do head `c3b5b35`: ela não leu o que mudou entre os dois.
+
+- **Contagem:** as 70 linhas do padrão do plano e as 94 do padrão da checagem em `src/` foram a 0, e as 7 linhas de teste em C# também. Nenhum `PublicAPI.*.txt` mudou.
+- **A checagem:** `scripts/check-citations.mjs`, em `src/` e `tests/` (menos `tests/manual-verification` e `tests/regression-guards`), no passo do `build-test` do Linux. Vista vermelha no run `45667571946` com `// kept for ADR-0099`.
+- **Os `//` que explicavam um porquê** viraram teste com nome descritivo, provados por mutação, e `src/**/*.cs` não tem mais nenhum `//`.
+- **O SSE:** métodos privados extraídos no `DashboardSseEndpoint`, aceitos pela auditoria, que mediu os mesmos eventos contra a `0.5.3` e a reconexão pelo id 13 repetindo os 7.
+- **O XML doc de `IncludeHttpClientSource`** diz o que foi medido (a query não sai). Só existe em `NetApiFlowOtlpExportOptions`.
+- **O detector:** o `dist` do `ClientApp` idêntico byte a byte entre o `develop` e a PR, o que a auditoria aceitou como prova.
+- **Aberto:** a 59.4 (59C) e a 59.5. Fora da 59: o `Dispose()` do `FlowActivityListener` que não é idempotente, em PR própria.
 
 ## Fora de escopo
 
