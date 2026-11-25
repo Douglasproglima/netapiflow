@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { checkAgainstExpected, entriesMissingFromTheChangelog, findDifferences, unreleasedSection } from './compare-with-published.mjs';
+import { announcedSections, checkAgainstExpected, entriesMissingFromTheChangelog, findDifferences } from './compare-with-published.mjs';
 
 const CHANGELOG = `# Changelog
 
@@ -126,33 +126,33 @@ test('checkAgainstExpected_WhenTheValueChangedFromTheListedOne_IsBothUnexpectedA
   assert.equal(result.missing.length, 1);
 });
 
-test('unreleasedSection_StopsAtTheNextRelease', () => {
-  const section = unreleasedSection(CHANGELOG);
+test('announcedSections_StopsAtTheLastPublishedVersion', () => {
+  const section = announcedSections(CHANGELOG, '0.5.3');
 
   assert.match(section, /a request that matches no endpoint is now recorded only when it ends/);
   assert.doesNotMatch(section, /older entry/);
 });
 
-test('unreleasedSection_WithoutTheSection_Throws', () => {
-  assert.throws(() => unreleasedSection('# Changelog\n\n## [0.5.3] - 2026-11-20\n'), /no "## \[Unreleased\]" section/);
+test('announcedSections_WithoutTheUnreleasedSection_Throws', () => {
+  assert.throws(() => announcedSections('# Changelog\n\n## [0.5.3] - 2026-11-20\n', '0.5.3'), /no "## \[Unreleased\]" section/);
 });
 
 test('entriesMissingFromTheChangelog_FindsTheTextAcrossALineBreak', () => {
   const wrapped = { ...LINE, changelog: 'A static file used to be listed as running.' };
 
-  assert.deepEqual(entriesMissingFromTheChangelog([LINE, wrapped], CHANGELOG), []);
+  assert.deepEqual(entriesMissingFromTheChangelog([LINE, wrapped], CHANGELOG, '0.5.3'), []);
 });
 
 test('entriesMissingFromTheChangelog_WhenTheEntryIsOnlyInAnOlderRelease_IsMissing', () => {
   const old = { ...LINE, changelog: 'An older entry that is no longer news.' };
 
-  assert.deepEqual(entriesMissingFromTheChangelog([old], CHANGELOG), [old]);
+  assert.deepEqual(entriesMissingFromTheChangelog([old], CHANGELOG, '0.5.3'), [old]);
 });
 
 test('entriesMissingFromTheChangelog_WhenNothingAnnouncesTheLine_IsMissing', () => {
   const unannounced = { ...LINE, changelog: 'the trace id header moves to Production' };
 
-  assert.deepEqual(entriesMissingFromTheChangelog([unannounced], CHANGELOG), [unannounced]);
+  assert.deepEqual(entriesMissingFromTheChangelog([unannounced], CHANGELOG, '0.5.3'), [unannounced]);
 });
 
 test('entriesMissingFromTheChangelog_WhenTheReleaseMovedTheEntryAboveTheLastPublishedVersion_FindsIt', () => {
