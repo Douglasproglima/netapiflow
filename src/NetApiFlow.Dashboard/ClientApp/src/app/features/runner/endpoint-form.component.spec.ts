@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import { EndpointFormComponent } from './endpoint-form.component';
 import { DashboardConfig, OpenApiDocument } from '../../core/models';
 import { RunnerCredentialsService } from '../../core/runner-credentials.service';
@@ -87,7 +88,7 @@ describe('EndpointFormComponent', () => {
   beforeEach(() => {
     sessionStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });

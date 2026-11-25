@@ -69,7 +69,7 @@
             [class.endpoint-form__field--invalid]="invalidFieldName() === field.name"
           >
             <label [for]="'endpoint-form-field-' + field.name"
-              >{{ field.name }}<b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
+              >{{ field.name }} <b>{{ fieldKindKey(field.kind) | t }} · {{ field.type }}</b></label
             >
             @if (field.kind === 'body') {
               <textarea
@@ -339,9 +339,43 @@
         </p>
       }
 
+      @if (response(); as response) {
+        <div class="endpoint-form__response">
+          <p
+            class="endpoint-form__response-status"
+            [class.endpoint-form__response-status--failure]="response.status >= 400"
+          >
+            {{ 'action.response.status' | t: { status: response.status } }}
+          </p>
+          <details class="endpoint-form__response-body">
+            <summary>{{ 'action.response.body' | t }}</summary>
+            @switch (response.content.kind) {
+              @case ('text') {
+                <pre class="endpoint-form__response-text">{{ response.content.text }}</pre>
+                @if (response.content.truncated) {
+                  <p class="endpoint-form__response-note">
+                    {{ 'action.response.truncated' | t: { limit: responseBodyLimit } }}
+                  </p>
+                }
+              }
+              @case ('empty') {
+                <p class="endpoint-form__response-text">{{ 'action.response.empty' | t }}</p>
+              }
+              @case ('not-shown') {
+                <p class="endpoint-form__response-text">
+                  {{ 'action.response.notShown' | t: { type: response.content.contentType } }}
+                </p>
+              }
+            }
+          </details>
+        </div>
+      }
+
       @if (lastTraceId(); as traceId) {
         <p class="endpoint-form__trace-id">
-          {{ 'action.traceConfirmation' | t: { traceId } }}
+          <a [routerLink]="['/']" [queryParams]="{ trace: traceId }">{{
+            'action.traceConfirmation' | t: { traceId }
+          }}</a>
         </p>
       }
     </div>
