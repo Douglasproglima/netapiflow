@@ -1,6 +1,6 @@
 # Fase 60: o acabamento que um revisor vê no primeiro dia (D-210 nível 3, D-236 B12 e B14)
 
-**Estado (25/11/2026):** **a Parte A está entregue em `develop` (#502, squash `0c839d3`, D-294) e conferida pela auditoria com o pacote real.** Falta a Parte B (60.9 a 60.11).
+**Estado (25/11/2026):** **as Partes A e B estão entregues em `develop` (#502, squash `0c839d3`, D-294; #504, squash `7934db6`, D-296) e conferidas pela auditoria com o pacote real. A fase está fechada, menos a Arquitetura (60.7), que entra na segunda passada.**
 
 O nível 3 da auditoria de base, mais dois itens da varredura final (B12, o filtro de rota do MCP, e B14, os samples). Nada
 aqui derruba o produto, mas é o que um purista abre primeiro: o celular, textos que se contradizem, o Runner pela metade,
@@ -115,6 +115,17 @@ O filtro de rota do MCP exige o **template exato**, e o exemplo da própria tool
 O README do `SampleApi.Controllers`: o `dotnet run` sem `-f` falha por multi-target, cita `GET /api/orders` (que dá 404) e não diz como
 subir o PostgreSQL. O `SampleApi.MinimalMediatR` **não tem README**. Os dois funcionam pelo caminho do usuário, com os nomes novos da
 Fase 67, e cada comando do README foi **executado**.
+
+## Resultado da Parte B (D-296, 25/11/2026)
+
+Entregue em `develop` na #504 (squash `7934db6`). O relato é da Executora, no corpo da PR, e da auditoria, que mediu com o pacote real `0.6.0-audit.17` contra a `0.5.3`. A Planejadora não repetiu as medições.
+
+- **60.9a:** a mensagem usa o singular para o limite 1, nos dois READMEs.
+- **60.9b:** com `Enabled = false`, um listener próprio na fonte `NetApiFlow` recebe 0 etapas (3 na `0.5.3`), e com `Enabled = true` recebe como antes. Entra em `### Fixed` (D-295). O custo do `Flow.Step` com `Enabled = true` e com `Enabled = false`, contra a `0.5.3`, entra na medição da 59.4.
+- **60.10:** `?route=/orders/{id}` sobre traces `/orders/{id:int}` acha 3 (0 na `0.5.3`), no REST, no MCP e no Histórico, em memória e nos dois bancos. A auditoria conferiu no código da `v0.5.3` que o `route_key` já era gravado normalizado, e refaz com um banco gravado pela `0.5.3` na segunda passada.
+- **60.11:** os READMEs dos dois samples, com cada comando executado, e a correção do id do Aspire.
+- **Visto vermelho:** em etapas, 4 por TFM em `NetApiFlow.Tests`, 1 em `IntegrationTests` e 4 em `Storage.Tests`, e 213 guardas no verde. O vermelho do MCP foi visto local, e a causa está coberta pela linha `60B-route-filter-in-memory`, que tem o vermelho no CI.
+- **Aberto:** a tela de Arquitetura (60.7), com o pacote real, na segunda passada.
 
 ## O que **não** está aqui, e onde está
 

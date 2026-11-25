@@ -126,6 +126,7 @@ das mudanças de custo das Fases 53, 55, 57, 58, 64 e 65):
 
 - `tests/NetApiFlow.Benchmarks` com `[MemoryDiagnoser]`, nos dois TFMs.
 - **Uma rodada concorrente**, além da sequencial.
+- **O `Flow.Step` com `Enabled = true` e com `Enabled = false`, contra a `0.5.3` publicada.** A 60.9b pôs dois `Volatile.Read` antes do `HasListeners` (D-296), sem lock e sem alocação, e a auditoria quer o número. Se o custo por passo subir além do ruído, a Executora para e relata, e a auditoria trata.
 - O relatório **versionado no repositório**, com o hardware, o sistema operacional, o runtime e o commit.
 - O README com os números novos, o hardware dito, e a frase de "32 µs more" corrigida.
 
@@ -153,8 +154,10 @@ saída real e o diff do README, e **não** declara a fase pronta antes disso.
 
 ## Versionamento e fluxo
 
-- `0.6.0`. Branch `chore/59-readme-verdadeiro` a partir de `develop` atualizado, **depois** das Fases 53, 55, 56, 57, 58, 60, 68 e 71.
-  A 59.4 é a última tarefa.
+- `0.6.0`. Em três PRs, como a 58 e a 60 (D-297), todas a partir de `develop` atualizado e **depois** das Fases 53, 55, 56, 57, 58, 60, 68 e 71:
+  - **59A, o texto** (`chore/59-readme-verdadeiro`): a 59.0, a 59.1, a 59.3 e a 59.6. `README.md`, `README.pt-BR.md`, os READMEs dos pacotes e dos samples, `CONTRIBUTING`, `SECURITY.md` e o template de PR. O `.github/ISSUE_TEMPLATE/config.yml` é configuração e fica fora da exceção de PR só de documentação (D-154).
+  - **59B, as citações** (`chore/59b-citacoes`): a 59.2, em C#, TypeScript, SCSS e JS, com a checagem no CI vista falhando e nenhum `PublicAPI.*.txt` mudando. Renomear um teste que cita fase mexe em linhas do `guards.json`, e a tarefa toca o `ClientApp`, então o detector roda nessa PR e não na do texto.
+  - **59C, o desempenho** (`chore/59c-desempenho`): a 59.4, a última tarefa, depois de nada mais mudar o custo. O README ganha aqui só a tabela nova e a frase de "32 µs more".
 - Commits pequenos, em inglês, uma linha, sem linha de coautor. Abrir a PR e parar.
 
 ## Relatório final
