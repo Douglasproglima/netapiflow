@@ -1699,5 +1699,27 @@
       "test": "ApiService callEndpoint reads the answer as text, so a plain-text success is never taken for a failure"
     },
     "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command-like-the-others",
+    "defect": "A command the app names CONNECT ... must keep the start, duration, parent and order of a normal command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_BetweenTwoNormalCommands_IsRecordedLikeThem"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command-error-origin",
+    "defect": "A failing command the app names CONNECT ... must be the error origin like a normal command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_WhenItFails_IsTheErrorOriginLikeANormalCommand"
+    },
+    "job": "build-test"
   }
 ]

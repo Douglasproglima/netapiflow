@@ -59,6 +59,39 @@ public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRep
         return Ok();
     }
 
+    [HttpGet("renamed-between-normal-commands")]
+    public async Task<IActionResult> RenamedBetweenNormalCommands()
+    {
+        await using var renamed = RenamedDataSource();
+        await using (var before = dataSource.CreateCommand("SELECT count(*) FROM \"Users\""))
+        {
+            await before.ExecuteScalarAsync();
+        }
+
+        await using (var middle = renamed.CreateCommand("SELECT \"Id\" FROM \"Users\" ORDER BY \"Id\" LIMIT 1"))
+        {
+            await middle.ExecuteScalarAsync();
+        }
+
+        await using var after = dataSource.CreateCommand("SELECT max(\"Id\") FROM \"Users\"");
+        return Ok(await after.ExecuteScalarAsync());
+    }
+
+    [HttpGet("renamed-failing-command")]
+    public async Task<IActionResult> RenamedFailingCommand()
+    {
+        await using var renamed = RenamedDataSource();
+        await using var command = renamed.CreateCommand("SELECT \"Id\" FROM \"TableThatDoesNotExist\"");
+        return Ok(await command.ExecuteScalarAsync());
+    }
+
+    private NpgsqlDataSource RenamedDataSource()
+    {
+        var builder = new NpgsqlDataSourceBuilder(server.ConnectionString);
+        builder.ConfigureTracing(tracing => tracing.ConfigureCommandSpanNameProvider(_ => RenamedCommandSpan));
+        return builder.Build();
+    }
+
     [HttpGet("renamed-command")]
     public async Task<IActionResult> RenamedCommand()
     {
@@ -348,6 +381,45 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
         span.Operation.ShouldBe("SELECT Users");
         span.Status.ShouldBe(FlowStatus.Success);
         span.ParentSpanId.ShouldBe(spans.Single(candidate => candidate.Type == ComponentType.Controller).SpanId);
+    }
+
+    [Fact]
+    public async Task CommandTheAppNamesLikeAConnection_BetweenTwoNormalCommands_IsRecordedLikeThem()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var spans = await GetAsync(host, client, "/api/sql-in-step/renamed-between-normal-commands");
+
+        var controller = spans.Single(span => span.Type == ComponentType.Controller);
+        var commands = spans.Where(span => span.Component == "Npgsql").OrderBy(span => span.Sequence).ToList();
+        commands.Count.ShouldBe(3);
+        commands.ShouldAllBe(command => command.ParentSpanId == controller.SpanId
+            && command.Operation == "SELECT Users"
+            && command.Status == FlowStatus.Success
+            && command.DurationMicros > 0
+            && command.EndedAt > command.StartedAt);
+        commands.Select(command => command.StartedAt).ShouldBeInOrder();
+        commands[1].StartedAt.ShouldBeGreaterThanOrEqualTo(commands[0].EndedAt!.Value);
+        commands[2].StartedAt.ShouldBeGreaterThanOrEqualTo(commands[1].EndedAt!.Value);
+    }
+
+    [Fact]
+    public async Task CommandTheAppNamesLikeAConnection_WhenItFails_IsTheErrorOriginLikeANormalCommand()
+    {
+        var (host, client) = await StartHostAsync();
+        using var _ = host;
+        using var __ = client;
+
+        var trace = await GetFailedTraceAsync(host, client, "/api/sql-in-step/renamed-failing-command");
+
+        var command = trace.Spans.Single(span => span.Component == "Npgsql");
+        command.Operation.ShouldBe("SELECT TableThatDoesNotExist");
+        command.Status.ShouldBe(FlowStatus.Error);
+        command.IsErrorOrigin.ShouldBeTrue();
+        command.ErrorType.ShouldBe("Npgsql.PostgresException");
+        command.ParentSpanId.ShouldBe(trace.Spans.Single(span => span.Type == ComponentType.Controller).SpanId);
     }
 
     private const int NPlusOneThreshold = 3;

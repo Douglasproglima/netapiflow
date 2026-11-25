@@ -283,4 +283,22 @@ describe('ApiService', () => {
     req.flush('untraced', { status: 200, statusText: 'OK' });
     expect(outcomes).toEqual(['success 200']);
   });
+
+  it('callEndpoint still takes a JSON answer, an HTML answer, an empty answer and a 204 for a success', () => {
+    const outcomes: string[] = [];
+    const record = {
+      next: (response: { status: number }) => outcomes.push(`success ${response.status}`),
+      error: () => outcomes.push('failure'),
+    };
+    service.callEndpoint('GET', '/api/json').subscribe(record);
+    service.callEndpoint('GET', '/api/html').subscribe(record);
+    service.callEndpoint('GET', '/api/empty').subscribe(record);
+    service.callEndpoint('DELETE', '/api/no-content').subscribe(record);
+
+    httpMock.expectOne('/api/json').flush('{"id":5}', { status: 200, statusText: 'OK' });
+    httpMock.expectOne('/api/html').flush('<p>ok</p>', { status: 200, statusText: 'OK' });
+    httpMock.expectOne('/api/empty').flush('', { status: 200, statusText: 'OK' });
+    httpMock.expectOne('/api/no-content').flush(null, { status: 204, statusText: 'No Content' });
+    expect(outcomes).toEqual(['success 200', 'success 200', 'success 200', 'success 204']);
+  });
 });
