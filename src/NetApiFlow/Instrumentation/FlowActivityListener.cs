@@ -21,6 +21,7 @@ internal sealed partial class FlowActivityListener : IDisposable
     private readonly bool _registeredAsEnabled;
     private readonly ILogger<FlowActivityListener> _logger;
     private readonly IntervalLogLimiter _failureLog = new(TimeSpan.FromSeconds(30));
+    private int _disposed;
 #if NET8_0
     private readonly HttpClientActivityTagBackfill _httpClientActivityTagBackfill;
 #endif
@@ -50,6 +51,11 @@ internal sealed partial class FlowActivityListener : IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
         NullStepArgumentLog.Detach(_logger);
         FlowActivitySource.UnregisterListener(_registeredAsEnabled);
         _listener.Dispose();
