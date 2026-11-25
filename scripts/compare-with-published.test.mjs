@@ -18,6 +18,53 @@ const CHANGELOG = `# Changelog
 - An older entry that is no longer news.
 `;
 
+const RELEASE_CHANGELOG = `# Changelog
+
+## [Unreleased]
+
+## [0.6.0] - 2026-11-25
+
+### Changed
+
+- **\`NetApiFlow\`: a request that matches no endpoint is now recorded only when it ends.** A static
+  file used to be listed as running.
+
+## [0.5.3] - 2026-11-20
+
+### Fixed
+
+- An older entry that is no longer news.
+
+## [0.5.2] - 2026-11-19
+
+### Fixed
+
+- An entry from two releases ago.
+`;
+
+const HOTFIX_AND_RELEASE_CHANGELOG = `# Changelog
+
+## [Unreleased]
+
+## [0.6.0] - 2026-11-25
+
+### Changed
+
+- The entry the minor release announces.
+
+## [0.5.4] - 2026-11-22
+
+### Fixed
+
+- The entry the hotfix announces.
+
+## [0.5.3] - 2026-11-20
+
+### Fixed
+
+- An older entry that is no longer news.
+`;
+
 const LINE = {
   scenario: 'slow-request',
   aspect: 'traces during',
@@ -106,4 +153,35 @@ test('entriesMissingFromTheChangelog_WhenNothingAnnouncesTheLine_IsMissing', () 
   const unannounced = { ...LINE, changelog: 'the trace id header moves to Production' };
 
   assert.deepEqual(entriesMissingFromTheChangelog([unannounced], CHANGELOG), [unannounced]);
+});
+
+test('entriesMissingFromTheChangelog_WhenTheReleaseMovedTheEntryAboveTheLastPublishedVersion_FindsIt', () => {
+  assert.deepEqual(entriesMissingFromTheChangelog([LINE], RELEASE_CHANGELOG, '0.5.3'), []);
+});
+
+test('entriesMissingFromTheChangelog_WhenTheEntryIsInTheLastPublishedVersion_IsMissing', () => {
+  const old = { ...LINE, changelog: 'An older entry that is no longer news.' };
+
+  assert.deepEqual(entriesMissingFromTheChangelog([old], RELEASE_CHANGELOG, '0.5.3'), [old]);
+});
+
+test('entriesMissingFromTheChangelog_WhenTheEntryIsBelowTheLastPublishedVersion_IsMissing', () => {
+  const older = { ...LINE, changelog: 'An entry from two releases ago.' };
+
+  assert.deepEqual(entriesMissingFromTheChangelog([older], RELEASE_CHANGELOG, '0.5.3'), [older]);
+});
+
+test('entriesMissingFromTheChangelog_WhenTheEntryIsStillUnreleased_FindsIt', () => {
+  assert.deepEqual(entriesMissingFromTheChangelog([LINE], CHANGELOG, '0.5.3'), []);
+});
+
+test('entriesMissingFromTheChangelog_WhenAHotfixAndAReleaseAreAboveTheLastPublishedVersion_FindsTheEntriesOfBoth', () => {
+  const hotfix = { ...LINE, changelog: 'The entry the hotfix announces.' };
+  const minor = { ...LINE, changelog: 'The entry the minor release announces.' };
+
+  assert.deepEqual(entriesMissingFromTheChangelog([hotfix, minor], HOTFIX_AND_RELEASE_CHANGELOG, '0.5.3'), []);
+});
+
+test('entriesMissingFromTheChangelog_WithoutTheSectionOfTheLastPublishedVersion_Throws', () => {
+  assert.throws(() => entriesMissingFromTheChangelog([LINE], CHANGELOG, '0.4.0'), /no "## \[0\.4\.0\]" section/);
 });
