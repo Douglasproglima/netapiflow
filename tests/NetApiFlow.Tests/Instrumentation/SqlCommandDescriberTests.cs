@@ -24,6 +24,7 @@ public class SqlCommandDescriberTests
     [InlineData("INSERT INTO [dbo].[Orders] ([Total]) VALUES (@p0)", "INSERT Orders")]
     [InlineData("UPDATE dbo.Orders SET Total = @p0 WHERE Id = @p1", "UPDATE Orders")]
     [InlineData("DELETE FROM `shop`.`orders` WHERE id = ?", "DELETE orders")]
+    [InlineData("SELECT Id FROM dbo.Users WHERE Email = 'someone@example.com'", "SELECT Users")]
     public void Describe_WithCommandText_MatchesTheEntityFrameworkCoreInterceptor(string commandText, string expected)
     {
         SqlCommandDescriber.Describe(commandText).ShouldBe(expected);
