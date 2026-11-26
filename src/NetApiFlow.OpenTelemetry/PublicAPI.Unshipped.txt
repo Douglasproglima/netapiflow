@@ -1,3 +1,1 @@
 #nullable enable
-NetApiFlow.OpenTelemetry.NetApiFlowTracerProviderBuilderExtensions
-static NetApiFlow.OpenTelemetry.NetApiFlowTracerProviderBuilderExtensions.AddNetApiFlowSource(this OpenTelemetry.Trace.TracerProviderBuilder! builder) -> OpenTelemetry.Trace.TracerProviderBuilder!
