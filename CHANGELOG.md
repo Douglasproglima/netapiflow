@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-25
+
 ### Added
 
 - `NetApiFlow.Dashboard`: the Runner shows what the request got back. After a send it shows
