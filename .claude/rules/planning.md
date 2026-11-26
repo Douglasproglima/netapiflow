@@ -76,7 +76,24 @@ A `AUDITORIA` fecha, antes da `0.6.0`, uma auditoria de base do sistema inteiro,
 inventário e não por diff: o README frase a frase num app novo, o mapa de cobertura do CI, a matriz
 de autorização, a matriz de integrações, todas as telas e a demo. `PathBase` e proxy reverso entram
 no inventário. O inventário e o fechamento são da auditoria, e a Planejadora não fecha nenhum item no
-lugar dela. Se a regra vale também para as minors seguintes, é a auditoria quem diz.
+lugar dela.
+
+## A auditoria de base nas minors seguintes (D-318)
+
+A regra vale de forma reduzida, e a decisão é da `AUDITORIA`. Atualizar as matrizes pelo que mudou não
+basta: os furos da `0.6.0` estavam em partes que nenhuma PR do ciclo tocou, e só uma passada pelo
+sistema achou. Para cada minor:
+
+1. As matrizes de autorização, de integrações, de `PathBase` e proxy e o mapa de cobertura do CI,
+   atualizadas pelo que mudou.
+2. Um núcleo fixo, refeito inteiro com o pacote real antes de cada release, mudando ou não: o quick start
+   no `net10.0` e no `net8.0` colado na ordem; todas as telas do painel e da demo num navegador, nos dois
+   temas e em 390 px; `Host` e `Origin`, os cabeçalhos e o 404 em `Production`; um banco real
+   (PostgreSQL e SQL Server) com o filtro e o reinício; e a comparação com a versão publicada.
+3. O inventário completo, o README frase a frase e o mapa inteiro, antes da `1.0` e sempre que uma minor
+   mudar a API pública.
+
+Se o dono quiser outra régua, ele decide.
 
 ## Quando um item do roadmap pode entrar num loop autônomo da Executora
 

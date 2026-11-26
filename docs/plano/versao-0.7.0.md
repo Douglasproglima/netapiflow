@@ -1,4 +1,4 @@
-# A `0.7.0`: o que o roadmap oferece e o que a Planejadora recomenda (D-317)
+# A `0.7.0`: o que o roadmap oferece e o que a Planejadora recomenda (D-317 e D-318)
 
 **Rascunho de 25/11/2026, para o dono e a auditoria confirmarem.** Escopo e prioridade são do dono (D-198). Esta página junta o que o `roadmap-valor.md` marcou como `0.7.0`, agrupa por tema e diz o que a Planejadora faria. Nada aqui é plano até o dono responder as perguntas do fim. Nenhuma fase foi escrita ainda, e nenhum item foi reordenado no roadmap por causa deste rascunho.
 
@@ -127,7 +127,17 @@ A `0.6.0` cresceu até o congelamento (D-232 e D-236). A recomendação é conge
 3. **A política de depreciação (item 22).** A Planejadora escreve o ADR agora, para a versão da API já nascer com ele?
 4. **O congelamento.** Vale desde a abertura, com a regra de cima?
 
-E uma que é da auditoria, não do dono: **a auditoria de base do D-205 vale para as minors seguintes?** A Planejadora não decide isso. Se valer, a sugestão é atualizar as matrizes do `0.6.0` pelo que mudou, em vez de refazer o inventário.
+**A pergunta que era da auditoria já foi respondida (D-318):** a auditoria de base vale para as minors seguintes de forma reduzida. A Planejadora tinha sugerido só atualizar as matrizes pelo que mudou, e a auditoria mostrou que não basta, porque os furos de 25/11 estavam em partes que nenhuma PR do ciclo tocou. O que ela exige está na seção seguinte. Se o dono quiser outra régua, ele decide.
+
+## O que a auditoria exige antes do release (D-318)
+
+Relato da auditoria. Vale para a `0.7.0` e para as minors seguintes:
+
+1. As matrizes de autorização, de integrações, de `PathBase` e proxy e o mapa de cobertura do CI, atualizadas pelo que mudou.
+2. Um núcleo fixo, refeito inteiro com o pacote real antes do release, mudando ou não: o quick start no `net10.0` e no `net8.0` colado na ordem, todas as telas do painel e da demo num navegador (nos dois temas e em 390 px), `Host` e `Origin`, os cabeçalhos e o 404 em `Production`, um banco real (PostgreSQL e SQL Server) com o filtro e o reinício, e a comparação com a versão publicada. A auditoria estima uma ou duas horas.
+3. O inventário completo, o README frase a frase e o mapa inteiro, antes da `1.0` e sempre que uma minor mudar a API pública.
+
+Isto pesa no desenho da `0.7.0`. Se ela não mudar a API pública, o terceiro item não é exigido, e é mais um motivo para deixar o grupo B para a versão seguinte. Quem diz se uma mudança conta como mudança da API pública é a auditoria. O banco real do segundo item é manual até o item 56 do roadmap (o job do pacote real não tem banco) entrar no grupo E, e então vira cenário do CI.
 
 ## O que a Planejadora faz depois da resposta
 

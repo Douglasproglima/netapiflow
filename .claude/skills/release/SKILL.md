@@ -18,6 +18,7 @@ em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
 
 0. **Para a `0.6.0`:** confirme com a `AUDITORIA` que a auditoria de base está fechada
    (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. A Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia) é **depois da publicação**: confirme só que ela está pronta para o dia.
+   **Para as minors seguintes (D-318):** confirme com a `AUDITORIA` as matrizes atualizadas, o núcleo fixo refeito com o pacote real e, se a minor mudou a API pública ou é a `1.0`, o inventário completo (`.claude/rules/planning.md`).
 1. Rode `git status` em `develop`. Working tree precisa estar limpo.
 2. Leia `CHANGELOG.md`, seção `[Unreleased]`, e `docs/plano/README.md` para confirmar quais fases
    foram concluídas desde a última tag (`git tag --sort=-v:refname | head -1`).
