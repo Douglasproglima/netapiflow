@@ -1,5 +1,7 @@
 # O release da `0.6.0`: a checklist, passo a passo (D-292)
 
+**Estado em 25/11/2026: publicada (D-316).** A tag `v0.6.0` está em `2175e57`, os 9 pacotes estão no nuget.org, e o Release e os quatro advisories estão publicados. O back-merge (#529, merge commit `a35ebb7`) já entrou no `develop`. No momento do registro faltavam o passo 17 (o site, a Tarefa 62.4) e o passo 19 (a `EXECUTORA-RELEASE`).
+
 **O release sai hoje, 25/11/2026, com o dono presente (decisão dele, relato da auditoria, D-307).** A ordem: a 59C entra, a auditoria termina a releitura 59.5 do README, e então a `/release` por esta checklist. **Ninguém abre o `release/0.6.0` antes de a auditoria dizer "pode abrir".**
 
 Quem segue: a `AUDITORIA`, com a `EXECUTORA-RELEASE` nos passos de código (D-272, D-273). A `EXECUTORA-RELEASE` é uma sessão nova, que o dono vai abrir (D-308). Esta página junta a skill `/release` (`.claude/skills/release/SKILL.md`) com o que é específico da `0.6.0`. Em conflito, vale a skill
@@ -20,7 +22,7 @@ para o passo e esta página para o que a `0.6.0` muda. Nenhum passo público (pu
 
 ## O estado dos portões, hoje
 
-Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `gh` mostram. A auditoria é quem confirma cada um.
+Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `gh` mostram. A auditoria é quem confirma cada um. Retrato de antes da tag: os oito fecharam, e a `0.6.0` foi publicada (D-316).
 
 | # | Portão | Estado |
 |---|---|---|
@@ -73,10 +75,10 @@ O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `D
 
 ### D. Depois da tag (a `AUDITORIA`, e a `EXECUTORA-RELEASE` no último passo)
 
-15. A página de Release (passo 11 da skill): `gh release create v0.6.0 --title v0.6.0 --notes-file <corpo>`, o corpo sendo a seção `[0.6.0]` do `CHANGELOG.md`. O `release.yml` nunca cria a página.
-16. Os quatro advisories, na ordem e com a condição de `advisories-0.6.0.md`.
+15. A página de Release (passo 11 da skill): `gh release create v0.6.0 --title v0.6.0 --notes-file <corpo>`, o corpo sendo a seção `[0.6.0]` do `CHANGELOG.md`. O `release.yml` nunca cria a página. **Criada depois dos advisories (passo 16),** para o Release já ter os números como link e não publicar os marcadores `xxxx` (D-316). Na `0.6.0` foi assim.
+16. Os quatro advisories, na ordem e com a condição de `advisories-0.6.0.md`. Na `0.6.0` foram publicados antes da página de Release (passo 15), com os pacotes já no nuget.org: o 1 `GHSA-wwmr-9vv7-4234`, o 2 `GHSA-r234-jvm5-qgr2`, o 3 `GHSA-9649-h9h4-626h` e o 4 `GHSA-7jm3-c37r-vjmw`.
 17. A Tarefa 62.4: o quick start e os números do site conferidos contra os pacotes `0.6.0` publicados, e o site atualizado no mesmo dia.
-18. O back-merge: PR de `main` para `develop`, com **"Create a merge commit"**, nunca squash, senão a PR perde o vínculo de ancestralidade (passo 12 da skill).
+18. O back-merge: PR de `main` para `develop`, com **"Create a merge commit"**, nunca squash, senão a PR perde o vínculo de ancestralidade (passo 12 da skill). **O back-merge conflita nas linhas do título do `CHANGELOG.md`** (`## [Unreleased]` e `## [0.6.0] - <data>`), porque os dois lados mexeram ali. A resolução é ficar com a versão da `main`, numa branch `chore/back-merge-<versão>` a partir do `develop`, com o merge commit da `main`: a árvore sai idêntica à da `main`, e a `main` fica como ancestral (D-316).
 19. **A PR de `chore/*` no `develop`, só depois da publicação e do back-merge (D-260), com estes quatro itens juntos** (passo 13 da skill):
     - `tests/real-package/previous-published-version.txt` para `0.6.0`;
     - `tests/real-package/expected-differences.json` para `[]`;
@@ -136,9 +138,10 @@ Uma linha por item, para a auditoria preencher pelas mensagens dela. A Planejado
 | 21 | Advisory 3 contra a `0.5.3` (S6 e S7) | 25/11/2026 | `0.5.3` | A `0.5.3` aceita tudo: Host evil, Origin evil e Origin null dão 200, o `DELETE` com Origin evil dá 204, o MCP com Origin evil dá 200, e não há nenhum cabeçalho de proteção. Reproduz o advisory 3 na `0.5.3` | S6 e S7 fechados, e o advisory 3 liberado para publicar |
 | 22 | Advisory 4 contra a `0.5.3` |  | `0.5.3` | Já reproduzido pela auditoria |  |
 | 23 | A corrida do campo de rota do Runner, com backend real (D-293) | 25/11/2026 | `0.6.0-audit.20` | Não rodou: a sonda não achou o endpoint na lista, provavelmente porque o OpenAPI mostra `/work/{{id}}` sem a constraint | Fica como está: `0.7.0`, não reproduzido |
-| 24 | O `release.yml` na tag, passos 11 a 13 |  |  |  |  |
+| 24 | O `release.yml` na tag, passos 11 a 13 | 25/11/2026 | `v0.6.0`, run `45732534378` | Os três jobs deram `success`. O log tem 27 "Your package was pushed" (9 `.nupkg` e 9 `.snupkg` no nuget.org, e 9 no GitHub Packages). Os 9 pacotes indexados no nuget.org às 22:18 (hora local), todos os `.nuspec` com `0.6.0`, README e ícone, e os 8 satélites com `NetApiFlow` `[0.6.0]` | O `release.yml` rodou nesta forma pela primeira vez e funcionou |
 | 25 | O `CHANGELOG` lido por quem atualiza da `0.5.3` (a lista da Planejadora, D-303) | 25/11/2026 | | A auditoria decidiu os itens 1 a 13 e 15 da lista, e a Planejadora os aplicou em `CHANGELOG.md` (D-304). A mensagem do painel para um trace sem etapas já diz o padrão novo e `Flow.Step` | Decidido |
-| 26 | O texto do Release, `release-0.6.0-notes.md` |  |  |  |  |
+| 26 | O texto do Release, `release-0.6.0-notes.md` | 25/11/2026 | | O Release `v0.6.0` está publicado com a abertura e a seção `[0.6.0]`, com os quatro `GHSA` já como link (criado depois dos advisories) | Feito |
 | 27 | O ensaio do passo 2 da `/release`, da `EXECUTORA-RELEASE` | 25/11/2026 | `0.6.0-verify.1` (`develop` `70b6e03`) | Os 9 pacotes, os Inícios rápidos `net10.0` e `net8.0`, todas as telas no navegador com 0 erro no console, e a receita `OptionsFromConfig` com SQL Server nas quatro combinações: tudo verde. O `verify.sh` grava `app-<tfm>-<modo>.log` dentro da pasta da receita, e o `.gitignore` não os cobre (item 68 do roadmap) | Verde. O `verify.sh` não bloqueia o release |
+| 28 | O pacote publicado num app novo (passo 14) | 25/11/2026 | `0.6.0`, do nuget.org | App novo com `nuget.config` só com o nuget.org, em `net10.0` (o Início rápido do README) e em `net8.0` (Swashbuckle e `OpenApiDocumentPath`): os dois restauram `NetApiFlow` `0.6.0`, compilam com 0 aviso, o painel mostra "v0.6.0", e o Runner enviou `/hello` e `/weatherforecast` e gravou a etapa, com 0 erro no console | Feito |
 
 **O que a Planejadora faz depois dela:** marcar R-29 e R-30 (Fases 48 e 49, publicadas na `0.5.0` e na `0.5.1`, ainda `Planejado` na tabela) e R-31, R-32 e R-33 como Mitigado, citando o arquivo de teste que prova cada um, depois de conferir que ele existe e é real; fechar no README as linhas das Fases 50, 51, 53, 55, 56 e 57 (e a 54, se a auditoria disser); e registrar a 60, a 59 e o release.

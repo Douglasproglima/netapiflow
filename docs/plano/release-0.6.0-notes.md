@@ -8,7 +8,7 @@ mudar uma palavra dela. A abertura é da Planejadora e a decisão de cortar ou m
 1. Depois da `/release`, o corpo é a abertura abaixo, uma linha em branco e a seção `[0.6.0] - <data>` do `CHANGELOG.md`, sem o cabeçalho `## [0.6.0]`.
 2. `gh release create v0.6.0 --title v0.6.0 --notes-file <corpo>` (passo 15).
 3. **Os números dos advisories ainda não existem nesse momento,** porque os advisories saem depois do Release (passo 16, com os pacotes já no nuget.org). O Release sai com as quatro linhas de segurança sem o número.
-   Depois de publicar cada advisory, a auditoria troca o `GHSA-xxxx-xxxx-xxxx` pelo número real e edita o Release: `gh release edit v0.6.0 --notes-file <corpo>`.
+   Depois de publicar cada advisory, a auditoria troca o `GHSA-xxxx-xxxx-xxxx` pelo número real e edita o Release: `gh release edit v0.6.0 --notes-file <corpo>`. **Na `0.6.0` a ordem foi outra (D-316):** a auditoria publicou os advisories antes e criou o Release depois, com os quatro `GHSA` já como link, para não publicar os marcadores. É a ordem a seguir da próxima vez.
 4. Conferir o `[Unreleased]` antes: a lista de leitura que a Planejadora mandou à auditoria (D-303) já foi aplicada (D-304), e a abertura segue o `CHANGELOG.md` final. Quando a 59C entrar, a Planejadora relê a seção e confirma que a abertura continua verdadeira, antes do passo 15.
 
 ## A abertura
