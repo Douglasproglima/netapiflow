@@ -22,7 +22,9 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 
 ## Estado das fases
 
-**A `0.6.0` foi publicada em 25/11/2026** (a tag `v0.6.0`, o `release.yml` no run `45732534378`, os quatro advisories e o Release), e o registro está no D-316. As linhas das Fases 50 a 71 que dizem "fechada" dizem agora também "publicada em `v0.6.0`". A Fase 62 também está fechada: a Tarefa 62.4, o site, foi publicada no mesmo dia (D-319), e a `0.6.0` está inteira. O passo 19 do release (a baseline em `0.6.0`) foi feito na #531, e a `0.7.0` está em rascunho em `versao-0.7.0.md` (D-317).
+**A `0.6.0` foi publicada em 25/11/2026** (a tag `v0.6.0`, o `release.yml` no run `45732534378`, os quatro advisories e o Release), e o registro está no D-316. As linhas das Fases 50 a 71 que dizem "fechada" dizem agora também "publicada em `v0.6.0`". A Fase 62 também está fechada: a Tarefa 62.4, o site, foi publicada no mesmo dia (D-319), e a `0.6.0` está inteira.
+
+**A `0.7.0` está aberta (D-320, 26/11/2026).** O dono confirmou, pelo relato da auditoria, os grupos A, C, D, E e F, sem quebra de API pública, e deixou o grupo B (a API) para a versão seguinte. O ADR-0029, a política de depreciação, está proposto e espera o aceite. O escopo está congelado desde a abertura. São as Fases 72 a 76, na ordem da seção "Ordem de execução da `0.7.0`". A divulgação do `NetApiFlow.Testing` segue em aberto com o dono. O passo 19 do release (a baseline em `0.6.0`) foi feito na #531, e a `0.7.0` está em rascunho em `versao-0.7.0.md` (D-317).
 
 | Fase | Nome | Status | Observação |
 |---|---|---|---|
@@ -98,6 +100,11 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | 69 | A suíte no runtime .NET 11, e o README sobre o `net8.0` e o `net11.0` | **Entregue em `develop` (#451); publicada em `v0.6.0`; o `release.yml` se exercitou na tag (run `45732534378`)** (2026-11-21) | D-250, item 16 do roadmap e ADR-0025. A suíte passa a rodar também no runtime .NET 11 contra a build de `net10.0` (só no `ubuntu-latest`), com um guarda que prova no log que rodou no 11, e o README e o CHANGELOG anunciam a saída do `net8.0` em 10/05/2027. Plano em `fase-69-runtime-net11.md`. |
 | 70 | A rede contra regressão | **Entregue em `develop` (#422, #432, #440, #443 e #446); publicada em `v0.6.0`; decisão do dono; o `release.yml` se exercitou na tag (run `45732534378`)** (2026-11-21) | D-253, R-35. Quatro regressões desta rodada passaram por CI verde: o Quick start da #409, a demo da #416, o piso do EF da `0.5.1` e as opções da Fase 47. A fase põe isso em passos de CI que ficam vermelhos: um job que instala o pacote num app novo e cola o Quick start do README na ordem, o snapshot dos `.nuspec`, a demo construída aberta num navegador, a linha de base da API pública, um registro de guardas que falha se um teste listado sumir e o mesmo roteiro rodado contra o pacote publicado anterior, com uma lista de diferenças esperadas. A regra dos consumidores do contrato já está escrita. Plano em `fase-70-rede-contra-regressao.md`. |
 | 71 | As tools do NetApiFlow só no endpoint do NetApiFlow | **Entregue em `develop` (#487) e fechada: a auditoria refez com o pacote real; publicada em `v0.6.0`, segurança (D-232).** O advisory `GHSA-7jm3-c37r-vjmw` está publicado (2026-11-24) | D-278, D-279, D-281, D-282 e D-283, S9, R-36. Um app que hospeda o próprio MCP servia as tools do `NetApiFlow.Mcp` e as traces no `/mcp` dele, sem a autorização do `/flow/mcp`, e o `/flow/mcp` servia as tools, os prompts e os resources do app. Agora as tools existem só no `/flow/mcp`, que responde só uma lista de métodos, e a decisão vem de uma marca que o gate liga. Plano em `fase-71-tools-do-mcp-so-no-endpoint-do-netapiflow.md`. |
+| 72 | A rede, as ferramentas e os pequenos | **Planejada** (2026-11-26), a primeira da `0.7.0` | D-320, grupo E. Onze itens do roadmap: o banco no job do pacote real (56), o tipo `node-test` (71), o `CHANGELOG` no `detect-changes` (67), o Npgsql 8 na matriz (55), as ferramentas (54, 61, 64, 68, 70) e dois ajustes pequenos no produto (66 e 63, este só se couber na regra do plano). Plano em `fase-72-rede-e-ferramentas.md`. |
+| 73 | A verdade do fluxo | **Planejada**, depois da 72 | D-320, grupo A. Oito defeitos antigos: a rota do `/boom` (52), o status do 500 sem tratador (45), a requisição sem endpoint ao vivo (51), mais os itens 47, 53, 48 e 44, e o desenho do status `Cancelled` do span (46, só o desenho). Plano em `fase-73-verdade-do-fluxo.md`. |
+| 74 | A medida e o caminho quente | **Planejada**, depois da 73 | D-320, grupo C. O benchmark sob concorrência (9), a causa do custo do `Flow.Step` no `net8.0` (65), e a reflexão e as alocações (43 e 35), só com número. Plano em `fase-74-medida-do-caminho-quente.md`. |
+| 75 | O painel, o teclado e a demo | **Planejada**, depois da 74 | D-320, grupo D. O resto do teclado (39), o foco na troca de rota (60), o erro de schema no painel (40), o plural (72) e a demo que pula um passo (49). Plano em `fase-75-painel-teclado-e-demo.md`. |
+| 76 | O site com uma rede | **Planejada**, em paralelo às outras | D-320, grupo F. O passo que cola e compila o quick start do site (50), no repositório `netapiflow-site`. A divulgação (itens 1, 20 e 21) espera o dono. Plano em `fase-76-site-com-rede.md`. |
 
 `0.3.0` publicada (D-120, MINOR por causa do `OpenApiDocumentPath` da Fase 29,
 `FlowStatus.Cancelled`/`Timeout` da Fase 27 e `IDeployAnnotationStore` da Fase 28). Fases 8 a 30
@@ -197,6 +204,21 @@ nenhum pacote.
 | 11 | 68, 60 | Acessibilidade e o acabamento do painel, da API e dos samples |
 | 12 | 59 | O README e os textos, **por último**, com a performance medida por último |
 | 13 | | A segunda passada da auditoria, e a `0.6.0` |
+
+## Ordem de execução da `0.7.0` (D-320)
+
+**A `0.7.0` tem fim, e o escopo está congelado desde a abertura** (D-232 e D-236, mesma regra da `0.6.0`): só entra segurança, regressão de uma PR da própria `0.7.0` e o que o dono decidir de forma explícita. Achado novo vai para o roadmap. **A `0.7.0` não quebra a API pública:** uma linha nova ou removida no `PublicAPI.Shipped.txt` ou no `PublicAPI.Unshipped.txt` conta como mudança (D-318), e a Executora para e relata. A auditoria fecha cada fase com o pacote real e o núcleo fixo do D-318 antes de a seguinte abrir.
+
+| Passo | Fase | O que |
+|---|---|---|
+| 1 | 72 | A rede, as ferramentas e os pequenos. É o que ensina o CI a pegar sozinho o tipo de furo que a `0.6.0` achou à mão |
+| 2 | 73 | A verdade do fluxo: o que a tela mostra de errado (a rota do `/boom`, o status do 500, a requisição sem endpoint) |
+| 3 | 74 | A medida e o caminho quente: benchmark sob concorrência e a causa do custo no `net8.0` |
+| 4 | 75 | O painel, o teclado e a demo |
+| em paralelo | 76 | O site com uma rede, no repositório `netapiflow-site`. Não espera nenhuma outra |
+| 5 | | A auditoria do D-318 e a `0.7.0` |
+
+O ADR-0029 (a política de depreciação) não é passo da execução: espera o aceite do dono e vale para a versão da API.
 
 ## Regra de avanço
 

@@ -41,3 +41,4 @@ Discussion é o lugar certo pra uma conversa permanente.
 | [ADR-0026](0026-etapa-de-endpoint-sem-marcacao-por-evento-do-roteamento.md) | Etapa de endpoint sem marcação, aberta pelo evento `EndpointMatched` do roteamento | Aceito | [#332](https://github.com/Douglasproglima/netapiflow/discussions/332) |
 | [ADR-0027](0027-decisao-de-rastrear-no-endpoint-matched.md) | A decisão de rastrear passa para o `EndpointMatched`, e as rotas do NetApiFlow se identificam pelo endpoint | Aceito | [#386](https://github.com/Douglasproglima/netapiflow/discussions/386) |
 | [ADR-0028](0028-identidade-propria-da-trace.md) | A trace do NetApiFlow tem identidade própria, e o W3C trace id vira uma tag | Aceito | [#383](https://github.com/Douglasproglima/netapiflow/discussions/383) |
+| [ADR-0029](0029-politica-de-depreciacao-e-caminho-para-a-1-0.md) | Política de depreciação, um ciclo publicado antes de remover, e o caminho para a 1.0 | Proposto | a criar no aceite |

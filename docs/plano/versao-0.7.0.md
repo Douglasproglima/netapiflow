@@ -1,6 +1,6 @@
 # A `0.7.0`: o que o roadmap oferece e o que a Planejadora recomenda (D-317 e D-318)
 
-**Rascunho de 25/11/2026, para o dono e a auditoria confirmarem.** Escopo e prioridade são do dono (D-198). Esta página junta o que o `roadmap-valor.md` marcou como `0.7.0`, agrupa por tema e diz o que a Planejadora faria. Nada aqui é plano até o dono responder as perguntas do fim. Nenhuma fase foi escrita ainda, e nenhum item foi reordenado no roadmap por causa deste rascunho.
+**Confirmada pelo dono em 26/11/2026 (relato da auditoria, D-320).** Os grupos A, C, D, E e F entram na `0.7.0`, sem quebra de API pública. O grupo B fica para a versão seguinte. A divulgação do `NetApiFlow.Testing` (item 1) segue em aberto. Esta página guarda o raciocínio: o que o `roadmap-valor.md` oferecia, agrupado por tema, e por que a recomendação ficou assim. As fases estão em `fase-72-rede-e-ferramentas.md`, `fase-73-verdade-do-fluxo.md`, `fase-74-medida-do-caminho-quente.md`, `fase-75-painel-teclado-e-demo.md` e `fase-76-site-com-rede.md`.
 
 ## De onde a `0.7.0` parte
 
@@ -120,12 +120,24 @@ Fica de fora, por precisar de decisão de arquitetura ou de produto antes de vir
 
 A `0.6.0` cresceu até o congelamento (D-232 e D-236). A recomendação é congelar na abertura: só entra segurança, regressão de uma PR da própria `0.7.0` e o que o dono decidir de forma explícita. Achado novo vai para o roadmap. Cada grupo fecha com a leitura da auditoria antes de o próximo abrir, e a `0.7.0` sai quando os grupos combinados fecharem, sem grupo novo no caminho.
 
-## Perguntas ao dono
+## As respostas do dono (26/11/2026, D-320)
 
-1. **O tamanho.** A `0.7.0` leva os grupos A, C, D, E e F (recomendado), e a API (B) fica para a versão seguinte? Ou tudo numa versão só?
-2. **A divulgação do `NetApiFlow.Testing` (item 1).** Começa agora, em paralelo, ou espera a `0.7.0`?
-3. **A política de depreciação (item 22).** A Planejadora escreve o ADR agora, para a versão da API já nascer com ele?
-4. **O congelamento.** Vale desde a abertura, com a regra de cima?
+Relato da auditoria, que apresentou as recomendações ao dono. Ele concordou com elas.
+
+1. **O tamanho.** A `0.7.0` leva os grupos A, C, D, E e F, sem quebra de API pública. O grupo B fica para a versão seguinte, com a migração toda de uma vez.
+2. **A divulgação do `NetApiFlow.Testing` (item 1).** **Ainda aberta.** A auditoria não recomendou nada, porque canal e data são decisão de produto. Não está respondida, e a auditoria repassa se o dono responder.
+3. **A política de depreciação (item 22).** A Planejadora escreve o ADR agora, para a versão da API já nascer com ele. O ADR-0029 está escrito como `Proposto`: o dono autorizou escrevê-lo, e o aceite vem depois de ele ler o conteúdo.
+4. **O congelamento.** Vale desde a abertura: só entra segurança, regressão de uma PR da própria `0.7.0` e o que o dono decidir de forma explícita. Achado novo vai para o roadmap.
+
+A ordem sugerida (E, A, C, D, com F em paralelo) ficou como a Planejadora propôs, sem objeção da auditoria. Ela audita cada grupo com o pacote real antes de o próximo abrir.
+
+| Fase | Grupo | Arquivo |
+|---|---|---|
+| 72 | E, a rede, as ferramentas e os pequenos | `fase-72-rede-e-ferramentas.md` |
+| 73 | A, a verdade do fluxo | `fase-73-verdade-do-fluxo.md` |
+| 74 | C, a medida e o caminho quente | `fase-74-medida-do-caminho-quente.md` |
+| 75 | D, o painel, o teclado e a demo | `fase-75-painel-teclado-e-demo.md` |
+| 76 | F, o site, em paralelo | `fase-76-site-com-rede.md` |
 
 **A pergunta que era da auditoria já foi respondida (D-318):** a auditoria de base vale para as minors seguintes de forma reduzida. A Planejadora tinha sugerido só atualizar as matrizes pelo que mudou, e a auditoria mostrou que não basta, porque os furos de 25/11 estavam em partes que nenhuma PR do ciclo tocou. O que ela exige está na seção seguinte. Se o dono quiser outra régua, ele decide.
 
@@ -139,6 +151,6 @@ Relato da auditoria. Vale para a `0.7.0` e para as minors seguintes:
 
 Isto pesa no desenho da `0.7.0`. Se ela não mudar a API pública, o terceiro item não é exigido, e é mais um motivo para deixar o grupo B para a versão seguinte. Quem diz se uma mudança conta como mudança da API pública é a auditoria, e uma linha nova ou removida no `PublicAPI.Shipped.txt` ou no `PublicAPI.Unshipped.txt` já conta. O banco real do segundo item é manual até o item 56 do roadmap (o job do pacote real não tem banco) entrar no grupo E, e então vira cenário do CI.
 
-## O que a Planejadora faz depois da resposta
+## O que a Planejadora fez e o que falta
 
-Escreve os arquivos de fase do que o dono confirmou, na ordem que ele confirmar, atualiza o `README.md` do plano e marca no roadmap o que entrou. Não abre branch de código, não conduz nenhum passo público e não fecha nenhum grupo no lugar da auditoria.
+Escreveu os arquivos das Fases 72 a 76 e o ADR-0029 como `Proposto` (D-320), e marcou no roadmap o que entrou em cada fase e o que passou para a versão da API. Atualiza o `README.md` do plano conforme a auditoria fecha cada grupo. Não abre branch de código, não conduz nenhum passo público e não fecha nenhum grupo no lugar da auditoria. Falta o aceite do ADR-0029 pelo dono, com a Discussion que o acompanha, e a resposta da pergunta 2.
