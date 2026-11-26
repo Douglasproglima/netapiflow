@@ -186,20 +186,23 @@ function normalizeSpaces(text) {
   return text.replace(/\s+/g, ' ');
 }
 
-export function unreleasedSection(changelog) {
+export function announcedSections(changelog, lastPublishedVersion) {
   const start = changelog.search(/^## \[Unreleased\]/m);
   if (start < 0) {
     throw new Error('The CHANGELOG has no "## [Unreleased]" section.');
   }
 
-  const rest = changelog.slice(start + 1);
-  const next = rest.search(/^## \[/m);
-  return normalizeSpaces(next < 0 ? rest : rest.slice(0, next));
+  const lastPublished = changelog.indexOf(`\n## [${lastPublishedVersion}]`, start);
+  if (lastPublished < 0) {
+    throw new Error(`The CHANGELOG has no "## [${lastPublishedVersion}]" section after "## [Unreleased]", so it cannot tell which sections are newer than the last published version.`);
+  }
+
+  return normalizeSpaces(changelog.slice(start, lastPublished));
 }
 
-export function entriesMissingFromTheChangelog(expected, changelog) {
-  const unreleased = unreleasedSection(changelog);
-  return expected.filter((line) => !unreleased.includes(normalizeSpaces(line.changelog)));
+export function entriesMissingFromTheChangelog(expected, changelog, lastPublishedVersion) {
+  const announced = announcedSections(changelog, lastPublishedVersion);
+  return expected.filter((line) => !announced.includes(normalizeSpaces(line.changelog)));
 }
 
 function formatDifference(difference) {
@@ -249,6 +252,7 @@ async function main() {
   const options = parseArguments(process.argv.slice(2));
   const expected = JSON.parse(await readFile(options.expected, 'utf8'));
   const changelog = await readFile(options.changelog, 'utf8');
+  const lastPublishedVersion = (await readFile(options.lastPublishedVersionFile, 'utf8')).trim();
 
   const found = [];
   for (const name of options.variants) {
@@ -261,7 +265,7 @@ async function main() {
   }
 
   const { unexpected, missing } = checkAgainstExpected(found, expected);
-  const unannounced = entriesMissingFromTheChangelog(expected, changelog);
+  const unannounced = entriesMissingFromTheChangelog(expected, changelog, lastPublishedVersion);
 
   console.log(`\nSUMMARY scenarios=${SCENARIOS.filter((scenario) => options.variants.includes(scenario.variant)).length} differences=${found.length} expected=${expected.length}`);
   for (const difference of unexpected) {
@@ -273,7 +277,7 @@ async function main() {
   }
 
   for (const line of unannounced) {
-    console.error(`NOT ANNOUNCED ${line.scenario}: ${line.aspect}: the CHANGELOG [Unreleased] has no "${line.changelog}"`);
+    console.error(`NOT ANNOUNCED ${line.scenario}: ${line.aspect}: the CHANGELOG has no "${line.changelog}" in [Unreleased] or in a release newer than ${lastPublishedVersion}`);
   }
 
   if (unexpected.length + missing.length + unannounced.length > 0) {
@@ -285,6 +289,7 @@ function parseArguments(argumentList) {
   const options = {
     expected: join(repoRoot, 'tests/real-package/expected-differences.json'),
     changelog: join(repoRoot, 'CHANGELOG.md'),
+    lastPublishedVersionFile: join(repoRoot, 'tests/real-package/previous-published-version.txt'),
     variants: Object.keys(VARIANTS),
     print: false,
   };
@@ -304,10 +309,12 @@ function parseArguments(argumentList) {
       options.expected = value;
     } else if (name === '--changelog') {
       options.changelog = value;
+    } else if (name === '--last-published-version-file') {
+      options.lastPublishedVersionFile = value;
     } else if (name === '--variants') {
       options.variants = value.split(',');
     } else {
-      throw new Error(`Unknown argument "${name}". Use --new-dll <dll> --old-dll <dll> [--expected <json>] [--changelog <md>] [--variants a,b] [--print].`);
+      throw new Error(`Unknown argument "${name}". Use --new-dll <dll> --old-dll <dll> [--expected <json>] [--changelog <md>] [--last-published-version-file <txt>] [--variants a,b] [--print].`);
     }
   }
 

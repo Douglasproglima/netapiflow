@@ -93,9 +93,11 @@ the new code does not see.
   sleep. It clears the traces before each scenario, after it waited for a trace of its own to be stored, so a
   write that is late cannot leak into the first one.
 - `tests/real-package/expected-differences.json` lists each difference this build is known to have, with the
-  scenario, the aspect, the value of each side, the reason and the text of the CHANGELOG `[Unreleased]` entry
-  that announces it. **A difference that is not in the list fails. A line of the list that does not appear any
-  more fails too**, so the list cannot rot. A line whose CHANGELOG text is not in `[Unreleased]` fails as well.
+  scenario, the aspect, the value of each side, the reason and the text of the CHANGELOG entry that announces
+  it. **A difference that is not in the list fails. A line of the list that does not appear any more fails
+  too**, so the list cannot rot. A line whose CHANGELOG text is not in `[Unreleased]`, or in a release newer than
+  the version in `tests/real-package/previous-published-version.txt`, fails as well. A release moves the text under
+  its own version, and the text stays announced until the file points to that version.
 
 To see what the differences are now, for example when you add a scenario, run with `--print`. A difference
 without a CHANGELOG entry that can announce it is a regression, not a line for the list.
