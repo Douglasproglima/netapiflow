@@ -31,7 +31,11 @@ public class TracingIntegrationTests
                 {
                     services.AddRouting();
                     services.AddSingleton<IFlowEventListener, ThrowingFlowEventListener>();
-                    services.AddNetApiFlow(o => o.IncludePaths("/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                 });
                 webBuilder.Configure(app =>
                 {
@@ -40,30 +44,30 @@ public class TracingIntegrationTests
                     {
                         endpoints.MapGet("/api/orders/{id}", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("OrdersController", "GetOrder", ComponentType.Controller);
-                            using var serviceStep = NetApiFlow.Step("OrderService", "GetAsync", ComponentType.Service);
-                            using var repositoryStep = NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
+                            using var controllerStep = Flow.Step("OrdersController", "GetOrder", ComponentType.Controller);
+                            using var serviceStep = Flow.Step("OrderService", "GetAsync", ComponentType.Service);
+                            using var repositoryStep = Flow.Step("OrderRepository", "FindAsync", ComponentType.Repository);
                             await Task.Delay(1);
                             return Results.Ok();
                         });
 
                         endpoints.MapGet("/api/parallel", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("ParallelController", "RunParallel", ComponentType.Controller);
+                            using var controllerStep = Flow.Step("ParallelController", "RunParallel", ComponentType.Controller);
                             await Task.WhenAll(DoWorkAsync("A"), DoWorkAsync("B"));
                             return Results.Ok();
 
                             static async Task DoWorkAsync(string name)
                             {
-                                using var step = NetApiFlow.Step("Worker", name, ComponentType.Service);
+                                using var step = Flow.Step("Worker", name, ComponentType.Service);
                                 await Task.Delay(10);
                             }
                         });
 
                         endpoints.MapGet("/api/fail", () =>
                         {
-                            using var outerStep = NetApiFlow.Step("FailController", "Fail", ComponentType.Controller);
-                            using var innerStep = NetApiFlow.Step("FailService", "DoWork", ComponentType.Service);
+                            using var outerStep = Flow.Step("FailController", "Fail", ComponentType.Controller);
+                            using var innerStep = Flow.Step("FailService", "DoWork", ComponentType.Service);
                             try
                             {
                                 throw new InvalidOperationException("boom");
@@ -78,7 +82,7 @@ public class TracingIntegrationTests
 
                         endpoints.MapGet("/api/simple", () =>
                         {
-                            using var step = NetApiFlow.Step("SimpleController", "Ping", ComponentType.Controller);
+                            using var step = Flow.Step("SimpleController", "Ping", ComponentType.Controller);
                             return Results.Ok();
                         });
                     });
@@ -108,12 +112,14 @@ public class TracingIntegrationTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
         var spans = spansByTrace[traceId];
-        spans.Count.ShouldBe(3);
+        spans.Count.ShouldBe(4);
 
+        var endpointSpan = spans.Single(s => s.Type == ComponentType.Endpoint);
         var controllerSpan = spans.Single(s => s.Component == "OrdersController");
         var serviceSpan = spans.Single(s => s.Component == "OrderService");
         var repositorySpan = spans.Single(s => s.Component == "OrderRepository");
 
+        controllerSpan.ParentSpanId.ShouldBe(endpointSpan.SpanId);
         serviceSpan.ParentSpanId.ShouldBe(controllerSpan.SpanId);
         repositorySpan.ParentSpanId.ShouldBe(serviceSpan.SpanId);
     }

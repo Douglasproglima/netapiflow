@@ -16,6 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\SecretLeakCases.cs" Link="Shared\SecretLeakCases.cs" />
+    <Compile Include="..\Shared\ExpectedSecurityHeaders.cs" Link="Shared\ExpectedSecurityHeaders.cs" />
+    <Compile Include="..\Shared\OriginAndHostCases.cs" Link="Shared\OriginAndHostCases.cs" />
+    <Compile Include="..\Shared\AuthorizationMatrix.cs" Link="Shared\AuthorizationMatrix.cs" />
+    <Compile Include="..\Shared\HostConfigurationWatchersTests.cs" Link="Shared\HostConfigurationWatchersTests.cs" />
+    <Compile Include="..\Shared\DisableConfigurationFileWatchers.cs" Link="Shared\DisableConfigurationFileWatchers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Mcp\NetApiFlow.Mcp.csproj" />
   </ItemGroup>

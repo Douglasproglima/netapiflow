@@ -12,17 +12,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
+using NetApiFlow.Domain;
 using Shouldly;
 using Xunit;
 
 namespace NetApiFlow.IntegrationTests;
 
-/// <summary>
-/// Verifies the dashboard's access gate (risco R-09): outside
-/// Development, every route (API and static UI alike) 404s unless the host configured
-/// <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>; with one configured and
-/// denied, it 403s.
-/// </summary>
 public class DashboardAuthorizationTests
 {
     [Fact]
@@ -66,6 +61,82 @@ public class DashboardAuthorizationTests
         (await client.GetAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task OutsideDevelopment_WithRequireAuthorizationAndAllowAnonymousChained_NoRouteIsServedAndNoTraceIsDeleted()
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureServices: DenyEveryoneAuthorization,
+            configureDashboard: builder => builder.RequireAuthorization(DenyEveryonePolicy).AllowAnonymous());
+        var store = host.Services.GetRequiredService<ITraceStore>();
+        await store.SaveAsync(StoredTrace("kept-trace"), [], CancellationToken.None);
+        var client = host.GetTestServer().CreateClient();
+
+        (await client.GetAsync("/flow/")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.DeleteAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await store.GetAsync("kept-trace", CancellationToken.None)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task OutsideDevelopment_WithRequireAuthorizationAndTheRequiredClaim_RoutesAreServed()
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureServices: services => services
+                .AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, AdminClaimAuthenticationHandler>("Test", _ => { })
+                .Services
+                .AddAuthorization(options => options.AddPolicy("RequiresAdmin", policy => policy.RequireClaim("role", "admin"))),
+            configureDashboard: builder => builder.RequireAuthorization("RequiresAdmin"));
+        var client = host.GetTestServer().CreateClient();
+
+        (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.GetAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task OutsideDevelopment_WithAllowAnonymousAlone_EveryRouteReturns404()
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureDashboard: builder => builder.AllowAnonymous());
+        var client = host.GetTestServer().CreateClient();
+
+        (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.DeleteAsync("/flow/api/traces")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Theory]
+    [InlineData(true, HttpStatusCode.OK)]
+    [InlineData(false, HttpStatusCode.Forbidden)]
+    public async Task OutsideDevelopment_WithBothChainedAndAFlowAccessFilter_TheFilterDecides(bool filterAllows, HttpStatusCode expected)
+    {
+        using var host = await StartHostAsync(
+            Environments.Production,
+            configureServices: services =>
+            {
+                DenyEveryoneAuthorization(services);
+                services.AddSingleton<IFlowAccessFilter>(new FixedAccessFilter(filterAllows));
+            },
+            configureDashboard: builder => builder.RequireAuthorization(DenyEveryonePolicy).AllowAnonymous());
+        var client = host.GetTestServer().CreateClient();
+
+        (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(expected);
+    }
+
+    [Fact]
+    public async Task InDevelopment_WithRequireAuthorizationAndAllowAnonymousChained_RoutesAreServed()
+    {
+        using var host = await StartHostAsync(
+            Environments.Development,
+            configureServices: DenyEveryoneAuthorization,
+            configureDashboard: builder => builder.RequireAuthorization(DenyEveryonePolicy).AllowAnonymous());
+        var client = host.GetTestServer().CreateClient();
+
+        (await client.GetAsync("/flow/api/config")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     private static async Task<IHost> StartHostAsync(
         string environmentName,
         Action<IServiceCollection>? configureServices = null,
@@ -92,7 +163,7 @@ public class DashboardAuthorizationTests
                     app.UseAuthorization();
                     app.UseEndpoints(endpoints =>
                     {
-                        var dashboard = endpoints.UseNetApiFlowDashboard();
+                        var dashboard = endpoints.MapNetApiFlowDashboard();
                         configureDashboard?.Invoke(dashboard);
                     });
                 });
@@ -100,9 +171,49 @@ public class DashboardAuthorizationTests
             .StartAsync();
     }
 
+    private const string DenyEveryonePolicy = "DenyEveryone";
+
+    private static void DenyEveryoneAuthorization(IServiceCollection services) => services
+        .AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, NoClaimsAuthenticationHandler>("Test", _ => { })
+        .Services
+        .AddAuthorization(options => options.AddPolicy(DenyEveryonePolicy, policy => policy.RequireAssertion(_ => false)));
+
+    private static FlowTrace StoredTrace(string traceId) => new()
+    {
+        TraceId = traceId,
+        Method = "GET",
+        RouteTemplate = "/api/orders/{id}",
+        HttpStatus = 200,
+        Status = FlowStatus.Success,
+        StartedAt = DateTime.UtcNow,
+        EndedAt = DateTime.UtcNow,
+        DurationMicros = 1_000,
+        SpanCount = 0,
+        Truncated = false,
+        Tags = new Dictionary<string, string>(),
+    };
+
     private sealed class DenyingAccessFilter : IFlowAccessFilter
     {
         public ValueTask<bool> AuthorizeAsync(Microsoft.AspNetCore.Http.HttpContext context) => new(false);
+    }
+
+    private sealed class FixedAccessFilter(bool allows) : IFlowAccessFilter
+    {
+        public ValueTask<bool> AuthorizeAsync(Microsoft.AspNetCore.Http.HttpContext context) => new(allows);
+    }
+
+    private sealed class AdminClaimAuthenticationHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    {
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            var identity = new ClaimsIdentity([new Claim("role", "admin")], "Test");
+            var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), "Test");
+            return Task.FromResult(AuthenticateResult.Success(ticket));
+        }
     }
 
     private sealed class NoClaimsAuthenticationHandler(

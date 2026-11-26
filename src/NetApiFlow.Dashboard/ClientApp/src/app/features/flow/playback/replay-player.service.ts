@@ -12,7 +12,7 @@ const MAX_VISUAL_DELAY_MS = 5_000;
 /**
  * Replays a completed trace's spans in the order they really started. Only the pacing of the
  * animation changes with playback speed; the duration any panel displays always comes straight
- * from the span's own `durationMicros`, never adjusted (seção 7.3 do prompt).
+ * from the span's own `durationMicros`, never adjusted.
  */
 @Injectable()
 export class ReplayPlayerService implements OnDestroy {

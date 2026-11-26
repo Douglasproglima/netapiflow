@@ -1,8 +1,24 @@
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { DOCUMENT } from '@angular/common';
-import { Component, computed, inject, output, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+  viewChildren,
+} from '@angular/core';
 import { HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { environment } from '../../../environments/environment';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
 import { OpenApiDocument, OpenApiSecurityScheme } from '../../core/models';
@@ -25,6 +41,7 @@ import {
   resolveAgainstHostRoot,
   SecuritySchemeEntry,
 } from './openapi-form';
+import { describeResponse, RESPONSE_BODY_LIMIT, RunnerResponse } from './runner-response';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
 
@@ -43,15 +60,34 @@ import { TranslationKey } from '../../core/i18n/translations';
   selector: 'app-endpoint-form',
   templateUrl: './endpoint-form.component.html',
   styleUrl: './endpoint-form.component.scss',
-  imports: [MatButtonModule, TranslatePipe],
+  imports: [MatButtonModule, CdkTrapFocus, RouterLink, TranslatePipe],
+  host: {
+    '[attr.role]': 'asDialog() ? "dialog" : null',
+    '[attr.aria-modal]': 'asDialog() && dialogOpen() ? "true" : null',
+    '[attr.aria-labelledby]': 'asDialog() ? titleId : null',
+    '(document:keydown.escape)': 'dismissOnEscape($event)',
+  },
 })
 export class EndpointFormComponent {
   private readonly api = inject(ApiService);
   private readonly config = inject(ConfigService);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
   protected readonly credentials = inject(RunnerCredentialsService);
 
+  readonly asDialog = input(false);
+  readonly dialogOpen = input(false);
   readonly traceDispatched = output<string>();
+  readonly dismissed = output<void>();
+
+  readonly titleId = 'endpoint-form-title';
+
+  private readonly filterInput = viewChild<ElementRef<HTMLInputElement>>('filterInput');
+  private readonly endpointButtons = viewChildren<ElementRef<HTMLButtonElement>>('endpointButton');
+  private readonly fieldControls = viewChildren<ElementRef<HTMLElement>>('fieldControl');
+  private readonly sendButton = viewChild('sendButton', { read: ElementRef<HTMLElement> });
+  private readonly addHeaderButton = viewChild<ElementRef<HTMLButtonElement>>('addHeaderButton');
+  private readonly headerNameInputs = viewChildren<ElementRef<HTMLInputElement>>('headerNameInput');
 
   readonly loading = signal(true);
   readonly loadError = signal<TranslationKey | null>(null);
@@ -176,9 +212,13 @@ export class EndpointFormComponent {
 
   readonly fieldValues = signal<Record<string, string>>({});
   readonly sending = signal(false);
+  readonly response = signal<RunnerResponse | null>(null);
+  readonly responseBodyLimit = RESPONSE_BODY_LIMIT;
   readonly sendError = signal<TranslationKey | null>(null);
   readonly invalidFieldName = signal<string | null>(null);
   readonly lastTraceId = signal<string | null>(null);
+
+  readonly missingTrace = signal<{ key: TranslationKey; status: number } | null>(null);
 
   private readonly hostPathBase = signal('');
 
@@ -189,6 +229,38 @@ export class EndpointFormComponent {
         resolveAgainstHostRoot(this.hostPathBase(), config.openApiDocumentPath),
       );
     });
+
+    effect(() => {
+      if (this.asDialog() && this.dialogOpen()) {
+        this.focusAfterRender(() => this.firstControlOfCurrentView());
+      }
+    });
+  }
+
+  dismissOnEscape(event: Event): void {
+    if (this.asDialog() && this.dialogOpen() && !event.defaultPrevented) {
+      event.preventDefault();
+      this.dismissed.emit();
+    }
+  }
+
+  private focusAfterRender(target: () => ElementRef<HTMLElement> | undefined): void {
+    afterNextRender(() => target()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private firstControlOfCurrentView(): ElementRef<HTMLElement> | undefined {
+    return this.form() ? (this.fieldControls()[0] ?? this.sendButton()) : this.filterInput();
+  }
+
+  private endpointButtonOf(endpoint: { method: string; path: string }) {
+    const key = this.endpointKey(endpoint);
+    return this.endpointButtons().find(
+      (button) => button.nativeElement.dataset['endpoint'] === key,
+    );
+  }
+
+  protected endpointKey(endpoint: { method: string; path: string }): string {
+    return `${endpoint.method} ${endpoint.path}`;
   }
 
   /**
@@ -227,10 +299,14 @@ export class EndpointFormComponent {
 
   selectEndpoint(method: string, path: string): void {
     this.selected.set({ method, path });
-    this.fieldValues.set({});
+    const example = this.form()?.fields.find((field) => field.kind === 'body')?.example;
+    this.fieldValues.set(example === undefined ? {} : { body: example });
     this.sendError.set(null);
     this.invalidFieldName.set(null);
     this.lastTraceId.set(null);
+    this.missingTrace.set(null);
+    this.response.set(null);
+    this.focusAfterRender(() => this.firstControlOfCurrentView());
   }
 
   /**
@@ -240,7 +316,11 @@ export class EndpointFormComponent {
    * form instead keeps the button reachable regardless of how many routes exist.
    */
   backToList(): void {
+    const leaving = this.selected();
     this.selected.set(null);
+    this.focusAfterRender(
+      () => (leaving ? this.endpointButtonOf(leaving) : undefined) ?? this.filterInput(),
+    );
   }
 
   fieldValue(name: string): string {
@@ -329,6 +409,12 @@ export class EndpointFormComponent {
 
   removeHeader(index: number): void {
     this.credentials.removeHeader(index);
+    this.focusAfterRender(
+      () =>
+        this.headerNameInputs()[index] ??
+        this.headerNameInputs()[index - 1] ??
+        this.addHeaderButton(),
+    );
   }
 
   setHeaderName(index: number, name: string): void {
@@ -426,27 +512,59 @@ export class EndpointFormComponent {
     this.dispatch(this.api.callEndpoint(form.method, fullPath, body, headers));
   }
 
-  private dispatch(request: Observable<HttpResponse<unknown>>): void {
+  private dispatch(request: Observable<HttpResponse<string>>): void {
     this.sending.set(true);
     this.sendError.set(null);
+    this.missingTrace.set(null);
+    this.response.set(null);
     request.subscribe({
-      next: (response) => this.onDispatched(response.headers.get('X-NetApiFlow-TraceId')),
+      next: (response) => {
+        this.response.set(
+          describeResponse(response.status, response.headers.get('Content-Type'), response.body),
+        );
+        this.onDispatched(response.headers.get('X-NetApiFlow-TraceId'), response.status);
+      },
       error: (error: HttpErrorResponse) => {
-        // A non-2xx response still carries the trace id header, so the Error scenario stays followable.
-        const traceId = error.headers.get('X-NetApiFlow-TraceId');
-        if (!traceId) {
-          this.sendError.set('action.requestFailed');
+        const traceIdOfFailedRequest = error.headers.get('X-NetApiFlow-TraceId');
+        if (!traceIdOfFailedRequest) {
+          this.sendError.set(this.messageForFailureWithoutTrace());
         }
-        this.onDispatched(traceId);
+        if (error.status !== 0) {
+          this.response.set(
+            describeResponse(
+              error.status,
+              error.headers.get('Content-Type'),
+              typeof error.error === 'string' ? error.error : null,
+            ),
+          );
+        }
+        this.onDispatched(traceIdOfFailedRequest, error.status);
       },
     });
   }
 
-  private onDispatched(traceId: string | null): void {
+  private explainMissingTrace(status: number): void {
+    if (environment.isDemoMode || status === 0) {
+      return;
+    }
+
+    this.missingTrace.set({
+      key: status >= 500 ? 'action.noTraceHeaderServerError' : 'action.noTraceHeader',
+      status,
+    });
+  }
+
+  private messageForFailureWithoutTrace(): TranslationKey {
+    return environment.isDemoMode ? 'action.demoCannotSend' : 'action.requestFailed';
+  }
+
+  private onDispatched(traceId: string | null, status: number): void {
     this.sending.set(false);
     this.lastTraceId.set(traceId);
     if (traceId) {
       this.traceDispatched.emit(traceId);
+    } else {
+      this.explainMissingTrace(status);
     }
   }
 }

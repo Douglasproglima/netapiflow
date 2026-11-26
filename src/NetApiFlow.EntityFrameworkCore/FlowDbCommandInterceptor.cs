@@ -14,7 +14,10 @@ namespace NetApiFlow.EntityFrameworkCore;
 /// </summary>
 public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions> options) : DbCommandInterceptor
 {
+    private readonly IOptions<NetApiFlowOptions> _options = options ?? throw new ArgumentNullException(nameof(options));
     private readonly ConcurrentDictionary<Guid, FlowStep> _steps = new();
+
+    internal int OpenStepCount => _steps.Count;
 
     /// <inheritdoc />
     public override InterceptionResult<DbDataReader> ReaderExecuting(
@@ -117,20 +120,26 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public override void CommandCanceled(DbCommand command, CommandEndEventData eventData) => CancelStep(eventData);
+
+    /// <inheritdoc />
+    public override Task CommandCanceledAsync(DbCommand command, CommandEndEventData eventData, CancellationToken cancellationToken = default)
+    {
+        CancelStep(eventData);
+        return Task.CompletedTask;
+    }
+
     private void StartStep(DbCommand command, CommandEventData eventData)
     {
-        // EF Core runs this once per attachment, so the same instance attached twice to one
-        // context (AddDbContext and AddDbContextFactory, for example) runs it twice for a single
-        // command, under the same CommandId. The slot is claimed before the step is opened, so
-        // the duplicate run records nothing at all: opening the step first and discarding it
-        // afterwards would still leave a zero-duration span in the graph.
-        if (!_steps.TryAdd(eventData.CommandId, default))
+        var alreadyRecordedByAnotherAttachment = !_steps.TryAdd(eventData.CommandId, default);
+        if (alreadyRecordedByAnotherAttachment)
         {
             return;
         }
 
-        var step = NetApiFlow.Step("EntityFrameworkCore", DescribeCommand(command.CommandText), ComponentType.Database);
-        if (options.Value.CaptureSqlText)
+        var step = Flow.Step("EntityFrameworkCore", DescribeCommand(command.CommandText), ComponentType.Database);
+        if (_options.Value.CaptureSqlText)
         {
             step.Tag("sql", command.CommandText);
         }
@@ -146,6 +155,15 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
         }
     }
 
+    private void CancelStep(CommandEndEventData eventData)
+    {
+        if (_steps.TryRemove(eventData.CommandId, out var step))
+        {
+            step.MarkError(new OperationCanceledException("The database command was canceled."));
+            step.Dispose();
+        }
+    }
+
     private void FailStep(CommandErrorEventData eventData)
     {
         if (_steps.TryRemove(eventData.CommandId, out var step))
@@ -155,7 +173,6 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
         }
     }
 
-    /// <summary>Derives "{CommandType} {MainTable}" from the command text, never the parameter values.</summary>
     internal static string DescribeCommand(string commandText)
     {
         var typeMatch = CommandTypeRegex().Match(commandText);
@@ -170,6 +187,6 @@ public sealed partial class FlowDbCommandInterceptor(IOptions<NetApiFlowOptions>
     [GeneratedRegex(@"^\s*(SELECT|INSERT|UPDATE|DELETE)\b", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex CommandTypeRegex();
 
-    [GeneratedRegex(@"\b(?:FROM|INTO|UPDATE)\s+[`""\[]?(\w+)[`""\]]?", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
+    [GeneratedRegex(@"\b(?:FROM|INTO|UPDATE)\s+(?:[`""\[]?\w+[`""\]]?\s*\.\s*)*[`""\[]?(\w+)[`""\]]?", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]
     private static partial Regex MainTableRegex();
 }

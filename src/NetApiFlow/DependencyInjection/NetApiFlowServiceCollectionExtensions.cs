@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,29 +15,37 @@ using NetApiFlow.Storage;
 
 namespace NetApiFlow;
 
-/// <summary>Registers NetApiFlow tracing. See <c>UseNetApiFlowDashboard</c> in <c>NetApiFlow.Dashboard</c> for the dashboard UI.</summary>
+/// <summary>Registers NetApiFlow tracing. See <c>MapNetApiFlowDashboard</c> in <c>NetApiFlow.Dashboard</c> for the dashboard UI.</summary>
 public static class NetApiFlowServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the tracing middleware, recorder, event publisher and the default in-memory trace
-    /// store. Calling this more than once has no additional effect.
+    /// store. Calling it again registers nothing new, and the <paramref name="configure"/> of every call is
+    /// applied, in the order of the calls.
     /// </summary>
     public static IServiceCollection AddNetApiFlow(this IServiceCollection services, Action<NetApiFlowOptions>? configure = null)
     {
-        if (services.Any(descriptor => descriptor.ServiceType == typeof(NetApiFlowMarkerService)))
+        ArgumentNullException.ThrowIfNull(services);
+
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(NetApiFlowMarkerService)))
         {
-            return services;
+            AddServices(services);
         }
 
-        services.AddSingleton<NetApiFlowMarkerService>();
-
-        services.AddNetApiFlowOptions();
         if (configure is not null)
         {
             services.Configure(configure);
         }
 
+        return services;
+    }
+
+    private static void AddServices(IServiceCollection services)
+    {
+        services.AddSingleton<NetApiFlowMarkerService>();
+        services.AddNetApiFlowOptions();
         services.AddSingleton<FlowRecorder>();
+        services.AddSingleton<RequestTracingDecider>();
         services.AddSingleton<FlowEventPublisher>();
         services.AddSingleton<FlowActivityListener>();
         services.AddSingleton<InMemoryTraceStore>();
@@ -48,7 +57,10 @@ public static class NetApiFlowServiceCollectionExtensions
         services.Configure<MvcOptions>(options => options.Filters.Add<FlowControllerActionFilter>());
         services.AddSingleton<PersistenceWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<PersistenceWriter>());
+        services.AddHostedService(sp => sp.GetRequiredService<FlowEventPublisher>());
         services.AddSingleton(RetentionInterval.Default);
+        services.AddSingleton(PersistenceRetryInterval.Default);
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<RetentionService>();
         services.AddHostedService<NetApiFlowWarmupHostedService>();
 
@@ -61,6 +73,8 @@ public static class NetApiFlowServiceCollectionExtensions
         services.AddSingleton<FlowAuthorizationFilterListener>();
         services.AddHostedService<FlowAuthorizationFilterListenerWarmupHostedService>();
 
-        return services;
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IDeveloperPageExceptionFilter, FlowDeveloperPageExceptionFilter>());
+        services.AddSingleton<EndpointMatchedListener>();
+        services.AddHostedService<EndpointMatchedListenerWarmupHostedService>();
     }
 }

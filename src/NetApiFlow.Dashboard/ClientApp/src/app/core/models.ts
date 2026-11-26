@@ -1,11 +1,11 @@
 /**
- * Mirrors the DTOs frozen in docs/plano/contratos.md, seção 3. Field names match the JSON
+ * Mirrors the DTOs of the dashboard REST contract. Field names match the JSON
  * exactly (camelCase); every duration is microseconds, every timestamp an ISO 8601 UTC string.
  */
 
 export type FlowStatus = 'Running' | 'Success' | 'Error' | 'Cancelled' | 'Timeout';
 
-/** The six visual states of seção 7.2 do prompt (D-26: lives in `core/`, not under `features/flow`). */
+/** The six visual states of a node. They live in `core/`, not under `features/flow`. */
 export type NodeVisualState =
   'waiting' | 'running' | 'completed' | 'slow' | 'error' | 'not-executed' | 'cancelled' | 'timeout';
 
@@ -83,6 +83,8 @@ export interface FlowTraceSummary {
   truncated: boolean;
 }
 
+export const UNMATCHED_ROUTE_TEMPLATE = '(unmatched)';
+
 /** GET /traces/{traceId} and GET /blueprint: a trace with its spans. */
 export interface FlowTraceDetail extends FlowTrace {
   spans: FlowSpan[];
@@ -110,7 +112,7 @@ export interface EndpointDescriptor {
   displayName: string;
 }
 
-/** GET /metrics (D-30: `errorCount` is the raw count behind `errorRate`). */
+/** GET /metrics (`errorCount` is the raw count behind `errorRate`). */
 export interface MetricsSummary {
   totalTraces: number;
   errorCount: number;
@@ -183,10 +185,10 @@ export interface PagedResult<T> {
   totalCount: number;
 }
 
-/** Sort field accepted by GET /traces (D-41). */
+/** Sort field accepted by GET /traces. */
 export type TraceSortField = 'startedAt' | 'duration' | 'httpStatus' | 'method' | 'route';
 
-/** Sort direction accepted by GET /traces (D-41). */
+/** Sort direction accepted by GET /traces. */
 export type SortDirection = 'asc' | 'desc';
 
 /** Query string accepted by GET /traces. */
@@ -227,7 +229,10 @@ export interface OpenApiOperation {
   parameters?: OpenApiParameter[];
   requestBody?: {
     required?: boolean;
-    content?: Record<string, { schema?: unknown }>;
+    content?: Record<
+      string,
+      { schema?: unknown; example?: unknown; examples?: Record<string, { value?: unknown }> }
+    >;
   };
   security?: OpenApiSecurityRequirement[];
 }
@@ -255,7 +260,7 @@ export interface DeployAnnotation {
   label: string;
 }
 
-/** SSE event body (seção 2 do contrato). Exactly one of span/trace is present. */
+/** SSE event body. Exactly one of span/trace is present. */
 export interface FlowEvent {
   eventId: number;
   type: FlowEventType;

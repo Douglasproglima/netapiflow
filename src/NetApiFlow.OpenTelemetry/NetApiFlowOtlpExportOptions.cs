@@ -9,8 +9,10 @@ public sealed class NetApiFlowOtlpExportOptions
     /// Also observes the native <c>"System.Net.Http"</c> <see cref="System.Diagnostics.ActivitySource"/>, mirroring
     /// <c>NetApiFlowOptions.ExternalSources</c>, so the exported trace has the same outbound HTTP spans
     /// the dashboard shows. That native <c>Activity</c> never passes through NetApiFlow's own URL sanitizer (which
-    /// only sanitizes <c>FlowSpan</c>), so enabling this can export the full outbound URL, including query string,
-    /// to the OTLP backend (R-16). Default: <see langword="false"/>.
+    /// only sanitizes <c>FlowSpan</c>), so what reaches the backend is what the runtime wrote. With a call to
+    /// <c>http://host/target?token=SECRET#fragment</c>, the span carried <c>url.full</c> as <c>http://host/target?*</c> on
+    /// .NET 10 and as <c>http://host/target</c> on .NET 8, so neither exported the query string or the fragment.
+    /// Another runtime version may behave differently. Default: <see langword="false"/>.
     /// </summary>
     public bool IncludeHttpClientSource { get; set; }
 

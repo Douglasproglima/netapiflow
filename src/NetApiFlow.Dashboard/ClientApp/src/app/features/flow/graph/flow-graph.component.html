@@ -32,6 +32,9 @@
         (keydown.enter)="onNodeClick(node)"
         (keydown.space)="onNodeKeydownSpace($event, node)"
       >
+        @if (operationTooltip(node); as tooltip) {
+          <title>{{ tooltip }}</title>
+        }
         <rect
           class="flow-graph__node-ring"
           x="-4"
@@ -150,28 +153,30 @@
   </g>
 </svg>
 
-<div
-  #legend
-  class="flow-graph__legend"
-  [class.flow-graph__legend--compact]="legendCompact()"
-  role="list"
-  [attr.aria-label]="legendAriaLabel()"
->
-  @for (state of legendStates; track state) {
-    <span class="flow-graph__legend-item" role="listitem">
-      <svg
-        class="flow-graph__legend-icon"
-        viewBox="0 0 11 11"
-        width="11"
-        height="11"
-        aria-hidden="true"
-      >
-        <image [attr.href]="legendIconSrc(state)" width="11" height="11"></image>
-      </svg>
-      <span [class.sr-only]="legendCompact()">{{ legendLabel(state) }}</span>
-    </span>
-  }
-</div>
+@if (showLegend()) {
+  <div
+    #legend
+    class="flow-graph__legend"
+    [class.flow-graph__legend--compact]="legendCompact()"
+    role="list"
+    [attr.aria-label]="legendAriaLabel()"
+  >
+    @for (state of legendStates; track state) {
+      <span class="flow-graph__legend-item" role="listitem">
+        <svg
+          class="flow-graph__legend-icon"
+          viewBox="0 0 11 11"
+          width="11"
+          height="11"
+          aria-hidden="true"
+        >
+          <image [attr.href]="legendIconSrc(state)" width="11" height="11"></image>
+        </svg>
+        <span [class.sr-only]="legendCompact()">{{ legendLabel(state) }}</span>
+      </span>
+    }
+  </div>
+}
 
 <div #zoomControls class="flow-graph__zoom-controls">
   <button

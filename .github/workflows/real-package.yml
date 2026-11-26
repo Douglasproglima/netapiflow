@@ -1,0 +1,73 @@
+name: Real package
+
+on:
+  workflow_call:
+    inputs:
+      run:
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  real-package:
+    name: real-package
+    if: inputs.run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/pack-packages
+
+      - name: Test the scripts of this job
+        run: node --test scripts/*.test.mjs
+
+      - name: What each package declares as a dependency matches its approved snapshot
+        run: node scripts/nuspec-snapshot.mjs --feed "$FEED"
+
+      - name: Create a new webapi app
+        run: dotnet new webapi -f net10.0 -n UserApp -o "$USER_APP"
+
+      - name: Paste the README blocks into the app and build it
+        run: node scripts/build-user-app.mjs --app "$USER_APP" --feed "$FEED" --version "$PACKAGE_VERSION"
+
+      - name: Run the app in Development and in Production and walk the HTTP script
+        run: node scripts/package-scenarios.mjs --dll "$USER_APP/bin/Release/net10.0/UserApp.dll"
+
+      - name: Open the panel in a real browser while a request runs and after it ended
+        run: node scripts/verify-live-panel.mjs --dll "$USER_APP/bin/Release/net10.0/UserApp.dll"
+
+      - name: Stop any app left running
+        if: always()
+        run: pkill -f UserApp.dll || true
+
+  comparison:
+    name: comparison
+    if: inputs.run
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/pack-packages
+
+      - name: Build the same app against this build and against the last published package
+        run: node scripts/build-comparison-apps.mjs --out "$COMPARISON_APPS" --feed "$FEED" --version "$PACKAGE_VERSION"
+
+      - name: Walk the same scenarios against both and compare what they do
+        run: >
+          node scripts/compare-with-published.mjs
+          --new-dll "$COMPARISON_APPS/new/bin/Release/net10.0/ComparisonApp.dll"
+          --old-dll "$COMPARISON_APPS/old/bin/Release/net10.0/ComparisonApp.dll"
+
+      - name: Stop any app left running
+        if: always()
+        run: pkill -f ComparisonApp.dll || true

@@ -73,7 +73,7 @@ describe('App', () => {
   let httpMock: HttpTestingController;
 
   function setup(initiallyNarrow: boolean) {
-    localStorage.clear(); // isolate LanguageService's default (pt-BR, D-35) across tests
+    localStorage.clear(); // isolate LanguageService's default (pt-BR) across tests
     const { fake, emitNarrow } = fakeBreakpointObserver(initiallyNarrow);
     const sse = fakeSseService();
     TestBed.configureTestingModule({
@@ -116,7 +116,7 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    // pt-BR is the default language (D-35), so the title renders translated, not the raw "Flow".
+    // pt-BR is the default language, so the title renders translated, not the raw "Flow".
     expect(compiled.querySelector('.app-topbar__title')?.textContent).toContain('Fluxo');
     expect(compiled.querySelector('a[href="/"]')).toBeTruthy();
     expect(compiled.querySelector('a[href="/history"]')).toBeTruthy();
@@ -286,7 +286,7 @@ describe('App', () => {
     expect(TestBed.inject(ThemeService).toggle).toHaveBeenCalled();
   });
 
-  it('reads the rail version from GET /config, not a build-time constant (D-44)', async () => {
+  it('reads the rail version from GET /config, not a build-time constant', async () => {
     const { fixture } = setup(false);
     await fixture.whenStable();
     flushShellRequests();

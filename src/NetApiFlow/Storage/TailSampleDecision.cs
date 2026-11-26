@@ -3,7 +3,7 @@ using NetApiFlow.Domain;
 namespace NetApiFlow.Storage;
 
 /// <summary>Pure decision of whether a completed trace should be persisted under tail-based
-/// sampling (D-82). The random draw is a parameter, not an internal <see cref="Random"/>, so the
+/// sampling. The random draw is a parameter, not an internal <see cref="Random"/>, so the
 /// decision is deterministic and testable.</summary>
 internal static class TailSampleDecision
 {

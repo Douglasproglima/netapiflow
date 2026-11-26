@@ -24,7 +24,37 @@ function inputValue(event: Event): string {
   return (event.target as HTMLSelectElement).value;
 }
 
-const INLINED_PRESENTATION_PROPERTIES = ['fill', 'stroke', 'color', 'font-family'] as const;
+const INLINED_PRESENTATION_PROPERTIES = [
+  'fill',
+  'fill-opacity',
+  'stroke',
+  'stroke-width',
+  'stroke-opacity',
+  'stroke-dasharray',
+  'stroke-linecap',
+  'stroke-linejoin',
+  'opacity',
+  'color',
+  'font-family',
+  'font-size',
+  'font-weight',
+  'font-style',
+  'letter-spacing',
+  'text-anchor',
+  'dominant-baseline',
+] as const;
+
+const ANGULAR_ENCAPSULATION_ATTRIBUTE = /^_ng(content|host)-/;
+
+function removeAngularEncapsulationAttributes(root: Element): void {
+  for (const element of [root, ...Array.from(root.querySelectorAll('*'))]) {
+    for (const attribute of Array.from(element.attributes)) {
+      if (ANGULAR_ENCAPSULATION_ATTRIBUTE.test(attribute.name)) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  }
+}
 
 /**
  * Bakes each element's own resolved color/font (M7) straight onto its exported clone, in the
@@ -53,7 +83,7 @@ function inlineComputedPresentation(live: Element, cloned: Element): void {
 
 /**
  * Generalizes /blueprint (last successful execution of a route) to the union of every
- * execution of a route within a window (D-83): same question ("what does this route normally
+ * execution of a route within a window: same question ("what does this route normally
  * do"), answered from GET /architecture instead of a single trace.
  */
 @Component({
@@ -205,6 +235,7 @@ export class ArchitectureComponent {
     }
 
     inlineComputedPresentation(svg, clone);
+    removeAngularEncapsulationAttributes(clone);
     await this.inlineStateIcons(clone);
 
     downloadTextFile(

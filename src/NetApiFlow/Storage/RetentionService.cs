@@ -21,13 +21,13 @@ internal sealed partial class RetentionService(
                 await ApplyRetentionWithoutFailingAsync(stoppingToken);
             }
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (IsGracefulShutdown(stoppingToken))
         {
-            // PeriodicTimer.WaitForNextTickAsync throws instead of returning false when the
-            // supplied token (as opposed to the timer itself) is what caused the wait to end;
-            // that is the expected shape of a graceful host shutdown, not a failure.
+            return;
         }
     }
+
+    private static bool IsGracefulShutdown(CancellationToken stoppingToken) => stoppingToken.IsCancellationRequested;
 
     private async Task ApplyRetentionWithoutFailingAsync(CancellationToken stoppingToken)
     {

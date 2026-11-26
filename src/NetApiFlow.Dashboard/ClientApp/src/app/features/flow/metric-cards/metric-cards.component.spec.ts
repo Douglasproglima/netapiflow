@@ -207,7 +207,7 @@ describe('MetricCardsComponent', () => {
     flushSparkline();
     await fixture.whenStable();
 
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain('Falha ao carregar as métricas.');
   });
 
@@ -243,7 +243,7 @@ describe('MetricCardsComponent', () => {
     expect(fixture.componentInstance.error()).toBeNull();
   });
 
-  it('re-fetches the metrics when a TraceCompleted event arrives (D-39)', async () => {
+  it('re-fetches the metrics when a TraceCompleted event arrives', async () => {
     const fixture = TestBed.createComponent(MetricCardsComponent);
     await fixture.whenStable();
     flushConfig();

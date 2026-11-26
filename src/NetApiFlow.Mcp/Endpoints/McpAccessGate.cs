@@ -2,37 +2,52 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NetApiFlow.Mcp.Tools;
 
 namespace NetApiFlow.Mcp.Endpoints;
 
-/// <summary>
-/// Shared gate for every MCP route (risco R-14): outside
-/// Development, a route 404s unless <c>RequireAuthorization</c> or an <see cref="IFlowAccessFilter"/>
-/// was configured. An <see cref="IFlowAccessFilter"/>, when registered, is always enforced (even in
-/// Development, since the host asked for it explicitly), returning <c>403</c> when it denies the
-/// request.
-/// </summary>
 internal static class McpAccessGate
 {
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
+        SecurityHeaders.Apply(httpContext.Response);
+        var refusal = RequestOriginGuard.Refusal(httpContext);
+        if (refusal is not null)
+        {
+            return Results.Text(refusal, statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        if (NetApiFlowToolScope.CannotTellTheEndpoint(httpContext.RequestServices))
+        {
+            return Results.NotFound();
+        }
+
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
         {
             return await customFilter.AuthorizeAsync(httpContext)
-                ? await next(context)
+                ? await AdmitAsync(context, next)
                 : Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         var environment = httpContext.RequestServices.GetRequiredService<IHostEnvironment>();
         if (environment.IsDevelopment())
         {
-            return await next(context);
+            return await AdmitAsync(context, next);
         }
 
-        var hasRequireAuthorization = httpContext.GetEndpoint()?.Metadata.GetMetadata<IAuthorizeData>() is not null;
-        return hasRequireAuthorization ? await next(context) : Results.NotFound();
+        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await AdmitAsync(context, next) : Results.NotFound();
     }
+
+    private static ValueTask<object?> AdmitAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        NetApiFlowMcpRequest.MarkCurrent();
+        return next(context);
+    }
+
+    private static bool IsGuardedByAuthorization(Endpoint? endpoint) =>
+        endpoint?.Metadata.GetMetadata<IAuthorizeData>() is not null
+        && endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null;
 }

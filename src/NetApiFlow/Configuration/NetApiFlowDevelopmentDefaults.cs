@@ -4,8 +4,9 @@ using Microsoft.Extensions.Options;
 namespace NetApiFlow.Configuration;
 
 /// <summary>
-/// Turns on the sources the runtime and the common database drivers already emit, while
-/// developing, so a fresh install shows outbound HTTP and SQL without configuring anything.
+/// Turns on the sources the runtime and the common database drivers already emit, and the
+/// trace id response header, while developing, so a fresh install shows outbound HTTP and SQL
+/// and the Runner and <c>NetApiFlow.Testing</c> find their traces without configuring anything.
 /// <para>Registered before configuration binding and before the caller's own lambda, and an
 /// <see cref="IConfigureOptions{TOptions}"/> runs in registration order, so anything stated
 /// explicitly still wins, including setting the value back to
@@ -26,5 +27,6 @@ internal sealed class NetApiFlowDevelopmentDefaults(IHostEnvironment? environmen
         options.ExternalSources = ExternalActivitySource.HttpClient
             | ExternalActivitySource.Npgsql
             | ExternalActivitySource.SqlClient;
+        options.EmitTraceIdHeader = true;
     }
 }

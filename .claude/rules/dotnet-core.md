@@ -45,7 +45,8 @@ de quem consome o pacote.
 ## Visibilidade e API pública
 
 - A superfície pública de cada pacote é a definida em `docs/plano/contratos.md`. Nada além
-  disso nasce `public` sem avisar a Planejadora.
+  disso nasce `public` sem avisar a Planejadora. Toda mudança pública aparece também como um diff do `PublicAPI.Unshipped.txt` do
+  pacote na PR, e o build falha com `RS0016` ou `RS0017` quando a PR não o traz (D-265).
 - Tudo que não precisa ser público é `internal`. Preferir `sealed` por padrão em classe que não
   foi desenhada para herança.
 - Todo membro `public` tem comentário XML (`<summary>`, `<param>`, `<returns>`, `<exception>`
@@ -63,6 +64,8 @@ de quem consome o pacote.
 - Toda exceção lançada **dentro** da própria instrumentação (listener, interceptor, proxy,
   middleware) é capturada e logada, nunca propagada para o código do usuário. Ver
   `.claude/rules/tracing.md`.
+- Todo `Add*` de registro, novo ou alterado, é seguro de chamar mais de uma vez: `TryAdd` ou `TryAddEnumerable`, e o `configure`
+  de cada chamada vale, na ordem, sobre um único objeto de opções (D-276). Chamada repetida tem teste de host real.
 - Sempre usar `{}` em `if`, `else`, `foreach`, `while`, sem exceção.
 - Comentário segue a regra de ouro do `CLAUDE.md`: sintoma de nome ruim, não solução. Nunca cita
   fase, etapa de plano ou número de ADR.
@@ -72,3 +75,5 @@ de quem consome o pacote.
 - `net8.0;net10.0` em todo `.csproj` de produto (ADR-0003). Divergência de API entre os dois
   alvos isolada com `#if NET10_0_OR_GREATER`, no menor número de arquivos possível.
 - Não assumir API só disponível em `net10.0` fora de um bloco `#if`.
+- `net11.0` só vira alvo próprio no dia em que o código usar uma API exclusiva do 11 (ADR-0025). Até
+  lá a suíte roda também no runtime 11, contra a build de `net10.0`.

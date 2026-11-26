@@ -1,4 +1,14 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChildren,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Params, ParamMap, Router, RouterLink } from '@angular/router';
@@ -25,6 +35,7 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { TranslationKey } from '../../core/i18n/translations';
 
 const DEFAULT_PAGE_SIZE = 50;
+const MAX_COMPARED = 2;
 const PAGE_SIZES: readonly number[] = [10, 20, 50, 100];
 const METHODS: readonly string[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const PERIOD_PRESETS: readonly PeriodPreset[] = ['15m', '1h', '24h', '7d'];
@@ -220,6 +231,9 @@ export class HistoryComponent {
   private readonly config = inject(ConfigService);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly sortButtons = viewChildren<ElementRef<HTMLButtonElement>>('sortButton');
+  private sortFieldToRefocus: TraceSortField | null = null;
 
   readonly methods = METHODS;
   readonly periodPresets = PERIOD_PRESETS;
@@ -253,6 +267,7 @@ export class HistoryComponent {
 
   /** At most 2, in selection order: a 3rd pick drops the oldest (FIFO), same as a product compare picker. */
   readonly selectedTraces = signal<FlowTraceSummary[]>([]);
+  readonly oldestSelectionDropped = signal(false);
   readonly canCompare = computed(() => this.selectedTraces().length === 2);
   readonly compareRouteMismatch = computed(() => {
     const [a, b] = this.selectedTraces();
@@ -372,6 +387,7 @@ export class HistoryComponent {
           this.result.set(result);
         }
         this.loading.set(false);
+        this.refocusSortButton();
       });
 
     effect(() => {
@@ -531,7 +547,23 @@ export class HistoryComponent {
         ? 'desc'
         : 'asc'
       : SORT_FIELD_DEFAULT_DIRECTION[field];
+    this.sortFieldToRefocus = field;
     this.patchFilters({ sort: field, order });
+  }
+
+  private refocusSortButton(): void {
+    const field = this.sortFieldToRefocus;
+    this.sortFieldToRefocus = null;
+    if (!field) {
+      return;
+    }
+    afterNextRender(
+      () =>
+        this.sortButtons()
+          .find((button) => button.nativeElement.dataset['sortField'] === field)
+          ?.nativeElement.focus(),
+      { injector: this.injector },
+    );
   }
 
   isActiveSort(field: TraceSortField): boolean {
@@ -626,12 +658,14 @@ export class HistoryComponent {
   toggleSelection(trace: FlowTraceSummary): void {
     const current = this.selectedTraces();
     if (this.isSelected(trace.traceId)) {
+      this.oldestSelectionDropped.set(false);
       this.selectedTraces.set(current.filter((selected) => selected.traceId !== trace.traceId));
       return;
     }
 
     const next = [...current, trace];
-    this.selectedTraces.set(next.length > 2 ? next.slice(1) : next);
+    this.oldestSelectionDropped.set(next.length > MAX_COMPARED);
+    this.selectedTraces.set(next.length > MAX_COMPARED ? next.slice(1) : next);
   }
 
   compare(): void {

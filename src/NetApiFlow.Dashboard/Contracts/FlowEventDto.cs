@@ -2,7 +2,7 @@ using NetApiFlow.Domain;
 
 namespace NetApiFlow.Dashboard.Contracts;
 
-/// <summary>Wire shape of an SSE event (<c>docs/plano/contratos.md</c>, seção 2). Exactly one of <see cref="Span"/>/<see cref="Trace"/> is present.</summary>
+/// <summary>Wire shape of an SSE event. Exactly one of <see cref="Span"/>/<see cref="Trace"/> is present.</summary>
 internal sealed record FlowEventDto
 {
     public required long EventId { get; init; }

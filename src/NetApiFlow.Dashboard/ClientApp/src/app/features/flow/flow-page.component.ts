@@ -1,4 +1,13 @@
-import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -8,7 +17,13 @@ import { MatMenuModule } from '@angular/material/menu';
 import { ActionDrawerService } from '../../core/action-drawer.service';
 import { ApiService } from '../../core/api.service';
 import { ConfigService } from '../../core/config.service';
-import { FlowSpan, FlowTraceDetail, FlowTraceSummary, SpanDetail } from '../../core/models';
+import {
+  FlowSpan,
+  FlowTraceDetail,
+  FlowTraceSummary,
+  SpanDetail,
+  UNMATCHED_ROUTE_TEMPLATE,
+} from '../../core/models';
 import { SSE_REFRESH_AUDIT_MS, SseService } from '../../core/sse.service';
 import { LiveTracePlayerService } from './playback/live-trace-player.service';
 import { ReplayPlayerService } from './playback/replay-player.service';
@@ -28,11 +43,13 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { TranslationKey } from '../../core/i18n/translations';
 import { parseTraceFile, traceExportFileName } from './trace-file';
 import { buildLocalSpanDetail } from './details/local-span-detail';
+import { ownTimeOfEachStep } from './own-time';
+import { ImportedTraceService } from '../../core/imported-trace.service';
 
 export const REPLAY_SPEEDS: readonly number[] = [0.25, 0.5, 1, 2, 4];
 
 /**
- * Default screen (`/flow`, D-23): a dense workspace, metric cards always visible on
+ * Default screen (`/flow`): a dense workspace, metric cards always visible on
  * top, the action panel (shared `EndpointFormComponent`) on the left, the graph with replay
  * controls at the center, the details panel on the right, and the live event feed at the bottom.
  * With no `?trace=` query param the center column lists the traces currently in progress; with
@@ -105,7 +122,10 @@ export class FlowPageComponent {
   readonly isReplaying = signal(false);
 
   readonly importedTrace = signal<FlowTraceDetail | null>(null);
+  private readonly importedTraceState = inject(ImportedTraceService);
   readonly importErrorKey = signal<TranslationKey | null>(null);
+
+  protected readonly unmatchedRouteTemplate = UNMATCHED_ROUTE_TEMPLATE;
 
   readonly trace = computed<FlowTraceDetail | null>(
     () => this.importedTrace() ?? this.livePlayer.trace(),
@@ -208,6 +228,11 @@ export class FlowPageComponent {
     });
 
     effect(() => {
+      this.importedTraceState.active.set(this.importedTrace() !== null);
+    });
+    inject(DestroyRef).onDestroy(() => this.importedTraceState.active.set(false));
+
+    effect(() => {
       const traceId = this.traceId();
       this.selectedNodeId.set(null);
       this.selectedSpanDetail.set(null);
@@ -234,9 +259,14 @@ export class FlowPageComponent {
       }
 
       this.liveBlueprintTraceId = trace.traceId;
-      this.api
-        .getBlueprint(trace.method, trace.routeTemplate)
-        .subscribe((blueprint) => this.liveBlueprintSpans.set(blueprint?.spans ?? null));
+      if (trace.routeTemplate === UNMATCHED_ROUTE_TEMPLATE) {
+        return;
+      }
+
+      this.api.getBlueprint(trace.method, trace.routeTemplate, trace.startedAt).subscribe({
+        next: (blueprint) => this.applyBlueprint(trace.traceId, blueprint?.spans ?? null),
+        error: () => this.applyBlueprint(trace.traceId, null),
+      });
     });
 
     // Keyed by traceId plus whether the trace is still Running (M5), so a live trace's growing
@@ -259,6 +289,12 @@ export class FlowPageComponent {
   }
 
   private lastReplayLoadKey: string | null = null;
+
+  private applyBlueprint(traceId: string, spans: FlowSpan[] | null): void {
+    if (traceId === this.liveBlueprintTraceId) {
+      this.liveBlueprintSpans.set(spans);
+    }
+  }
 
   readonly replaySpeeds = REPLAY_SPEEDS;
 
@@ -285,11 +321,12 @@ export class FlowPageComponent {
       return null;
     }
 
-    return (
-      trace.spans
-        .filter((span) => (span.durationMicros ?? 0) >= threshold)
-        .sort((a, b) => (b.durationMicros ?? 0) - (a.durationMicros ?? 0))[0] ?? null
-    );
+    const ownTimes = ownTimeOfEachStep(trace.spans);
+    const slowest = trace.spans
+      .map((span) => ({ span, ownMicros: ownTimes.get(span.spanId) ?? 0 }))
+      .filter((step) => step.ownMicros >= threshold)
+      .sort((a, b) => b.ownMicros - a.ownMicros)[0];
+    return slowest ?? null;
   });
 
   readonly replayStatusLine = computed(() => {

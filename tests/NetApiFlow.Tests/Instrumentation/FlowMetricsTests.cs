@@ -8,11 +8,13 @@ using NetApiFlow.Domain;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
 using NetApiFlow.Storage;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
 
 namespace NetApiFlow.Tests.Instrumentation;
 
+[Collection("FlowMetrics")]
 public class FlowMetricsTests
 {
     private static MeterListener CreateListener(ConcurrentDictionary<string, long> totals)
@@ -92,10 +94,9 @@ public class FlowMetricsTests
 
         using var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/orders", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/orders");
 
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             for (var i = 0; i < 25; i++)
             {

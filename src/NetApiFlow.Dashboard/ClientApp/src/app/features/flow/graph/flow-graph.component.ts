@@ -27,8 +27,8 @@ import { NodeVisualState } from '../../../core/models';
 const ZOOM_STEP_FACTOR = 1.3;
 
 /**
- * Renders the output of graph-builder as plain SVG (seção 4.2 do prompt: no ready-made
- * graph-rendering library, dagre is layout-only). Zoom and pan via d3-zoom.
+ * Renders the output of graph-builder as plain SVG (no ready-made graph-rendering library, dagre
+ * is layout-only). Zoom and pan via d3-zoom.
  */
 @Component({
   selector: 'app-flow-graph',
@@ -42,12 +42,13 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
   readonly nodes = input.required<GraphNode[]>();
   readonly edges = input.required<GraphEdge[]>();
   readonly selectedNodeId = input<string | null>(null);
+  readonly showLegend = input(true);
 
   readonly nodeSelected = output<string>();
 
   private readonly svgRef = viewChild.required<ElementRef<SVGSVGElement>>('svg');
   private readonly zoomLayerRef = viewChild.required<ElementRef<SVGGElement>>('zoomLayer');
-  private readonly legendRef = viewChild.required<ElementRef<HTMLDivElement>>('legend');
+  private readonly legendRef = viewChild<ElementRef<HTMLDivElement>>('legend');
   private readonly zoomControlsRef = viewChild.required<ElementRef<HTMLDivElement>>('zoomControls');
 
   private readonly containerSize = signal<ContainerSize>({ width: 0, height: 0 });
@@ -151,13 +152,14 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
     }
 
     const hostElement = this.hostElementRef.nativeElement;
-    const legendElement = this.legendRef().nativeElement;
-    const zoomControlsElement = this.zoomControlsRef().nativeElement;
+    const overlays = [this.legendRef()?.nativeElement, this.zoomControlsRef().nativeElement].filter(
+      (overlay): overlay is HTMLDivElement => overlay !== undefined,
+    );
 
     const measure = (): void => {
       this.containerSize.set({ width: hostElement.clientWidth, height: hostElement.clientHeight });
       const canvasMiddleY = hostElement.getBoundingClientRect().top + hostElement.clientHeight / 2;
-      const panels = [legendElement, zoomControlsElement];
+      const panels = overlays;
       const isInTopHalf = (panel: HTMLElement): boolean =>
         panel.getBoundingClientRect().top < canvasMiddleY;
       this.topOverlayHeights.set(panels.filter(isInTopHalf).map((panel) => panel.clientHeight));
@@ -168,8 +170,7 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
 
     this.overlayResizeObserver = new ResizeObserver(measure);
     this.overlayResizeObserver.observe(hostElement);
-    this.overlayResizeObserver.observe(legendElement);
-    this.overlayResizeObserver.observe(zoomControlsElement);
+    overlays.forEach((overlay) => this.overlayResizeObserver?.observe(overlay));
   }
 
   zoomToFit(): void {
@@ -298,6 +299,10 @@ export class FlowGraphComponent implements AfterViewInit, OnDestroy {
     return node.operation.length <= maxChars
       ? node.operation
       : `${node.operation.slice(0, maxChars - 1)}…`;
+  }
+
+  operationTooltip(node: GraphNode): string | null {
+    return this.nodeOperationLabel(node) === node.operation ? null : node.operation;
   }
 
   /** Edge color follows the target node's state (guide seção 6.4: "cor do estado do nó de destino"). */

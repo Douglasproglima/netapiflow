@@ -35,34 +35,88 @@ It is **not**:
 
 ## Quick start
 
-```bash
+In a project created with `dotnet new webapi`:
+
+```bash quickstart:packages
 dotnet add package NetApiFlow
 dotnet add package NetApiFlow.Dashboard
 ```
 
-```csharp
+> **Update all the NetApiFlow packages together.** Each package asks for the core at exactly its own
+> version. If they do not match, NuGet tells you when it restores: `NU1605` (an error) when the core
+> is older than a package needs, and `NU1608` (a warning, worth turning into an error) when it is newer.
+
+Then add the NetApiFlow lines to the `Program.cs` the template generated. On .NET 10, `AddOpenApi()`
+and `MapOpenApi()` are the template's own, so keep them: the dashboard's Runner lists your endpoints
+from your app's OpenAPI document, which is `/openapi/v1.json` unless you set `OpenApiDocumentPath`.
+The `/hello` line stands for your own endpoints. On .NET 8, read the note under the block.
+
+```csharp quickstart:program
 using NetApiFlow;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
+using NetApiFlow.Marking;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOpenApi();
 builder.Services.AddNetApiFlow();
 builder.Services.AddNetApiFlowDashboard();
 
 var app = builder.Build();
-app.UseNetApiFlowDashboard(); // mounted at /flow by default
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
 
-app.MapGet("/hello", () => "Hello")
-    .WithNetApiFlowTracking();
+app.MapNetApiFlowDashboard(); // mounted at /flow by default
+
+app.MapGet("/hello", () => "Hello");
 
 app.Run();
 ```
 
-MVC controllers become a step on their own. A Minimal API endpoint only becomes one with
-`.WithNetApiFlowTracking()`, on the endpoint or on a whole group
-(`app.MapGroup("/api").WithNetApiFlowTracking()`). The default `dotnet new webapi` template uses
-Minimal API, so add the call to its `MapGet`. Without it the request is still recorded and listed,
-but with zero steps, and the graph stays empty.
+**On .NET 8**, the `dotnet new webapi` template has no `AddOpenApi()` and no `MapOpenApi()`. It uses
+Swashbuckle: `AddSwaggerGen()`, `UseSwagger()` and `UseSwaggerUI()`. Pasting those two lines gives
+`CS1061`. Keep what the template generated, leave the two lines out, and point the Runner at the
+document Swashbuckle serves:
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.OpenApiDocumentPath = "/swagger/v1/swagger.json");
+```
+
+Without that path the Runner says it could not load the OpenAPI document and lists no endpoint.
+Nothing else in the Quick start changes.
+
+Calling `AddNetApiFlow(...)`, `AddNetApiFlowDashboard()`, `AddNetApiFlowMediatR()` or
+`AddNetApiFlowOtlpExport(...)` again is safe, for example from an extension method of your own or
+from a test. Nothing is registered twice, and the options of every call to `AddNetApiFlow(...)` and
+`AddNetApiFlowOtlpExport(...)` are applied, in the order of the calls.
+
+MVC controllers and Minimal API endpoints become a step on their own, with nothing to mark. That
+includes the default `dotnet new webapi` template. A Minimal API endpoint gets one `Endpoint` step
+for each traced request, from the moment routing picks it to the end of the request, so the step
+also counts the middleware that runs in between, such as authentication. A request that matches
+no route, a 404 or a static file for example, is still recorded and listed, with zero steps.
+
+To turn the automatic step off, set `CaptureMinimalApiEndpoints = false`. A Minimal API endpoint
+then becomes a step only with `.WithNetApiFlowTracking()`, on the endpoint or on a whole group
+(`app.MapGroup("/api").WithNetApiFlowTracking()`). Marking an endpoint while the option is on does
+no harm: it never gets two steps.
+
+To draw the layers under the endpoint too, add these lines where you register your own services,
+before `builder.Build()`. The `using NetApiFlow.Marking;` at the top of the block above is for the
+last one:
+
+```csharp quickstart:registrations
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.TrackFlowByConvention();
+```
+
+Every interface of your own code whose implementation is named `*Service`, `*Repository` or
+`*Handler` then becomes a step, with the matching component type. Call it after the
+registrations: one made later is not tracked, and the host logs a warning that names it.
+[Marking forms](#marking-forms) has the other ways.
 
 Open `http://localhost:<port>/flow` and send a request to the endpoint. See
 [Dashboard security in production](#dashboard-security-in-production) before deploying this
@@ -71,58 +125,100 @@ anywhere but your own machine.
 ## Marking forms
 
 NetApiFlow needs to know where one step ends and the next begins. Pick whichever form fits each
-layer. They compose freely in the same request.
+layer. They compose freely in the same request. `AddFlowTracked`, `DecorateFlowTracked` and
+`TrackFlowByConvention` are in the `NetApiFlow.Marking` namespace, so `Program.cs` needs
+`using NetApiFlow.Marking;` at the top, next to the `using NetApiFlow;` the Quick start already has.
+The `using NetApiFlow;` covers `.WithNetApiFlowTracking()` and `ComponentType`.
 
 | Form | What it does | When to use it |
 |---|---|---|
-| `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Minimal API apps. MVC controllers don't need it |
-| `NetApiFlow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
+| `.WithNetApiFlowTracking()` | Wraps a Minimal API endpoint, or every endpoint of a `MapGroup`, in an `Endpoint` step | Only with `CaptureMinimalApiEndpoints = false`. Otherwise every Minimal API endpoint already gets the step, and MVC controllers always do |
+| `Flow.Step(...)` | Manually opens and closes a step around a block of code | Any code, no dependency on DI |
+| `.WithoutNetApiFlowTracking()` | Keeps an endpoint, a group, `MapControllers()` or `MapHealthChecks()` out of tracing | A health check, a metrics route, any route that must never show up in history, also under a `PathBase` |
 | `AddFlowTracked<TInterface, TImpl>(...)` | Wraps every call to an interface's implementation in a step, via a dynamic proxy | A repository/service interface already registered in DI |
-| `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention (e.g. `I*Repository`) |
-| `NetApiFlow.MediatR` | A pipeline behavior that wraps every `IRequest` handled by MediatR | Projects already using MediatR for commands/queries |
+| `TrackFlowByConvention()` | Wraps the `*Service`, `*Repository` and `*Handler` interfaces of your own code in steps, each with its component type | A layered app: one line after your registrations |
+| `DecorateFlowTracked(predicate, ...)` | Same as above, applied in bulk to every registration matching a predicate | Many interfaces that share a naming convention you choose yourself |
+| `NetApiFlow.MediatR` | A pipeline behavior that wraps every `IRequest` handled by MediatR. Register it with `builder.Services.AddNetApiFlowMediatR()` (namespace `NetApiFlow.MediatR`) next to your `AddMediatR(...)`. Without that call, no MediatR step is recorded | Projects already using MediatR for commands/queries |
 | `NetApiFlow.EntityFrameworkCore` | A `DbCommandInterceptor` that marks each SQL command as a `Database` step | Projects using EF Core |
 
 Manual form, used explicitly:
 
 ```csharp
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
 
 public async Task<Order?> FindAsync(int id, CancellationToken cancellationToken)
 {
-    using var step = Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
+    using var step = Flow.Step(nameof(OrderRepository), nameof(FindAsync), ComponentType.Repository);
     return await _dbContext.Orders.FindAsync([id], cancellationToken);
 }
 ```
 
-The `using static` is what lets you write `Step(...)` unqualified. Writing `NetApiFlow.Step(...)`
-instead only compiles from inside a namespace of your own: from the global namespace, which is
-where a top-level-statements `Program.cs` puts your code, `NetApiFlow` resolves to this package's
-namespace rather than its class, and the compiler reports `CS0234`.
+`Flow` lives in the `NetApiFlow` namespace, so `using NetApiFlow;` is all it needs, from a
+top-level `Program.cs` too. If another library you import also has a type named `Flow`, write
+`NetApiFlow.Flow.Step(...)`, or give it an alias such as `using Tracing = NetApiFlow.Flow;` and call
+`Tracing.Step(...)`.
+
+A manual step does not see the exception of the block it wraps. If the block throws and you never call
+`MarkError`, the step is recorded as `Success`, and only the step above it (the `Endpoint` or the
+`Controller`) is marked as failed. To make the step itself show the failure, catch the exception and call
+`step.MarkError(exception)` before you rethrow it.
+
+Before 0.6.0 this class was `NetApiFlow.NetApiFlow`, and the dashboard and the MCP server were
+mounted with `UseNetApiFlowDashboard` and `UseNetApiFlowMcp`. Those names still work and forward to the new
+ones. They are marked `[Obsolete]`, so the compiler shows warning `CS0618` where you use them. They
+will be removed in a later version, and the CHANGELOG will say so before that happens.
 
 Automatic form, from `samples/SampleApi.Controllers/Program.cs`: `OrderService`/`OrderRepository`
 carry no NetApiFlow code at all, every call to them is tracked because of this one registration:
 
 ```csharp
-using NetApiFlow.Marking;
-
 builder.Services.AddFlowTracked<IOrderRepository, OrderRepository>(ComponentType.Repository);
 builder.Services.AddFlowTracked<IOrderService, OrderService>(ComponentType.Service);
 ```
 
-`DecorateFlowTracked` does the same thing in bulk, for every interface already registered in DI
-whose implementation type matches a predicate. It scales to a real project with many repositories
-and services, by naming convention instead of one call per interface:
+One line covers the usual layers. Call `TrackFlowByConvention` after your own registrations:
 
 ```csharp
-using NetApiFlow.Marking;
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.TrackFlowByConvention(); // after the registrations above
+```
 
-builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Repository"), ComponentType.Repository);
-builder.Services.DecorateFlowTracked(type => type.Name.EndsWith("Service"), ComponentType.Service);
+It tracks `*Service` as a `Service`, `*Repository` as a `Repository` and `*Handler` as a `UseCase`,
+for the interfaces whose implementation is a type of your application's entry assembly. It never
+touches a type of the framework, of a third-party package or of NetApiFlow. When the repositories
+live in another assembly, name it, or a namespace:
+
+```csharp
+builder.Services.TrackFlowByConvention(options =>
+{
+    options.IncludeAssembly(typeof(OrderRepository).Assembly);
+    options.IncludeNamespacePrefix("MyCompany.Orders");
+});
+```
+
+Any of the two calls replaces the default scope, the entry assembly. Under `WebApplicationFactory`
+the entry assembly is the test host, so name yours with
+`options.IncludeAssembly(typeof(Program).Assembly)`, or the shortcut tracks none of your services
+in those tests. A MediatR handler is left out,
+because `NetApiFlow.MediatR` already opens its step. Two cases the shortcut cannot cover are
+logged as warnings when the host starts, naming the types: a registration made after the call,
+and a registration made by factory, for which `AddFlowTracked<TInterface, TImplementation>` is the
+way. It stays optional, `AddNetApiFlow()` never turns it on.
+
+`DecorateFlowTracked` is what it is built on: it decorates every interface already registered in DI
+whose implementation type matches a predicate you write. Add the assembly to the predicate, or it
+also matches types of the framework and of other packages:
+
+```csharp
+builder.Services.DecorateFlowTracked(
+    type => type.Assembly == typeof(Program).Assembly && type.Name.EndsWith("Repository"),
+    ComponentType.Repository);
 ```
 
 The predicate receives the concrete implementation type registered in DI, never the interface, so
-matching on an interface-only naming convention (`IOrderRepository`) will not work.
+matching on an interface-only naming convention (`IOrderRepository`) will not work. A type of
+NetApiFlow itself is never decorated, whatever the predicate says.
 
 ### EF Core database commands
 
@@ -131,8 +227,6 @@ only registers `FlowDbCommandInterceptor` in DI. You attach it to each `DbContex
 because EF Core has no global interceptor registration:
 
 ```csharp
-using NetApiFlow.EntityFrameworkCore;
-
 builder.Services.AddNetApiFlowEntityFrameworkCore();
 
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
@@ -142,21 +236,28 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 });
 ```
 
+`FlowDbCommandInterceptor` is in `NetApiFlow.EntityFrameworkCore`, so `Program.cs` also needs
+`using NetApiFlow.EntityFrameworkCore;` at the top.
+
 The package works with EF Core 8.0.10 or later, on `net8.0` and on `net10.0`. It was tested on
 EF Core 8, 9 and 10.
 
 ### Tagging a step
 
-A step opened with `NetApiFlow.Step(...)` accepts free key/value tags, recorded on that span:
+A step opened with `Flow.Step(...)` accepts free key/value tags, recorded on that span:
 
 ```csharp
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
 
-using var step = Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
+using var step = Flow.Step(nameof(OrderService), nameof(ConfirmAsync), ComponentType.Service);
 step.Tag("order.status", order.Status);
 step.Tag("payment.provider", provider.Name);
 ```
+
+`Tag` takes a `string`, an `int`, a `long`, a `double`, a `bool` or an enum value. A number is
+recorded as text in the invariant culture, a `bool` as `true` or `false`, and an enum value as the
+name of its member. A null key or value is ignored and logs a warning, so a tag never breaks the
+request.
 
 Call `Tag` at any point while the step is open, not only right after opening it: tags are read off
 the step when it completes. A key starting with `netapiflow.` is reserved and never recorded.
@@ -169,20 +270,20 @@ and `Limits.MaxTagValueLength` truncates a long value without dropping the tag. 
 > and served exactly as written. Keep it to identifiers and short labels, never a request payload,
 > a user's data or a credential.
 
-Tags travel on `FlowSpan.Tags`: `GET /traces/{traceId}`, `NetApiFlow.GetRecentTrace`,
+Tags travel on `FlowSpan.Tags`: `GET /traces/{traceId}`, `Flow.GetRecentTrace`,
 `NetApiFlow.Mcp`'s `get_trace` and both storage packages all carry them. The dashboard UI does not
 display them in this version.
 
 ## Asserting on flow in tests
 
 An integration test built on `WebApplicationFactory<TEntryPoint>` already has the response its
-own request just produced. `NetApiFlow.GetRecentTrace` reads that trace straight from the
-in-memory buffer kept while persistence catches up, so there's no `Task.Delay` or retry loop
-waiting for the asynchronous write to finish:
+own request just produced. `Flow.GetRecentTrace` reads that trace straight from a buffer in memory
+that holds the last 500 completed traces, whether or not they were already persisted, so there's no
+`Task.Delay` or retry loop waiting for the asynchronous write to finish:
 
 ```csharp
+using Microsoft.AspNetCore.Mvc.Testing;
 using NetApiFlow;
-using static NetApiFlow.NetApiFlow;
 
 public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
     : IClassFixture<WebApplicationFactory<Program>>
@@ -195,12 +296,21 @@ public class OrdersEndpointTests(WebApplicationFactory<Program> factory)
         var response = await client.GetAsync("/api/orders/42");
 
         var traceId = response.Headers.GetValues("X-NetApiFlow-TraceId").Single();
-        var trace = GetRecentTrace(factory.Services, traceId);
+        var trace = Flow.GetRecentTrace(factory.Services, traceId);
 
         Assert.NotNull(trace);
         Assert.Equal(1, trace.Spans.Count(s => s.Type == ComponentType.Database));
     }
 }
+```
+
+The test project needs the `Microsoft.AspNetCore.Mvc.Testing` package, in the version of your .NET.
+`WebApplicationFactory<Program>` also needs the test project to see the `Program` class of the app. The
+.NET 10 template needs nothing. The .NET 8 template makes `Program` internal, so the test project does not
+compile (`CS0122`) until you add this line at the end of the app's `Program.cs`:
+
+```csharp
+public partial class Program { }
 ```
 
 `GetRecentTrace` returns a plain `FlowTraceDetail` (the `FlowTrace` and the `FlowSpan`s it
@@ -217,6 +327,7 @@ The same test, written with the optional `NetApiFlow.Testing` package, which ski
 read and the null check and names the rule instead of spelling out the LINQ:
 
 ```csharp
+using Microsoft.AspNetCore.Mvc.Testing;
 using NetApiFlow;
 using NetApiFlow.Testing;
 
@@ -246,7 +357,7 @@ component alone when the operation is left out, or on the exact pair when it is 
 The package references nothing but `NetApiFlow` itself, so it imposes no assertion library on
 your test project. A failed assertion throws `FlowAssertionException` with a message saying what
 was expected and what was found, for example
-`Expected at most 1 Database calls, found 5.`; every test framework reports that as a failure.
+`Expected at most 1 Database call, found 5.`; every test framework reports that as a failure.
 `GetFlowTrace` throws the same exception instead of returning `null` when the response carries no
 `X-NetApiFlow-TraceId` header or the trace already left the buffer.
 
@@ -266,6 +377,11 @@ was expected and what was found, for example
 The core (`NetApiFlow`) has zero dependencies beyond the ASP.NET Core shared framework. Every
 one of the above is opt-in.
 
+`NetApiFlow.MediatR` asks for MediatR 12.5.0, which is under the Apache-2.0 license. MediatR 13.0.0 and
+later changed the license: their package carries a `LICENSE.md` that says Reciprocal Public License 1.5,
+or a commercial license of Lucky Penny Software for those who do not want to release the source of what
+they build. Read it before your app moves to MediatR 13 or later.
+
 ## Reading the graph
 
 Every node is one step. Color reinforces its state, but never is the only signal: each state
@@ -280,6 +396,12 @@ black-and-white printout.
 | ⚠ Slow | Finished without error, at or above the configured slow threshold |
 | ✕ Error | Finished with an exception, or a descendant step failed |
 | ∅ Not executed | The blueprint expected this step, but the request finished without reaching it (e.g. an early return, a short-circuited branch) |
+
+The blueprint of a trace is the last successful execution of the same method and route that started
+before it. A trace is never drawn with steps that only a later execution ran, so an old trace looks
+the same today as it did when it ended. The first execution of an endpoint has no blueprint, so it
+shows no Waiting or Not executed node. If retention already removed the execution that would have
+been the blueprint, the trace is drawn from the one before it, or with none.
 
 A `Database` node also shows an N+1 badge, e.g. `⚠ ×12`, when 3 or more `Database` steps in the
 same trace share the same component and operation, even under different parents. That shape is
@@ -304,7 +426,8 @@ through a trace that already finished.
 
 The metrics strip above the graph carries a p95 latency card with a sparkline of the last 50
 executions. The p95 figure comes from `GET /metrics` for the whole window. The sparkline is the
-shape of the recent series next to it. Both refresh as traces complete.
+shape of the recent series next to it. Both refresh as traces complete. The card and its sparkline are
+shown only in a window 1600 px wide or more, and are hidden below that.
 
 ## Try an endpoint
 
@@ -318,9 +441,10 @@ endpoint) in the host application, and says so when the document can't be loaded
 own routes are filtered out of the list.
 
 When the OpenAPI document declares a security scheme (`http`/`bearer`, `apiKey`, `oauth2`,
-`openIdConnect`), an "Authorize" section appears above the request form. Paste a value into its
-masked field for each scheme; a preview next to it shows the exact header or query parameter that
-will be sent. The right one is applied automatically to every request whose route requires that
+`openIdConnect`), an "Authorize" section appears between the parameters and the headers of the request
+form. Paste a value into its masked field for each scheme; a preview below it shows which header or
+query parameter will carry it, with the value itself masked except for its last four characters
+(`Authorization: Bearer ••••-123`). The right one is applied automatically to every request whose route requires that
 scheme, and a header added by hand always wins over the automatic one. The pasted value lives only
 in `sessionStorage` for the current tab: closing it clears the value, and nothing is written to
 disk.
@@ -334,8 +458,10 @@ makes an HTTP call in either direction. The person receiving the file needs no a
 that produced it, nor to its database, which is what makes a trace mailable to a colleague or
 pastable into a conversation with an AI agent.
 
-An imported trace renders through exactly the same graph, waterfall, metric cards and event feed
-as a live one, carries a visible "Imported trace" badge for as long as it is open, and has a
+An imported trace renders through the same graph and waterfall as a live one. The metric cards keep
+showing the numbers of the instance you are looking at, not those of the file, and the event feed stays
+on "Waiting for events", because an imported trace has no live events. It carries a visible
+"Imported trace" badge for as long as it is open, and has a
 "Back to live traces" action to leave. It is never persisted: it does not enter `ITraceStore` and
 never shows up in `/history`, `/insights`, `/metrics` or `/architecture`, so someone else's trace
 can't contaminate your own statistics. A file that isn't a NetApiFlow export gets a clear error
@@ -399,7 +525,8 @@ window (last 24 hours, last 7 days by default, or last 30 days): the slowest rou
 duration, the routes with the most errors, and dead routes, those that exist in the host API but
 never ran in the chosen window. All three come from `GET /metrics/routes` and `GET /endpoints`;
 slowest and top errors are two different sortings of the same payload, and dead routes is the
-dashboard cross-referencing it against every route the host API exposes.
+dashboard cross-referencing it against every route the host API exposes. That includes the route that
+serves your OpenAPI document (`GET /openapi/{documentName}.json`), which always shows up as dead.
 
 ## Architecture map
 
@@ -431,8 +558,9 @@ builder.Services.AddNetApiFlow(options =>
     options.Limits.MaxTagValueLength = 4000; // default shown; a longer value is truncated, not dropped
     options.IncludePaths("/api/**"); // only trace matching routes; default traces everything
     options.ExcludePaths("/api/health"); // excluded even if it also matches an include pattern
-    options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // opt-in; default is None
+    options.ExternalSources = ExternalActivitySource.HttpClient | ExternalActivitySource.Npgsql; // default is None, except in Development
     options.CapturePrePipelineSteps = true; // opt-in; default is false, see below
+    options.CaptureMinimalApiEndpoints = true; // default shown; false asks for WithNetApiFlowTracking()
     options.TailSampling.Enabled = true; // opt-in; see Tail sampling below
     options.TailSampling.SuccessSampleRate = 0.1; // default shown
     options.LogCorrelation.Enabled = true; // opt-in; see Log correlation below
@@ -441,10 +569,15 @@ builder.Services.AddNetApiFlow(options =>
 });
 ```
 
-`OpenApiDocumentPath` tells the dashboard's "Run an endpoint" panel where your application serves
+`Retention.MaxAge` is applied by a background pass that runs every 5 minutes, and the first pass comes 5
+minutes after the app starts. Until then, a trace older than `MaxAge` is still listed.
+
+`OpenApiDocumentPath` tells the dashboard's "Try an endpoint" panel where your application serves
 its OpenAPI document. The default is what `MapOpenApi()` serves. Point it at
 `/swagger/v1/swagger.json` for Swashbuckle, or wherever else you serve it. The panel lists your
-endpoints from that document, so a wrong path leaves it with nothing to show.
+endpoints from that document, so a wrong path leaves it with nothing to show. Requests to that path
+are never traced, so the document the dashboard fetches does not show up in your traces. Under a
+`PathBase` see [Paths under `UsePathBase`](#paths-under-usepathbase).
 
 `CapturePrePipelineSteps` records what runs before your controller is even called, on MVC
 Controller routes: one step per Authorization filter, under the component `AuthorizationFilters`
@@ -452,9 +585,22 @@ with the filter's type name as its operation, and one step around the Resource f
 under the component `ResourceFilters` with the action name as its operation. The latter becomes
 the parent of the `Controller` step already in the graph, so the stages nest instead of
 duplicating. That's the answer to "the request took 400 ms but my controller only took
-20 ms, where did the rest go" when the time went to authorization or to a resource filter such as
-output caching. It is off by default and changes nothing for anyone who hasn't turned it on.
+20 ms, where did the rest go" when the time went to an authorization filter of MVC or to a resource
+filter. It is off by default and changes nothing for anyone who hasn't turned it on.
+
+Two things it does not show. A plain `[Authorize]` is handled by the authorization middleware, not by
+an MVC filter, so it gets no `AuthorizationFilters` step. A filter you write that implements
+`IAuthorizationFilter` does. And output caching is a middleware too: the first request of a cached
+action shows its steps, and a cache hit shows none, because the request never reaches MVC.
 Minimal API routes have no MVC filter stage, so they see no new step either way.
+
+`CaptureMinimalApiEndpoints` opens the `Endpoint` step of a Minimal API endpoint with no marking. It
+listens to the routing's `Microsoft.AspNetCore.Routing.EndpointMatched` diagnostic event, which the
+framework writes and does not document as an API, so a future framework version could rename it.
+A test in the repository fails when it stops firing, and `.WithNetApiFlowTracking()` keeps
+working either way. The step is marked as failed when the endpoint throws and also when the
+response is a 5xx with no exception, which `.WithNetApiFlowTracking()` does not do. `MapHealthChecks`
+and static files get no step.
 
 `ExternalSources` ingests the `Activity` instances the .NET runtime and the common database
 drivers already produce, with no code change in your services.
@@ -464,8 +610,8 @@ configuring anything. Everywhere else the default stays `None`. Whatever you sta
 wins, from configuration or from code, including setting it back to
 `ExternalActivitySource.None` while developing.
 
-`HttpClient` covers outbound calls (ADR-0012). The outbound URL is reduced to
-`scheme://host[:port]/path` before it is ever recorded: query string and fragment are never
+`HttpClient` covers outbound calls (ADR-0012). The outbound call is recorded as `HttpClient`, with the
+operation `GET host[:port]/path`: no scheme, and the query string and the fragment are never
 captured, same guarantee as every other span.
 
 `Npgsql` covers SQL commands (ADR-0018), recorded as a `Database` span named after the command
@@ -492,12 +638,14 @@ feature and an empty flow.
 Mounting the dashboard at a path other than the default, and protecting it:
 
 ```csharp
-app.UseNetApiFlowDashboard("/internal/flow")
+app.MapNetApiFlowDashboard("/internal/flow")
     .RequireAuthorization("AdminOnly"); // or register an IFlowAccessFilter in DI
 ```
 
 Persisting to a real database instead of memory (call after `AddNetApiFlow`, it replaces the
-default store):
+default store). `AddNetApiFlowPostgreSqlStorage` is in the namespace `NetApiFlow.Storage.PostgreSql`, so
+`Program.cs` also needs `using NetApiFlow.Storage.PostgreSql;` at the top, next to the `using NetApiFlow;`
+the Quick start already has:
 
 ```csharp
 builder.Services.AddNetApiFlowPostgreSqlStorage(
@@ -505,7 +653,107 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
     options => options.TablePrefix = "netapiflow_"); // default shown
 ```
 
-`NetApiFlow.Storage.SqlServer` mirrors the same shape (`AddNetApiFlowSqlServerStorage`).
+`NetApiFlow.Storage.SqlServer` mirrors the same shape: `AddNetApiFlowSqlServerStorage`, with
+`using NetApiFlow.Storage.SqlServer;`.
+
+That package depends on `Microsoft.Data.SqlClient` 5.2.2. With that version,
+`ExternalActivitySource.SqlClient` records no SQL command: the driver reports its events in a form
+NetApiFlow cannot read, and the host logs that once at `Information`. To record SQL commands, add
+`Microsoft.Data.SqlClient` 6.0 or later to your own project (6.1.8 was tested).
+
+### Tenants
+
+In an app that serves several tenants, register an `IFlowTenantResolver`. Its `Resolve` method returns
+the tenant of the request, or `null`, and NetApiFlow puts it on the trace as the `tenant` tag. With no
+resolver registered, traces carry no `tenant` tag. The interface is in the `NetApiFlow` namespace.
+
+```csharp
+public sealed class HeaderTenantResolver : IFlowTenantResolver
+{
+    public string? Resolve(HttpContext context) => context.Request.Headers["X-Tenant"].FirstOrDefault();
+}
+
+builder.Services.AddSingleton<IFlowTenantResolver, HeaderTenantResolver>();
+```
+
+`GET /flow/api/traces?tenant=acme` lists only the traces of that tenant.
+
+### Fixed limits
+
+Besides the limits of the configuration block, NetApiFlow has limits that no option changes in this
+release. They are the values of the code today, and a later release may turn some of them into options:
+
+| Limit | Value |
+|---|---|
+| Traces in progress at the same time | 500 |
+| Completed traces kept for `Flow.GetRecentTrace` | 500 |
+| Traces waiting to be persisted | 1000 |
+| Events waiting to be published to the dashboard | 5000 |
+| Dashboard clients connected to the live stream | 50 |
+| Events kept to replay to a client that reconnects | 1000 |
+| Events queued for each connected client | 5000 |
+| Error message, in characters | 300 |
+| Outbound URL, in characters | 300 |
+
+### Paths under `UsePathBase`
+
+`ExcludePaths`, `IncludePaths` and `OpenApiDocumentPath` value the path you see, relative to the
+`PathBase`, whenever the request matches an endpoint. With `app.UsePathBase("/api")`,
+`ExcludePaths("/health")` keeps `GET /api/health` out of tracing. NetApiFlow decides it when routing
+picks the endpoint, which is where the path is already relative.
+
+A request that matches no endpoint, a static file served by `UseStaticFiles` or a 404, is decided by
+the full path, `PathBase` included, because there is no endpoint to read it from. Write the pattern
+with the prefix: `ExcludePaths("/api/site.css")`. A static file served as an endpoint, with
+`MapStaticAssets()`, is an endpoint and follows the first rule.
+
+The routes of the dashboard (its pages, its REST API and its stream) and of the MCP server are never
+traced, with or without a `PathBase`. They are told apart by what they are, not by their text. Mark
+your own routes the same way, whatever the patterns say:
+
+```csharp
+app.MapHealthChecks("/healthz").WithoutNetApiFlowTracking();
+app.MapGroup("/internal").WithoutNetApiFlowTracking();
+```
+
+`WithoutNetApiFlowTracking()` works on a Minimal API endpoint, on a group, on `MapControllers()` and
+on `MapHealthChecks()`, and it wins over `ExcludePaths`, `IncludePaths` and `WithNetApiFlowTracking()`
+on the same endpoint. A controller marked by attribute has no equivalent.
+
+What was measured: Kestrel with and without `UsePathBase`, IIS Express with the ASP.NET Core Module
+v2, in-process and out-of-process, and nginx in front of Kestrel. Where the framework sets the
+`PathBase` before NetApiFlow runs (IIS) or the proxy cuts the prefix, the problem never existed: it
+came from `UsePathBase` called in your own code. What was not measured: the full IIS and YARP.
+
+### Running without DDL permission
+
+By default the storage creates and upgrades its tables on first use, with a `CREATE TABLE`, an
+`ALTER TABLE` and an `UPDATE` against your application's database. If the database user of your
+application cannot run DDL, turn that off and create the tables yourself (same `using` as above):
+
+```csharp
+builder.Services.AddNetApiFlowPostgreSqlStorage(
+    connectionString,
+    options => options.AutoCreateSchema = false);
+```
+
+With `AutoCreateSchema = false` nothing is created or changed. On first use the storage only checks
+that the tables and the `route_key` column exist. If something is missing it logs an error that says
+what is missing and where the script is, and it does not take your request down. Run `schema.sql`
+yourself: `src/NetApiFlow.Storage.PostgreSql/schema.sql` or
+`src/NetApiFlow.Storage.SqlServer/schema.sql` in the repository, at the tag of the version you
+installed (`https://github.com/Douglasproglima/netapiflow/tree/v<version>/src`). If you changed
+`TablePrefix`, replace `netapiflow_` in the script first. The script creates what is missing and
+upgrades tables written by an earlier version, and it is safe to run again. The SQL Server script
+separates its batches with `GO`, so run it with `sqlcmd`, SSMS or Azure Data Studio.
+
+Until the tables exist, the traces your application produces cannot be saved. A save that fails
+logs a warning with the type and the message of the exception, and the next trace is tried
+normally. After three failures in a row, the storage discards the traces that arrive for 30
+seconds and tries again, with one warning for each attempt that fails. The traces that were not
+saved are counted in `netapiflow.persistence.failures`. When a save works again it logs one line
+with how many traces were not saved. The same happens when the database is unreachable. The full
+exception is logged at `Debug`.
 
 ## Dashboard security in production
 
@@ -516,19 +764,25 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 > Outside `IHostEnvironment.IsDevelopment()`, every dashboard route (REST, SSE and the UI itself)
 > responds **404** unless you explicitly configure one of:
 >
-> - `.RequireAuthorization("YourPolicy")`, chained on `app.UseNetApiFlowDashboard(...)`.
+> - `.RequireAuthorization("YourPolicy")`, chained on `app.MapNetApiFlowDashboard(...)`.
 > - A custom `IFlowAccessFilter` registered in DI, checked on every request
 >   regardless of environment.
 >
 > There is no "partially open" default. If neither is configured, production always 404s.
 >
+> **The same rule covers the two routes that write, and there is no read-only role.** `DELETE
+> /flow/api/traces` deletes every stored trace, and `POST /flow/api/deploys` adds a deploy marker. Whoever
+> can open the dashboard can call both. If some users should only read, put that decision in your
+> `IFlowAccessFilter`, which sees the method of every request.
+>
 > **An app with a `FallbackPolicy` that requires an authenticated user** (common in JWT APIs) gets
-> **401** on the dashboard instead, in every environment: the authorization middleware answers
-> before the dashboard's own check, and a browser does not send a bearer token when it navigates
-> to `/flow`. In Development, let the dashboard through:
+> the challenge of its authentication scheme on the dashboard instead, in every environment: a
+> **401** with JWT bearer, a **302** to the login page with cookies. The authorization middleware
+> answers before the dashboard's own check, and a browser does not send a bearer token when it
+> navigates to `/flow`. In Development, let the dashboard through:
 >
 > ```csharp
-> var dashboard = app.UseNetApiFlowDashboard();
+> var dashboard = app.MapNetApiFlowDashboard();
 > if (app.Environment.IsDevelopment())
 > {
 >     dashboard.AllowAnonymous();
@@ -537,30 +791,157 @@ builder.Services.AddNetApiFlowPostgreSqlStorage(
 >
 > Outside Development, either chain `.RequireAuthorization("YourPolicy")` and nothing else, or
 > chain `.AllowAnonymous()` and register an `IFlowAccessFilter`, which then decides every request.
-> **Never chain `.AllowAnonymous()` and `.RequireAuthorization()` together.** `AllowAnonymous`
-> wins, the authorization is ignored, and the dashboard is open to everyone.
+> Chaining `.AllowAnonymous()` together with `.RequireAuthorization()` authorizes nothing:
+> `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
+>
+> When the application starts with a `FallbackPolicy` and a dashboard that has neither
+> `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the 401
+> and the way out, so it does not stay unexplained.
+
+### Which `Host` and `Origin` are accepted
+
+The dashboard and the MCP endpoint check the `Host` and the `Origin` of every request, on every
+method: the REST API, the live stream, the files and the MCP transport. The check runs after your
+own pipeline, so `UseForwardedHeaders` has already set the `Host`. A refused request gets a **403**
+whose message says why and what to change.
+
+- **In Development**, the `Host` must be `localhost`, `127.0.0.1` or `[::1]`, or a name you declare
+  in the `AllowedHosts` setting. A `"*"` does not count as declaring. This is what stops DNS
+  rebinding: a page on another site whose own name resolves to your machine reaches the dashboard
+  with that name as the `Host`, so only the `Host` can refuse it.
+- **In every environment**, a request with an `Origin` must have the host and the port of the `Host`
+  the application sees. The scheme is not compared. A request without an `Origin` passes, such as a
+  `GET` from the same page or a client that is not a browser, and an `Origin: null` is refused.
+- **Outside Development**, the `Host` follows your own `AllowedHosts` and `UseForwardedHeaders`.
+
+To open the dashboard in Development by a name other than localhost, for example from a phone
+through the address of your machine on the local network, or `host.docker.internal`, declare it:
+
+```json
+{ "AllowedHosts": "localhost;192.168.1.13" }
+```
+
+An entry is a name without a port, and `*.example.com` matches subdomains. ASP.NET Core reads the same
+setting in its own host filtering, so once the list names specific hosts, keep `localhost` in it or
+the application answers 400 to `localhost` itself.
+
+Behind a reverse proxy the application has to see the original `Host`. Otherwise the `Origin` the
+browser sends does not match it and a `DELETE` gets 403. Keep the `Host` in the proxy
+(`proxy_set_header Host $http_host;` in nginx), or call `UseForwardedHeaders` with
+`ForwardedHeaders.XForwardedHost` before the dashboard and let the proxy send `X-Forwarded-Host`.
+A proxy that ends TLS needs nothing for the scheme, because it is not compared.
+
+### The trace id header
+
+NetApiFlow writes `X-NetApiFlow-TraceId` on the response of every traced request in Development. It
+carries the id of the trace, a random id the server makes for each request. It is not the W3C trace
+id of the `traceparent` header: that one is in the tag `w3c.trace_id` of the trace and in
+`Activity.Current.TraceId`, and the details of a trace in the dashboard show both. It is how
+`NetApiFlow.Testing` finds the trace of a response and how the dashboard's Runner opens the graph of
+the request it sent. Knowing a trace id does not open the dashboard: its routes stay behind the
+rules above.
+
+**Before 0.6.0 the id of the trace was the W3C trace id.** Two requests with the same `traceparent`
+shared one id and lost a trace. If a test or a log line compared `Flow.CurrentTraceId` or this
+header with `Activity.Current.TraceId`, read the W3C trace id from the tag instead.
+
+**From 0.6.0 the header is sent only in Development by default. To keep it in Production, set
+`EmitTraceIdHeader = true`.**
+
+```csharp
+builder.Services.AddNetApiFlow(options => options.EmitTraceIdHeader = true);
+```
+
+Or in `appsettings.json`: `"NetApiFlow": { "EmitTraceIdHeader": true }`. Set it to `false` to keep
+the trace id out of your responses in Development too. Requests are traced either way.
+`GetFlowTrace` from `NetApiFlow.Testing` reads this header, so it throws while the header is off. A
+test host built with `WebApplicationFactory` runs in Development and needs nothing. If your tests run
+in another environment, such as `Testing` or `Staging`, set `EmitTraceIdHeader = true` in the test
+host.
+
+One response does not carry it even with the header on. In Production with no exception handler,
+an exception that nothing handles reaches the server, and the server builds the 500 itself and
+drops the headers set before. That 500 has no `X-NetApiFlow-TraceId`, although the trace is
+recorded. Measured on Kestrel, on
+`net8.0` and `net10.0`. NetApiFlow does not change that response. Add `UseExceptionHandler` and the
+500 is answered inside your pipeline, so it carries the header. In Development the developer
+exception page does that for you.
+
+### Security headers
+
+Every response of the dashboard and of the MCP endpoint carries `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors
+'none'`. That includes the 403 and the 404 of the access check. No other page can show the dashboard
+in a frame, so nothing can hide its delete button under a click.
+
+The page of the dashboard itself carries a full policy:
+
+```text
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'
+```
+
+`script-src` has no `'unsafe-inline'`: the dashboard runs only the script files it ships. `style-src`
+has it, on purpose. Angular adds the styles of each component as `<style>` elements when the page
+runs, there are dozens of them, and a hash for each would change with every build. An inline style
+cannot run code. If your own middleware sets a `Content-Security-Policy` on these routes, the one of
+the dashboard replaces it.
 
 ## MCP server
 
-```bash
+```bash mcp:package
 dotnet add package NetApiFlow.Mcp
 ```
 
-```csharp
+Add these two lines at the top of `Program.cs`, next to the `using NetApiFlow;` the Quick start
+already has:
+
+```csharp mcp:usings
+using NetApiFlow.Mcp;
+using NetApiFlow.Mcp.Endpoints;
+```
+
+Then register the server before `builder.Build()` and mount it right after:
+
+```csharp mcp:registration
 builder.Services.AddNetApiFlowMcp();
 
 var app = builder.Build();
-app.UseNetApiFlowMcp(); // mounted at /flow/mcp by default
+app.MapNetApiFlowMcp(); // mounted at /flow/mcp by default
 ```
 
 Three read-only tools, backed by the same `ITraceStore` the dashboard reads from: `list_recent_traces`,
 `get_trace` and `get_component_stats`. No write tool exists in this version: nothing deletes a
 trace or triggers a replay through MCP.
 
-> **Same security rule as the dashboard.** Outside `IHostEnvironment.IsDevelopment()`, every MCP
-> route responds **404** unless you explicitly configure `.RequireAuthorization(...)` or a custom
-> `IFlowAccessFilter`, exactly like [Dashboard security in production](#dashboard-security-in-production).
+> **Same security rule as the dashboard.** Outside `IHostEnvironment.IsDevelopment()`, every request
+> that the MCP endpoint serves responds **404** unless you explicitly configure
+> `.RequireAuthorization(...)` or a custom `IFlowAccessFilter`, exactly like
+> [Dashboard security in production](#dashboard-security-in-production). A method that the endpoint does
+> not serve responds **405**, which tells that the route exists. By default, with no session, the endpoint
+> serves only `POST`, so `GET`, `DELETE` and `PUT` answer 405. If your app keeps MCP sessions, the
+> endpoint serves `GET` and `DELETE` too, and only `PUT` answers 405. When the dashboard is mounted at
+> `/flow`, a `GET` on `/flow/mcp` is answered by the dashboard, and it is a 404 outside `Development`.
 > An AI agent reading trace data is the same exposure risk as the visual dashboard.
+>
+> The three tools exist only on the NetApiFlow endpoint. An app that hosts its own MCP server
+> (`AddMcpServer()` and `MapMcp(...)`) does not serve them on its own endpoint, so they stay behind
+> the rule above, and `/flow/mcp` does not serve the tools of the app. `/flow/mcp` answers only the
+> three tools and the handshake. Prompts, resources, completions and any other method of the app get
+> `-32601 Method '...' is not available`, even when the `initialize` of the app announces those
+> capabilities. One configuration is the
+> exception. When the MCP server of the app keeps sessions (a `SessionMode` other than `Stateless`)
+> and sets `PerSessionExecutionContext = true`, a tool call does not carry the HTTP request that sent
+> it, so NetApiFlow cannot tell which endpoint it came from. The NetApiFlow tools are then served on
+> no endpoint, `/flow/mcp` answers 404, and the app logs one warning at startup that says so. Set
+> `PerSessionExecutionContext = false`, or use the stateless mode, to get them back.
+>
+> The endpoint also refuses a request whose `Host` or `Origin` is not its own, with a **403**. In
+> Development the `Host` must be `localhost`, `127.0.0.1`, `[::1]` or a name declared in
+> `AllowedHosts`, and an `Origin` must match the `Host` the application sees. An MCP client that is
+> not a browser, such as the MCP Inspector or the official C# client, sends no `Origin`, so it is
+> not affected. The details, and what to set behind a reverse proxy, are in
+> [Which `Host` and `Origin` are accepted](#which-host-and-origin-are-accepted). Its responses carry
+> the same [security headers](#security-headers) as the dashboard's.
 
 See `samples/SampleApi.Controllers/README.md` for how to point a real MCP client (e.g. Claude
 Code) at a running instance.
@@ -571,6 +952,9 @@ Code) at a running instance.
 dotnet add package NetApiFlow.OpenTelemetry
 ```
 
+Add `using NetApiFlow.OpenTelemetry;` at the top of `Program.cs`, next to the `using NetApiFlow;` the
+Quick start already has, then register the export before `builder.Build()`:
+
 ```csharp
 builder.Services.AddNetApiFlowOtlpExport();
 ```
@@ -579,7 +963,28 @@ The NetApiFlow core already produces real `Activity` instances on the `"NetApiFl
 `ActivitySource` (ADR-0002). `AddNetApiFlowOtlpExport` points the OpenTelemetry SDK at that
 source and exports it via OTLP, to any compatible backend: Jaeger, Tempo, Aspire Dashboard,
 Honeycomb, or an OpenTelemetry Collector. There is no NetApiFlow-specific serialization: the SDK
-exports the same `Activity` the dashboard reads from.
+exports the same `Activity` the dashboard reads from. The trace id that the backend shows is the W3C
+trace id, which the details of a trace in the dashboard list as "W3C trace". It is not the "Trace" field
+above it, which is NetApiFlow's own id for the request.
+
+**If your app already configures OpenTelemetry, use `AddNetApiFlowSource()` and not
+`AddNetApiFlowOtlpExport`.** `AddNetApiFlowOtlpExport` adds its exporter to the tracer provider of
+your app. In that app, every source your app traces also goes to the NetApiFlow endpoint, and that
+can send data to a destination you did not expect. `AddNetApiFlowSource()` adds the `"NetApiFlow"`
+source to the tracing you already have, and nothing else: no exporter and no other source. The
+steps then go to the exporters you already set up. Such an app already has `using OpenTelemetry.Trace;`
+at the top of `Program.cs`. Add `using NetApiFlow.OpenTelemetry;` next to it:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("MyApp")
+        .AddNetApiFlowSource()
+        .AddOtlpExporter());
+```
+
+Use `AddNetApiFlowOtlpExport` when NetApiFlow is all your app exports and you do not want to set up
+OpenTelemetry yourself.
 
 ```csharp
 builder.Services.AddNetApiFlowOtlpExport(options =>
@@ -589,18 +994,46 @@ builder.Services.AddNetApiFlowOtlpExport(options =>
 });
 ```
 
-> **`IncludeHttpClientSource` exports the full outbound URL, including query string.** Enabling
-> it also observes the native `"System.Net.Http"` `ActivitySource`, mirroring
-> `NetApiFlowOptions.ExternalSources` so the exported trace has the same outbound HTTP spans the
-> dashboard shows. That native `Activity` never passes through NetApiFlow's own URL sanitizer
-> (which only sanitizes `FlowSpan`), so the OTLP backend receives the URL as-is. Default is
-> `false` for this reason.
+> **`IncludeHttpClientSource` exports the outbound call from the runtime's own `Activity`, not from
+> the one NetApiFlow sanitizes.** Enabling it also observes the native `"System.Net.Http"`
+> `ActivitySource`, mirroring `NetApiFlowOptions.ExternalSources` so the exported trace has the same
+> outbound HTTP spans the dashboard shows. That `Activity` never passes through NetApiFlow's own URL
+> sanitizer (which only sanitizes `FlowSpan`), so what reaches the backend is what the runtime wrote.
+> It was measured with a call to `http://host/target?token=SECRET#fragment`: on .NET 10 the span carries
+> `url.full` as `http://host/target?*`, and on .NET 8 as `http://host/target`. The query and the
+> fragment were not exported on either. Another runtime version may behave differently, so the default
+> stays `false`.
 
-> **Exported volume can exceed what the dashboard shows.** The OpenTelemetry SDK samples
-> independently of NetApiFlow's own sampling decision (tracing disabled, the 500-trace limit
-> reached). A request NetApiFlow discards early can still be exported. Neither pipeline blocks
-> the other; this is the expected result of two independent `ActivityListener` instances
-> observing the same source, not a bug.
+> **What is exported follows what NetApiFlow records.** With `Enabled = false`, or for a path that
+> `ExcludePaths` leaves out, nothing is exported. The sampler of your own OpenTelemetry setup does not
+> apply to these spans: with an `AlwaysOffSampler` on the host, the NetApiFlow span is still exported.
+
+**The exported trace has no `SERVER` span.** NetApiFlow exports its own steps. The request itself, the
+`SERVER` span that ASP.NET Core opens, is not one of them, so the first step of each trace points at a
+parent that is not in the backend, and the trace there starts at a step with a missing parent. To export
+the `SERVER` span too, add the ASP.NET Core instrumentation, in the same version as the OpenTelemetry SDK that
+`NetApiFlow.OpenTelemetry` brings (1.20.1 in this release):
+
+```bash
+dotnet add package OpenTelemetry.Instrumentation.AspNetCore --version 1.20.1
+```
+
+Then, with `using OpenTelemetry.Trace;` at the top of `Program.cs`:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation(options =>
+        options.Filter = context => !context.Request.Path.StartsWithSegments("/flow")));
+```
+
+The NetApiFlow steps then hang under the `SERVER` span. The `Filter` keeps the requests of the dashboard
+itself out of the export. Do not take the latest version of the instrumentation package on .NET 8:
+version 1.21.0 pulls `System.Diagnostics.DiagnosticSource` 11.0.0, NuGet warns that it does not support
+`net8.0`, and the app stops answering with a `MissingMethodException`.
+
+**Name the service.** With nothing set, the backend shows your app as `unknown_service:<process name>`,
+for example `unknown_service:dotnet`. Set the `OTEL_SERVICE_NAME` environment variable, for example
+`OTEL_SERVICE_NAME=my-orders-api`, and the exported `service.name` is that.
 
 ## Tail sampling
 
@@ -680,8 +1113,8 @@ NetApiFlow never captures, under any configuration:
   never the resolved URI).
 - SQL parameter values, even with `CaptureSqlText = true` (that flag only captures the command
   text and the main table it touches).
-- Query strings or fragments of outbound URLs, when `ExternalSources` is enabled (same reduction
-  to `scheme://host[:port]/path` as routes).
+- Query strings or fragments of outbound URLs, when `ExternalSources` is enabled (the call is
+  recorded as `GET host[:port]/path`).
 - Connection string, database user or peer address, when `ExternalActivitySource.Npgsql` is
   enabled. The driver reports all of them on its own `Activity`; none is ever copied onto a span.
 
@@ -691,10 +1124,59 @@ NetApiFlow never captures, under any configuration:
 > for the case where there's no template to use yet. If static assets or your own OpenAPI document
 > are cluttering your history with `(unmatched)` noise, `ExcludePaths` keeps them out of tracing
 > entirely.
+>
+> A request that matches no route is recorded only when it ends. While it is in progress it is not
+> listed as running, and nothing it does shows up before then, such as an EF Core or `HttpClient`
+> call inside a terminal middleware or a WebSocket handler. A request that matches an endpoint
+> shows as running from the moment routing picks it.
 
-Error messages are truncated to 300 characters and sanitized, removing e-mail addresses, CPF,
-CNPJ, long numeric sequences, and `password=`/`token=`/`authorization`/`api-key`/`secret` pairs.
-See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+Error messages are sanitized and then truncated to 300 characters, in every output: the dashboard,
+the MCP tools, the stored trace, correlated logs and the `netapiflow.error.message` tag on the
+`Activity`, which is what an OpenTelemetry exporter sends. Sanitizing first means a secret cut by
+the limit leaves nothing behind.
+
+**A value of the request can come back inside an exception message.** NetApiFlow never reads the body,
+but it records the message of the exception that ends a step. If your code puts a value of the body in
+that message, the value is in the trace. `int.Parse` does it: with `{"quantity":"my-secret-value-9876"}`,
+the recorded message is `The input string 'my-secret-value-9876' was not in a correct format.` The
+sanitizer below removes the shapes it lists and nothing more. Keep request data out of exception
+messages.
+
+The sanitizer is on by default and it is a filter for known shapes, not a guarantee that no secret
+survives. What it removes: e-mail addresses, CPF, CNPJ, numeric sequences of 12 digits or more, a JWT (three
+base64url segments starting with `eyJ`), the password in a URL (`scheme://user:password@host`), and
+the value of any `key=value`, `key: value` or JSON `"key": "value"` pair whose key contains
+`password`, `passwd`, `pwd`, `token`, `secret`, `api-key` (also `api_key` and `apikey`),
+`passphrase`, `private_key` or `authorization`, in any case. A key inside brackets, such as
+`config[password]`, counts. The Azure keys `AccountKey`, `SharedAccessKey`,
+`SharedAccessSignature` count too, and so does a `sig=` in a signed URL.
+
+How a value ends:
+
+- A quoted value is removed whole, escaped quotes included. When it is a quoted string in JSON, the
+  JSON around it stays valid.
+- The value of `Authorization` includes its scheme (`Bearer`, `Basic`, `Digest`, AWS) and its
+  parameters. A `Cookie:` or `Set-Cookie:` header loses the rest of the line.
+- A bare `Bearer <token>` is removed.
+- An unquoted value ends at a space or at `;`, like a connection string pair. So `password=ab;cd`
+  leaves `;cd`.
+
+Any message with one of those words followed by `:` or `=` loses what comes after it, even a
+harmless one such as `Unexpected token: '}'`, because a secret cannot be told apart from it and
+leaking one is the worse failure. For the same reason `the bearer of the card` loses the word after
+`bearer`. See [`docs/adr/0007-nunca-capturar-payload.md`](docs/adr/0007-nunca-capturar-payload.md).
+
+What it does not touch, or touches only in part:
+
+- `Basic <base64>` on its own, without `Authorization`.
+- `credentials: ...`, as in `Invalid credentials: ana`.
+- A cookie in `name=value` form without the `Cookie:` prefix, such as `.AspNetCore.Cookies=...`.
+- An unquoted value with a space: it is cut at the first space, so `password=two words` leaves
+  `words`. Only a quoted value can hold spaces.
+- A JSON value that is not a string: `{"token":12345}` becomes `{"token":[redacted]`, and the closing
+  brace goes with it.
+- A password with a `@` that is not percent-encoded in a URL: `postgres://u:p@ss@host/db` leaves what
+  follows the first `@`.
 
 The one exception is what you write yourself: a step's tags (see
 [Tagging a step](#tagging-a-step)) are stored and served exactly as given, with no sanitization.
@@ -704,46 +1186,72 @@ The one exception is what you write yourself: a step's tags (see
 Measured with `tests/NetApiFlow.Benchmarks` (BenchmarkDotNet), comparing the cost of a request
 against a minimal ASP.NET Core pipeline with NetApiFlow **absent** (package not installed),
 **disabled** (`Enabled = false`) and **enabled** (default options), on two endpoints: `Simple`
-(no steps marked) and `Nested` (four nested `NetApiFlow.Step` calls, mirroring a
+(no steps marked) and `Nested` (four nested `Flow.Step` calls, mirroring a
 Controller→Service→Repository→Database chain).
 
-| Scenario | Simple (mean) | Nested, 4 steps (mean) |
-|---|---|---|
-| Absent (package not installed) | 6.22 μs | 11.79 μs |
-| Disabled (`Enabled = false`) | 9.17 μs | 12.84 μs |
-| Enabled (default options) | 27.00 μs | 43.84 μs |
+| Scenario | Simple, .NET 8 | Simple, .NET 10 | Nested, 4 steps, .NET 8 | Nested, 4 steps, .NET 10 |
+|---|---|---|---|---|
+| Absent (package not installed) | 5.9 μs | 5.4 μs | 7.3 μs | 7.4 μs |
+| Disabled (`Enabled = false`) | 6.9 μs | 5.9 μs | 9.0 μs | 7.8 μs |
+| Enabled (default options) | 18.7 μs | 19.6 μs | 29.9 μs | 23.1 μs |
 
-So tracing a request with default options costs roughly 20 μs on an endpoint with no steps
-marked, and about 32 μs more with four nested steps, on this hardware. Turning tracing off
-(`Enabled = false`) keeps most of that cost away (listener registration itself has a small,
-near-constant overhead) without removing the package.
+Mean time per request, median of two rounds, on a 12th Gen Intel Core i7-1255U laptop (10 cores,
+12 threads) running Windows 10, with .NET 8.0.34 and .NET 10.0.15. The machine was shared with
+other programs, so the rounds differ from each other: the enabled `Simple` request took between
+15.7 and 23.5 μs on .NET 10. Read the numbers as an order of magnitude.
 
-Method: each scenario (absent/disabled/enabled) runs as its own process, isolating .NET's
-process-wide `ActivitySource` listener registration so one scenario can't bias another. Full
-BenchmarkDotNet reports, including hardware and runtime details, are generated under
-`tests/NetApiFlow.Benchmarks/BenchmarkDotNet.Artifacts/results/` on every run.
+Tracing a request with default options adds about 13 to 14 μs to an endpoint with no steps
+marked, and about 16 to 23 μs to the endpoint with four nested steps. Turning tracing off
+(`Enabled = false`) keeps almost all of that away (0.4 to 1.7 μs) without removing the package.
+With 16 requests in flight at once, the time per request is lower because they overlap, and
+tracing adds about 4 to 5 μs per request.
+
+`Flow.Step` itself, compared with the published 0.5.3 on the same machine:
+
+- With `Enabled = false` a step is much cheaper now: about 0.5 ns and no allocation outside a
+  traced request, against 68 to 84 ns and 232 bytes in 0.5.3.
+- With `Enabled = true`, a step inside a traced request cost about 41 ns more than in 0.5.3 on
+  .NET 8 (about 15%, and higher in 8 of 8 rounds). On .NET 10 the difference was within the noise
+  of the machine.
+- The memory allocated per step is the same.
+
+Method: each scenario runs as its own process, isolating .NET's process-wide `ActivitySource`
+listener registration so one scenario can't bias another. The full report has every table with
+its ranges, the hardware, the machine load and the commands to repeat the measurement:
+[docs/benchmarks/0.6.0.md](docs/benchmarks/0.6.0.md).
 
 ## Known limitations
 
 - `Activity.Current` (and therefore step nesting) is lost across `ExecutionContext.SuppressFlow()`
-  or a custom, non-flowing thread pool. Spans created after such a boundary record correctly, but
-  as a new root rather than nested under the request's trace.
-- Automatic tracking (`AddFlowTracked`/`DecorateFlowTracked`) does not support `IAsyncEnumerable<T>`
-  return types in this version.
-- Automatic tracking does not work under Native AOT either. Both `AddFlowTracked` and
-  `DecorateFlowTracked` build their proxy with `DispatchProxy`, which emits a type at run time, and
-  `DecorateFlowTracked` also matches implementation types by reflection. Both carry
-  `[RequiresDynamicCode]` (and `DecorateFlowTracked` also `[RequiresUnreferencedCode]`), so you get
-  an `IL3050`/`IL2026` warning at build time instead of a failure at startup. The marking form that
-  stays safe under Native AOT and trimming is `NetApiFlow.Step(...)`: a host calling only
-  `AddNetApiFlow()` and `Step(...)` publishes with zero AOT or trimming warnings, and there is a
-  check in the repository that proves it.
+  or a custom, non-flowing thread pool. Spans created after such a boundary start a new root
+  activity, and NetApiFlow does not attach them to the trace of the request.
+- A step started with an explicit `ActivityContext` as its parent, in a thread that does not carry
+  the `ExecutionContext` of the request, is not part of any trace. Before 0.6.0 it was recorded,
+  because it shared the W3C trace id of the request. Start it inside the flow of the request, or set
+  `Activity.Current` to an activity of the request first.
+- Automatic tracking (`AddFlowTracked`, `DecorateFlowTracked` and `TrackFlowByConvention`) does not
+  follow an `IAsyncEnumerable<T>` return type. The step closes when the method hands back the
+  enumerator, a fraction of a millisecond later, and is recorded as `Success`, even if the
+  enumeration throws afterwards. Only the step above it is marked as failed.
+- Automatic tracking does not work under Native AOT either. `AddFlowTracked`,
+  `DecorateFlowTracked` and `TrackFlowByConvention` build their proxy with `DispatchProxy`, which
+  emits a type at run time, and the last two also match implementation types by reflection. All
+  three carry `[RequiresDynamicCode]` (and the last two also `[RequiresUnreferencedCode]`), so you
+  get an `IL3050`, `IL3053` or `IL2026` warning at build time. If you publish anyway, the binary starts, and the
+  first call into a tracked service fails: the request answers 500 with
+  `PlatformNotSupportedException: Dynamic code generation is not supported on this platform`. The
+  marking form that stays safe under Native AOT and trimming is `Flow.Step(...)`: a host calling only
+  `AddNetApiFlow()` and `Flow.Step(...)` publishes with zero AOT or trimming warnings on net8.0 and
+  net10.0. The steps `Publish the core as native AOT, any trim or AOT warning fails` and
+  `Publish the net8.0 core host as native AOT, any IL warning in the output fails` of
+  `.github/workflows/ci.yml` prove it, and also prove that a Minimal API endpoint becomes an
+  `Endpoint` step in the native binary.
 - The `NetApiFlow.EntityFrameworkCore` interceptor is a separate question from the one above. The
   interceptor itself emits no warning, but EF Core states it is not fully compatible with Native
   AOT, and a published host using it reports that: `IL2026`/`IL3050` on the `DbContext`
   constructor and `IL2104`/`IL3053` on the EF Core assemblies. That limitation belongs to EF Core,
   not to NetApiFlow, and no change here can remove it. Under Native AOT, mark database work with
-  `NetApiFlow.Step(...)` if you want a warning-free publish.
+  `Flow.Step(...)` if you want a warning-free publish.
 - The live view is per process, not per cluster. `GET /traces/live` reads the in-memory recorder of
   whichever replica answered that call, so behind a load balancer without sticky sessions `/flow`
   shows only the traffic that one replica handled, and the browser can land on a different replica
@@ -751,14 +1259,14 @@ BenchmarkDotNet reports, including hardware and runtime details, are generated u
   configured every replica writes to the same database, so `GET /traces/{traceId}` and the History
   screen find a trace no matter which replica recorded it.
 - `net8.0` left Microsoft's official support window on 10 November 2026, and NetApiFlow still ships
-  an asset for it. It stays for now because there is nowhere to move it to yet: the next LTS,
-  `net12.0`, is only expected in November 2027, so dropping `net8.0` today would leave `net10.0` as
-  the single supported target. `net8.0` only stops shipping once `net12.0` can replace it. Keeping
-  it does mean the package has a target framework that no longer gets servicing updates from
-  Microsoft, which is worth knowing if your own policy forbids that.
-- A `net11.0` app uses the `net10.0` asset today. That was tested against a real SQL Server with the
-  storage package and `Microsoft.Data.SqlClient` 7.1.2. An asset of its own for `net11.0` is
-  planned.
+  an asset for it. It stops shipping in the first version published on or after 10 May 2027. If you
+  still need it after that, stay on the last version that has it. Keeping it until then does mean
+  the package has a target framework that no longer gets servicing updates from Microsoft, which is
+  worth knowing if your own policy forbids that.
+- A `net11.0` app uses the `net10.0` asset. The CI runs the whole test suite on the .NET 11 runtime,
+  on Linux, against the build of `net10.0`, and the storage package was tested against a real SQL
+  Server with `Microsoft.Data.SqlClient` 7.1.2. An asset of its own for `net11.0` will exist only on
+  the day the code uses an API that only .NET 11 has.
 - `net9.0` (STS) is not a supported target. Multi-targeting covers `net8.0` and `net10.0` (both
   LTS); a `net9.0` consumer resolves to the `net8.0` asset, including the hand-written SSE
   implementation used there instead of `net10.0`'s native `TypedResults.ServerSentEvents`.

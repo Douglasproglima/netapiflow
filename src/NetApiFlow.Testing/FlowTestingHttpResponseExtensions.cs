@@ -13,7 +13,9 @@ public static class FlowTestingHttpResponseExtensions
     /// recorded for it.
     /// </summary>
     /// <exception cref="FlowAssertionException">
-    /// The header is absent, which means the request was never tracked, or the trace is no longer
+    /// The header is absent, which means the request was never tracked,
+    /// <c>NetApiFlowOptions.EmitTraceIdHeader</c> is off, or the response is a 500
+    /// the server built because nothing handled an exception. Also thrown when the trace is no longer
     /// in the in-memory buffer of recently completed traces.
     /// </exception>
     public static FlowTraceDetail GetFlowTrace(this HttpResponseMessage response, IServiceProvider services)
@@ -25,11 +27,13 @@ public static class FlowTestingHttpResponseExtensions
             values.FirstOrDefault() is not { Length: > 0 } traceId)
         {
             throw new FlowAssertionException(
-                $"The response carries no {TraceIdHeader} header, so NetApiFlow did not track this request. " +
-                "Check that AddNetApiFlow is registered and that the route is not excluded by IncludePaths/ExcludePaths.");
+                $"The response carries no {TraceIdHeader} header. The usual causes are that NetApiFlowOptions.EmitTraceIdHeader is off " +
+                "(it is on by default only in Development, so set it to true if your test host runs in another environment), " +
+                "that AddNetApiFlow is not registered, that the route is excluded by IncludePaths/ExcludePaths, " +
+                "or that the response is a 500 the server built because nothing handled the exception (add UseExceptionHandler).");
         }
 
-        return NetApiFlow.GetRecentTrace(services, traceId)
+        return Flow.GetRecentTrace(services, traceId)
             ?? throw new FlowAssertionException(
                 $"No trace found for {traceId}. It either aged out of the in-memory buffer of recently " +
                 "completed traces, or tracing is disabled on this host.");

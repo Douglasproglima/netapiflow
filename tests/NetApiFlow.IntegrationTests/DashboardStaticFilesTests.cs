@@ -13,7 +13,7 @@ namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
 /// Verifies the embedded Angular UI is served and its &lt;base href&gt; rewritten for the host's
-/// actual mount path (risco R-03).
+/// actual mount path.
 /// </summary>
 public class DashboardStaticFilesTests
 {
@@ -38,7 +38,7 @@ public class DashboardStaticFilesTests
                     }
 
                     app.UseRouting();
-                    app.UseEndpoints(endpoints => endpoints.UseNetApiFlowDashboard(dashboardPath));
+                    app.UseEndpoints(endpoints => endpoints.MapNetApiFlowDashboard(dashboardPath));
                 });
             })
             .Start();

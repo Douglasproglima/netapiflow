@@ -12,13 +12,13 @@ public class StepTests
     {
         // Warm up: let the JIT compile Step() once before measuring, so tiered compilation does not
         // show up as allocation noise.
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
@@ -37,7 +37,7 @@ public class StepTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        using var step = NetApiFlow.Step("StockService", "ReserveAsync", ComponentType.Service);
+        using var step = Flow.Step("StockService", "ReserveAsync", ComponentType.Service);
 
         var activity = Activity.Current;
         activity.ShouldNotBeNull();
@@ -56,7 +56,7 @@ public class StepTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var step = NetApiFlow.Step("Component", "Operation");
+        var step = Flow.Step("Component", "Operation");
         var activity = Activity.Current;
         step.MarkError(new InvalidOperationException("boom"));
         step.Dispose();
@@ -80,7 +80,7 @@ public class StepTests
 
         var exception = new InvalidOperationException("boom");
 
-        var step = NetApiFlow.Step("Component", "Operation");
+        var step = Flow.Step("Component", "Operation");
         step.MarkError(exception);
         step.Dispose();
 
@@ -99,9 +99,9 @@ public class StepTests
 
         var exception = new InvalidOperationException("boom");
 
-        var outer = NetApiFlow.Step("OuterComponent", "Operation");
+        var outer = Flow.Step("OuterComponent", "Operation");
         var outerActivity = Activity.Current;
-        var inner = NetApiFlow.Step("InnerComponent", "Operation");
+        var inner = Flow.Step("InnerComponent", "Operation");
         var innerActivity = Activity.Current;
 
         inner.MarkError(exception);

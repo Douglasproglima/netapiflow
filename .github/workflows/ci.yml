@@ -20,6 +20,7 @@ jobs:
     outputs:
       docs_only: ${{ steps.filter.outputs.docs_only }}
       clientapp_changed: ${{ steps.filter.outputs.clientapp_changed }}
+      readme_changed: ${{ steps.filter.outputs.readme_changed }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -41,6 +42,7 @@ jobs:
             echo "No usable base SHA (new branch or force-push), treating as a full build." >&2
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
             echo "clientapp_changed=true" >> "$GITHUB_OUTPUT"
+            echo "readme_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -58,6 +60,12 @@ jobs:
             echo "clientapp_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "clientapp_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if echo "$CHANGED" | grep -qE '^README(\.pt-BR)?\.md$'; then
+            echo "readme_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "readme_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
   build-test:
@@ -84,6 +92,7 @@ jobs:
           dotnet-version: |
             8.0.x
             10.0.x
+            11.0.x
 
       - name: Setup Node
         if: needs.detect-changes.outputs.docs_only != 'true'
@@ -107,6 +116,21 @@ jobs:
           npm ci
           npm run build
 
+      - name: Lint dashboard UI
+        if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run lint
+
+      - name: Check dashboard UI formatting
+        if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run format:check
+
+      - name: Test dashboard UI
+        if: needs.detect-changes.outputs.docs_only != 'true' && needs.detect-changes.outputs.clientapp_changed == 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run test:ci -- --reporters default --reporters json --output-file "$RUNNER_TEMP/vitest.json"
+
       - name: Restore
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet restore NetApiFlow.slnx
@@ -114,6 +138,10 @@ jobs:
       - name: Format check
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet format NetApiFlow.slnx --verify-no-changes --no-restore
+
+      - name: No code of src/ or tests/ cites an ADR, a decision, a risk or a plan document
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: node scripts/check-citations.mjs
 
       - name: Build
         if: needs.detect-changes.outputs.docs_only != 'true'
@@ -124,22 +152,112 @@ jobs:
         shell: bash
         run: |
           set -e
-          dotnet test tests/NetApiFlow.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.EntityFrameworkCore.Ef8Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.Mcp.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.OpenTelemetry.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-          dotnet test tests/NetApiFlow.PrePipelineInteropSpike -c Release --no-build --collect:"XPlat Code Coverage"
+          run_tests() {
+            dotnet test "tests/$1" -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx;LogFileName=$1.trx" --results-directory "$RUNNER_TEMP/trx"
+          }
+          run_tests NetApiFlow.Tests
+          run_tests NetApiFlow.IntegrationTests
+          run_tests NetApiFlow.EntityFrameworkCore.Ef8Tests
+          run_tests NetApiFlow.Mcp.Tests
+          run_tests NetApiFlow.OpenTelemetry.Tests
+          run_tests NetApiFlow.PrePipelineInteropSpike
           # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners (tarefa 6.5).
           if [ "${{ runner.os }}" != "Windows" ]; then
-            dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build --collect:"XPlat Code Coverage"
-            dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
-            dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build --collect:"XPlat Code Coverage"
+            run_tests NetApiFlow.Storage.Tests
+            run_tests NetApiFlow.Npgsql.IntegrationTests
+            run_tests NetApiFlow.Npgsql10.IntegrationTests
+            run_tests NetApiFlow.SqlClient.IntegrationTests
           fi
+
+      - name: Run the same tests on the .NET 11 runtime, against the build of net10.0
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        shell: bash
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+          NETAPIFLOW_EXPECT_RUNTIME_MAJOR: "11"
+        run: |
+          set -e
+          dotnet --version
+          dotnet --list-runtimes
+          run_tests() {
+            dotnet test "tests/$1" -c Release --no-build -f net10.0
+          }
+          run_tests NetApiFlow.Tests
+          run_tests NetApiFlow.IntegrationTests
+          run_tests NetApiFlow.EntityFrameworkCore.Ef8Tests
+          run_tests NetApiFlow.Mcp.Tests
+          run_tests NetApiFlow.OpenTelemetry.Tests
+          run_tests NetApiFlow.PrePipelineInteropSpike
+          run_tests NetApiFlow.Storage.Tests
+          run_tests NetApiFlow.Npgsql.IntegrationTests
+          run_tests NetApiFlow.Npgsql10.IntegrationTests
+          run_tests NetApiFlow.SqlClient.IntegrationTests
+
+      - name: Check that every regression guard still exists and passes
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: node scripts/check-regression-guards.mjs --trx "$RUNNER_TEMP/trx" --vitest "$RUNNER_TEMP/vitest.json"
+
+      - name: Create the local package folders the verification projects list
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: mkdir -p tests/manual-verification/local-nuget-feed tests/manual-verification/local-packages
+
+      - name: Publish the core as native AOT, any trim or AOT warning fails
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerification
+        run: dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=true
+
+      - name: Publish the net8.0 core host as native AOT, any IL warning in the output fails
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish -c Release -r linux-x64 -o ./publish | tee publish.log
+          if grep -E "warning IL[0-9]+" publish.log; then exit 1; fi
+
+      - name: Run the net8.0 native binary, the HttpClient backfill must record method, URL and status
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        run: ./publish/AotCoreVerificationNet8 --verify-http-backfill
 
       - name: Pack (verification only)
         if: needs.detect-changes.outputs.docs_only != 'true'
         run: dotnet pack NetApiFlow.slnx -c Release --no-build
+
+  real-package:
+    name: real-package
+    needs: detect-changes
+    uses: ./.github/workflows/real-package.yml
+    with:
+      run: ${{ needs.detect-changes.outputs.docs_only != 'true' || needs.detect-changes.outputs.readme_changed == 'true' }}
+
+  built-demo:
+    name: built-demo
+    needs: detect-changes
+    if: needs.detect-changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: src/NetApiFlow.Dashboard/ClientApp/.nvmrc
+          cache: npm
+          cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
+
+      - name: Test the script that checks the demo
+        run: node --test scripts/verify-built-demo.test.mjs
+
+      - name: Build the demo
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: |
+          npm ci
+          npm run build:demo
+
+      - name: Open every trace and screen of the built demo in a headless browser
+        run: node scripts/verify-built-demo.mjs --directory src/NetApiFlow.Dashboard/ClientApp/dist/demo/browser
 
   # D-76: visual-quality findings never fail this job (`|| true` below). The detector runs in
   # warn-only mode for a full cycle before the Planejadora decides whether it should block.

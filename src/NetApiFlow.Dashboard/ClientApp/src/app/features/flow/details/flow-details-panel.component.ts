@@ -5,11 +5,14 @@ import { httpMethodTagClass } from '../../../shared/http-method-style';
 import { buildWaterfall, computeUnexplainedTime } from './waterfall';
 import { findNPlusOneGroup } from '../graph/graph-builder';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
+import { statusLabelKey } from '../../../shared/status-label';
+
+const W3C_TRACE_ID_TAG = 'w3c.trace_id';
 
 /**
- * No span selected: request summary + waterfall (guide seção 6.6). A span selected: its full
+ * No span selected: request summary + waterfall. A span selected: its full
  * detail, including ancestors, children and the delta from the normal median duration of that
- * operation (seção 8 do prompt).
+ * operation.
  */
 @Component({
   selector: 'app-flow-details-panel',
@@ -28,22 +31,27 @@ export class FlowDetailsPanelComponent {
 
   readonly waterfall = computed(() => buildWaterfall(this.trace(), this.slowThresholdMicros()));
 
+  readonly w3cTraceId = computed(() => this.trace().tags[W3C_TRACE_ID_TAG] ?? null);
+
   readonly unexplainedTimeValues = computed(() => {
     const unexplained = computeUnexplainedTime(this.trace());
     if (!unexplained) {
       return null;
     }
 
+    const roundedPercent = unexplained.unexplainedPercent.toFixed(0);
     return {
-      percent: unexplained.unexplainedPercent.toFixed(0),
+      percent: roundedPercent === '0' && unexplained.unexplainedMicros > 0 ? '<1' : roundedPercent,
       unexplained: this.formatDuration(unexplained.unexplainedMicros),
       total: this.formatDuration(this.trace().durationMicros),
     };
   });
 
+  readonly statusLabelKey = statusLabelKey;
+
   readonly executedCount = computed(() => this.trace().spans.length);
 
-  /** D-71: siblings of the same shape as the selected span, anywhere in the trace. */
+  /** siblings of the same shape as the selected span, anywhere in the trace. */
   readonly nPlusOneGroup = computed(() => {
     const selected = this.selectedSpan();
     return selected ? findNPlusOneGroup(this.trace().spans, selected.span.spanId) : [];

@@ -19,9 +19,9 @@ import {
 } from './models';
 
 /**
- * HTTP client for the ten routes frozen in docs/plano/contratos.md, seção 3. Every path is
+ * HTTP client for the ten routes of the dashboard REST contract. Every path is
  * relative (no leading slash), so it resolves against whatever base path the host page sets via
- * <base href> (risco R-03): the dashboard can be mounted anywhere, and there is never a CORS
+ * <base href>: the dashboard can be mounted anywhere, and there is never a CORS
  * round-trip because the API is always same-origin, relative to wherever this page was served.
  */
 @Injectable({ providedIn: 'root' })
@@ -49,10 +49,9 @@ export class ApiService {
     );
   }
 
-  /** Returns `null` when the API responds 204 (no previous successful execution). */
-  getBlueprint(method: string, route: string): Observable<FlowTraceDetail | null> {
+  getBlueprint(method: string, route: string, before: string): Observable<FlowTraceDetail | null> {
     return this.http.get<FlowTraceDetail | null>(`${this.basePath}/blueprint`, {
-      params: new HttpParams().set('method', method).set('route', route),
+      params: new HttpParams().set('method', method).set('route', route).set('before', before),
     });
   }
 
@@ -113,8 +112,13 @@ export class ApiService {
     path: string,
     body?: unknown,
     headers?: HttpHeaders,
-  ): Observable<HttpResponse<unknown>> {
-    return this.http.request(method, path, { body, headers, observe: 'response' });
+  ): Observable<HttpResponse<string>> {
+    return this.http.request(method, path, {
+      body,
+      headers,
+      observe: 'response',
+      responseType: 'text',
+    });
   }
 
   /** Fetches the host application's own OpenAPI document, at a root-relative, configurable URL. */

@@ -9,7 +9,7 @@ public sealed class FlowTrackingBehavior<TRequest, TResponse> : IPipelineBehavio
     /// <inheritdoc />
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        using var step = NetApiFlow.Step(typeof(TRequest).Name, "Handle", ComponentType.UseCase);
+        using var step = Flow.Step(typeof(TRequest).Name, "Handle", ComponentType.UseCase);
 
         try
         {

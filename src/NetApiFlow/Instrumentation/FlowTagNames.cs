@@ -10,4 +10,5 @@ internal static class FlowTagNames
     public const string ErrorType = "netapiflow.error.type";
     public const string ErrorMessage = "netapiflow.error.message";
     public const string ErrorOrigin = "netapiflow.error.origin";
+    public const string TraceId = "netapiflow.trace_id";
 }

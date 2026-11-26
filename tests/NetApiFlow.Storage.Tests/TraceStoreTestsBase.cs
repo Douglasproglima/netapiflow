@@ -80,6 +80,23 @@ public abstract class TraceStoreTestsBase
     }
 
     [Fact]
+    public async Task GetAsync_ForATraceSavedBeforeTheOwnTraceIdWithTheW3CTraceIdAsKey_ReadsItWithoutTheNewTag()
+    {
+        var store = CreateStore();
+        const string w3cTraceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        await store.SaveAsync(MakeTrace(w3cTraceId), [MakeSpan(w3cTraceId, "span-root", null, 0)], CancellationToken.None);
+
+        var detail = await store.GetAsync(w3cTraceId, CancellationToken.None);
+        var listed = await store.QueryAsync(new TraceQuery { RouteTemplate = "/api/orders/{id}" }, CancellationToken.None);
+
+        detail.ShouldNotBeNull();
+        detail.Trace.TraceId.ShouldBe(w3cTraceId);
+        detail.Trace.Tags.ContainsKey("w3c.trace_id").ShouldBeFalse();
+        detail.Spans.Single().TraceId.ShouldBe(w3cTraceId);
+        listed.Items.Select(item => item.TraceId).ShouldContain(w3cTraceId);
+    }
+
+    [Fact]
     public async Task SaveAsync_ThenGetAsync_RoundTripsCancelledAndTimeoutStatus()
     {
         var store = CreateStore();
@@ -443,6 +460,71 @@ public abstract class TraceStoreTestsBase
         blueprint.ShouldNotBeNull();
         blueprint.Trace.TraceId.ShouldBe("ls-3");
         blueprint.Spans.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task GetLastSuccessfulAsync_WithAnAnchor_ReturnsTheLatestSuccessStrictlyBeforeIt()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        var first = now.AddMinutes(-10);
+        var second = now.AddMinutes(-5);
+        var third = now.AddMinutes(-1);
+        await store.SaveAsync(MakeTrace("an-1", startedAt: first), [MakeSpan("an-1", "s1", null, 0)], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("an-2", startedAt: second), [MakeSpan("an-2", "s1", null, 0)], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("an-3", startedAt: third), [MakeSpan("an-3", "s1", null, 0)], CancellationToken.None);
+
+        var blueprintOfTheThird = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", third, CancellationToken.None);
+        var blueprintOfTheSecond = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", second, CancellationToken.None);
+        var blueprintOfTheFirst = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", first, CancellationToken.None);
+
+        blueprintOfTheThird.ShouldNotBeNull().Trace.TraceId.ShouldBe("an-2");
+        blueprintOfTheThird.Spans.ShouldHaveSingleItem();
+        blueprintOfTheSecond.ShouldNotBeNull().Trace.TraceId.ShouldBe("an-1");
+        blueprintOfTheFirst.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(5)]
+    [InlineData(7)]
+    [InlineData(9)]
+    public async Task GetLastSuccessfulAsync_AnchoredAtTheTracesOwnStartWithSubMicrosecondTicks_NeverReturnsTheTraceItself(int extraTicks)
+    {
+        var store = CreateStore();
+        var startedAt = new DateTime(2026, 11, 21, 12, 0, 0, DateTimeKind.Utc).AddTicks(extraTicks);
+        await store.SaveAsync(MakeTrace("own-1", startedAt: startedAt), [MakeSpan("own-1", "s1", null, 0)], CancellationToken.None);
+
+        var blueprint = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", startedAt, CancellationToken.None);
+
+        blueprint.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetLastSuccessfulAsync_WithAnAnchor_SkipsAFailedTraceBeforeIt()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeTrace("fail-1", status: FlowStatus.Success, startedAt: now.AddMinutes(-10)), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("fail-2", status: FlowStatus.Error, startedAt: now.AddMinutes(-2)), [], CancellationToken.None);
+
+        var blueprint = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", now, CancellationToken.None);
+
+        blueprint.ShouldNotBeNull().Trace.TraceId.ShouldBe("fail-1");
+    }
+
+    [Fact]
+    public async Task GetLastSuccessfulAsync_WithAnAnchor_FindsARouteStoredWithAParameterConstraintAndIgnoresAnotherMethod()
+    {
+        var store = CreateStore();
+        var now = DateTime.UtcNow;
+        await store.SaveAsync(MakeTrace("typed-before", method: "GET", route: "/api/orders/{id:int}", startedAt: now.AddMinutes(-10)), [], CancellationToken.None);
+        await store.SaveAsync(MakeTrace("other-method", method: "POST", route: "/api/orders/{id:int}", startedAt: now.AddMinutes(-5)), [], CancellationToken.None);
+
+        var blueprint = await store.GetLastSuccessfulAsync("GET", "/api/orders/{id}", now, CancellationToken.None);
+
+        blueprint.ShouldNotBeNull().Trace.TraceId.ShouldBe("typed-before");
     }
 
     [Fact]

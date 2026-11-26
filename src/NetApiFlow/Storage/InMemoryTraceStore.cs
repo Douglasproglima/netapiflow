@@ -22,11 +22,12 @@ internal sealed class InMemoryTraceStore : ITraceStore
 
     public ValueTask<PagedResult<FlowTraceSummary>> QueryAsync(TraceQuery query, CancellationToken cancellationToken)
     {
+        var routeKey = query.RouteTemplate is null ? null : RouteTemplateNormalizer.NormalizeForComparison(query.RouteTemplate);
         var matching = _entries.Values
             .Select(e => e.Trace)
             .Where(trace => query.Status is null || trace.Status == query.Status)
             .Where(trace => query.Method is null || string.Equals(trace.Method, query.Method, StringComparison.OrdinalIgnoreCase))
-            .Where(trace => query.RouteTemplate is null || trace.RouteTemplate == query.RouteTemplate)
+            .Where(trace => routeKey is null || RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate) == routeKey)
             .Where(trace => query.Tenant is null || trace.Tags.GetValueOrDefault("tenant") == query.Tenant)
             .Where(trace => query.From is null || trace.StartedAt >= query.From)
             .Where(trace => query.To is null || trace.StartedAt <= query.To)
@@ -90,12 +91,19 @@ internal sealed class InMemoryTraceStore : ITraceStore
         return ValueTask.FromResult<IReadOnlyList<ComponentStat>>(stats);
     }
 
-    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken) =>
+        FindLastSuccessful(method, routeKey, DateTime.MaxValue);
+
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
+        FindLastSuccessful(method, routeKey, before);
+
+    private ValueTask<FlowTraceDetail?> FindLastSuccessful(string method, string routeKey, DateTime before)
     {
         var entry = _entries.Values
             .Where(e => string.Equals(e.Trace.Method, method, StringComparison.OrdinalIgnoreCase))
             .Where(e => RouteTemplateNormalizer.NormalizeForComparison(e.Trace.RouteTemplate) == routeKey)
             .Where(e => e.Trace.Status == FlowStatus.Success)
+            .Where(e => e.Trace.StartedAt < before)
             .OrderByDescending(e => e.Trace.StartedAt)
             .FirstOrDefault();
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
 
@@ -25,8 +26,7 @@ public class FlowLoggerTests
 
         var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, listener, subject, traceId, root);
     }
@@ -38,7 +38,7 @@ public class FlowLoggerTests
         using var _ = listener;
         using var __ = root;
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
             subject.Log(LogLevel.Information, new EventId(0), "state", null, (s, e) => s);
         }
@@ -82,7 +82,7 @@ public class FlowLoggerTests
         using var _ = listener;
         using var __ = root;
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
             subject.Log(LogLevel.Warning, new EventId(0), "state", null, (s, e) => "something happened");
         }
@@ -99,7 +99,7 @@ public class FlowLoggerTests
         using var _ = listener;
         using var __ = root;
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
             subject.Log(LogLevel.Error, new EventId(0), "state", new InvalidOperationException("boom"), (s, e) => "failed");
         }
@@ -116,7 +116,7 @@ public class FlowLoggerTests
         using var _ = listener;
         using var __ = root;
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
             subject.Log(LogLevel.Warning, new EventId(0), "state", null, (s, e) => "contact someone@example.com, cpf 123.456.789-09");
         }
@@ -134,7 +134,7 @@ public class FlowLoggerTests
         using var _ = listener;
         using var __ = root;
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
             subject.Log(LogLevel.Warning, new EventId(0), "state", null, (s, e) => "one");
             subject.Log(LogLevel.Warning, new EventId(0), "state", null, (s, e) => "two");

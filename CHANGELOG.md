@@ -7,6 +7,484 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-25
+
+### Added
+
+- `NetApiFlow.Dashboard`: the Runner shows what the request got back. After a send it shows
+  `HTTP <status>`, also for a 4xx and a 5xx, the trace id as a link that opens the trace, and the body of
+  the response in a folded "Response body" block. The body is shown as text only, never as markup, cut at
+  4000 characters, and nothing from the headers of the response is shown. It stays in the memory of the
+  page: it goes away at the next send, when you pick another endpoint and when you leave the screen. A
+  response that is not text says its type and shows nothing. A `POST` starts with the `example` that the
+  OpenAPI document gives for its request body, when it gives one.
+- `NetApiFlow`: the class `Flow`, the new name of the entry point for marking a step by hand:
+  `Flow.Step("OrderRepository", "Find")`, `Flow.CurrentTraceId` and `Flow.GetRecentTrace`. It needs
+  only `using NetApiFlow;` and works from a top-level `Program.cs` too, where `NetApiFlow.Step(...)`
+  did not compile.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: `MapNetApiFlowDashboard` and `MapNetApiFlowMcp`, the
+  new names of `UseNetApiFlowDashboard` and `UseNetApiFlowMcp`, following the `Map*` convention of
+  ASP.NET Core for adding endpoints.
+- `NetApiFlow`: `WithNetApiFlowTracking()` works on any `IEndpointConventionBuilder`, and no longer
+  only on `RouteHandlerBuilder` and `RouteGroupBuilder`.
+- `NetApiFlow`: `FlowStep.Tag` accepts an `int`, a `long`, a `double`, a `bool` or an enum value, and
+  records it as text. An enum value is recorded as the name of its member. Before, only a `string`
+  compiled.
+- `NetApiFlow.OpenTelemetry`: `AddNetApiFlowSource()`, for an app that already configures OpenTelemetry.
+  It adds the `"NetApiFlow"` source to the tracing of the app and nothing else, so the steps go to the
+  exporters the app already has. `AddNetApiFlowOtlpExport(...)` does not change: it adds its exporter to the
+  tracer provider of the app, so in an app with its own OpenTelemetry every source of the app also goes to
+  the NetApiFlow endpoint. The README says when to use each one.
+- `NetApiFlow`: `WithoutNetApiFlowTracking()` keeps an endpoint, a group, `MapControllers()` or
+  `MapHealthChecks()` out of tracing, for a health check, a metrics route or anything that must never
+  show up in history. It is read from the matched endpoint, so it holds under `UsePathBase`, and it
+  wins over `ExcludePaths`, `IncludePaths` and `WithNetApiFlowTracking()` on the same endpoint. The
+  dashboard and the MCP server mark their own routes with it.
+- `NetApiFlow`: `TrackFlowByConvention()` tracks the application's own services, repositories and
+  handlers with one line, called after the registrations. `*Service` becomes a `Service` step,
+  `*Repository` a `Repository` step and `*Handler` a `UseCase` step, for the types of the entry
+  assembly, or of the assemblies and namespaces you name with `IncludeAssembly` and
+  `IncludeNamespacePrefix`. It never touches a type of the framework, of a third-party package or of
+  NetApiFlow, and it leaves MediatR handlers to `NetApiFlow.MediatR`. When the host starts it logs a
+  warning naming a registration made after the call and a registration made by factory, which
+  cannot be decorated. It is optional, `AddNetApiFlow()` never turns it on.
+- `NetApiFlow`: a Minimal API endpoint becomes an `Endpoint` step with no marking, so the graph of the
+  default `dotnet new webapi` app is no longer empty. The `CaptureMinimalApiEndpoints` option
+  (`NetApiFlowOptions`, or `NetApiFlow:CaptureMinimalApiEndpoints` in configuration, default `true`)
+  turns it off. What this changes in your traces is under Changed.
+- `NetApiFlow`: the `EmitTraceIdHeader` option (`NetApiFlowOptions`, or `NetApiFlow:EmitTraceIdHeader`
+  in configuration) turns the `X-NetApiFlow-TraceId` response header on or off. Its default is under
+  Changed. With it off, requests are still traced, but `GetFlowTrace` from `NetApiFlow.Testing` reads
+  that header and throws, and its message now names the option.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: the `AutoCreateSchema` option
+  (default `true`, so nothing changes unless you set it). With `false` the storage runs no `CREATE`,
+  `ALTER` or `UPDATE` on your database. On first use it only checks that the tables and the
+  `route_key` column exist, and when something is missing it logs an error that says what and where
+  the script is, without failing the request. For an application whose database user cannot run DDL.
+- `NetApiFlow.Dashboard`: an application with an authorization `FallbackPolicy` that mounts the
+  dashboard with neither `AllowAnonymous()` nor `RequireAuthorization(...)` now logs one warning when
+  it starts. Until now the dashboard answered with the challenge of the authentication scheme of the
+  app (a 401 with JWT bearer, a redirect to the login page with cookies) and nothing said why. The
+  warning names the 401 and how to fix it.
+- `NetApiFlow` and `NetApiFlow.Dashboard`: `GET /flow/api/blueprint` takes an optional `before`, an
+  ISO 8601 date and time, normally the `startedAt` of the trace being drawn. It answers with the last
+  successful execution that started strictly before it, so a trace is never its own blueprint and a
+  later execution no longer changes the drawing of an earlier one. Without `before` it answers as it
+  did, and a `before` that is not a date is a 400. `ITraceStore` gets
+  `GetLastSuccessfulAsync(method, routeKey, before, cancellationToken)` as a member with a default
+  implementation, so a store written for an earlier release keeps compiling and loading. The default
+  asks for the latest successful trace and returns it only if it started before `before`, so it can
+  return nothing where an exact store would find an earlier one. The in-memory, PostgreSQL and SQL
+  Server stores implement it exactly, with `started_at < before` on the index they already have.
+- `NetApiFlow`: the metric `netapiflow.persistence.failures` counts the traces the writer discards while
+  the store keeps failing. The policy is under Changed.
+
+### Changed
+
+- `NetApiFlow.Dashboard`: "Slowest step" names the step that spent the most time in its own code, which
+  is its duration minus the duration of its direct children, and the banner says "own time". Before, it
+  named the longest duration, which was always the step that contains all the others. The slow threshold
+  now applies to that time of its own, so a trace whose steps only wait for each other shows no banner.
+- `NetApiFlow.Dashboard`, `NetApiFlow.EntityFrameworkCore`, `NetApiFlow.Mcp`, `NetApiFlow.MediatR`,
+  `NetApiFlow.OpenTelemetry`, `NetApiFlow.Storage.PostgreSql`, `NetApiFlow.Storage.SqlServer` and
+  `NetApiFlow.Testing`: each package now asks for `NetApiFlow` at exactly its own version, `[0.6.0]` for
+  the 0.6.0 release, and no longer at that version or later. The packages are published together, and
+  the panel and the two storages use some internal types of the core, so a mix of releases could fail at
+  run time. Now NuGet says so when it restores: updating a package without the core gives `NU1605` (an
+  error), and updating the core without a package gives `NU1608` (only a warning, worth turning into an
+  error with `WarningsAsErrors`). Update all the NetApiFlow packages together. The packages already
+  published, up to 0.5.3, keep the open range, so they get none of this: with the 0.6.0 core and the
+  0.5.3 `NetApiFlow.Dashboard`, the restore passes with no message, and in the paths we exercised (the
+  panel API with a trace in flight, the detail of a live trace, the history, the metrics and clearing
+  the traces) nothing broke.
+- `NetApiFlow` and `NetApiFlow.EntityFrameworkCore`: a SQL step is named after its table, not its
+  schema. `SELECT Id FROM dbo.Users` was the step `SELECT dbo`, and it is now `SELECT Users`. The same
+  goes for `[dbo].[Users]`, `"public"."orders"`, `public.orders` and a name with three parts, for
+  SqlClient, Npgsql and EF Core with `HasDefaultSchema`. If you already record schema-qualified SQL
+  with 0.5.3, the history and the statistics per component show the old name and the new one as two
+  different steps. Two tables of the same schema no longer share one name, so they no longer light a
+  false N+1 badge.
+- `NetApiFlow.Mcp`: `/flow/mcp` answers `NetApiFlow` as the server name in `initialize` and
+  `server/discover`. Before, it answered the name of the host assembly of the app. The MCP endpoint of
+  an app that hosts its own server keeps its own name, or the default of the SDK when it sets none.
+- `NetApiFlow.Mcp`: the tool classes `GetTraceTool`, `ListRecentTracesTool`, `GetComponentStatsTool`
+  and the result type `TraceLookupResult` are no longer public. They were meant to be called by an MCP
+  client and not from code. The tools, their names and their answers stay the same.
+- Every registration entry point now checks its arguments: a null `services`, `builder`,
+  `endpoints`, `basePath`, `predicate` or array of patterns throws `ArgumentNullException` naming the
+  parameter. `AddNetApiFlowPostgreSqlStorage` and `AddNetApiFlowSqlServerStorage` throw at startup when
+  the connection string is null, empty or blank, with a message that says what to pass.
+- `NetApiFlow`: events now reach an `IFlowEventListener`, the live panel included, from a background
+  queue and no longer on the thread of the request. Before, the synchronous part of every listener ran
+  inside the request. A listener that took 200 ms per event made a request to an empty endpoint take
+  811 ms instead of 0.4 ms. Now it takes 0.5 ms. Each listener has its own queue of 5000 events and gets
+  them one at a time, in the order they happened. A slow listener only delays its own events and never
+  holds back the others. When the queue of a listener is full, a new event is dropped for that listener
+  only and counted in `netapiflow.events.dropped`, and the request never waits. A listener now gets the
+  shutdown token instead of `CancellationToken.None`. When the app stops, the event a listener is
+  handling is awaited only until that token, and the events still in its queue are not delivered.
+- **`NetApiFlow`: a null, empty or blank pattern in `IncludePaths` or `ExcludePaths` now stops the app
+  at startup.** This holds in code and in the `NetApiFlow` configuration section, so an empty
+  environment variable such as `NetApiFlow__ExcludePaths__1=` also stops it. The message names the
+  option and the position of the pattern. In 0.5.3 the app started, and each case did something
+  different. A null pattern made every request fail with a `NullReferenceException`. An empty pattern
+  matched only the root path `/`. A blank pattern, made only of spaces, never matched anything.
+- **`NetApiFlow`: each request gets its own trace id, and the id of a trace is no longer the W3C trace
+  id of the request.** The id is random and has the same format as before, 32 hexadecimal
+  characters. `X-NetApiFlow-TraceId`, `NetApiFlow.GetRecentTrace`, `NetApiFlow.Testing`, the REST API,
+  the stream and the MCP tools use it. `NetApiFlow.CurrentTraceId` now returns it, and `null` when the
+  request has no trace in progress, including a request that is not traced, where it used to return
+  the W3C trace id. The W3C trace id is in the tag `w3c.trace_id` of the trace and in
+  `Activity.Current.TraceId`, and the details of a trace in the dashboard show both with their
+  labels. The `TraceStarted` event of the stream and the detail of a trace that is still running
+  carry `w3c.trace_id` and the tenant from the start, which they did not carry before, so a consumer
+  of the stream can match the first event with OpenTelemetry. Every NetApiFlow activity carries the
+  tag `netapiflow.trace_id`, so a span in an OTLP
+  backend leads to its trace, and the exported spans keep the W3C trace id. A trace saved before
+  stays readable. If a test or a log line compared `CurrentTraceId` or the header with
+  `Activity.Current.TraceId`, read the W3C trace id from the tag.
+- `NetApiFlow`: a step started with an explicit `ActivityContext` as its parent, in a thread that does
+  not carry the `ExecutionContext` of the request, is not recorded any more. It used to be, because
+  it shared the W3C trace id of the request. The README lists it next to `ExecutionContext.SuppressFlow()`.
+- `NetApiFlow`: the trace of a request that matches an endpoint now opens when routing picks the
+  endpoint, with its route already known. The `TraceStarted` event, the live list and the REST list
+  show `/orders/{id}` where they used to show `(unmatched)` until the request ended. The start time is
+  still the start of the request, and a step created before routing is kept.
+- **`NetApiFlow`: a request that matches no endpoint is now recorded only when it ends.** A static
+  file, a 404, a branch with its own terminal middleware and a WebSocket handler used to be listed as
+  running, as `(unmatched)`, from the start of the request, and the live list and the stream showed
+  its steps as they happened, such as an EF Core or `HttpClient` call. Now none of it appears until
+  the request ends: the trace, with its steps, is published then. It is still recorded and listed.
+  What you lose is seeing it while it runs, in the live list, in the stream and in
+  `GET /traces/{id}`. This is what lets a route that you excluded, with `.WithoutNetApiFlowTracking()`
+  or with `ExcludePaths` under a `PathBase`, never show up at all.
+- `NetApiFlow`: `DecorateFlowTracked` no longer decorates a type of NetApiFlow's own packages,
+  whatever the predicate says. A predicate such as `type.Name.EndsWith("Service")` used to put a
+  proxy on NetApiFlow's own hosted services, so their `StartAsync` and `StopAsync` went through it.
+- **`NetApiFlow`: every Minimal API endpoint now gets one step per traced request by default.** A
+  trace of an app that did not mark its endpoints goes from 0 steps to 1, so the span count, the
+  architecture map and the limit of 300 steps per trace see one more step per request, and a step
+  you open inside a handler now has the `Endpoint` step as its parent. The step runs from routing
+  to the end of the request, so it includes the middleware in between, such as authentication,
+  while `.WithNetApiFlowTracking()` measures only the filters and the handler. It is marked as
+  failed when the endpoint throws, and also when the response is a 5xx with no exception. Set
+  `CaptureMinimalApiEndpoints = false` to go back to marking each endpoint. An endpoint that is
+  already marked still gets one step.
+- **`NetApiFlow`: from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by
+  default. To keep it in Production, set `EmitTraceIdHeader = true`**, in code or in
+  `NetApiFlow:EmitTraceIdHeader`. In Production it is no longer sent and nothing warns you, so a
+  client, a log pipeline or a test that read it there stops finding it. The default is off there so a
+  response does not announce that the application runs NetApiFlow. `NetApiFlow.Testing` keeps working
+  under `WebApplicationFactory`, which runs in Development. If your tests run in another environment,
+  set the option in the test host. The dashboard's Runner reads this header too, so turn it on if you
+  use the Runner against a Production host.
+- `NetApiFlow`: the step that `.WithNetApiFlowTracking()` records for a Minimal API endpoint is named
+  from the handler, no longer from the framework's display name. It used to read
+  `HTTP: GET /hello./hello` in the dashboard. A handler that is a named method is shown as its type
+  and method (`Handlers.StaticGet`). A lambda or a local function is shown as `Minimal API` with its
+  endpoint name when it has `WithName(...)`, or with its verbs and route (`GET /hello`) when it does
+  not. Traces already stored in PostgreSQL or SQL Server keep the old names, so the architecture map
+  and the diff show two nodes for the same endpoint until the old history ages out. If you assert on
+  the step name with `NetApiFlow.Testing` or read it through the MCP tools, update the name you expect.
+- **`NetApiFlow`: `net8.0` stops shipping in the first version published on or after 10 May 2027.**
+  It left Microsoft's support window on 10 November 2026, and the package still ships an asset for
+  it until then. If you need it after that date, stay on the last version that has it. This closes
+  the open question that the notes of `0.4.1` left about when to stop shipping it.
+- `NetApiFlow`: a `net11.0` app uses the `net10.0` asset, and an asset of its own for `net11.0` will
+  exist only on the day the code uses an API that only .NET 11 has.
+- `NetApiFlow`: a store that fails to save no longer fills the log with one error and a stack trace per
+  trace. A failed save logs a warning with the type and the message of the exception, and the next trace
+  is tried normally. After three failures in a row the writer discards the traces that arrive for 30
+  seconds while counting them in the new metric `netapiflow.persistence.failures`, then tries again with
+  one warning for each attempt that fails, and logs one line when saving works again. You see it with
+  `AutoCreateSchema = false` before the tables exist, and when the database is down. The full exception
+  is still logged at `Debug`.
+- `NetApiFlow`: the requests of NetApiFlow itself are no longer traced. That is the dashboard (its
+  pages, the REST API and the stream) and the MCP server, also in Production, where they answer 404,
+  with or without a `PathBase`, and the request that fetches your OpenAPI document
+  (`OpenApiDocumentPath`, `/openapi/v1.json` by default; the match ignores case and only covers that one
+  path). They used to show up in recent executions and in the metrics as if they were your traffic, and
+  a second dashboard client saw the stream of the first one as a trace that stayed `Running` for the
+  whole connection. If a chart or an alert counted them, expect a drop.
+
+### Deprecated
+
+- `NetApiFlow`: the class `NetApiFlow.NetApiFlow`. Use `NetApiFlow.Flow`, which has the same members.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: `UseNetApiFlowDashboard` and `UseNetApiFlowMcp`. Use
+  `MapNetApiFlowDashboard` and `MapNetApiFlowMcp`.
+- The old names still work and forward to the new ones, with warning `CS0618`. They will be removed in
+  a later version, announced here before it happens.
+
+### Fixed
+
+- `NetApiFlow.OpenTelemetry`: the XML doc of `IncludeHttpClientSource` no longer says that the full
+  outbound URL, query string included, can be exported. It says what was measured: on .NET 10 the span
+  carries `http://host/target?*`, on .NET 8 `http://host/target`, and neither exports the query string
+  or the fragment. The XML docs of the public API no longer cite ADRs, decisions, risks or plan
+  documents.
+- The README, the Portuguese README and the package READMEs now say what the product does. Every sentence
+  of the audit's list was measured against a new app first, and the table is in
+  `tests/manual-verification/Fase59ReadmeVerdadeiroVerification/`. The corrections: the Quick start on
+  .NET 8 (the template has no `AddOpenApi()`, and the Runner needs `OpenApiDocumentPath`); the `using` of
+  the storage packages and of `Microsoft.AspNetCore.Mvc.Testing`, and `public partial class Program` on
+  .NET 8; what OTLP exports (nothing for a disabled or excluded request, the sampler of the host does not
+  apply, no `SERVER` span and how to add it, and the query string that `IncludeHttpClientSource` did not
+  export); what `CapturePrePipelineSteps` shows, `IAsyncEnumerable` and Native AOT (the first call into a
+  tracked service answers 500); the buffer of 500 traces of `Flow.GetRecentTrace`; the retention pass every
+  5 minutes; the `SqlClient` 5.2.2 of `NetApiFlow.Storage.SqlServer`; the license of MediatR 13 and later;
+  the routes that write in the dashboard; the fixed limits; `IFlowTenantResolver`; and the status codes of
+  the MCP route outside `Development`. The Portuguese README now writes "trace" in the masculine
+  everywhere, as the screen does.
+- `CONTRIBUTING.md` lists the prerequisites and `npm run format:check`, `SECURITY.md` puts the MCP server in
+  scope, the pull request template asks for `format:check`, and the issue templates link to the security
+  policy.
+- `NetApiFlow`: `Enabled = false` now keeps every step silent. Before, another `ActivityListener` on
+  the `NetApiFlow` source, such as an OpenTelemetry pipeline that adds it, still received the
+  controller, service and handler steps, although NetApiFlow recorded no trace. Now no step is opened at
+  all. If you relied on those steps reaching your exporter with NetApiFlow disabled, keep `Enabled` on.
+- `NetApiFlow`, `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: filtering the trace
+  history by route ignores the constraint. `/api/orders/{id}` finds the traces recorded as
+  `/api/orders/{id:int}`, in `GET /flow/api/traces?route=` and in the `route` argument of the
+  `list_recent_traces` MCP tool, with the in-memory store, PostgreSQL and SQL Server. Before, only the
+  exact template with the constraint matched, so the example that the tool itself gives returned nothing.
+  The stored data does not change.
+- `NetApiFlow.Testing`: the message of `ShouldCallAtMost` uses the singular for a limit of 1, as in
+  "Expected at most 1 Database call, found 2.". Before it said "1 Database calls". The README quotes the
+  new message.
+- Samples: the README of `SampleApi.Controllers` no longer tells you to run `dotnet run` without `-f`,
+  which fails on a project that targets two frameworks, and no longer cites `GET /api/orders`, which
+  answers 404. It starts PostgreSQL with a `docker run`, lists the six requests that show each scenario,
+  and says that the Aspire Dashboard asks for a login token and that its trace id is the "W3C trace"
+  field of NetApiFlow. `SampleApi.MinimalMediatR` now has a README. Every command in both was run.
+- `NetApiFlow.Dashboard`, on a phone: Compare, Insights and History stack their rows instead of
+  scrolling sideways, so the B and Delta columns, the p95 and the Compare button are no longer off the
+  screen, and the route of a History row wraps instead of ending in an ellipsis. The "Try an endpoint"
+  drawer now ends 1 rem above the bottom of the window in every width where it appears, and "Send
+  request" is no longer 5 px from the edge, below the screen: it did not scroll into view, not even with
+  `Tab`.
+- `NetApiFlow.Dashboard`, texts and states: "Error origin" shows the duration of the step that started
+  the error and not the duration of the trace. A share of time no step covers that rounds to 0 reads
+  "<1%". The status of a step and the name of the request summary are translated. The route in the header
+  of the Flow screen and in the summary has a tooltip with the whole route. The "Steps" list of the
+  summary can be clicked to inspect a step. The button that opens the endpoint drawer has a name on a
+  narrow screen. The connection chip no longer says "Live" while an imported trace is on screen, and says
+  "Imported trace". The labels of the fields of the Runner are no longer glued ("idpath"). In the History,
+  picking a third execution to compare says that the oldest one was unchecked, and the "Slow only" switch
+  is named once.
+- `NetApiFlow.Dashboard`, Architecture: a step that runs more than once in each execution says how many
+  times (`SELECT items (×5)`), the map no longer explains node states that it does not have, and the
+  exported SVG keeps its font sizes, weights and line widths when it is opened on its own.
+- `NetApiFlow.Dashboard`: the panel can be used from the keyboard where it used to stop. The focus of
+  the Material buttons and menu items was a faint tint, between 1.09 and 1.44 to 1 against the
+  surface, and is now a 2 px ring in the focus color of the brand, 4.2 to 1 in the dark theme and 6.5
+  to 1 in the light one. The "Try an endpoint" drawer is a dialog now: it has a name, takes the focus
+  when it opens, keeps it inside, closes with `Esc` and gives the focus back to the button that opened
+  it, and its close button moved inside it. The focus no longer falls on the page when you pick an
+  endpoint in the Runner, go back to its list, remove a custom header or sort the History by a
+  column. Picking an endpoint now puts the focus on its first field, so the next `Tab` no longer
+  skips the required `id` and lands on "Send request". The arrow keys in the language selector, a
+  link to skip to the content, `Esc` in the step panel and a live region are not part of this fix.
+- `NetApiFlow` with `Microsoft.Data.SqlClient`: several commands in one method record one step each
+  again, and the code that follows them has the right parent. Since `ExternalActivitySource.SqlClient`
+  exists, the step of a command stayed the current `Activity` of your code after its `await`, already
+  stopped. A repository with three queries recorded the first one only, because the stopped step then
+  covered the next ones, a Npgsql command that followed it disappeared from the trace, and the next
+  `Flow.Step` became a child of the finished SQL step. The same happened after a failed command, a
+  cancelled one and an `ExecuteReader`. The step is still opened in `WriteCommandBefore` and closed in
+  `WriteCommandAfter`, but it no longer replaces the current activity of the caller. A trace can have
+  more steps than before for the same request, and an N+1 made of SqlClient commands in one method now
+  lights the N+1 badge, which it could not before because only the first command was recorded.
+- `NetApiFlow` with Npgsql 10: a command is named after its SQL again, and `CaptureSqlText` records
+  the text again. Npgsql 10 moved the text from `db.statement` to `db.query.text`, and only the old
+  tag was read, so every command came out as `SQL command`. Both are read now, so Npgsql 8 and 9 keep
+  working. The connection open of Npgsql 10 (`CONNECT <database>`) is no longer recorded as a second
+  `Database` step, which also lit a false N+1 badge, and a refused connection now fails the step that
+  opened it, as on Npgsql 8 and 9. A command your app names `CONNECT ...` through
+  `ConfigureCommandSpanNameProvider` is still recorded, with its SQL.
+- `NetApiFlow.Dashboard`: the Runner says why a response opened no trace. When the response comes
+  without the `X-NetApiFlow-TraceId` header, it names the causes that fit: `EmitTraceIdHeader` turned
+  off, or a route that is not traced, and for a 5xx, an exception with no exception handler, which
+  ends the response before the header is written. Before, it said nothing.
+- `NetApiFlow.Dashboard`: the Runner no longer reports a plain-text success as "Request failed". It
+  read every answer as JSON, so a `200` with a text body failed to parse.
+- `NetApiFlow.MediatR`: the README, the Portuguese README and the package README now say that
+  `AddNetApiFlowMediatR()` is required. Without it, no MediatR step is recorded.
+- `NetApiFlow`: a null argument to `Step`, `FlowStep.Tag` or `FlowStep.MarkError` no longer breaks
+  the request or the step. `MarkError(null)` threw an `ArgumentNullException` into your code, and a
+  tag with a null key made the step lose every tag it had. Now a null component or operation records
+  no step, a null tag key or value is ignored, and `MarkError(null)` does nothing. Each case logs a
+  warning, at most once every 30 seconds.
+- `NetApiFlow.Dashboard`: calling `Finally(...)` on the builder `MapNetApiFlowDashboard` returns threw
+  `NotImplementedException`. It now applies the convention to every route of the dashboard.
+- `NetApiFlow.OpenTelemetry`: a second `AddNetApiFlowOtlpExport(...)` added a second exporter, so every span
+  was sent twice. Now there is one exporter, and the options of every call are applied, in the order of the
+  calls.
+- `NetApiFlow`, `NetApiFlow.Dashboard` and `NetApiFlow.MediatR`: calling a registration more than once is
+  now safe. A second `AddNetApiFlow(...)` used to drop its `configure`. Now the `configure` of every call is
+  applied, in the order of the calls, and nothing is registered twice. A second `AddNetApiFlowDashboard()`
+  registered the live stream twice, so every event reached the panel twice. A second
+  `AddNetApiFlowMediatR()` recorded every handler as two steps. Both now register once.
+- `NetApiFlow`: a failure inside NetApiFlow itself no longer reaches your request. Before, an exception while
+  recording a step was thrown from your own code, where the step started or ended, and an exception while
+  the middleware opened or closed the trace broke the response. A step with a reserved tag set to a value
+  of the wrong type was enough. Now the failure is logged as an error that says the request was not
+  affected, at most once every 30 seconds, and the request goes on. Only the trace or the step can be
+  missing.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: a trace is never stored without its
+  steps. The trace and its steps were written one after the other with no transaction, so a failure while
+  writing the steps left the trace in history with a step count and no step to show, and a new attempt to
+  store the same trace failed with a primary key violation. Both are now written in one transaction, and a
+  failure leaves nothing behind. The cost of a save did not change in the measurement.
+- `NetApiFlow`: requests that carry the same `traceparent`, which is what happens when a service calls
+  your API more than once, no longer lose traces or mix their steps. In sequence, the in-memory store
+  kept only the last trace and PostgreSQL and SQL Server only the first, and at the same time the steps
+  of both requests went into one trace. Each request is now its own trace, and the client controls only
+  the tag `w3c.trace_id`: see the new trace id under Changed. This is a defect of correctness and not a
+  vulnerability: a client can only collide with an id it chose itself, and it cannot read or delete the
+  trace of someone else.
+- `NetApiFlow.Dashboard`: a request that was still running was drawn without the steps it was expected
+  to run, so the Waiting state never showed. The panel asked for the blueprint of a running request
+  under the route `(unmatched)`, because the route was only known at the end. The route is known from
+  the start now, so the expected steps show as Waiting while the request runs and as Not executed when
+  it ends without them.
+- `NetApiFlow`: under `app.UsePathBase("/api")`, `ExcludePaths`, `IncludePaths` and
+  `OpenApiDocumentPath` compared the full path, `/api/health`, with patterns written for `/health`, so
+  none of them matched. Now, whenever the request matches an endpoint, they value the path your
+  application sees. A request that matches no endpoint, a static file served by `UseStaticFiles` or a
+  404, is still decided by the full path, and the pattern has to carry the prefix. The README says so.
+- `NetApiFlow`: `IncludePaths("/orders")` under `UsePathBase` left your own route out of the store,
+  because the filter compared `/api/orders`. The route is kept now.
+- `NetApiFlow.Dashboard`: the graph of a trace no longer changes when a newer execution of the endpoint
+  arrives. The steps drawn as "Not executed" came from the latest successful execution of the endpoint,
+  even one that started after the trace you were looking at, and it could be the trace itself. They now
+  come from the last successful execution that started before the trace. When there is none, the graph
+  shows only what happened. A trace with no matched route asks for no blueprint. A trace you already
+  stored can be drawn differently now.
+- `NetApiFlow.EntityFrameworkCore`: a query cancelled by its `CancellationToken` no longer leaves its
+  step open. The interceptor did not handle the cancellation event, so the step stayed in its
+  internal table for good and the span kept showing as running. The span now closes as failed with
+  an `OperationCanceledException`, and the step is released.
+- `NetApiFlow`: `DecorateFlowTracked` no longer leaves the services it decorates undisposed. It built
+  the original with `ActivatorUtilities`, so a decorated service that implements `IDisposable` was
+  never disposed. The container now owns the original and disposes it with the lifetime the service
+  was registered with. The original is registered with a private key, so the container has to
+  support keyed services. The default container does, from .NET 8.
+- `NetApiFlow`: a call through a tracked interface (`AddFlowTracked` or `DecorateFlowTracked`) that
+  returns a cancelled `Task` or `ValueTask` now hands the caller a cancelled task. It used to hand
+  back a faulted one, and the span closed as a success. The span now closes as failed with the
+  cancellation exception.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: with `AutoCreateSchema = false`,
+  a schema check that failed on a transient error, such as a dropped connection, was marked as done
+  for good and never ran again. It now runs again on the next call until it completes, and logs the
+  failure at most once every 30 seconds.
+- `NetApiFlow`: a request that throws an exception nothing in your pipeline handled now keeps the
+  `X-NetApiFlow-TraceId` header in Development. The developer exception page rewrites the response
+  before NetApiFlow could write the header, so the 500 came back without it. The dashboard's Runner
+  then showed only "The request failed." and `GetFlowTrace` from `NetApiFlow.Testing` said NetApiFlow
+  did not track the request when it had. The header is now written at the moment the response starts.
+  One 500 still carries no header even with the option on: in Production with no exception handler,
+  the server builds the 500 itself and drops the headers set before, so add `UseExceptionHandler` if
+  you need it there. Measured on Kestrel, `net8.0` and `net10.0`. NetApiFlow does not change that
+  response.
+- `NetApiFlow.Storage.PostgreSql` and `NetApiFlow.Storage.SqlServer`: `schema.sql` is now the whole
+  schema. It was missing the `route_key` column and its index, so a database created by hand from the
+  script was rejected by the code. It now also carries the four indexes and the deploy annotations
+  table the package creates, and an upgrade section that adds `route_key` and fills it for tables
+  written by an earlier version. It is safe to run again.
+- `NetApiFlow.Dashboard`: a trace with no steps no longer draws a blank graph. It now says the request
+  was recorded but no step was marked, and shows how to mark one: MVC controllers and Minimal API
+  endpoints become a step on their own (a Minimal API endpoint needs `.WithNetApiFlowTracking()` only
+  when `CaptureMinimalApiEndpoints` is `false`), and other code can call `Flow.Step(...)` or use
+  `AddFlowTracked`. The message is in English and Portuguese.
+- `NetApiFlow.Dashboard`: the details panel no longer says that 100% of the time is uncovered for a
+  trace whose steps last microseconds, and the waterfall bars of such a trace no longer all start at
+  the same point. Both are now measured in microseconds, the precision the timestamps already carry.
+- `NetApiFlow.Dashboard`: a step name cut with an ellipsis now shows its full text in a tooltip, on the
+  graph node and on the waterfall label of the details panel. Before, two routes of the same group
+  looked alike once the end of the name was cut. A node whose operation fits shows no tooltip.
+- `NetApiFlow.Dashboard` demo: the Architecture screen loads the recorded map of each route again. The
+  screen asks for a time window and the demo only knew the recording made without one, so every route
+  ended in "Failed to load the architecture map."
+
+### Security
+
+- `NetApiFlow.Mcp`: the NetApiFlow tools are served only on the NetApiFlow MCP endpoint, and that
+  endpoint serves nothing of the app. From 0.2.0 to
+  0.5.3, an app that hosts its own MCP server (`AddMcpServer()` and `MapMcp(...)`) also served
+  `list_recent_traces`, `get_trace` and `get_component_stats` on its own endpoint, because the SDK has
+  one MCP server per process. That endpoint does not follow the rule of the dashboard, so in Production,
+  with no authorization configured, `/flow/mcp` answered 404 while the `/mcp` of the app answered
+  whoever could reach it: `list_recent_traces` gave the id, method, route, status and duration of the
+  traces, and `get_trace` the steps of a trace. NetApiFlow never records a body, an argument, a header,
+  a query string or SQL with its parameters, so none of those leaked. The same single server made
+  `/flow/mcp` serve what the app registered, under the rule of the dashboard: its tools, prompts,
+  resources and completions, and a tool of the app named like a NetApiFlow tool. Now each message is
+  checked against the endpoint it came through. The endpoint of the app no longer lists or calls the
+  NetApiFlow tools, even with a session opened on `/flow/mcp`, and keeps its own prompts, resources and
+  completions. `/flow/mcp` answers only `initialize`, `server/discover`, `ping`, `tools/list`,
+  `tools/call` and `logging/setLevel`, and only for the three NetApiFlow tools. Every other method gets
+  `-32601 Method '...' is not available`, including the ones a later protocol revision adds. A tool is
+  told apart by the method that runs it, not by its name, so when the app registers its own `get_trace`
+  first, `/flow/mcp` serves neither and one warning at startup names the tool to rename. An app that
+  does not host its own MCP server sees no change. When the MCP server
+  of the app keeps sessions and sets `PerSessionExecutionContext = true`, NetApiFlow cannot tell the
+  endpoint of a call, so its tools are served on no endpoint, `/flow/mcp` answers 404, and one warning
+  at startup says how to get them back.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: chaining `AllowAnonymous()` together with
+  `RequireAuthorization(...)` no longer opens the dashboard and the MCP endpoint outside Development.
+  The authorization middleware ignores the policy when an endpoint also allows anonymous access, and
+  the access gate only checked that a policy was present. So every dashboard route was served,
+  including `DELETE /flow/api/traces`, which deletes every stored trace, and the MCP endpoint
+  answered. A route now counts as protected only when it requires authorization and does not allow
+  anonymous access. If you relied on the two chained calls to open the dashboard, it now answers 404:
+  register an `IFlowAccessFilter` instead.
+- `NetApiFlow`: the error message of a failed step is now sanitized, and then truncated to 300
+  characters, before it is written on the `Activity`, so it reaches OpenTelemetry (OTLP) clean. It used
+  to be exported as thrown, with no sanitization and no length limit, while the dashboard showed a
+  version that truncated first and sanitized after, so a secret cut by the limit could leave a piece
+  behind. The key is matched by containing a sensitive word, and the sanitizer now covers the forms it
+  missed: an `Authorization` value of any length (`Bearer`, `Basic`, `Digest`, an AWS signature, with
+  all their parameters), `token: Bearer ...` and a bare `Bearer <token>`, `access_token=`,
+  `client_secret=`, `DB_PASSWORD=`, `api_key=` and `apikey=`, `Pwd=` and `passwd=` pairs, quoted values
+  (also with an escaped quote inside), a key in brackets such as `config[password]`, `Cookie:` and
+  `Set-Cookie:` headers, the Azure keys `AccountKey`, `SharedAccessKey` and `SharedAccessSignature`,
+  `sig=` in a signed URL, the keys `passphrase` and `private_key`, a bare JWT, and the password in a URL
+  (`scheme://user:password@host`). A secret in a quoted JSON string leaves valid JSON,
+  `{"password":"[redacted]"}`, where it used to leave `{"password=[redacted]}`. A harmless message such
+  as `Unexpected token: '}'` now loses its value too, because of how the key is matched. The sanitizer
+  is a filter for known shapes and does not promise that no secret survives. The README says so, and
+  lists what it does not touch: `Basic <base64>` without `Authorization`, `credentials: ...`, a cookie
+  in `name=value` form, an unquoted value with a space or a `;` (it is cut there, as in a connection
+  string), a JSON value that is not a string, and a URL password with an unencoded `@`.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: both now refuse a request whose `Host` or `Origin` is
+  not their own, with a 403 that says what to change. They used to answer any page on the web, so
+  with the dashboard or the MCP endpoint open, which is the default in Development, a page under an
+  attacker's control could use DNS rebinding to read your traces, delete all of them with
+  `DELETE /flow/api/traces` and call the MCP tools. In Development the `Host` must now be
+  `localhost`, `127.0.0.1`, `[::1]` or a name you declare in `AllowedHosts` (a `*` does not count),
+  so opening the dashboard by a LAN address, `host.docker.internal` or a WSL address needs that
+  declaration. In every environment an `Origin` must match the `Host` the application sees, and the
+  scheme is not compared. Behind a reverse proxy that rewrites the `Host`, keep the original `Host`
+  or call `UseForwardedHeaders` with `XForwardedHost`, otherwise a `DELETE` from the browser gets 403.
+- `NetApiFlow.Dashboard` and `NetApiFlow.Mcp`: every response now carries `X-Content-Type-Options:
+  nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` and `Content-Security-Policy:
+  frame-ancestors 'none'`, the 403 and 404 of the access check included. Before, nothing was sent, so
+  any page could show the dashboard in a frame and place its delete button under a click. The
+  dashboard can no longer be embedded in a frame of another page. The dashboard page also carries a
+  full policy with `script-src 'self'` and no `'unsafe-inline'`. Its `style-src` allows inline styles,
+  because Angular adds the styles of each component at run time. To keep `script-src` strict the
+  dashboard build no longer inlines its critical CSS, so the page loads one stylesheet file instead,
+  and `index.html` went from about 14 KB to under 1 KB. If your middleware sets a
+  `Content-Security-Policy` on the dashboard or MCP routes, the one of the package replaces it.
+- `NetApiFlow.Dashboard`: `POST /flow/api/deploys` now reads and validates its body after the access
+  check. Before, a body that failed to bind (`{}`, broken JSON, or a content type that is not JSON)
+  was answered with 400 or 415 before the check ran, so a caller without access learned that the
+  route exists and what it expects, instead of the 404 or 403 every other route gives, and the
+  README said every dashboard route answers 404 by default. A caller without access now gets the
+  404 or the 403 whatever the body is. With access, a bad body is still a 400 and a wrong content
+  type a 415. The other routes only take optional query values, and a malformed one was already
+  answered by the check first.
+
 ## [0.5.3] - 2026-11-20
 
 ### Fixed

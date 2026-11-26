@@ -1,0 +1,7 @@
+#nullable enable
+NetApiFlow.Storage.SqlServer.NetApiFlowSqlServerServiceCollectionExtensions
+NetApiFlow.Storage.SqlServer.SqlServerStorageOptions
+NetApiFlow.Storage.SqlServer.SqlServerStorageOptions.SqlServerStorageOptions() -> void
+NetApiFlow.Storage.SqlServer.SqlServerStorageOptions.TablePrefix.get -> string!
+NetApiFlow.Storage.SqlServer.SqlServerStorageOptions.TablePrefix.set -> void
+static NetApiFlow.Storage.SqlServer.NetApiFlowSqlServerServiceCollectionExtensions.AddNetApiFlowSqlServerStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString, System.Action<NetApiFlow.Storage.SqlServer.SqlServerStorageOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

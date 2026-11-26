@@ -37,6 +37,27 @@ public class ListRecentTracesToolTests
         traces[0].GetProperty("method").GetString().ShouldBe("POST");
     }
 
+    [Theory]
+    [InlineData("/api/orders/{id}")]
+    [InlineData("/api/orders/{id:int}")]
+    [InlineData("api/orders/{id}")]
+    public async Task ListRecentTraces_FilteredByTheRouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint(string route)
+    {
+        await using var fixture = await McpTestFixture.StartAsync();
+        var constrained = CreateTrace("trace-1", "GET", FlowStatus.Success);
+        await fixture.Store.SaveAsync(constrained with { RouteTemplate = "/api/orders/{id:int}" }, [], CancellationToken.None);
+        await fixture.Store.SaveAsync(constrained with { TraceId = "trace-2", RouteTemplate = "/api/customers/{id:int}" }, [], CancellationToken.None);
+
+        var result = await fixture.Client.CallToolAsync(
+            "list_recent_traces",
+            new Dictionary<string, object?> { ["route"] = route },
+            cancellationToken: CancellationToken.None);
+
+        var traces = ReadTraces(result);
+        traces.Count.ShouldBe(1);
+        traces[0].GetProperty("traceId").GetString().ShouldBe("trace-1");
+    }
+
     [Fact]
     public async Task ListRecentTraces_WithInvalidStatus_ReturnsToolErrorWithoutCrashingServer()
     {

@@ -92,7 +92,17 @@ const en = {
   'action.invalidJson': 'Body is not valid JSON.',
   'action.emptyPathParam': 'Fill in the "{name}" path parameter before sending.',
   'action.requestFailed': 'Request failed.',
+  'action.demoCannotSend': 'This demo shows recorded runs and does not send real requests.',
+  'action.noTraceHeader':
+    'No trace to open: the response came without the X-NetApiFlow-TraceId header. Either EmitTraceIdHeader is off, or this route is not traced (IncludePaths, ExcludePaths or WithoutNetApiFlowTracking).',
+  'action.noTraceHeaderServerError':
+    'No trace to open: the server answered {status} without the X-NetApiFlow-TraceId header. An unhandled exception with no exception handler (UseExceptionHandler) ends the response before the header is written, which is what happens in Production. EmitTraceIdHeader being off, or the route not being traced, also explain it.',
   'action.traceConfirmation': 'Trace: {traceId}',
+  'action.response.status': 'HTTP {status}',
+  'action.response.body': 'Response body',
+  'action.response.truncated': 'Cut at {limit} characters.',
+  'action.response.empty': '(empty body)',
+  'action.response.notShown': '(content {type}, not shown)',
   'action.closePanel': 'Close the action panel',
 
   'graph.title': 'Request path',
@@ -100,12 +110,21 @@ const en = {
   'graph.replay': 'Replay',
   'graph.copyTraceId': 'Copy trace ID',
   'graph.errorOrigin': 'Error origin: {component} · HTTP {status} · {duration}',
-  'graph.slowestStep': 'Slowest step: {component} · {duration}',
+  'graph.slowestStep': 'Slowest step: {component} · {duration} own time',
   'graph.empty.title': 'No request is currently in progress.',
   'graph.empty.hint': 'Send a request from "Try an endpoint" or call your API directly.',
   'graph.notFound.title': 'Trace not found.',
   'graph.notFound.hint':
     'It may have expired from the in-memory buffer, or the id in the URL is invalid.',
+  'graph.unmatched.title': 'The request was recorded, but it matched no route.',
+  'graph.unmatched.hint':
+    'There is no endpoint to mark. A 404, a static file or a path nothing answers has no step to draw.',
+  'graph.noSteps.title': 'The request was recorded, but no step was marked.',
+  'graph.noSteps.mvc': 'MVC controllers become a step on their own',
+  'graph.noSteps.minimalApi':
+    'A Minimal API endpoint becomes a step on its own, unless CaptureMinimalApiEndpoints is false. Then it needs',
+  'graph.noSteps.otherCode': 'Any other code can use',
+  'graph.noSteps.or': 'or',
   'graph.loading': 'Loading…',
   'graph.liveTracesError': 'Failed to load in-progress requests.',
   'graph.zoomIn': 'Zoom in',
@@ -123,6 +142,11 @@ const en = {
   'node.state.notExecuted': 'Not executed',
   'node.state.cancelled': 'Cancelled',
   'node.state.timeout': 'Timeout',
+  'status.running': 'Running',
+  'status.success': 'Success',
+  'status.error': 'Error',
+  'status.cancelled': 'Cancelled',
+  'status.timeout': 'Timeout',
   'node.nPlusOneBadge': '×{count}',
   'node.nPlusOneAria': 'Suspected N+1, {count} queries with the same shape in this trace',
 
@@ -150,7 +174,8 @@ const en = {
   'details.kpi.executed': 'Executed',
   'details.kpi.notExecuted': 'Not executed',
   'details.error.failedAt': 'Failed at {component}.{operation}',
-  'details.summary.traceId': 'Trace ID',
+  'details.summary.traceId': 'Trace',
+  'details.summary.w3cTraceId': 'W3C trace',
   'details.summary.started': 'Started',
   'details.summary.finished': 'Finished',
   'details.httpStatus': 'HTTP {status}',
@@ -172,6 +197,7 @@ const en = {
   'details.span.nPlusOne': 'Suspected N+1: {count} queries with this same shape in this trace.',
   'details.span.nPlusOneJump': 'Jump to the first one',
   'details.backToSummary': 'Back to trace summary',
+  'details.summary.aria': 'Request summary',
   'details.unexplainedTime':
     '{percent}% of the time ({unexplained} of {total}) is not covered by any recorded step.',
 
@@ -320,6 +346,8 @@ const en = {
   'history.compare.count': '{count}/2 selected',
   'history.compare.action': 'Compare',
   'history.compare.routeMismatch': 'The two selected executions are not the same route.',
+  'history.compare.thirdDropped':
+    'Only two executions can be compared at a time: the oldest one was unchecked.',
 
   'diff.title': 'Compare executions',
   'diff.vs': 'vs',
@@ -419,7 +447,18 @@ const ptBr: Record<keyof typeof en, string> = {
   'action.invalidJson': 'O corpo não é um JSON válido.',
   'action.emptyPathParam': 'Preencha o parâmetro de rota "{name}" antes de enviar.',
   'action.requestFailed': 'A requisição falhou.',
+  'action.noTraceHeader':
+    'Sem trace para abrir: a resposta veio sem o cabeçalho X-NetApiFlow-TraceId. Ou o EmitTraceIdHeader está desligado, ou esta rota não é rastreada (IncludePaths, ExcludePaths ou WithoutNetApiFlowTracking).',
+  'action.noTraceHeaderServerError':
+    'Sem trace para abrir: o servidor respondeu {status} sem o cabeçalho X-NetApiFlow-TraceId. Uma exceção sem tratador (UseExceptionHandler) encerra a resposta antes de o cabeçalho ser escrito, que é o que acontece em Production. O EmitTraceIdHeader desligado, ou a rota não rastreada, também explicam.',
+  'action.demoCannotSend':
+    'Esta demo mostra execuções gravadas e não envia requisições de verdade.',
   'action.traceConfirmation': 'Trace: {traceId}',
+  'action.response.status': 'HTTP {status}',
+  'action.response.body': 'Corpo da resposta',
+  'action.response.truncated': 'Cortado em {limit} caracteres.',
+  'action.response.empty': '(corpo vazio)',
+  'action.response.notShown': '(conteúdo {type}, não exibido)',
   'action.closePanel': 'Fechar o painel de ação',
 
   'graph.title': 'Caminho da requisição',
@@ -427,12 +466,21 @@ const ptBr: Record<keyof typeof en, string> = {
   'graph.replay': 'Replay',
   'graph.copyTraceId': 'Copiar ID do trace',
   'graph.errorOrigin': 'Origem do erro: {component} · HTTP {status} · {duration}',
-  'graph.slowestStep': 'Etapa mais lenta: {component} · {duration}',
+  'graph.slowestStep': 'Etapa mais lenta: {component} · {duration} de tempo próprio',
   'graph.empty.title': 'Nenhuma requisição em andamento no momento.',
   'graph.empty.hint':
     'Envie uma requisição usando "Testar um endpoint" ou chame sua API diretamente.',
   'graph.notFound.title': 'Trace não encontrada.',
   'graph.notFound.hint': 'Ela pode ter expirado do buffer em memória, ou o id na URL é inválido.',
+  'graph.unmatched.title': 'A requisição foi gravada, mas não casou com nenhuma rota.',
+  'graph.unmatched.hint':
+    'Não há endpoint para marcar. Um 404, um arquivo estático ou um caminho que nada responde não tem etapa para desenhar.',
+  'graph.noSteps.title': 'A requisição foi gravada, mas nenhuma etapa foi marcada.',
+  'graph.noSteps.mvc': 'Controllers MVC viram etapa sozinhos',
+  'graph.noSteps.minimalApi':
+    'Um endpoint de Minimal API vira etapa sozinho, a menos que CaptureMinimalApiEndpoints seja false. Aí ele precisa de',
+  'graph.noSteps.otherCode': 'Qualquer outro código pode usar',
+  'graph.noSteps.or': 'ou',
   'graph.loading': 'Carregando…',
   'graph.liveTracesError': 'Falha ao carregar as requisições em andamento.',
   'graph.zoomIn': 'Mais zoom',
@@ -450,6 +498,11 @@ const ptBr: Record<keyof typeof en, string> = {
   'node.state.notExecuted': 'Não executado',
   'node.state.cancelled': 'Cancelado',
   'node.state.timeout': 'Tempo esgotado',
+  'status.running': 'Em execução',
+  'status.success': 'Sucesso',
+  'status.error': 'Erro',
+  'status.cancelled': 'Cancelado',
+  'status.timeout': 'Tempo esgotado',
   'node.nPlusOneBadge': '×{count}',
   'node.nPlusOneAria': 'Possível N+1, {count} consultas com o mesmo formato neste trace',
 
@@ -477,7 +530,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'details.kpi.executed': 'Executadas',
   'details.kpi.notExecuted': 'Não executadas',
   'details.error.failedAt': 'Falhou em {component}.{operation}',
-  'details.summary.traceId': 'ID do trace',
+  'details.summary.traceId': 'Trace',
+  'details.summary.w3cTraceId': 'W3C trace',
   'details.summary.started': 'Iniciado',
   'details.summary.finished': 'Concluído',
   'details.httpStatus': 'HTTP {status}',
@@ -499,6 +553,7 @@ const ptBr: Record<keyof typeof en, string> = {
   'details.span.nPlusOne': 'Possível N+1: {count} consultas com esse mesmo formato neste trace.',
   'details.span.nPlusOneJump': 'Pular para a primeira',
   'details.backToSummary': 'Voltar ao resumo do trace',
+  'details.summary.aria': 'Resumo da requisição',
   'details.unexplainedTime':
     '{percent}% do tempo ({unexplained} de {total}) não está coberto por nenhuma etapa registrada.',
 
@@ -647,6 +702,8 @@ const ptBr: Record<keyof typeof en, string> = {
   'history.compare.count': '{count}/2 selecionadas',
   'history.compare.action': 'Comparar',
   'history.compare.routeMismatch': 'As duas execuções selecionadas não são da mesma rota.',
+  'history.compare.thirdDropped':
+    'Só dá para comparar duas execuções por vez: a mais antiga foi desmarcada.',
 
   'diff.title': 'Comparar execuções',
   'diff.vs': 'vs',

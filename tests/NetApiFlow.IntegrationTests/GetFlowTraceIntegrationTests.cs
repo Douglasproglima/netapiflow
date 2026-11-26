@@ -19,17 +19,27 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class GetFlowTraceIntegrationTests
 {
-    private static IHost CreateHost(bool trackingEnabled = true)
+    private static IHost CreateHost(
+        bool trackingEnabled = true,
+        bool? emitTraceIdHeader = true,
+        bool developerExceptionPage = false,
+        string? environment = null)
     {
         return Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
             {
                 webBuilder.UseTestServer();
+                webBuilder.UseEnvironment(environment ?? (developerExceptionPage ? Environments.Development : Environments.Production));
                 webBuilder.ConfigureServices(services =>
                 {
                     services.AddRouting();
                     services.AddNetApiFlow(o =>
                     {
+                        if (emitTraceIdHeader is { } emit)
+                        {
+                            o.EmitTraceIdHeader = emit;
+                        }
+
                         if (trackingEnabled)
                         {
                             o.IncludePaths("/**");
@@ -42,13 +52,19 @@ public class GetFlowTraceIntegrationTests
                 });
                 webBuilder.Configure(app =>
                 {
+                    if (developerExceptionPage)
+                    {
+                        app.UseDeveloperExceptionPage();
+                    }
+
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
+                        endpoints.MapGet("/api/boom", () => Boom());
                         endpoints.MapGet("/api/orders/{id}", async () =>
                         {
-                            using var controllerStep = NetApiFlow.Step("OrdersController", "GetOrder", ComponentType.Controller);
-                            using (NetApiFlow.Step("OrderRepository", "FindAsync", ComponentType.Database))
+                            using var controllerStep = Flow.Step("OrdersController", "GetOrder", ComponentType.Controller);
+                            using (Flow.Step("OrderRepository", "FindAsync", ComponentType.Database))
                             {
                                 await Task.Delay(1);
                             }
@@ -84,6 +100,42 @@ public class GetFlowTraceIntegrationTests
     }
 
     [Fact]
+    public async Task GetFlowTrace_AfterAnUnhandledExceptionAnsweredByTheDeveloperExceptionPage_ReturnsTheErrorTrace()
+    {
+        using var host = CreateHost(developerExceptionPage: true);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/boom");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        response.GetFlowTrace(host.Services).ShouldHaveStatus(FlowStatus.Error);
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_InDevelopmentWithTheHeaderOptionLeftAlone_FindsTheTrace()
+    {
+        using var host = CreateHost(emitTraceIdHeader: null, environment: Environments.Development);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.GetFlowTrace(host.Services).ShouldHaveStatus(FlowStatus.Success);
+    }
+
+    [Fact]
+    public async Task GetFlowTrace_InProductionWithTheHeaderOptionLeftAlone_ThrowsNamingTheOption()
+    {
+        using var host = CreateHost(emitTraceIdHeader: null, environment: Environments.Production);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        var thrown = Should.Throw<FlowAssertionException>(() => response.GetFlowTrace(host.Services));
+
+        thrown.Message.ShouldContain("NetApiFlowOptions.EmitTraceIdHeader");
+    }
+
+    [Fact]
     public async Task GetFlowTrace_WhenTheRouteIsNotTracked_ThrowsSayingTheHeaderIsMissing()
     {
         using var host = CreateHost(trackingEnabled: false);
@@ -99,6 +151,22 @@ public class GetFlowTraceIntegrationTests
     }
 
     [Fact]
+    public async Task GetFlowTrace_WhenTheHeaderIsTurnedOff_ThrowsNamingTheOption()
+    {
+        using var host = CreateHost(emitTraceIdHeader: false);
+        var client = host.GetTestServer().CreateClient();
+
+        var response = await client.GetAsync("/api/orders/42");
+
+        response.Headers.Contains("X-NetApiFlow-TraceId").ShouldBeFalse();
+
+        var thrown = Should.Throw<FlowAssertionException>(() => response.GetFlowTrace(host.Services));
+
+        thrown.Message.ShouldStartWith("The response carries no X-NetApiFlow-TraceId header");
+        thrown.Message.ShouldContain("NetApiFlowOptions.EmitTraceIdHeader");
+    }
+
+    [Fact]
     public async Task GetFlowTrace_WhenTheTraceIsNoLongerBuffered_ThrowsInsteadOfReturningNull()
     {
         using var host = CreateHost();
@@ -110,4 +178,6 @@ public class GetFlowTraceIntegrationTests
 
         thrown.Message.ShouldStartWith("No trace found for ");
     }
+
+    private static string Boom() => throw new InvalidOperationException("boom");
 }

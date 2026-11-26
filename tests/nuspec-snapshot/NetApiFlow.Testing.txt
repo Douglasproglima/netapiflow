@@ -1,0 +1,7 @@
+id: NetApiFlow.Testing
+dependencies:
+  net10.0:
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+  net8.0:
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+frameworkReferences: (none)

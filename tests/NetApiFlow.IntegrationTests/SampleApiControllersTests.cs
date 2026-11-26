@@ -21,7 +21,7 @@ namespace NetApiFlow.IntegrationTests;
 /// <summary>
 /// Verifies the Controllers sample produces the full
 /// Controller → Service → Repository → Database flow automatically, with no manual
-/// <c>NetApiFlow.Step(...)</c> call anywhere in the sample's business code.
+/// <c>Flow.Step(...)</c> call anywhere in the sample's business code.
 ///
 /// The sample's own <c>Program.cs</c> targets PostgreSQL via Npgsql, matching the product spec.
 /// This test builds a separate host reusing the sample's Controller/Service/Repository/DbContext
@@ -47,7 +47,11 @@ public class SampleApiControllersTests
                     services.AddControllers().AddApplicationPart(typeof(Sample.Controllers.OrdersController).Assembly);
                     services.AddHttpClient();
 
-                    services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
+                    services.AddNetApiFlow(o =>
+                    {
+                        o.IncludePaths("/api/**");
+                        o.EmitTraceIdHeader = true;
+                    });
                     services.AddNetApiFlowEntityFrameworkCore();
 
                     // Registered directly here (not via the sample's Program.cs, which wires Npgsql)

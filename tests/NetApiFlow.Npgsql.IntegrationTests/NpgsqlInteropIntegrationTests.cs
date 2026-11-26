@@ -6,6 +6,7 @@ using NetApiFlow.Domain;
 using NetApiFlow.EntityFrameworkCore;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Npgsql;
 using Shouldly;
 using Xunit.Abstractions;
@@ -47,6 +48,23 @@ public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture
         span.Operation.ShouldBe("SELECT Users");
         span.Status.ShouldBe(FlowStatus.Success);
         span.Tags.Keys.ShouldNotContain("sql");
+    }
+
+    [Theory]
+    [InlineData("SELECT \"Id\" FROM public.\"Users\" LIMIT 1")]
+    [InlineData("SELECT \"Id\" FROM \"public\".\"Users\" LIMIT 1")]
+    public async Task RawNpgsqlCommand_WithASchemaPrefix_IsNamedAfterTheTable(string commandText)
+    {
+        var (recorder, listener, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = listener;
+        using var __ = root;
+
+        using (var command = fixture.DataSource.CreateCommand(commandText))
+        {
+            await command.ExecuteScalarAsync();
+        }
+
+        DatabaseSpansOf(recorder, traceId).Single().Operation.ShouldBe("SELECT Users");
     }
 
     [Fact]
@@ -138,8 +156,7 @@ public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture
 
         var root = new Activity("NpgsqlInteropRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, listener, traceId, root);
     }
@@ -153,8 +170,7 @@ public sealed class NpgsqlInteropIntegrationTests(NpgsqlContainerFixture fixture
 
         using var root = new Activity($"NpgsqlConcurrentRoot{index}");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         await QueryUserWithEntityFrameworkCoreAsync(options, index);
 

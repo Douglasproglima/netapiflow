@@ -7,13 +7,20 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  packages: write
 
 jobs:
+  real-package:
+    name: real-package
+    uses: ./.github/workflows/real-package.yml
+
   release:
     name: pack-and-publish
+    needs: real-package
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
     steps:
       - uses: actions/checkout@v7
 
@@ -24,6 +31,7 @@ jobs:
           dotnet-version: |
             8.0.x
             10.0.x
+            11.0.x
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -39,6 +47,18 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      - name: Lint dashboard UI
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run lint
+
+      - name: Check dashboard UI formatting
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run format:check
+
+      - name: Test dashboard UI
+        working-directory: src/NetApiFlow.Dashboard/ClientApp
+        run: npm run test:ci
 
       - name: Extract version from tag
         id: version
@@ -61,7 +81,50 @@ jobs:
           dotnet test tests/NetApiFlow.PrePipelineInteropSpike -c Release --no-build
           dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build
           dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build
+          dotnet test tests/NetApiFlow.Npgsql10.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build
+
+      - name: Run the same tests on the .NET 11 runtime, against the build of net10.0
+        shell: bash
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+          NETAPIFLOW_EXPECT_RUNTIME_MAJOR: "11"
+        run: |
+          set -e
+          dotnet --version
+          dotnet --list-runtimes
+          run_tests() {
+            dotnet test "tests/$1" -c Release --no-build -f net10.0
+          }
+          run_tests NetApiFlow.Tests
+          run_tests NetApiFlow.IntegrationTests
+          run_tests NetApiFlow.EntityFrameworkCore.Ef8Tests
+          run_tests NetApiFlow.Mcp.Tests
+          run_tests NetApiFlow.OpenTelemetry.Tests
+          run_tests NetApiFlow.PrePipelineInteropSpike
+          run_tests NetApiFlow.Storage.Tests
+          run_tests NetApiFlow.Npgsql.IntegrationTests
+          run_tests NetApiFlow.Npgsql10.IntegrationTests
+          run_tests NetApiFlow.SqlClient.IntegrationTests
+
+      - name: Create the local package folders the verification projects list
+        run: mkdir -p tests/manual-verification/local-nuget-feed tests/manual-verification/local-packages
+
+      - name: Publish the core as native AOT, any trim or AOT warning fails
+        working-directory: tests/manual-verification/AotCoreVerification
+        run: dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=true
+
+      - name: Publish the net8.0 core host as native AOT, any IL warning in the output fails
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet publish -c Release -r linux-x64 -o ./publish | tee publish.log
+          if grep -E "warning IL[0-9]+" publish.log; then exit 1; fi
+
+      - name: Run the net8.0 native binary, the HttpClient backfill must record method, URL and status
+        working-directory: tests/manual-verification/AotCoreVerificationNet8
+        run: ./publish/AotCoreVerificationNet8 --verify-http-backfill
 
       - name: Pack the six packages
         run: >

@@ -1,0 +1,13 @@
+id: NetApiFlow.Dashboard
+dependencies:
+  net10.0:
+    Microsoft.Extensions.FileProviders.Embedded 10.0.0 (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+  net8.0:
+    Microsoft.Extensions.FileProviders.Embedded 8.0.34 (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+frameworkReferences:
+  net10.0:
+    Microsoft.AspNetCore.App
+  net8.0:
+    Microsoft.AspNetCore.App

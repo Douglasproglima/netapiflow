@@ -2,16 +2,17 @@ namespace NetApiFlow.Routing;
 
 /// <summary>
 /// Matches a request path against a route glob pattern. <c>*</c> matches exactly one path segment;
-/// <c>**</c> matches any number of segments, including zero (see D-08 in docs/plano/decisoes.md).
+/// <c>**</c> matches any number of segments, including zero. Written by hand, because the core takes no
+/// dependency for pattern matching.
 /// </summary>
 internal static class RouteGlobMatcher
 {
-    public static bool Matches(string pattern, string path)
-    {
-        var patternSegments = Split(pattern);
-        var pathSegments = Split(path);
-        return MatchesSegments(patternSegments, 0, pathSegments, 0);
-    }
+    public static bool Matches(string pattern, string path) => Matches(Split(pattern), path);
+
+    public static string[] Compile(string pattern) => Split(pattern);
+
+    public static bool Matches(string[] patternSegments, string path) =>
+        MatchesSegments(patternSegments, 0, Split(path), 0);
 
     private static string[] Split(string value) =>
         value.Split('/', StringSplitOptions.RemoveEmptyEntries);

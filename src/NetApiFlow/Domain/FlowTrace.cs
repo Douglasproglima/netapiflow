@@ -6,7 +6,7 @@ public sealed record FlowTrace
     private static readonly IReadOnlyDictionary<string, string> EmptyTags =
         new Dictionary<string, string>();
 
-    /// <summary>Correlation id, same as the ASP.NET Core <c>Activity.TraceId</c> for the request.</summary>
+    /// <summary>NetApiFlow id of the trace, random and unique for each request. It is not the W3C trace id of the request, which the <c>w3c.trace_id</c> tag carries.</summary>
     public required string TraceId { get; init; }
 
     /// <summary>HTTP method of the request (e.g. <c>GET</c>).</summary>

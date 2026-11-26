@@ -8,11 +8,16 @@ public sealed class NetApiFlowOptions
 
     /// <summary>
     /// Base path where the dashboard is mounted. Routes under it are never traced, even without
-    /// explicit configuration. Set internally by <c>UseNetApiFlowDashboard</c>. Default: <c>/flow</c>.
+    /// explicit configuration. Set internally by <c>MapNetApiFlowDashboard</c>. Default: <c>/flow</c>.
     /// </summary>
     internal string DashboardBasePath { get; set; } = "/flow";
 
-    /// <summary>Whether tracing is active. Default: <see langword="true"/>.</summary>
+    /// <summary>
+    /// Whether tracing is active. When <see langword="false"/>, NetApiFlow records nothing and
+    /// <see cref="Flow.Step(string, string, ComponentType)"/> opens no <see cref="System.Diagnostics.Activity"/>, so no other
+    /// <see cref="System.Diagnostics.ActivityListener"/> in the process, such as an OpenTelemetry pipeline that
+    /// listens to the <c>NetApiFlow</c> source, receives its steps either. Default: <see langword="true"/>.
+    /// </summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>Duration above which a span is considered slow. Default: 250 ms.</summary>
@@ -32,9 +37,30 @@ public sealed class NetApiFlowOptions
     /// Root-relative path of the OpenAPI document the dashboard's "Run an endpoint" panel reads to
     /// list your endpoints. Set it to wherever your host serves its document, for example
     /// <c>/swagger/v1/swagger.json</c> under Swashbuckle. Default: <c>/openapi/v1.json</c>, what
-    /// <c>MapOpenApi()</c> serves.
+    /// <c>MapOpenApi()</c> serves. Requests to this path are never traced.
+    /// Under <c>UsePathBase</c> the pattern is compared with the path relative to the <c>PathBase</c>
+    /// when the request matches an endpoint, and with the full path when it does not, such as a
+    /// static file or a 404.
     /// </summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
+
+    /// <summary>
+    /// Writes <c>X-NetApiFlow-TraceId</c> on the response of every traced request, so a caller can
+    /// find the trace and <c>NetApiFlow.Testing</c> can read it. Default: <see langword="true"/> in
+    /// Development and <see langword="false"/> everywhere else. Set it to <see langword="true"/> to keep
+    /// the header in Production, or to <see langword="false"/> to keep the trace id out of responses
+    /// in Development too. A 500 that the server
+    /// builds because nothing in the pipeline handled an exception carries no header, because the
+    /// server drops the headers set before it. Add <c>UseExceptionHandler</c> and the response carries it.
+    /// </summary>
+    public bool EmitTraceIdHeader { get; set; }
+
+    /// <summary>
+    /// Opens a <see cref="ComponentType.Endpoint"/> step for every Minimal API endpoint of a traced request,
+    /// without marking it. Set it to <see langword="false"/> to get a step only for the endpoints marked with
+    /// <c>WithNetApiFlowTracking()</c>. Default: <see langword="true"/>.
+    /// </summary>
+    public bool CaptureMinimalApiEndpoints { get; set; } = true;
 
     /// <summary>Retention policy for persisted traces.</summary>
     public RetentionOptions Retention { get; } = new();
@@ -54,16 +80,28 @@ public sealed class NetApiFlowOptions
     /// <summary>Route glob patterns excluded from tracing even when they match an include pattern.</summary>
     public IReadOnlyList<string> ExcludePatterns => _excludePatterns;
 
-    /// <summary>Adds route glob patterns that must match for a request to be traced.</summary>
+    /// <summary>
+    /// Adds route glob patterns that must match for a request to be traced.
+    /// Under <c>UsePathBase</c> the pattern is compared with the path relative to the <c>PathBase</c>
+    /// when the request matches an endpoint, and with the full path when it does not, such as a
+    /// static file or a 404.
+    /// </summary>
     public NetApiFlowOptions IncludePaths(params string[] patterns)
     {
+        ArgumentNullException.ThrowIfNull(patterns);
         _includePatterns.AddRange(patterns);
         return this;
     }
 
-    /// <summary>Adds route glob patterns that are always excluded from tracing, even when they match an include pattern.</summary>
+    /// <summary>
+    /// Adds route glob patterns that are always excluded from tracing, even when they match an include pattern.
+    /// Under <c>UsePathBase</c> the pattern is compared with the path relative to the <c>PathBase</c>
+    /// when the request matches an endpoint, and with the full path when it does not, such as a
+    /// static file or a 404.
+    /// </summary>
     public NetApiFlowOptions ExcludePaths(params string[] patterns)
     {
+        ArgumentNullException.ThrowIfNull(patterns);
         _excludePatterns.AddRange(patterns);
         return this;
     }

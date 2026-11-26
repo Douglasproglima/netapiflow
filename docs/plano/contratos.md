@@ -13,15 +13,16 @@ nenhum `using` de ASP.NET, EF Core ou driver de banco (provado por teste de arqu
 ```csharp
 namespace NetApiFlow;
 
-public static class NetApiFlow
+public static class Flow
 {
     /// <summary>Marks the start of a tracked step. Dispose the returned <see cref="FlowStep"/>
     /// to close it.</summary>
     public static FlowStep Step(string component, string operation,
                                  ComponentType type = ComponentType.Custom);
 
-    /// <summary>Trace id of the request currently executing, or <c>null</c> when tracing is
-    /// disabled or there is no ambient trace.</summary>
+    /// <summary>The NetApiFlow trace id of the request currently executing, the same value as the
+    /// <c>X-NetApiFlow-TraceId</c> response header, or <c>null</c> when tracing is disabled or there is no
+    /// ambient trace. It is not the W3C trace id: read that from <c>Activity.Current.TraceId</c>.</summary>
     public static string? CurrentTraceId { get; }
 
     /// <summary>A trace that finished recently, read straight from memory, without waiting for
@@ -32,9 +33,20 @@ public static class NetApiFlow
     public static FlowTraceDetail? GetRecentTrace(IServiceProvider services, string traceId);
 }
 
+// O nome antigo da classe, de antes da Fase 67 (D-237): [Obsolete] e escondido do IntelliSense. Tem os mesmos três
+// membros de Flow, com as mesmas assinaturas, e encaminha cada um para ela.
+[Obsolete("Use NetApiFlow.Flow.")]
+[EditorBrowsable(EditorBrowsableState.Never)]
+public static class NetApiFlow { }
+
 public readonly struct FlowStep : IDisposable
 {
     public void Tag(string key, string value);
+    public void Tag(string key, int value);
+    public void Tag(string key, long value);
+    public void Tag(string key, double value);
+    public void Tag(string key, bool value);
+    public void Tag<TEnum>(string key, TEnum value) where TEnum : struct, Enum;
     public void MarkError(Exception exception);
     public void Dispose();
 }
@@ -68,6 +80,7 @@ public interface ITraceStore
     ValueTask<IReadOnlyList<RouteStat>> GetRouteStatsAsync(StatsQuery query, CancellationToken cancellationToken);
     ValueTask<ArchitectureMap> GetArchitectureMapAsync(string method, string routeKey, StatsQuery query, CancellationToken cancellationToken);
     ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken);
+    ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken);
     ValueTask<int> ApplyRetentionAsync(RetentionPolicy policy, CancellationToken cancellationToken);
 }
 
@@ -111,8 +124,20 @@ public sealed class NetApiFlowOptions
     public bool CapturePrePipelineSteps { get; set; }
 
     /// <summary>Root-relative path of the OpenAPI document the dashboard's "Run an endpoint"
-    /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves.</summary>
+    /// panel reads. Default: <c>/openapi/v1.json</c>, what <c>MapOpenApi()</c> serves. Requests to
+    /// this path are never traced.</summary>
     public string OpenApiDocumentPath { get; set; } = "/openapi/v1.json";
+
+    /// <summary>Writes <c>X-NetApiFlow-TraceId</c> on the response of every traced request, so a
+    /// caller can find the trace and <c>NetApiFlow.Testing</c> can read it. Default:
+    /// <see langword="true"/>. Set it to <see langword="false"/> to keep the trace id out of
+    /// responses.</summary>
+    public bool EmitTraceIdHeader { get; set; } = true;
+
+    /// <summary>Opens an <see cref="ComponentType.Endpoint"/> step for every Minimal API endpoint,
+    /// without <c>WithNetApiFlowTracking()</c>. Default: <see langword="true"/>. An endpoint that is
+    /// already marked keeps a single step, and an MVC action keeps only the controller step.</summary>
+    public bool CaptureMinimalApiEndpoints { get; set; } = true;
     public RetentionOptions Retention { get; }
     public LimitsOptions Limits { get; }
     public TailSamplingOptions TailSampling { get; }
@@ -216,12 +241,45 @@ public static class FlowTrackedServiceCollectionExtensions
     public static IServiceCollection DecorateFlowTracked(
         this IServiceCollection services, Func<Type, bool> predicate,
         ComponentType componentType = ComponentType.Service);
+
+    /// <summary>Tracks the application's own services, repositories and handlers by name:
+    /// <c>*Service</c> as <see cref="ComponentType.Service"/>, <c>*Repository</c> as
+    /// <see cref="ComponentType.Repository"/>, <c>*Handler</c> as <see cref="ComponentType.UseCase"/>.
+    /// Only types of the entry assembly, or of the assemblies and namespaces named in
+    /// <paramref name="configure"/>, are ever decorated, never a framework, third-party or NetApiFlow
+    /// type. Call it after your own registrations: a registration made later is not decorated, and
+    /// the host logs a warning naming it. A registration made by factory cannot be decorated, and the
+    /// host logs a warning naming it too.</summary>
+    public static IServiceCollection TrackFlowByConvention(
+        this IServiceCollection services, Action<FlowConventionOptions>? configure = null);
+}
+
+public sealed class FlowConventionOptions
+{
+    /// <summary>Adds an assembly to the scope. Any call replaces the default scope, the entry assembly.</summary>
+    public FlowConventionOptions IncludeAssembly(Assembly assembly);
+
+    /// <summary>Adds a namespace prefix to the scope. Any call replaces the default scope, the entry assembly.</summary>
+    public FlowConventionOptions IncludeNamespacePrefix(string prefix);
 }
 
 public static class NetApiFlowEndpointFilterExtensions
 {
+    public static TBuilder WithNetApiFlowTracking<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder;
+
+    // As duas sobrecargas abaixo ficam escondidas do IntelliSense ([EditorBrowsable(Never)]) e encaminham para a genérica.
+    // A resolução de sobrecarga as prefere em MapGet e MapGroup, então não são [Obsolete] (D-277).
     public static RouteHandlerBuilder WithNetApiFlowTracking(this RouteHandlerBuilder builder);
     public static RouteGroupBuilder WithNetApiFlowTracking(this RouteGroupBuilder builder);
+}
+
+public static class NetApiFlowEndpointConventionExtensions
+{
+    /// <summary>Marks the endpoint, or every endpoint of a group, as never traced. Read from the matched endpoint's
+    /// metadata, so it holds under <c>UsePathBase</c>.</summary>
+    public static TBuilder WithoutNetApiFlowTracking<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder;
 }
 ```
 
@@ -231,8 +289,34 @@ public static class NetApiFlowEndpointFilterExtensions
 (registra o interceptor; ainda precisa de `optionsBuilder.AddInterceptors(...)` no `DbContext`,
 porque o EF Core não tem registro global de interceptor). Formalizado na revisão da Fase 2.
 
+**Chamadas repetidas (Fase 66, D-276).** `AddNetApiFlow`, `AddNetApiFlowDashboard`, `AddNetApiFlowMediatR` e
+`AddNetApiFlowOtlpExport` são seguros de chamar mais de uma vez. O `configure` de cada chamada vale, na ordem das chamadas, sobre
+um único objeto de opções, e nada é registrado duas vezes: um listener, um exportador, um step por requisição. Uma única chamada
+dá o mesmo resultado de antes.
+
 Formalizado na revisão da Fase 1 (estava ausente desta lista desde o bootstrap, embora a seção 9
 do prompt já descrevesse essa forma de configuração em código).
+
+**Passos de SQL de fonte externa (Fase 58, D-285).** O texto do comando vem de `db.query.text` (Npgsql 10) e, na falta dela, de `db.statement` (Npgsql 8 e 9). O nome do passo de um comando SQL é o verbo e a **tabela**, o último identificador do nome com ou sem schema (`dbo.Users`, `[dbo].[Users]`, `"public"."orders"` e `master.dbo.Users` dão a tabela), só com identificador e nunca com valor, e o núcleo e o `NetApiFlow.EntityFrameworkCore` usam a mesma regra. A abertura de conexão do Npgsql 10 (atividade sem texto SQL e com nome começando por `CONNECT `) nunca vira passo: sem texto ela é ignorada, também quando falha (a falha é da etapa que a abriu, como no Npgsql 8 e 9), e uma atividade de comando que o app renomeou para `CONNECT ...` e que traz texto é adicionada como passo completo quando termina. O SqlClient não emite `ActivitySource`, e a conexão dele nunca é passo.
+
+**Identidade da trace (ADR-0028).** `FlowTrace.TraceId` é um id próprio de cada requisição rastreada, aleatório, de
+32 caracteres hexadecimais, gerado pelo NetApiFlow. **Não** é o W3C trace id: este fica na tag `w3c.trace_id` da
+trace, e toda atividade do NetApiFlow carrega a tag `netapiflow.trace_id`. O cabeçalho `X-NetApiFlow-TraceId`, o
+REST, o SSE, o MCP, `Flow.CurrentTraceId` e o `traceId` de `Flow.GetRecentTrace` usam o id do
+NetApiFlow. Duas requisições com o mesmo W3C trace id são duas traces.
+
+**Exclusão por metadado (ADR-0027, Fase 53).** `WithoutNetApiFlowTracking()` grava um metadado interno no endpoint, e o núcleo decide no `EndpointMatched`, que é onde o `Request.Path` já é relativo ao `PathBase`. O painel (REST, SSE, estáticos) e o MCP a chamam nos grupos deles, e é por isso que as rotas do NetApiFlow nunca são rastreadas. A extensão é genérica sobre `IEndpointConventionBuilder` (cobre `MapGet`, grupo, `MapControllers()` e `MapHealthChecks()`), o tipo do metadado é `internal`, e o metadado **vence** `ExcludePaths`, `IncludePaths` e `WithNetApiFlowTracking()` no mesmo endpoint. Controller por atributo não existe.
+
+**O que a Fase 53 entregou, no contrato (#420, D-258).** `ExcludePaths`, `IncludePaths` e `OpenApiDocumentPath` valem contra o caminho relativo ao `PathBase` quando há endpoint casado, e contra o caminho cheio quando nenhum endpoint casa (um arquivo estático, um 404), que é o limite dito no README. A decisão de uma requisição reexecutada (`UseStatusCodePagesWithReExecute`, `UseExceptionHandler`) segue a da requisição original, como na `0.5.3`. **Duas mudanças visíveis:** (1) a trace de uma requisição que casa um endpoint abre já com a rota conhecida, então `TraceStarted`, a lista ao vivo e a lista REST mostram `/orders/{id}` onde mostravam `(unmatched)` até o fim; (2) uma requisição que não casa nenhum endpoint (middleware terminal, WebSocket) é gravada **só quando termina**, junto com os spans dela, e não aparece em `/traces/live`, no stream nem em `GET /traces/{traceId}` enquanto roda (D-256). A API pública nova é só a extensão acima.
+
+**Nome da etapa `Endpoint` de um Minimal API (Tarefa 51.9).** O par `(component, operation)` sai de
+metadados do endpoint, nunca do `DisplayName`, e é o mesmo para a etapa de `WithNetApiFlowTracking()` e
+para a etapa sem marcação. Método com nome, sem marca de compilador: `Tipo.Método`. Lambda ou função
+local: `component = "Minimal API"` e `operation` com o nome de `WithName` ou, sem ele, os verbos e a
+rota normalizada (`GET /hello`). Os verbos se juntam com `, ` (`GET, PUT /rota`), e um endpoint sem metadado de verbo traz só a rota. Um
+endpoint que não é `RouteEndpoint` grava `component = "Minimal API"` e `operation` com o `DisplayName`, ou
+`Endpoint` se ele for nulo. Controller de MVC e Razor Pages mantêm `Controller.Action`. A regra e as
+medições estão em `docs/plano/fase-51-sem-marcacao.md`, Tarefa 51.9.
 
 ### `NetApiFlow.Dashboard`: superfície pública
 
@@ -248,12 +332,16 @@ namespace NetApiFlow.Dashboard.Endpoints;
 
 public static class NetApiFlowDashboardEndpointRouteBuilderExtensions
 {
+    public static IEndpointConventionBuilder MapNetApiFlowDashboard(
+        this IEndpointRouteBuilder endpoints, string basePath = "/flow");
+
+    [Obsolete("Use MapNetApiFlowDashboard.")]
     public static IEndpointConventionBuilder UseNetApiFlowDashboard(
         this IEndpointRouteBuilder endpoints, string basePath = "/flow");
 }
 ```
 
-`UseNetApiFlowDashboard` monta a API REST/SSE sob `{basePath}/api` e a UI Angular embutida sob
+`MapNetApiFlowDashboard` (e o `UseNetApiFlowDashboard`, obsoleto, que encaminha) monta a API REST/SSE sob `{basePath}/api` e a UI Angular embutida sob
 `basePath`, com fallback de SPA. Devolve um `IEndpointConventionBuilder` para encadear
 `RequireAuthorization(...)`, que vale para as duas partes juntas (ADR-0006). Fora de
 `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization` nem `IFlowAccessFilter` (núcleo,
@@ -277,6 +365,10 @@ namespace NetApiFlow.Mcp.Endpoints;
 
 public static class NetApiFlowMcpEndpointRouteBuilderExtensions
 {
+    public static IEndpointConventionBuilder MapNetApiFlowMcp(
+        this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp");
+
+    [Obsolete("Use MapNetApiFlowMcp.")]
     public static IEndpointConventionBuilder UseNetApiFlowMcp(
         this IEndpointRouteBuilder endpoints, string basePath = "/flow/mcp");
 }
@@ -310,13 +402,13 @@ public sealed class FlowAssertionException : Exception
 public static class FlowTestingHttpResponseExtensions
 {
     /// <summary>Reads <c>X-NetApiFlow-TraceId</c> off the response and calls
-    /// <see cref="NetApiFlow.GetRecentTrace"/>, throwing <see cref="FlowAssertionException"/>
+    /// <see cref="Flow.GetRecentTrace"/>, throwing <see cref="FlowAssertionException"/>
     /// instead of returning <see langword="null"/> when the trace is not found.</summary>
     public static FlowTraceDetail GetFlowTrace(this HttpResponseMessage response, IServiceProvider services);
 }
 ```
 
-`UseNetApiFlowMcp` monta o servidor MCP (transporte HTTP, `ModelContextProtocol.AspNetCore`) sob
+`MapNetApiFlowMcp` (e o `UseNetApiFlowMcp`, obsoleto, que encaminha) monta o servidor MCP (transporte HTTP, `ModelContextProtocol.AspNetCore`) sob
 `basePath`. Mesma régua da Dashboard (ADR-0006/ADR-0013), com o filtro compartilhado do núcleo
 (ADR-0015): fora de `IHostEnvironment.IsDevelopment()`, sem `RequireAuthorization(...)` nem
 `IFlowAccessFilter` registrado no DI, toda rota do MCP responde `404`. Três tools na v1, todas só
@@ -324,6 +416,10 @@ leitura, implementadas sobre `ITraceStore`: listar traces recentes (filtro por s
 rota, limite), obter uma trace por id, obter estatísticas por componente. Não depende de
 `NetApiFlow.Dashboard`: os dois dependem só de `NetApiFlow` (núcleo) para `IFlowAccessFilter`.
 Formalizado na revisão da Fase 10.
+
+**O que a Fase 67 mudou no MCP (D-277).** As três tools e o `TraceLookupResult` são `internal`: o `tools/list` e o `tools/call` seguem iguais, e a mudança está nas linhas `*REMOVED*` do `PublicAPI.Unshipped.txt` e no `CompatibilitySuppressions.xml`, que o passo 13 do `/release` apaga. O `??=` do `serverInfo.name`, que a Fase 67 pôs, foi trocado na Fase 71 (D-282): veja o parágrafo seguinte.
+
+**O que a Fase 71 mudou no MCP (D-282).** As tools do NetApiFlow existem só no `/flow/mcp`, e o endpoint MCP de um app que hospeda o próprio servidor não as serve. O `/flow/mcp` responde só `initialize`, `server/discover`, `ping`, `tools/list`, `tools/call` e `logging/setLevel`, mais as notificações `initialized`, `cancelled` e `progress`: o resto recebe `-32601`, e a notificação fora da lista é descartada. Os prompts, os resources e as completions do app não passam pelo `/flow/mcp`, e o `initialize` dele ainda anuncia as capabilities do app, sem nada por trás (resíduo aceito). A decisão é da marca que o gate liga depois de liberar o acesso, e não do `HttpContext`. O `tools/call` é decidido pelo método que o executaria, e não pelo nome: uma tool do app com o nome de uma do NetApiFlow não atravessa o `/flow/mcp`, e na partida sai um aviso. O `/flow/mcp` responde `NetApiFlow` como `serverInfo.name`, e o endpoint do app mantém o nome dele. Com `PerSessionExecutionContext = true` e sessões, o `/flow/mcp` responde `404`, as tools ficam fora de todo endpoint e um aviso sai na partida. Sem API pública nova.
 
 ### `NetApiFlow.OpenTelemetry`: superfície pública
 
@@ -342,6 +438,11 @@ public sealed class NetApiFlowOtlpExportOptions
     public bool IncludeHttpClientSource { get; set; }
     public Action<OtlpExporterOptions>? ConfigureOtlpExporter { get; set; }
 }
+
+public static class NetApiFlowTracerProviderBuilderExtensions
+{
+    public static TracerProviderBuilder AddNetApiFlowSource(this TracerProviderBuilder builder);
+}
 ```
 
 `AddNetApiFlowOtlpExport` registra o SDK do OpenTelemetry (`AddOpenTelemetry().WithTracing(...)`)
@@ -349,6 +450,12 @@ observando a fonte `"NetApiFlow"` (a mesma `ActivitySource` do núcleo, ADR-0002
 `IncludeHttpClientSource` for `true`, também `"System.Net.Http"` (ADR-0012), antes de
 `AddOtlpExporter`. Não lê nem reescreve `FlowSpan`/`ITraceStore`: exporta a `Activity` nativa
 diretamente, sem depender do pipeline do dashboard. ADR-0016. Formalizado na revisão da Fase 13.
+
+`AddNetApiFlowSource` só faz `AddSource("NetApiFlow")`: nenhum exportador e nenhuma outra fonte. É a forma para quem **já**
+configura o OpenTelemetry, e os spans do NetApiFlow vão só para os exportadores do app (Fase 66, B7, D-276).
+`AddNetApiFlowOtlpExport` não mudou o que exporta: num app com OpenTelemetry próprio, ele manda **todas** as fontes do app para o
+endpoint do NetApiFlow, e o README avisa disso. Ele usa `AddNetApiFlowSource` para a fonte `"NetApiFlow"`, e
+`IncludeHttpClientSource` passa a ser lido quando o provider é montado, não na chamada.
 
 ### `NetApiFlow.Storage.PostgreSql` e `NetApiFlow.Storage.SqlServer`: superfície pública
 
@@ -365,11 +472,17 @@ public static class NetApiFlowPostgreSqlServiceCollectionExtensions
 public sealed class PostgreSqlStorageOptions
 {
     public string TablePrefix { get; set; } = "netapiflow_";
+
+    /// <summary>Creates and upgrades the tables on first use, with a <c>CREATE TABLE</c>, an
+    /// <c>ALTER TABLE</c> and an <c>UPDATE</c> against the application's database. Default:
+    /// <see langword="true"/>. With <see langword="false"/> nothing is created or changed and the
+    /// tables must already exist; <c>schema.sql</c> in the package's repository folder creates them.</summary>
+    public bool AutoCreateSchema { get; set; } = true;
 }
 
 // NetApiFlow.Storage.SqlServer espelha a mesma forma: AddNetApiFlowSqlServerStorage(
 // this IServiceCollection, string connectionString, Action<SqlServerStorageOptions>?)
-// e SqlServerStorageOptions com o mesmo TablePrefix.
+// e SqlServerStorageOptions com o mesmo TablePrefix e o mesmo AutoCreateSchema.
 ```
 
 Chamar depois de `AddNetApiFlow(...)`: substitui o `ITraceStore` em memória pelo storage
@@ -515,8 +628,9 @@ acima):
 
 - `FlowStep` é `readonly struct` por decisão D-09: com tracing desligado, carrega `Activity? =
   null` e `Dispose` não faz nada. Zero alocação no caminho frio.
+- `Flow.Step`, `FlowStep.Tag` e `FlowStep.MarkError` não lançam em argumento nulo, porque rodam no código do usuário em produção (D-277): um argumento nulo em `Step` vira uma etapa não rastreada, uma tag com chave ou valor nulo é ignorada e `MarkError(null)` não faz nada, cada caso com um aviso de no máximo uma vez a cada 30 segundos. `Tag` grava número como texto invariante, `bool` como `true` ou `false` e enum como o nome do membro. Os pontos de entrada de configuração (`Add*`, `Map*`, `Use*`, a `connection string` dos storages) lançam na partida, com o nome do parâmetro ou uma mensagem que diz o que passar.
 - `DispatchProxy` (`AddFlowTracked<TInterface, TImpl>`, `DecorateFlowTracked(predicate)`) e os
-  filtros de Controller/Minimal API usam `NetApiFlow.Step(...)` por baixo. Não precisam de API
+  filtros de Controller/Minimal API usam `Flow.Step(...)` por baixo. Não precisam de API
   pública própria além da extensão de `IServiceCollection` (seção 6.3 do prompt).
 - `FlowTrace`/`FlowSpan` seguem o modelo de domínio da seção 6.4 do prompt, literalmente.
 
@@ -562,6 +676,8 @@ Corpo do `data`, JSON camelCase:
 Eventos de `TraceStarted` e `TraceCompleted` trazem a chave `trace` (forma de `FlowTrace`) em vez
 de `span`. Os seis tipos de evento são os da seção 6.5 do prompt: `TraceStarted`, `SpanStarted`,
 `SpanCompleted`, `SpanFailed`, `TraceCompleted`, `TracePersisted`.
+
+O `TraceStarted` de uma requisição que casa um endpoint traz a rota real. Uma requisição que não casa nenhum endpoint emite o `TraceStarted`, e os eventos dos spans dela, só quando termina (D-256).
 
 Regras do stream:
 
@@ -759,10 +875,19 @@ Spans da última execução bem-sucedida do endpoint, usados pelo frontend para 
 "não executadas" (seção 7.2 do prompt).
 
 Query string: `method` (obrigatório), `route` (obrigatório, route template exato, normalizado
-antes de comparar, D-124).
+antes de comparar, D-124), `before` (opcional, data e hora em ISO 8601, normalmente o `startedAt`
+da trace que o painel desenha).
+
+Com `before`, a resposta é a última execução bem-sucedida que começou **estritamente antes** dele,
+então uma trace nunca é o blueprint dela mesma e uma execução posterior não muda o desenho de uma
+anterior. Sem `before`, a mais recente, como antes. O membro `GetLastSuccessfulAsync(method,
+routeKey, before, cancellationToken)` do `ITraceStore` é de interface com implementação padrão,
+para um storage de um release anterior continuar carregando (D-246, D-248). O `before` do store é
+UTC.
 
 Resposta `200`, mesma forma de `/traces/{traceId}` (trace + spans). `204` sem corpo se não
-houver execução bem-sucedida anterior daquele método/rota. `400` se faltar `method` ou `route`.
+houver execução bem-sucedida anterior daquele método/rota (e, com `before`, anterior a ele).
+`400` se faltar `method` ou `route`, ou se `before` não for uma data e hora válidas.
 
 ### GET `/endpoints`
 

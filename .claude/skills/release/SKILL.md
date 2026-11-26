@@ -4,22 +4,31 @@ description: Calcula a próxima versão SemVer, abre release/<versao> a partir d
 argument-hint: "[major|minor|patch]"
 ---
 
+Para a `0.6.0`, a checklist passo a passo, com os portões e a conferência do `release.yml`, está em `docs/plano/release-0.6.0.md`.
+
 Prepare a release: $ARGUMENTS (padrão: `minor`, a menos que haja breaking change na API pública
 listada em `docs/plano/contratos.md` desde a última release, caso em que é `major`, mas
 `MAJOR` fica em `0` até a `1.0.0`, seção 12 do `netapiflow-prompt.md`, então antes da v1.0.0 uma
 "major" vira incremento de `MINOR`).
 
+**Quem faz o quê (D-272).** Uma `EXECUTORA-RELEASE` faz os passos de código (1 a 9, e o 13 depois da publicação), abre as PRs e
+para. A `AUDITORIA` faz os merges, a tag, o Release, o back-merge, os advisories e os checks obrigatórios da `main` (passos
+10 a 12). A Planejadora mantém esta skill e registra. Os passos 7 e 13 mexem em `Directory.Build.props`, em `tests/real-package/` e
+em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
+
+0. **Para a `0.6.0`:** confirme com a `AUDITORIA` que a auditoria de base está fechada
+   (`.claude/rules/planning.md`, D-205). Sem esse fechamento, pare e relate. A Tarefa 62.4 (o site conferido contra os pacotes `0.6.0` e atualizado no mesmo dia) é **depois da publicação**: confirme só que ela está pronta para o dia.
 1. Rode `git status` em `develop`. Working tree precisa estar limpo.
 2. Leia `CHANGELOG.md`, seção `[Unreleased]`, e `docs/plano/README.md` para confirmar quais fases
    foram concluídas desde a última tag (`git tag --sort=-v:refname | head -1`).
 3. Calcule a versão SemVer seguinte (`docs/gitflow.md`, seção "Versionamento"). Confirme com quem
    pediu antes de prosseguir se houver ambiguidade entre `minor` e `patch`.
-4. **Fumaça obrigatória em `tests/manual-verification/`, antes de abrir a branch (D-176).** Pacote
+4. **Teste obrigatório com o pacote real em `tests/manual-verification/`, antes de abrir a branch (D-176).** Pacote
    empacotado de verdade (nunca `ProjectReference`), com `-p:Version=<próxima>-verify.<n>`
    (`.claude/rules/packaging.md`, D-174; nunca `-p:VersionSuffix=verify`, que não funciona neste
    repositório). Rodar `AddNetApiFlow()` **sem nenhuma lambda**, em `Development`, com storage
    real configurado (Postgres ou SQL Server via Testcontainers/instância local), fazendo pelo
-   menos uma requisição real. Foi a fumaça com pacote real, não a suíte automatizada, que achou
+   menos uma requisição real. Foi o teste com o pacote real, não a suíte automatizada, que achou
    tanto o `MissingMethodException` do `MediatR` (D-140) quanto o bug de opção ligada só por
    configuração (D-175): os dois passavam limpo em `dotnet test NetApiFlow.slnx`, que roda contra
    `ProjectReference`/`InMemoryTraceStore`, não contra o pacote publicado com a configuração mais
@@ -27,6 +36,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    A receita pronta está em `tests/manual-verification/README.md`, na seção "Options set only in
    configuration" (app `OptionsFromConfigVerification`). Rodar os comandos de lá com um
    `-verify.<n>` novo, nos dois alvos e nos dois modos, sem reescrever nada.
+   **E o caminho do usuário (D-186).** Criar um app novo com `dotnet new webapi` e seguir o README ao
+   pé da letra, sem completar nada de cabeça. Conferir o documento OpenAPI do app: nenhuma rota do
+   NetApiFlow nele. Usar cada tela do dashboard e da demo num navegador de verdade (Playwright), não só
+   conferir status HTTP: a auditoria que achou sete problemas (D-185) passou pelas rodadas anteriores
+   porque elas conferiam só diffs, CI e status.
 5. Crie a branch:
    ```bash
    git switch develop
@@ -50,7 +64,11 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
    conferência do passo 10.
 9. Pare aqui e peça confirmação explícita antes de `git push` e `gh pr create --base main`. Push,
    PR e tag são ações públicas (ver `.claude/rules/git-workflow.md`).
-10. Depois do merge em `main` (squash): criar a tag `v<versao>` (**só com confirmação explícita**),
+10. Depois do merge em `main` (squash): **só na `0.6.0`, a `AUDITORIA` torna `real-package / real-package`, `real-package /
+    comparison` e `built-demo` checks obrigatórios na `main`** (D-261, D-262, D-270). Os três já são obrigatórios no `develop`. A
+    `main` ficou de fora até aqui de propósito: o `ci.yml` dela ainda é o antigo, sem os jobs, e um `hotfix/*` nasce da `main` e
+    nunca produziria os checks, então torná-los obrigatórios antes travaria qualquer `0.5.x`. A configuração é da auditoria, com a autorização do dono. Depois disso,
+    criar a tag `v<versao>` (**só com confirmação explícita**),
     que dispara `release.yml` (Trusted Publishing, sem API key guardada). Confirme antes de criar
     a tag que a política de Trusted Publishing já foi configurada no nuget.org (tarefa 7.7 em
     `docs/plano/fase-7-documentacao.md`); se for a primeira release, esse passo manual precisa ter
@@ -67,6 +85,19 @@ listada em `docs/plano/contratos.md` desde a última release, caso em que é `ma
     branch (push direto é rejeitado pelo próprio GitHub), então isso sempre é PR, nunca
     fast-forward direto. Mergear com "Create a merge commit" (nunca squash), senão a PR perde o
     vínculo de ancestralidade que o merge deveria estabelecer.
+13. **Depois da publicação e do back-merge, nunca antes da tag (D-260),** num PR de `chore/*` no `develop`: apontar
+    `tests/real-package/previous-published-version.txt` para a versão nova e esvaziar `tests/real-package/expected-differences.json`
+    (`[]`). A tag publica com a lista cheia, porque o job `comparison` roda na tag e faz parte do `needs` da publicação: esvaziar
+    antes travaria o release. Esvaziar logo depois é o que impede o primeiro CI do ciclo seguinte de cair, porque a regra "linha que
+    não aparece mais falha" acusaria cada linha velha.
+    **Na mesma PR, a API pública (D-265):** mover para `PublicAPI.Shipped.txt`, em cada pacote, as linhas que estavam em
+    `PublicAPI.Unshipped.txt` **na tag** (`git show v<versao>:src/<Pacote>/PublicAPI.Unshipped.txt`), deixando no `Unshipped` só o
+    que entrou no `develop` depois do corte. Uma linha `*REMOVED*` tira a linha dela do `Shipped` e some. O registro de guardas
+    não tem passo no release.
+    **No mesmo PR, apagar todo `CompatibilitySuppressions.xml` do repositório (D-278),** hoje só o de `src/NetApiFlow.Mcp/`. Com a
+    baseline na `0.6.0`, em que as tools do MCP já são `internal`, a supressão é desnecessária, e o `pack` falha com "Supressões
+    desnecessárias encontradas", que é erro e não aviso (medido pela auditoria). A baseline do `pack` lê o `previous-published-version.txt`, então a troca da versão e
+    a exclusão da supressão vão **na mesma PR**: uma sem a outra quebra o `pack`.
 
 Nunca criar a tag nem publicar sem confirmação explícita de quem pediu, mesmo que os passos
 anteriores já tenham sido aprovados.

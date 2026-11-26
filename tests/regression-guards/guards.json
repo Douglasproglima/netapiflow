@@ -1,0 +1,2342 @@
+[
+  {
+    "id": "S1-otlp-export",
+    "defect": "The OTLP exporter sent the raw error message, with no sanitizing and no 300 character cut",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.OpenTelemetry.Tests",
+      "test": "NetApiFlow.OpenTelemetry.Tests.ErrorMessageExportTests.MarkError_WithASecretInTheMessage_ExportsNoFragmentOfItAndNoMoreThan300Characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S1-activity-tag",
+    "defect": "The error message tag of the Activity carried the raw message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.Activity_WithASecretInTheMessage_CarriesTheErrorMessageTagAlreadyClean"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-sanitizer-audit-cases",
+    "defect": "The sanitizer let a secret through in the forms the audit measured (Bearer, access_token, client_secret, DB_PASSWORD, api_key) and cut the message before cleaning it",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Sanitization.ErrorMessageSanitizerTests.Sanitize_WithEachCaseTheAuditMeasured_LeavesNoFragmentOfTheSecretAndNoMoreThan300Characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-sanitizer-leaked-forms",
+    "defect": "The sanitizer let through the forms of secret that had leaked before",
+    "fixedIn": "#388",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Sanitization.ErrorMessageSanitizerTests.Sanitize_WithASecretInAFormThatLeakedBefore_ReturnsTheMessageWithOnlyTheSecretRedacted"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-sanitizer-limit",
+    "defect": "A secret that starts just before the limit of 300 characters was cut instead of removed",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Sanitization.ErrorMessageSanitizerTests.Sanitize_WithASecretStartingJustBeforeTheLimit_NeverLeaksItNorExceeds300Characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-panel-rest",
+    "defect": "The REST API of the panel served a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.PanelRest_WithASecretInTheMessage_ServesNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-panel-sse",
+    "defect": "The live stream of the panel carried a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.PanelSse_WithASecretInTheMessage_StreamsNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-storage",
+    "defect": "The store persisted a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.Storage_WithASecretInTheMessage_PersistsNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-correlated-log",
+    "defect": "A log correlated to a span carried a secret of the logged message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ErrorMessageOutputsTests.CorrelatedLog_WithASecretInTheLoggedMessage_ReachesTheSpanWithNoFragmentOfIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S2-mcp",
+    "defect": "The MCP tool get_trace returned a secret of the error message",
+    "fixedIn": "#371",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.ErrorMessageMcpTests.GetTrace_WithASecretInTheMessage_ReturnsNoFragmentOfItAndNoLongerMessage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S4-dashboard-matrix",
+    "defect": "AllowAnonymous together with RequireAuthorization opened the dashboard",
+    "fixedIn": "#360",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardAuthorizationMatrixTests.EveryDashboardRouteAndMethod_FollowsTheMatrix"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S4-mcp-matrix",
+    "defect": "AllowAnonymous together with RequireAuthorization opened the MCP endpoint",
+    "fixedIn": "#360",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAuthorizationMatrixTests.EveryMcpRouteAndMethod_FollowsTheMatrix"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-dashboard-routes-traced",
+    "defect": "Under UsePathBase the dashboard (pages, REST and stream) was traced as the traffic of the app",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.RoutesOfTheDashboard_AreNeverTraced"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-stream-running",
+    "defect": "Under UsePathBase the stream of the dashboard showed as a trace that stayed Running",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.StreamOfTheDashboard_IsNeverTraced_AndNeverShowsAsRunning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-mcp-traced",
+    "defect": "Under UsePathBase the MCP server was traced as the traffic of the app",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.InitializeOfTheMcpServer_IsNeverTraced"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-exclude-paths",
+    "defect": "Under UsePathBase, ExcludePaths compared the full path and excluded nothing",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.ExcludePaths_OnAMatchedEndpoint_ValuesThePathTheUserSees"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-include-paths",
+    "defect": "Under UsePathBase, IncludePaths left the route of the user out of the store",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.IncludePaths_OnAMatchedEndpoint_KeepsTheUsersRouteInTheStore"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S5-without-tracking",
+    "defect": "A route marked with WithoutNetApiFlowTracking was traced, with or without a PathBase",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.PathBaseTracingTests.EndpointWithoutNetApiFlowTracking_IsNeverTraced"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S6-dashboard-origin-host",
+    "defect": "The dashboard accepted a foreign Origin and a foreign Host in Development (DNS rebinding)",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardOriginAndHostTests.EveryRestMethod_AppliesTheSharedOriginAndHostTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S6-mcp-origin-host",
+    "defect": "The MCP endpoint accepted a foreign Origin and a foreign Host in Development",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpOriginAndHostTests.Initialize_AppliesTheSharedOriginAndHostTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S6-dashboard-in-a-new-app",
+    "defect": "The dashboard accepted a foreign Origin and a foreign Host, seen in a new app with the published package",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "d"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S6-mcp-in-a-new-app",
+    "defect": "The MCP endpoint accepted a foreign Origin and a foreign Host, seen in a new app with the published package",
+    "fixedIn": "#398",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "h"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S7-dashboard-document-policy",
+    "defect": "The page of the dashboard had no security policy and could be shown in an iframe",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSecurityHeadersTests.TheDashboardDocument_CarriesTheWholePolicy"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S7-dashboard-refusal-headers",
+    "defect": "A refused request of the dashboard came without the security headers",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSecurityHeadersTests.ARefusedRequest_ComesWithTheSecurityHeaders"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S7-mcp-headers",
+    "defect": "An answer of the MCP endpoint came without the security headers",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpSecurityHeadersTests.AnAnsweredRequest_ComesWithTheSecurityHeaders"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S7-headers-in-a-new-app",
+    "defect": "The page, the API and the refusals of the dashboard came without the security headers, seen in a new app with the published package",
+    "fixedIn": "#401",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "e"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B1-cancelled-command",
+    "defect": "A cancelled EF Core command left its step in the singleton for ever and the span Running",
+    "fixedIn": "#407",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.EntityFrameworkCore.FlowDbCommandInterceptorTests.Query_CancelledWhileItRuns_ClosesTheDatabaseStepAndReleasesIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B2-decorated-service-disposed",
+    "defect": "DecorateFlowTracked created the original service with the container never disposing it",
+    "fixedIn": "#407",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Marking.DecorateFlowTrackedTests.DecorateFlowTracked_ForADisposableScopedService_DisposesTheOriginalWhenTheScopeEnds"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B3-cancelled-task",
+    "defect": "The proxy of a marked service returned a cancelled Task as faulted and closed the span as Success",
+    "fixedIn": "#407",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Marking.FlowInterceptorProxyTests.Invoke_WhenTaskIsCanceled_ReturnsACanceledTaskAndClosesTheSpanAsTheCancellation"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-blueprint-from-a-later-run",
+    "defect": "The blueprint of a trace came from a later execution, so the drawing of an old trace changed with time",
+    "fixedIn": "#412",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.BlueprintAnchorTests.Blueprint_OfAnEarlyReturnTrace_NeverComesFromALaterExecution"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-blueprint-store-default",
+    "defect": "A store written before the anchored blueprint could return a trace that started at or after the anchor",
+    "fixedIn": "#412",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Storage.TraceStoreBlueprintAnchorDefaultTests.GetLastSuccessfulAsync_StoreWithoutTheAnchoredMember_NeverReturnsATraceThatStartedAtOrAfterTheAnchor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-panel-anchor",
+    "defect": "The panel asked for the blueprint of a trace with no anchor, so it got the last success even if it was later",
+    "fixedIn": "#416",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent asks for the blueprint of a trace with the start of that trace as the anchor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-route-known-while-running",
+    "defect": "A trace that matched an endpoint was listed as (unmatched) until the request ended",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnmatchedRequestLiveVisibilityTests.RequestWithAMatchedEndpoint_WhileItRuns_IsListedAsRunningWithItsRoute"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-header-on-an-unhandled-500",
+    "defect": "A 500 of an exception nothing handled came without X-NetApiFlow-TraceId although the trace existed",
+    "fixedIn": "#405",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnhandledExceptionTraceIdHeaderTests.UnhandledException_InDevelopmentWithTheHeaderOn_IsAnswered500CarryingTheTraceIdOfItsTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-header-in-a-new-app",
+    "defect": "The trace id header was sent where it should not or missing where it should, seen in a new app with the published package",
+    "fixedIn": "#405",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "f"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "QuickStart-does-not-compile",
+    "defect": "The Quick start, pasted into a new webapi, did not compile (CS1529, a using in the middle of the file)",
+    "fixedIn": "#414",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "a"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "Demo-404-on-every-trace",
+    "defect": "The built demo answered 404 on every trace after the panel started to send before",
+    "fixedIn": "#416",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/demo-fixture-coverage.spec.ts",
+      "test": "the blueprints of the recorded demo points"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Demo-says-what-it-lacks",
+    "defect": "The demo answered a call it had no recording for with a 404 that nothing showed",
+    "fixedIn": "#440",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/demo-fixture.interceptor.spec.ts",
+      "test": "demoFixtureInterceptor says on the console which request it has no recording for when it answers"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Demo-opened-in-a-browser",
+    "defect": "No job opened the built demo, so a broken demo reached the review",
+    "fixedIn": "#440",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "traces-of-the-manifest"
+    },
+    "job": "built-demo"
+  },
+  {
+    "id": "Demo-architecture-asks-for-a-time-window",
+    "defect": "The Architecture screen of the demo failed for every route, because the screen sends a time window the recorded key does not have",
+    "fixedIn": "#523",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/demo-fixture.interceptor.spec.ts",
+      "test": "demoFixtureInterceptor matches the architecture recording for every time window the screen asks for"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "EfFloor-moved-to-9",
+    "defect": "The package asked for EF Core 9.0.22, which broke an app on EF Core 8 with a provider of EF 8",
+    "fixedIn": "#323",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.EntityFrameworkCore.Ef8Tests",
+      "test": "NetApiFlow.EntityFrameworkCore.Ef8Tests.FlowDbCommandInterceptorOnEfCore8Tests.ResolvedEfCore_InThisProject_IsTheDeclaredFloor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "EfFloor-works-on-the-floor",
+    "defect": "The interceptor did not record the commands on the floor version of EF Core",
+    "fixedIn": "#323",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.EntityFrameworkCore.Ef8Tests",
+      "test": "NetApiFlow.EntityFrameworkCore.Ef8Tests.FlowDbCommandInterceptorOnEfCore8Tests.Query_OnTheFloorEfCore_RecordsOneEntityFrameworkCoreDatabaseStep"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "EfFloor-in-the-nuspec",
+    "defect": "The floor of EF Core that the package declares moved without anyone seeing it",
+    "fixedIn": "#422",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.EntityFrameworkCore"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "Options-only-in-config-log-correlation",
+    "defect": "LogCorrelation.Enabled set only in the configuration never turned the feature on",
+    "fixedIn": "#309",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ConfigOnlyOptionsIntegrationTests.LogCorrelation_EnabledOnlyInConfiguration_CorrelatesLogToTheActiveSpan"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Options-only-in-config-pre-pipeline",
+    "defect": "CapturePrePipelineSteps set only in the configuration never turned the feature on",
+    "fixedIn": "#309",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ConfigOnlyOptionsIntegrationTests.PrePipelineSteps_EnabledOnlyInConfiguration_ProducesAuthorizationAndResourceFilterSpans"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-status-page-excluded-path",
+    "defect": "A status code page that re-executes opened a trace and a header for a path in ExcludePaths",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.StatusCodePageReExecution_ForAPathInExcludePaths_LeavesNoTraceAndNoHeader"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-status-page-excluded-error-path",
+    "defect": "A status code page that re-executes dropped the trace of a request when only the error path was excluded",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.StatusCodePageReExecution_WhenOnlyTheErrorPathIsExcluded_StillRecordsTheRequest"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-exception-handler-excluded-path",
+    "defect": "An exception handler that re-executes opened a trace and a header for a path in ExcludePaths",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.ExceptionHandlerReExecution_ForAPathInExcludePaths_LeavesNoTraceAndNoHeader"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-exception-handler-excluded-error-path",
+    "defect": "An exception handler that re-executes dropped the trace of a request when only the error path was excluded",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.ReExecutionTracingTests.ExceptionHandlerReExecution_WhenOnlyTheErrorPathIsExcluded_StillRecordsTheRequest"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R1-against-the-published-package",
+    "defect": "A re-executed request behaved differently from the published package, in the header and in the recorded route",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "status-page-reexecution-excluded-path"
+    },
+    "job": "comparison"
+  },
+  {
+    "id": "R2-request-without-an-endpoint-live",
+    "defect": "A request that matches no endpoint was listed as running and its steps were published before the end, the decision to keep them for the end",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnmatchedRequestLiveVisibilityTests.RequestWithoutAMatchedEndpoint_WhileItRuns_IsNotListedAsRunningAndItsStepWaitsForTheEnd"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "R2-against-the-published-package",
+    "defect": "The live view of a request with no endpoint changed against the published package without anyone listing it",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "slow-request-in-a-terminal-middleware"
+    },
+    "job": "comparison"
+  },
+  {
+    "id": "Reservation-drop-counter",
+    "defect": "A reservation that was never going to be traced counted a dropped trace",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.TryReserveTrace_AtTheLimitOfActiveTraces_ReturnsFalseWithoutCountingADrop"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Reservation-seen-by-the-panel",
+    "defect": "The panel read a reservation nobody published and showed it in place of the stored trace with the same id",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.UnpublishedReservationVisibilityTests.TraceLookupOfThePanel_WhileAnExcludedRequestUsesTheSameTraceId_ServesTheStoredTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Reservation-duplicated-event",
+    "defect": "A step added from another thread while a reservation was published came out twice",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.PublishReserved_WhileAnotherThreadAddsAndCompletesSpans_PublishesEachEventOnce"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "Runtime11-the-suite-never-ran-on-it",
+    "defect": "The CI never ran the suite on the .NET 11 runtime, although the decision was that it should, and a roll forward that did not happen would have left the step green on runtime 10",
+    "fixedIn": "#451",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Release.ExpectedRuntimeTests.Runtime_WhenTheCiNamesTheMajorTheSuiteMustRunOn_IsThatMajor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F1-waiting-in-the-real-panel",
+    "defect": "A running trace was drawn without the steps it was expected to run, because the panel asked for its blueprint under the route (unmatched)",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:running"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "F1-old-trace-in-the-real-panel",
+    "defect": "An older trace was drawn with the steps of a later execution as not executed, so its drawing changed with time",
+    "fixedIn": "#416",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:old-trace"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "F1-not-executed-after-the-end-in-the-real-panel",
+    "defect": "A request that ended without running steps the blueprint expected was not drawn with them as not executed in the real panel",
+    "fixedIn": "#420",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "live-panel:ended"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S3-sequence-in-memory",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sequence-postgresql",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sequence-sqlserver",
+    "defect": "Requests with the same traceparent, one after the other, lost traces: the in-memory store kept the last and PostgreSQL and SQL Server the first, with a primary key violation for the others",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Requests_SharingOneTraceparentOneAfterTheOther_AreStoredAsOneTraceEachWithoutErrors"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-in-memory",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-postgresql",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-concurrent-sqlserver",
+    "defect": "Requests with the same traceparent at the same time mixed their steps in one trace and the second got no X-NetApiFlow-TraceId",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Requests_SharingOneTraceparentAtTheSameTime_GetDifferentTraceIdsAndKeepOnlyTheirOwnSteps"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-in-memory",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.InMemoryTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-postgresql",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-chosen-key-sqlserver",
+    "defect": "A client chose the id of a stored trace through the traceparent and overwrote it in the in-memory store, or got its own trace refused by the database",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerTraceIdentityTests.Request_WhoseTraceparentCarriesTheIdOfAStoredTrace_LeavesThatTraceAsItWas"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-in-a-new-app",
+    "defect": "Requests that carry the same traceparent were not one trace each in an app made from the README and the published package",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "i"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S3-against-the-published-package",
+    "defect": "Requests that share a traceparent are one trace each now, and the published package keeps one trace for all of them",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "requests-that-share-a-traceparent"
+    },
+    "job": "comparison"
+  },
+  {
+    "id": "S3-trace-started-tags",
+    "defect": "The TraceStarted event came without the W3C trace id and the tenant, so a consumer of the stream lost the match with OpenTelemetry on the first event",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSseTests.Stream_TraceStartedOfATracedRequest_CarriesTheW3CTraceIdAndTheTenantInItsTags"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-no-endpoint",
+    "defect": "The TraceStarted event of a request that matches no endpoint, published when it ends, came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardSseTests.Stream_TraceStartedOfARequestWithoutAMatchedEndpoint_CarriesTheW3CTraceIdAndTheTenantInItsTags"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-running-trace-detail-tags",
+    "defect": "The detail of a trace that is still running came with no tags, so the panel could not show the W3C trace id until the request ended",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RunningTraceDetailTests.TraceLookupOfThePanel_WhileTheRequestStillRuns_CarriesTheW3CTraceIdTag"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-sampling-of-a-foreign-activity",
+    "defect": "An activity with another W3C trace id, started inside a traced request, was forced into recording although NetApiFlow then dropped it, over the sampler of the user",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TraceResolutionCasesTests.Activity_WithAnotherW3CTraceIdStartedInsideATracedRequest_IsNotForcedIntoRecording"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-released-at-the-end",
+    "defect": "The state of a request stayed reachable from an ExecutionContext captured during the request, and so did the HttpContext behind it, after the request ended",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TraceResolutionCasesTests.ExecutionContext_CapturedDuringTheRequest_NoLongerSeesTheRequestOnceItEnded"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-finished-when-completing-throws",
+    "defect": "When completing the trace threw, the request was not marked as finished and CurrentTraceId kept answering in a task that outlived it",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-tenant-resolver-failure",
+    "defect": "A tenant resolver that threw discarded the whole trace, because the opening tags are resolved before the trace is published",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.OpeningTagsTests.Trace_WhenTheTenantResolverThrows_IsStillRecordedWithTheW3CTraceIdAndWithoutTheTenant"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-request-released-when-completing-throws",
+    "defect": "When completing the trace threw, the request stayed reachable from a context captured during it, because the release ran after the completion in the same block",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenCompletingTheTraceThrows_ReleasesTheRequestFromAContextCapturedDuringIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-reserved-path",
+    "defect": "The TraceStarted event of a trace opened from a reservation came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.PublishReserved_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S3-trace-started-tags-unreserved-path",
+    "defect": "The TraceStarted event of a trace opened without a reservation came without the W3C trace id and the tenant",
+    "fixedIn": "#464",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Recording.FlowRecorderReservationTests.TryStartTrace_WithTags_RaisesTraceStartedWithThemAndKeepsThemOnTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-no-trace-without-spans-postgresql",
+    "defect": "A failure while writing the spans left the trace stored with a span count and no span",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlAtomicTraceSaveTests.SaveAsync_WhenTheSpansFailToBeWritten_LeavesNoRowOfTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-same-trace-saved-after-failure-postgresql",
+    "defect": "After a failed span write, the leftover trace row made the next save of the same trace fail with a primary key violation",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlAtomicTraceSaveTests.SaveAsync_AfterASaveWhoseSpansFailed_StoresTheSameTraceWholeOnTheNextSave"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-no-trace-without-spans-sqlserver",
+    "defect": "A failure while writing the spans left the trace stored with a span count and no span",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerAtomicTraceSaveTests.SaveAsync_WhenTheSpansFailToBeWritten_LeavesNoRowOfTheTrace"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B4-same-trace-saved-after-failure-sqlserver",
+    "defect": "After a failed span write, the leftover trace row made the next save of the same trace fail with a primary key violation",
+    "fixedIn": "#469",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerAtomicTraceSaveTests.SaveAsync_AfterASaveWhoseSpansFailed_StoresTheSameTraceWholeOnTheNextSave"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-pattern-validator",
+    "defect": "A null, empty or blank path pattern passed validation and silently stopped every request from being traced",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.NetApiFlowOptionsTests.Validate_WithANullEmptyOrBlankPathPattern_FailsNamingTheOptionAndThePosition"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-pattern-configuration",
+    "defect": "A blank path pattern in the NetApiFlow configuration section passed validation",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.NetApiFlowOptionsTests.Value_WithABlankPathPatternInConfiguration_ThrowsOptionsValidationExceptionNamingTheOption"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-include-pattern-host",
+    "defect": "A host with a blank IncludePaths pattern started instead of failing with a message that names the option",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Start_WithAnInvalidIncludePathPattern_FailsWithAMessageThatNamesTheOption"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5b-blank-exclude-pattern-host",
+    "defect": "A host with a blank ExcludePaths pattern started instead of failing with a message that names the option",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Start_WithAnInvalidExcludePathPattern_FailsWithAMessageThatNamesTheOption"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5a-middleware-start",
+    "defect": "An exception while the middleware started tracing a request reached the request, and the trace reservation stayed held",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Middleware.NetApiFlowMiddlewareTests.InvokeAsync_WhenStartingTheTraceThrows_RunsTheRequestUntracedAndReleasesItsReservation"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5a-middleware-finish-host",
+    "defect": "An exception while the middleware completed the trace reached the request and broke the response",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenCompletingTheTraceThrows_RespondsNormallyAndLogsTheFailure"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5a-activity-started-host",
+    "defect": "An exception while recording the start of a step was thrown from the code of the user that started it",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenRecordingTheStartOfAStepThrows_RespondsNormallyAndLogsTheFailure"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5a-activity-stopped-host",
+    "defect": "A reserved tag with a value of the wrong type made the end of a step throw in the code of the user",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.InstrumentationFailureIntegrationTests.Request_WhenAStepCarriesATagValueThatBreaksTheRecording_RespondsNormallyAndLogsTheFailure"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5c-listener-off-the-request",
+    "defect": "The synchronous part of an event listener ran on the thread of the request and delayed the response",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.EventDeliveryIntegrationTests.Request_WithAListenerThatBlocksWhileHandlingAnEvent_RespondsWithoutWaitingForIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5c-queue-full-drops-and-counts",
+    "defect": "Without a bounded queue between the recorder and the listeners, nothing limited or counted the events a slow listener could not take",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Events.FlowEventPublisherTests.Publish_WithTheQueueFull_DropsTheEventCountsItAndNeverWaits"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5c-slow-listener-holds-no-other",
+    "defect": "With one queue for every listener, a slow listener delayed and made the others, the live panel included, lose events",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Events.FlowEventPublisherTests.Publish_WithASlowAsyncListener_DoesNotDelayNorDropTheEventsOfAnotherListener"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B5c-shutdown-does-not-drain",
+    "defect": "The shutdown waited for a slow listener to empty its queue before the host stopped",
+    "fixedIn": "#471",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.EventDeliveryIntegrationTests.StopAsync_WithASlowListenerAndEventsStillQueued_StopsWithoutDeliveringThem"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6a-add-netapiflow-twice",
+    "defect": "A second AddNetApiFlow call dropped its configure",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlow_CalledTwiceWithDifferentConfigure_AppliesBothInTheOrderOfTheCalls"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6b-dashboard-twice",
+    "defect": "A second AddNetApiFlowDashboard call registered the SSE listener twice and every event reached the panel twice",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlowDashboard_CalledTwice_RegistersOneListenerAndDeliversEachEventOnce"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6c-mediatr-twice",
+    "defect": "A second AddNetApiFlowMediatR call recorded every handler as two steps",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RepeatedRegistrationIntegrationTests.AddNetApiFlowMediatR_CalledTwice_RecordsOneStepPerHandlerCall"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B6c-otlp-export-twice",
+    "defect": "A second AddNetApiFlowOtlpExport call added a second exporter and every span was sent twice",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.OpenTelemetry.Tests",
+      "test": "NetApiFlow.OpenTelemetry.Tests.RepeatedOtlpExportTests.AddNetApiFlowOtlpExport_CalledTwice_ExportsEachSpanOnce"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B7-netapiflow-source-only",
+    "defect": "An app with its own OpenTelemetry had no way to add NetApiFlow without an exporter that also took every source of the app",
+    "fixedIn": "#473",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.OpenTelemetry.Tests",
+      "test": "NetApiFlow.OpenTelemetry.Tests.OwnTracingTests.AddNetApiFlowSource_OnAnAppWithItsOwnTracing_SendsTheStepsToTheExportersOfTheAppAndAddsNothingElse"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-step-null-argument",
+    "defect": "A null component or operation to Step was recorded as a step with no name instead of being ignored with a warning",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.NullStepArgumentIntegrationTests.Step_WithANullArgument_AnswersTheRequestRecordsNoStepAndLogsAWarning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-tag-null-argument",
+    "defect": "A tag with a null key made the step lose every tag it had",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.NullStepArgumentIntegrationTests.Tag_WithANullArgument_AnswersTheRequestKeepsTheStepWithoutTheTagAndLogsAWarning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-mark-error-null",
+    "defect": "MarkError(null) threw an ArgumentNullException into the code of the user",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.NullStepArgumentIntegrationTests.MarkError_WithANullException_AnswersTheRequestKeepsTheStepSuccessfulAndLogsAWarning"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-dashboard-finally",
+    "defect": "Finally on the builder the dashboard mapping returns threw NotImplementedException",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardConventionFinallyTests.MapNetApiFlowDashboard_WithAFinallyConvention_AppliesItToEveryDashboardRoute"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B8d-tag-typed-values",
+    "defect": "FlowStep.Tag accepted only a string, so an enum or a number did not compile",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.TypedTagIntegrationTests.Tag_WithANumberAFlagOrAnEnum_RecordsItAsInvariantText"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-mcp-server-name",
+    "defect": "The MCP server answered the name of the host assembly instead of NetApiFlow",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpServerInfoTests.Initialize_AnswersWithNetApiFlowAsTheServerName"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-entry-point-arguments",
+    "defect": "The registration entry points did not check their arguments, so a null one did not throw an ArgumentNullException naming it",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.ArgumentValidationTests.EntryPoint_WithANullArgument_ThrowsNamingTheParameter"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-storage-connection-string",
+    "defect": "A null, empty or blank storage connection string was accepted at registration",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.StorageArgumentValidationTests.AddStorage_WithoutAConnectionString_ThrowsAMessageThatSaysWhatToPass"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B9-mcp-server-name-of-the-app",
+    "defect": "Naming the NetApiFlow MCP server replaced the name an app gave its own MCP server",
+    "fixedIn": "#481",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpServerInfoWithAppServerTests.Initialize_OnTheMcpServerOfTheApp_KeepsTheNameTheAppGaveIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-tools-not-in-the-app-endpoint",
+    "defect": "The MCP endpoint of an app with its own MCP server listed the NetApiFlow tools, outside the access rule of the dashboard",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.AppEndpoint_ListsTheToolsOfTheAppAndNoneOfNetApiFlow"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-tools-not-callable-on-the-app-endpoint",
+    "defect": "The MCP endpoint of an app with its own MCP server answered calls to the NetApiFlow tools and returned the traces",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.AppEndpoint_CallingAToolOfNetApiFlow_AnswersUnknownTool"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-lists-only-its-tools",
+    "defect": "/flow/mcp listed the tools of the app next to the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.NetApiFlowEndpoint_ListsOnlyItsThreeToolsAndStillAnswersThem"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-cannot-call-the-app-tool",
+    "defect": "/flow/mcp answered calls to the tools of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.NetApiFlowEndpoint_CallingTheToolOfTheApp_AnswersUnknownTool"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-base-path-and-path-base",
+    "defect": "Under a custom base path or a PathBase, the MCP endpoint of the app still served the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.NetApiFlowEndpoint_UnderACustomBasePathOrAPathBase_ServesItsToolsAndTheAppEndpointDoesNot"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-path-prefix",
+    "defect": "An MCP endpoint of the app whose path starts with the NetApiFlow path served the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.AppEndpoint_WhosePathStartsWithTheNetApiFlowPath_GetsNoneOfItsTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-session-moved-to-the-app-endpoint",
+    "defect": "A session opened on /flow/mcp and reused on the MCP endpoint of the app reached the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.SessionOpenedOnTheNetApiFlowEndpoint_ReusedOnTheAppEndpoint_ReachesNoneOfItsTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-fail-closed-without-http",
+    "defect": "A transport with no HTTP request, such as a stream or stdio next to HTTP, listed the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.ToolsListOverATransportWithNoHttpRequest_ListsNoneOfTheToolsOfNetApiFlow"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-per-session-execution-context",
+    "defect": "With PerSessionExecutionContext and sessions, the NetApiFlow tools were served on the MCP endpoint of the app with no warning",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeTests.WithPerSessionExecutionContextAndSessions_TheToolsOfNetApiFlowAreServedOnNoEndpointAndOneWarningSaysWhy"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-app-endpoint-real-package",
+    "defect": "A new app with its own MCP server, built from the published package, served the NetApiFlow tools on its /mcp in Production",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "j"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S9-flow-mcp-methods-of-the-app",
+    "defect": "/flow/mcp served the resources, prompts, completions, subscriptions and custom methods of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpEndpointMethodScopeTests.NetApiFlowEndpoint_AnyMethodButItsTools_AnswersMethodNotFound"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-official-client-prompts-and-resources",
+    "defect": "Through the official client, /flow/mcp listed and read the prompts and resources of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpEndpointMethodScopeTests.WithTheOfficialClient_NetApiFlowEndpoint_RefusesThePromptsAndResourcesOfTheApp"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-subscriptions-listen",
+    "defect": "On the 2026-07-28 revision, /flow/mcp accepted subscriptions/listen for the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpEndpointMethodScopeTests.SubscriptionsListenOnTheNewestRevision_IsRefusedOnTheNetApiFlowEndpointAndServedOnTheAppEndpoint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-app-keeps-its-prompts-and-resources",
+    "defect": "Closing /flow/mcp must not take the prompts, resources, completions and custom methods away from the MCP endpoint of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpEndpointMethodScopeTests.AppEndpoint_StillServesItsPromptsResourcesAndCompletions"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-flow-mcp-ping-and-logging-level",
+    "defect": "The allow list of /flow/mcp must keep ping and logging/setLevel",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpEndpointMethodScopeTests.NetApiFlowEndpoint_StillAnswersPingAndLoggingLevel"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-official-client-app-endpoint",
+    "defect": "With the official client on its default revision, the endpoint of the app listed or called the NetApiFlow tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeWithTheOfficialClientTests.AppEndpoint_ListsAndCallsOnlyTheToolsOfTheApp"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-official-client-flow-endpoint",
+    "defect": "With the official client on its default revision, /flow/mcp listed or called the tool of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeWithTheOfficialClientTests.NetApiFlowEndpoint_ListsAndCallsOnlyItsThreeTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-official-client-base-path",
+    "defect": "With the official client, a custom base path or a PathBase broke the scope of the tools",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeWithTheOfficialClientTests.UnderACustomBasePathOrAPathBase_EachEndpointServesOnlyItsOwnTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-official-client-session-moved",
+    "defect": "A session opened by the official client on /flow/mcp reached the NetApiFlow tools through the endpoint of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpToolScopeWithTheOfficialClientTests.SessionOpenedOnTheNetApiFlowEndpoint_ReusedOnTheAppEndpoint_ReachesNoneOfItsTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-alternate-call-tool-handler",
+    "defect": "An app with an alternate call-tool handler lost its whole MCP server once AddNetApiFlowMcp registered a call-tool filter",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.AppWithAnAlternateCallToolHandler_BothEndpointsStillWork"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-tool-name-taken-by-the-app",
+    "defect": "A tool of the app named get_trace and registered first was listed and run on /flow/mcp",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.AppToolNamedLikeANetApiFlowToolAndRegisteredFirst_IsServedOnlyOnTheAppEndpointAndOneWarningSaysSo"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-no-warning-without-a-taken-name",
+    "defect": "The startup warning about a taken tool name must not show when no name is taken",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.WithoutAnAppToolNamedLikeANetApiFlowTool_NoWarningAboutNamesIsLogged"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-legacy-sse",
+    "defect": "Over the legacy SSE transport, an endpoint served the tools of the other",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.OverTheLegacySseTransport_EachEndpointServesOnlyItsOwnTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-decision-without-http-context",
+    "defect": "The endpoint of a message was read from the HttpContext, which can be gone when the message is handled, and /flow/mcp then served the tool of the app",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.WhenTheAppClearsTheHttpContextBeforeNetApiFlowSeesTheMessage_EachEndpointStillServesOnlyItsOwnTools"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-refused-request-leaves-no-mark",
+    "defect": "A request refused on /flow/mcp must not leave anything after it treated as coming from /flow/mcp",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.RequestRefusedOnTheNetApiFlowEndpoint_LeavesNothingThatRunsAfterItTreatedAsComingFromThere"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-server-name-of-the-app",
+    "defect": "The MCP endpoint of an app with no server name of its own answered NetApiFlow as its name",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.AppWithoutAServerName_KeepsItsDefaultNameAndTheNetApiFlowEndpointIsCalledNetApiFlow"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S9-mcp-server-name-of-flow-mcp",
+    "defect": "/flow/mcp answered the server name of the app instead of NetApiFlow",
+    "fixedIn": "#487",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.McpAppServerCompatibilityTests.AppWithItsOwnServerName_KeepsItAndTheNetApiFlowEndpointIsCalledNetApiFlow"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-sql-text",
+    "defect": "On Npgsql 10 a raw command was named SQL command, because only db.statement was read",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlInteropIntegrationTests.RawNpgsqlCommand_WithoutEntityFrameworkCore_RecordsExactlyOneDatabaseSpan"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-capture-sql",
+    "defect": "On Npgsql 10 CaptureSqlText recorded no SQL text",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlInteropIntegrationTests.RawNpgsqlCommand_WithCaptureSqlText_RecordsTheCommandTextWithoutTheParameterValue"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-concurrent-requests",
+    "defect": "On Npgsql 10 concurrent requests recorded a second Npgsql step per command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.ConcurrentRequestsInsideAController_EachRecordTheirOwnDriverSpan"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-connect-no-n-plus-one",
+    "defect": "On Npgsql 10 each physical connection open became a SQL command step, and a few of them lit the N+1 badge",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandsOnFreshPhysicalConnections_RecordOnlyTheCommandsAndNoQueryShapeReachesTheNPlusOneThreshold"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-connect-wrong-password",
+    "defect": "On Npgsql 10 a refused connection showed up as its own failed step instead of failing the step that opened it",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.ConnectionRefusedForAWrongPassword_FailsTheStepThatOpenedItAndRecordsNoConnectionStep"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command",
+    "defect": "On Npgsql 10 a command the app names CONNECT ... lost its SQL name",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_IsStillRecordedWithItsSql"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-command-text-conventions",
+    "defect": "The Npgsql command text was read only from db.statement, never from db.query.text",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlCommandText_RecordsTheCommandWhateverItsNameAndConvention"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-connection-open-dropped",
+    "defect": "The Npgsql connection open was recorded as a SQL command step, also when it failed",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlConnectionOpen_RecordsNoSpanEvenWhenItFails"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-textless-activity-stays-a-command",
+    "defect": "Classifying the connection open by the missing SQL text alone would drop a command that comes without text",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlActivityWithoutTextUnderTheDriverName_StaysAGenericSqlCommand"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-sql-step-name-table",
+    "defect": "A SQL step was named after the schema (SELECT dbo), in the core and in EF Core",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.SqlCommandDescriberTests.Describe_WithCommandText_MatchesTheEntityFrameworkCoreInterceptor"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-sqlclient-schema-prefix",
+    "defect": "A SqlClient command on dbo.Users was named SELECT dbo",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientInteropIntegrationTests.RawSqlCommand_WhateverTheSchemaPrefix_IsNamedAfterTheTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-sqlclient-same-schema-no-n-plus-one",
+    "defect": "Commands on two tables of one schema shared the name SELECT dbo and lit a false N+1",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientInteropIntegrationTests.RawSqlCommands_OnTwoTablesOfTheSameSchema_NeverReachTheNPlusOneThreshold"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-efcore-default-schema",
+    "defect": "An EF Core query with a default schema was named SELECT dbo",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientInteropIntegrationTests.EfCoreQuery_WithADefaultSchema_IsNamedAfterTheTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B11-npgsql-schema-prefix",
+    "defect": "An Npgsql command on public.\"Users\" was named SELECT public",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlInteropIntegrationTests.RawNpgsqlCommand_WithASchemaPrefix_IsNamedAfterTheTable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-header-option",
+    "defect": "The Runner said nothing when a success came back without the trace id header",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id names the trace id header option when a success comes back without the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-untraced-route",
+    "defect": "The Runner said nothing when the route was not traced",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id names the options that keep a route out of tracing when a success comes back without the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-server-error",
+    "defect": "The Runner did not say why a 500 opened no trace",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id names the missing exception handler when a server error comes back without the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-no-note-with-header",
+    "defect": "The note about a missing trace must not show when the header is there",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id explains nothing when the response carries the header"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-demo-message",
+    "defect": "The demo keeps its own message and no note about a missing trace",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.component.spec.ts",
+      "test": "EndpointFormComponent a response that carries no trace id keeps to the demo message in the demo"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-plain-text-success",
+    "defect": "The Runner reported a plain-text success as a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.spec.ts",
+      "test": "ApiService callEndpoint reads the answer as text, so a plain-text success is never taken for a failure"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command-like-the-others",
+    "defect": "A command the app names CONNECT ... must keep the start, duration, parent and order of a normal command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_BetweenTwoNormalCommands_IsRecordedLikeThem"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql10-renamed-command-error-origin",
+    "defect": "A failing command the app names CONNECT ... must be the error origin like a normal command",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Npgsql10.IntegrationTests",
+      "test": "NetApiFlow.Npgsql.IntegrationTests.NpgsqlCommandInsideStepIntegrationTests.CommandTheAppNamesLikeAConnection_WhenItFails_IsTheErrorOriginLikeANormalCommand"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F2-npgsql-renamed-command-real-start-and-duration",
+    "defect": "A command the app names CONNECT ... is added when it ends, so it must still carry the start, duration, parent and outcome of its own activity",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerTests.ActivityStopped_WithNpgsqlCommandNamedLikeAConnectionOpen_KeepsTheStartDurationParentAndOutcomeOfTheActivity"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-plain-text",
+    "defect": "Read as JSON by the real HTTP backend, a plain-text success became a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend takes a plain-text body for a success"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-html",
+    "defect": "Read as JSON by the real HTTP backend, an HTML success became a failed request",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend takes an HTML body for a success"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "F3-runner-real-backend-trace-header",
+    "defect": "A plain-text success lost its trace id header because the answer was reported as a failure",
+    "fixedIn": "#491",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/api.service.real-backend.spec.ts",
+      "test": "ApiService callEndpoint against the real HTTP backend keeps the trace id header of a plain-text success readable"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-several-commands-one-step-each",
+    "defect": "Several SqlClient commands in one method recorded one step only, because the first stopped step covered the next ones",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.SeveralCommandsInOneMethod_RecordOneStepEachUnderTheCallerInOrder"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-caller-activity-stays-current",
+    "defect": "After a SqlClient command the current activity of the caller was the stopped step of the command",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.AfterACommand_TheActivityCurrentToTheCallerIsStillTheCallersOwn"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-next-step-parent",
+    "defect": "A step opened after SqlClient commands became a child of the finished SQL step",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.AStepOpenedAfterTheCommands_IsAChildOfTheCallerAndNotOfAFinishedSqlStep"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-driver-activity-after-command",
+    "defect": "A Npgsql command after a SqlClient command in one method disappeared from the trace",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.ADriverActivityAfterASqlClientCommand_IsStillRecorded"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-ef-then-raw",
+    "defect": "An EF Core query followed by a raw SqlClient command left the next step with the SQL step as parent",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.AnEfCoreQueryThenARawCommandInOneMethod_RecordTwoStepsAndLeaveTheCallerActivityCurrent"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B12-sqlclient-failure-reader-cancellation",
+    "defect": "After a failed, a cancelled or an ExecuteReader SqlClient command the stopped step stayed the current activity of the caller",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.SqlClient.IntegrationTests",
+      "test": "NetApiFlow.SqlClient.IntegrationTests.SqlClientCommandInsideStepIntegrationTests.WhateverTheOutcomeOfTheCommand_TheCallerActivityStaysCurrentAndTheNextStepIsItsChild"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "S8-Dashboard-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Dashboard asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Dashboard"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-EntityFrameworkCore-asks-for-the-exact-core",
+    "defect": "NetApiFlow.EntityFrameworkCore asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.EntityFrameworkCore"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Mcp-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Mcp asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Mcp"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-MediatR-asks-for-the-exact-core",
+    "defect": "NetApiFlow.MediatR asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.MediatR"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-OpenTelemetry-asks-for-the-exact-core",
+    "defect": "NetApiFlow.OpenTelemetry asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.OpenTelemetry"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Storage.PostgreSql-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Storage.PostgreSql asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Storage.PostgreSql"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Storage.SqlServer-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Storage.SqlServer asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Storage.SqlServer"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "S8-Testing-asks-for-the-exact-core",
+    "defect": "NetApiFlow.Testing asked for the core at its own version or any later one, so updating only the core could leave an old satellite running against a core it was not built for",
+    "fixedIn": "#495",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "nuspec:NetApiFlow.Testing"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B13a-focus-ring-on-the-material-buttons",
+    "defect": "The Material buttons and menu items showed their keyboard focus only as a state layer of 12 percent, between 1.09 and 1.44 to 1 against the surface, and nothing else, below the 3 to 1 of WCAG",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "focus-ring:material-buttons-and-menu-items"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B13a-focus-color-reaches-3-to-1",
+    "defect": "The focus color of the brand was never measured against the surfaces it is drawn on",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "focus-ring:tokens-reach-3-to-1"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "B13b-drawer-is-a-dialog",
+    "defect": "The Try an endpoint drawer had no dialog role, no name, no modal state, let Tab leave it and ignored Escape",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.dialog.spec.ts",
+      "test": "the endpoint form as the drawer dialog"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13b-drawer-gives-the-focus-back",
+    "defect": "Closing the Try an endpoint drawer dropped the focus on the body instead of returning it to the button that opened it",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/core/action-drawer.service.spec.ts",
+      "test": "ActionDrawerService the focus around opening and closing gives the focus back to the element that opened the drawer"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-runner-focuses-the-required-field",
+    "defect": "Picking an endpoint in the Runner dropped the focus on the body, and the next Tab went to Send request and skipped the required id field",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.focus.spec.ts",
+      "test": "keyboard focus in the endpoint form puts the focus on the required path field when an endpoint is picked"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-runner-back-keeps-the-place",
+    "defect": "Going back from the form to the list of endpoints dropped the focus on the body",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.focus.spec.ts",
+      "test": "keyboard focus in the endpoint form returns the focus to the endpoint that was open when going back to the list"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-header-removal-keeps-the-focus",
+    "defect": "Removing a custom header dropped the focus on the body",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.focus.spec.ts",
+      "test": "keyboard focus in the endpoint form moves the focus to the next header row"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "B13c-history-sort-keeps-the-focus",
+    "defect": "Sorting the history by a column dropped the focus on the body when the rows came back",
+    "fixedIn": "#497",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/history/history.component.spec.ts",
+      "test": "HistoryComponent puts the focus back on the sort button of the column that was sorted"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-slowest-step-own-time",
+    "defect": "The banner called the step that contains all the others the slowest one, because it picked the longest duration and not the most time of its own",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent the banner above the graph names the step with the most time of its own"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-error-origin-own-duration",
+    "defect": "The error origin banner showed the duration of the whole trace instead of the duration of the step that started the error",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent the banner above the graph shows the duration of the step that started the error"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-route-tooltip-header",
+    "defect": "The route in the header of the Flow screen was cut by the ellipsis with no tooltip",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/flow-page.component.spec.ts",
+      "test": "FlowPageComponent gives the route of the header a tooltip"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-unexplained-under-one-percent",
+    "defect": "The unexplained time badge said 0% of the time for 812 microseconds, which reads as a contradiction",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel says \"less than 1%\""
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-step-status-translated",
+    "defect": "The status of a step was shown as the raw English word in the Portuguese panel",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel shows the status"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-summary-label-translated",
+    "defect": "The request summary was named in English in the Portuguese panel",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel names the request summary"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-route-tooltip-summary",
+    "defect": "The route in the request summary was cut by the ellipsis with no tooltip",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel gives the route of the summary a tooltip"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-waterfall-rows-clickable",
+    "defect": "The steps list said to select a step to inspect it, but its rows could not be selected",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/flow/details/flow-details-panel.component.spec.ts",
+      "test": "FlowDetailsPanelComponent the texts of the panel asks to inspect a step"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-topbar-button-named",
+    "defect": "The button that opens the endpoint drawer had no accessible name on a narrow screen, where its text is hidden",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/app.flow-route.spec.ts",
+      "test": "the shell on the Flow route names the button that opens the endpoint drawer"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-imported-trace-chip",
+    "defect": "The connection chip said Live while an imported trace, which is not live, was on screen",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/app.flow-route.spec.ts",
+      "test": "the shell on the Flow route does not say"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-history-third-selection-notice",
+    "defect": "Picking a third execution to compare unchecked the oldest one in silence",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/history/history.component.spec.ts",
+      "test": "HistoryComponent picking a third execution to compare says the oldest execution was unchecked"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-history-slow-only-named-once",
+    "defect": "The Slow only switch was announced twice, by its aria-label and by a hidden copy of the same text",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/history/history.component.spec.ts",
+      "test": "HistoryComponent names the \"Slow only\" switch once"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-status-and-body",
+    "defect": "The Runner showed neither the HTTP status nor the body of the response",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response shows the status"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-trace-link",
+    "defect": "The trace id after a send was plain text, with no way to open the trace from the Runner screen",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response turns the trace id into a link"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-example",
+    "defect": "A POST started with an empty body even when the OpenAPI document gave an example for it",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response the body of a POST starts with the example"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-label-space",
+    "defect": "The label of a field ran the name and the kind of the field together",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response puts a space between the name of a field"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-architecture-repeat-count",
+    "defect": "A step that runs five times in each request looked the same as one that runs once",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/architecture/architecture-graph-builder.spec.ts",
+      "test": "buildArchitectureGraph how many times a step runs in each execution says how many times"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-architecture-no-legend",
+    "defect": "The Architecture map explained node states that a map of many executions does not have",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/architecture/architecture.component.spec.ts",
+      "test": "ArchitectureComponent draws no legend of node states"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-architecture-svg-keeps-styles",
+    "defect": "The exported Architecture SVG lost its font sizes and weights when opened outside the panel",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/architecture/architecture.component.spec.ts",
+      "test": "ArchitectureComponent the exported SVG, opened on its own keeps the"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-as-text",
+    "defect": "The body of the response of the Runner must be shown as text and never as markup",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response shows markup in the body as text and never as markup"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-cut",
+    "defect": "The body of the response of the Runner must be cut at 4000 characters before it is rendered, so that a large answer cannot freeze the tab",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response keeps only the first 4000 characters"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60A-runner-body-not-stored",
+    "defect": "The body of the response of the Runner must stay in memory, out of every storage and out of the address",
+    "fixedIn": "#502",
+    "guard": {
+      "kind": "vitest",
+      "file": "src/app/features/runner/endpoint-form.response.spec.ts",
+      "test": "what the Runner shows of the response keeps the body out of every storage"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-assert-at-most-singular",
+    "defect": "The ShouldCallAtMost failure message said \"1 Database calls\" for a limit of 1",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Testing.FlowTraceAssertionsTests.ShouldCallAtMost_WhenTheLimitIsOne_ThrowsWithTheSingularCall"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-disabled-tracing-other-listener",
+    "defect": "With Enabled = false, another ActivityListener on the NetApiFlow source still received every step, because Flow.Step kept opening activities",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DisabledTracingWithAnotherListenerTests.Request_WhenTracingIsDisabledAndAnotherListenerSamplesTheSource_CreatesNoNetApiFlowActivity"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-in-memory",
+    "defect": "The in-memory store filtered the history by the exact route text, so /api/orders/{id} found nothing for a trace recorded as /api/orders/{id:int}",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Storage.InMemoryTraceStoreTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-rest",
+    "defect": "GET /flow/api/traces?route=/api/widgets/{id} returned an empty list for a trace recorded with the constraint",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.RouteConstraintComparisonIntegrationTests.TraceHistory_FilteredByTheRouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-mcp",
+    "defect": "The route argument of list_recent_traces returned nothing for the example route of the tool itself when the trace had a constraint",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Mcp.Tests",
+      "test": "NetApiFlow.Mcp.Tests.ListRecentTracesToolTests.ListRecentTraces_FilteredByTheRouteWithOrWithoutTheConstraint_FindsTheTraceRecordedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-postgresql",
+    "defect": "The PostgreSQL store compared the route filter with the stored route key without normalizing the filter, so a route without the constraint found nothing",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.PostgreSqlRouteTemplateNormalizationTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceSavedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-route-filter-sqlserver",
+    "defect": "The SQL Server store compared the route filter with the stored route key without normalizing the filter, so a route without the constraint found nothing",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Storage.Tests",
+      "test": "NetApiFlow.Storage.Tests.SqlServerRouteTemplateNormalizationTests.QueryAsync_FilteredByARouteWithOrWithoutTheConstraint_FindsTheTraceSavedWithTheConstraint"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "60B-listener-dispose-idempotent",
+    "defect": "Disposing an enabled listener twice decremented the listener counters twice, so with another enabled host and a disabled one in the same process the enabled host lost every step",
+    "fixedIn": "#512",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.Tests",
+      "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerDisposeTests.Dispose_CalledTwiceOnAnEnabledListener_DoesNotSilenceAnotherEnabledListener"
+    },
+    "job": "build-test"
+  }
+]

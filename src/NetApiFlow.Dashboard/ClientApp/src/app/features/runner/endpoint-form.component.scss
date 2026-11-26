@@ -13,10 +13,31 @@
 }
 
 .endpoint-form {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: 100%;
+}
+
+.endpoint-form--dialog .endpoint-form__header {
+  padding-right: 3.5rem;
+}
+
+.endpoint-form__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--naf-border);
+  background: var(--naf-surface-2);
+  color: var(--naf-text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
 }
 
 .endpoint-form__header {
@@ -54,6 +75,10 @@
 
 .endpoint-form__status--error {
   color: var(--naf-danger);
+  opacity: 1;
+}
+
+.endpoint-form__status--note {
   opacity: 1;
 }
 
@@ -425,6 +450,55 @@
 }
 
 .endpoint-form__trace-id {
+  margin: 0;
   font-family: var(--naf-font-mono);
   font-size: 0.75rem;
+  overflow-wrap: anywhere;
+
+  a {
+    color: var(--naf-flow-text);
+  }
+}
+
+.endpoint-form__response {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.endpoint-form__response-status {
+  margin: 0;
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  color: var(--naf-success-on-tint);
+}
+
+.endpoint-form__response-status--failure {
+  color: var(--naf-danger-on-tint);
+}
+
+.endpoint-form__response-body summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
+}
+
+.endpoint-form__response-text {
+  margin: 0.25rem 0 0;
+  max-height: 10rem;
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--naf-border);
+  border-radius: var(--naf-radius-sm);
+  background: var(--naf-bg);
+  font-family: var(--naf-font-mono);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.endpoint-form__response-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--naf-text-muted);
 }

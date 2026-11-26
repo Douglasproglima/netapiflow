@@ -25,7 +25,12 @@
   <span class="app-topbar__sub">{{ pageSubtitle() | t }}</span>
   <div class="app-topbar__right">
     @if (onFlowRoute() && actionDrawer.isDrawer()) {
-      <button type="button" class="app-topbar__try-endpoint" (click)="actionDrawer.toggle()">
+      <button
+        type="button"
+        class="app-topbar__try-endpoint"
+        [attr.aria-label]="'topbar.tryEndpoint' | t"
+        (click)="actionDrawer.toggle()"
+      >
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -157,17 +162,19 @@
     <span
       class="naf-chip"
       aria-live="polite"
-      [class.naf-chip--live]="connectionState() === 'open'"
-      [class.naf-chip--warning]="connectionState() === 'connecting'"
-      [class.naf-chip--danger]="connectionState() === 'closed'"
+      [class.naf-chip--live]="!showingImportedTrace() && connectionState() === 'open'"
+      [class.naf-chip--warning]="!showingImportedTrace() && connectionState() === 'connecting'"
+      [class.naf-chip--danger]="!showingImportedTrace() && connectionState() === 'closed'"
     >
       <span class="naf-chip__dot"></span>
       {{
-        (connectionState() === 'open'
-          ? 'chip.connection.live'
-          : connectionState() === 'connecting'
-            ? 'chip.connection.reconnecting'
-            : 'chip.connection.offline'
+        (showingImportedTrace()
+          ? 'import.badge'
+          : connectionState() === 'open'
+            ? 'chip.connection.live'
+            : connectionState() === 'connecting'
+              ? 'chip.connection.reconnecting'
+              : 'chip.connection.offline'
         ) | t
       }}
     </span>

@@ -18,7 +18,7 @@ using Xunit;
 namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
-/// Verifies the eleven REST routes frozen in <c>docs/plano/contratos.md</c>, seção 3,
+/// Verifies the eleven REST routes of the dashboard contract
 /// against a host running only NetApiFlow's own services (no sample app), seeding
 /// <see cref="InMemoryTraceStore"/> and <see cref="FlowRecorder"/> directly.
 /// </summary>
@@ -315,6 +315,74 @@ public class DashboardApiTests
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         doc.RootElement.GetProperty("traceId").GetString().ShouldBe("blueprint-1");
+    }
+
+    private static async Task<string?> BlueprintTraceIdAsync(HttpClient client, string? before)
+    {
+        var query = before is null ? string.Empty : "&before=" + Uri.EscapeDataString(before);
+        var response = await client.GetAsync("/flow/api/blueprint?method=GET&route=%2Fapi%2Forders%2F%7Bid%7D" + query);
+        if (response.StatusCode == HttpStatusCode.NoContent)
+        {
+            return null;
+        }
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return doc.RootElement.GetProperty("traceId").GetString();
+    }
+
+    [Fact]
+    public async Task GetBlueprint_WithBefore_ReturnsTheLatestSuccessStrictlyBeforeIt()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        var now = DateTime.UtcNow;
+        var first = now.AddMinutes(-10);
+        var second = now.AddMinutes(-5);
+        var third = now.AddMinutes(-1);
+        foreach (var (id, startedAt) in new[] { ("bp-1", first), ("bp-2", second), ("bp-3", third) })
+        {
+            await store.SaveAsync(CreateTrace(id, "GET", "/api/orders/{id}", FlowStatus.Success, startedAt, 2_000), [CreateSpan(id, "span-1", null, 0, "OrdersController", "Get", 2_000)], CancellationToken.None);
+        }
+
+        var client = host.GetTestServer().CreateClient();
+
+        (await BlueprintTraceIdAsync(client, third.ToString("O"))).ShouldBe("bp-2");
+        (await BlueprintTraceIdAsync(client, second.ToString("O"))).ShouldBe("bp-1");
+        (await BlueprintTraceIdAsync(client, first.ToString("O"))).ShouldBeNull();
+        (await BlueprintTraceIdAsync(client, null)).ShouldBe("bp-3");
+    }
+
+    [Fact]
+    public async Task GetBlueprint_WithBeforeInAnotherUtcOffset_MeansTheSameInstant()
+    {
+        using var host = CreateHost();
+        var store = host.Services.GetRequiredService<InMemoryTraceStore>();
+        var now = DateTime.UtcNow;
+        var second = now.AddMinutes(-5);
+        await store.SaveAsync(CreateTrace("off-1", "GET", "/api/orders/{id}", FlowStatus.Success, now.AddMinutes(-10), 2_000), [], CancellationToken.None);
+        await store.SaveAsync(CreateTrace("off-2", "GET", "/api/orders/{id}", FlowStatus.Success, second, 2_000), [], CancellationToken.None);
+
+        var client = host.GetTestServer().CreateClient();
+        var inBrasilia = new DateTimeOffset(second).ToOffset(TimeSpan.FromHours(-3)).ToString("O");
+
+        (await BlueprintTraceIdAsync(client, inBrasilia)).ShouldBe("off-1");
+    }
+
+    [Theory]
+    [InlineData("yesterday")]
+    [InlineData("2026-13-45T10:00:00Z")]
+    [InlineData("1763719200")]
+    [InlineData("")]
+    public async Task GetBlueprint_WithAnInvalidBefore_Returns400WithProblemDetails(string before)
+    {
+        using var host = CreateHost();
+
+        var client = host.GetTestServer().CreateClient();
+        var response = await client.GetAsync("/flow/api/blueprint?method=GET&route=%2Fapi%2Forders%2F%7Bid%7D&before=" + Uri.EscapeDataString(before));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
     }
 
     [Fact]

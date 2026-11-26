@@ -33,6 +33,8 @@ comunicação que precise das cores, tipografia ou espaçamento oficiais do proj
 | Coral 700 | `#B91C1C` | Erro, AA 6,4:1 |
 | Ink | `#0F172A` | Texto principal, AAA 18:1 |
 
+O foco do teclado usa `--naf-focus`: no tema escuro é o Flow 500 (`#8B5CF6`) e no tema claro é o Flow 700 (`#6D28D9`). É um anel de 2 px, e nunca um `outline: none` sem substituto (Fase 68).
+
 ## Tipografia
 
 | Família | Função | Pesos |

@@ -249,7 +249,9 @@
       </div>
 
       <div class="history__field">
-        <span class="history__lbl">{{ 'history.filter.slowOnly.label' | t }}</span>
+        <label class="history__lbl" id="history-slow-only-label" for="history-slow-only">{{
+          'history.filter.slowOnly.label' | t
+        }}</label>
         <span class="history__toggle">
           <button
             type="button"
@@ -257,12 +259,16 @@
             id="history-slow-only"
             class="naf-switch"
             [attr.aria-checked]="slowOnly()"
-            [attr.aria-label]="'history.filter.slowOnly.label' | t"
+            aria-labelledby="history-slow-only-label history-slow-only-threshold"
             (click)="toggleSlowOnly()"
           >
-            <span class="sr-only">{{ 'history.filter.slowOnly.label' | t }}</span>
+            <span aria-hidden="true"></span>
           </button>
-          <label for="history-slow-only" class="naf-mono history__muted">
+          <label
+            for="history-slow-only"
+            id="history-slow-only-threshold"
+            class="naf-mono history__muted"
+          >
             @if (slowThresholdMicros() !== null) {
               {{
                 'history.filter.slowOnly.threshold'
@@ -339,6 +345,12 @@
         </button>
       </div>
     </div>
+
+    @if (oldestSelectionDropped()) {
+      <p class="naf-banner history__selection-notice" role="status">
+        {{ 'history.compare.thirdDropped' | t }}
+      </p>
+    }
 
     @switch (viewState()) {
       @case ('loading') {
@@ -489,6 +501,8 @@
                 <th class="history__col-status" [attr.aria-sort]="sortAriaSort('httpStatus')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="httpStatus"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('httpStatus')"
                     [attr.aria-label]="
@@ -523,6 +537,8 @@
                 <th class="history__col-method" [attr.aria-sort]="sortAriaSort('method')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="method"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('method')"
                     [attr.aria-label]="
@@ -557,6 +573,8 @@
                 <th class="history__col-route" [attr.aria-sort]="sortAriaSort('route')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="route"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('route')"
                     [attr.aria-label]="
@@ -589,6 +607,8 @@
                 <th class="history__col-started" [attr.aria-sort]="sortAriaSort('startedAt')">
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="startedAt"
                     class="naf-sort-btn"
                     [class.naf-sort-btn--active]="isActiveSort('startedAt')"
                     [attr.aria-label]="
@@ -626,6 +646,8 @@
                 >
                   <button
                     type="button"
+                    #sortButton
+                    data-sort-field="duration"
                     class="naf-sort-btn naf-sort-btn--numeric"
                     [class.naf-sort-btn--active]="isActiveSort('duration')"
                     [attr.aria-label]="

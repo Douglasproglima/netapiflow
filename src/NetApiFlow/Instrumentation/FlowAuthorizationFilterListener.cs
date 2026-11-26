@@ -31,6 +31,8 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     internal bool IsSubscribed => _allListenersSubscription is not null;
 
+    internal int PendingStepCount => _pendingSteps.Count;
+
     public void Start()
     {
         if (_disposed || _allListenersSubscription is not null)
@@ -90,11 +92,11 @@ internal sealed partial class FlowAuthorizationFilterListener
         }
     }
 
+    private bool ShouldIgnoreDeliveryAfterDisposal => _disposed;
+
     public void OnNext(KeyValuePair<string, object?> value)
     {
-        // Disposing the subscription does not synchronously stop delivery, and a step opened here
-        // after disposal would never be closed by anything.
-        if (_disposed)
+        if (ShouldIgnoreDeliveryAfterDisposal)
         {
             return;
         }
@@ -127,17 +129,14 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     private void OnBefore(BeforeAuthorizationFilterOnAuthorizationEventData data)
     {
-        if (NetApiFlow.CurrentTraceId is not { } traceId)
+        if (Flow.CurrentTraceId is not { } traceId)
         {
             return;
         }
 
-        var step = NetApiFlow.Step("AuthorizationFilters", data.Filter.GetType().Name, ComponentType.Service);
+        var step = Flow.Step("AuthorizationFilters", data.Filter.GetType().Name, ComponentType.Service);
         if (step.IsNoOp)
         {
-            // Not tracked by NetApiFlow (route excluded, or tracing disabled): storing it would
-            // leak forever if this same filter instance later throws for an untracked request,
-            // since AfterOnAuthorization never fires for it, and nothing closes an untracked trace.
             return;
         }
 
@@ -146,7 +145,7 @@ internal sealed partial class FlowAuthorizationFilterListener
 
     private void OnAfter(AfterAuthorizationFilterOnAuthorizationEventData data)
     {
-        if (NetApiFlow.CurrentTraceId is not { } traceId)
+        if (Flow.CurrentTraceId is not { } traceId)
         {
             return;
         }

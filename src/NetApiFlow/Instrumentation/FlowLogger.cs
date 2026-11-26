@@ -7,7 +7,7 @@ using NetApiFlow.Sanitization;
 namespace NetApiFlow.Instrumentation;
 
 /// <summary>Correlates a log call to the span active in <see cref="Activity.Current"/>, when it
-/// belongs to the <see cref="FlowActivitySource"/> (ADR-0017).</summary>
+/// belongs to the <see cref="FlowActivitySource"/>.</summary>
 internal sealed class FlowLogger(FlowRecorder recorder, IOptions<NetApiFlowOptions> options) : ILogger
 {
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -29,6 +29,11 @@ internal sealed class FlowLogger(FlowRecorder recorder, IOptions<NetApiFlowOptio
             return;
         }
 
+        if (FlowTraceResolver.ForActivity(activity)?.TraceId is not { } traceId)
+        {
+            return;
+        }
+
         var entry = new LogEntry
         {
             Timestamp = DateTime.UtcNow,
@@ -38,6 +43,6 @@ internal sealed class FlowLogger(FlowRecorder recorder, IOptions<NetApiFlowOptio
             ExceptionMessage = ErrorMessageSanitizer.Sanitize(exception?.Message),
         };
 
-        recorder.AddLogEntry(activity.TraceId.ToHexString(), activity.SpanId.ToHexString(), entry);
+        recorder.AddLogEntry(traceId, activity.SpanId.ToHexString(), entry);
     }
 }

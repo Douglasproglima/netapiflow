@@ -75,6 +75,7 @@ public class HttpClientInteropIntegrationTests
                     services.AddNetApiFlow(o =>
                     {
                         o.IncludePaths("/**");
+                        o.EmitTraceIdHeader = true;
                         o.ExternalSources = ExternalActivitySource.HttpClient;
                     });
                 });
@@ -85,7 +86,7 @@ public class HttpClientInteropIntegrationTests
                     {
                         endpoints.MapGet("/api/call", async (IHttpClientFactory httpClientFactory, string target) =>
                         {
-                            using var serviceStep = NetApiFlow.Step("OrderService", "NotifyAsync", ComponentType.Service);
+                            using var serviceStep = Flow.Step("OrderService", "NotifyAsync", ComponentType.Service);
                             using var client = httpClientFactory.CreateClient();
                             try
                             {

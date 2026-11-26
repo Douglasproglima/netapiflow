@@ -45,13 +45,32 @@ agir. Não assuma um papel fixo só porque é o que este arquivo descreveu numa 
 `main` e `develop` têm proteção configurada no GitHub (D-65): PR obrigatório para mergear, checks
 `pr-lint`, `secret-scan`, `detect-changes` e `build-test` (os dois sistemas operacionais)
 obrigatórios, sem force-push, sem apagar a branch. Vale até para quem administra o repositório.
+O `develop` exige também `real-package / real-package`, `real-package / comparison` e `built-demo` (D-261, D-262, D-270). A `main`
+passa a exigi-los depois do merge do `release/0.6.0` (passo 10 da skill `/release`), porque o `ci.yml` dela ainda é o antigo. Um
+job que não roda num PR só de documentação aparece como Skipped, e o Skipped satisfaz o check obrigatório. A configuração da
+proteção é da auditoria, com a autorização do dono.
 Push direto numa das duas branches é rejeitado pelo próprio GitHub, não só pela convenção abaixo.
 
 ## Ações que exigem confirmação
 
-Push, merge, tag, abrir ou mergear PR e criar release são visíveis publicamente no GitHub (o
-repositório é público). Nunca fazer nenhuma delas sem confirmação explícita na conversa.
-Confirmação vale para aquela ação, não para as próximas.
+Merge, tag, criar release e back-merge são visíveis publicamente no GitHub (o repositório é
+público) e **ficam com o dono ou com a auditoria** (ver "Delegação à auditoria" abaixo). A
+Planejadora e a Executora não executam nenhuma delas, a não ser o merge da PR só de documentação, na exceção
+abaixo (D-109).
+
+**Empurrar uma branch de trabalho e abrir a PR não pedem confirmação** (decisão do dono). A PR é o
+ponto de revisão: quem empurra a branch e abre a PR para ali, e a auditoria revisa, faz o merge e
+publica. Vale para `feature/*`, `bugfix/*`, `chore/*` e `hotfix/*`. Push direto em `main` e em
+`develop` continua rejeitado pela proteção de branch, e `git push --force` continua proibido em
+`main`, `develop` e `release/*` (ver "Nunca").
+
+### Delegação à auditoria (D-198)
+
+O dono delegou à sessão de auditoria (`AUDITORIA`) as ações públicas depois de ela aprovar com
+evidência: o merge, a tag, o Release e o back-merge, incluindo cada uso da exceção do D-191. A
+Planejadora e a Executora continuam sem executar nenhuma delas, e abrem a PR e param. Decisão de
+produto (escopo, posicionamento, datas) fica com o dono, e uma decisão explícita dele vale acima da
+auditoria. Os passos de código do `/release` ficam com uma `EXECUTORA-RELEASE`, que abre as PRs e para (D-272).
 
 ### Exceção: PR só de documentação (D-109, critério ajustado pela D-154)
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Marking;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
 
@@ -24,6 +25,12 @@ public class FlowInterceptorProxyTests
         Task<int> GetTaskAsync(int delayMs);
 
         Task FaultTaskAsync();
+
+        Task CancelTaskAsync();
+
+        Task<int> CancelTaskOfTAsync();
+
+        ValueTask CancelValueTaskAsync();
 
         ValueTask DoValueTaskAsync(int delayMs);
 
@@ -50,6 +57,12 @@ public class FlowInterceptorProxyTests
 
         public Task FaultTaskAsync() => Task.FromException(new InvalidOperationException("task boom"));
 
+        public Task CancelTaskAsync() => Task.FromCanceled(new CancellationToken(true));
+
+        public Task<int> CancelTaskOfTAsync() => Task.FromCanceled<int>(new CancellationToken(true));
+
+        public ValueTask CancelValueTaskAsync() => ValueTask.FromCanceled(new CancellationToken(true));
+
         public async ValueTask DoValueTaskAsync(int delayMs) => await Task.Delay(delayMs);
 
         public async ValueTask<int> GetValueTaskAsync(int delayMs)
@@ -67,8 +80,7 @@ public class FlowInterceptorProxyTests
 
         var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, listener, traceId, root);
     }
@@ -162,6 +174,57 @@ public class FlowInterceptorProxyTests
 
         var span = recorder.GetActiveTrace(traceId)!.Spans.Single(s => s.Operation == nameof(IWorker.FaultTaskAsync));
         span.Status.ShouldBe(FlowStatus.Error);
+    }
+
+    [Fact]
+    public async Task Invoke_WhenTaskIsCanceled_ReturnsACanceledTaskAndClosesTheSpanAsTheCancellation()
+    {
+        var (recorder, listener, traceId, root) = Arrange();
+        using var _ = listener;
+        using var __ = root;
+        var proxy = FlowInterceptorProxy.Create<IWorker, Worker>(new Worker(), ComponentType.Service);
+
+        var returned = proxy.CancelTaskAsync();
+        await Should.ThrowAsync<TaskCanceledException>(() => returned);
+
+        returned.IsCanceled.ShouldBeTrue();
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single(s => s.Operation == nameof(IWorker.CancelTaskAsync));
+        span.Status.ShouldBe(FlowStatus.Error);
+        span.ErrorType.ShouldBe(typeof(TaskCanceledException).FullName);
+    }
+
+    [Fact]
+    public async Task Invoke_WhenTaskOfTIsCanceled_ReturnsACanceledTaskAndClosesTheSpanAsTheCancellation()
+    {
+        var (recorder, listener, traceId, root) = Arrange();
+        using var _ = listener;
+        using var __ = root;
+        var proxy = FlowInterceptorProxy.Create<IWorker, Worker>(new Worker(), ComponentType.Service);
+
+        var returned = proxy.CancelTaskOfTAsync();
+        await Should.ThrowAsync<TaskCanceledException>(() => returned);
+
+        returned.IsCanceled.ShouldBeTrue();
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single(s => s.Operation == nameof(IWorker.CancelTaskOfTAsync));
+        span.Status.ShouldBe(FlowStatus.Error);
+        span.ErrorType.ShouldBe(typeof(TaskCanceledException).FullName);
+    }
+
+    [Fact]
+    public async Task Invoke_WhenValueTaskIsCanceled_ReturnsACanceledTaskAndClosesTheSpanAsTheCancellation()
+    {
+        var (recorder, listener, traceId, root) = Arrange();
+        using var _ = listener;
+        using var __ = root;
+        var proxy = FlowInterceptorProxy.Create<IWorker, Worker>(new Worker(), ComponentType.Service);
+
+        var returned = proxy.CancelValueTaskAsync();
+        await Should.ThrowAsync<TaskCanceledException>(async () => await returned);
+
+        returned.IsCanceled.ShouldBeTrue();
+        var span = recorder.GetActiveTrace(traceId)!.Spans.Single(s => s.Operation == nameof(IWorker.CancelValueTaskAsync));
+        span.Status.ShouldBe(FlowStatus.Error);
+        span.ErrorType.ShouldBe(typeof(TaskCanceledException).FullName);
     }
 
     [Fact]

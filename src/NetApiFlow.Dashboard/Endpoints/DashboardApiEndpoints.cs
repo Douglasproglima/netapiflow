@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -14,8 +16,7 @@ using NetApiFlow.Routing;
 namespace NetApiFlow.Dashboard.Endpoints;
 
 /// <summary>
-/// Maps the fifteen REST routes of the frozen dashboard contract (<c>docs/plano/contratos.md</c>,
-/// seção 3).
+/// Maps the fifteen REST routes of the dashboard contract.
 /// </summary>
 internal static class DashboardApiEndpoints
 {
@@ -27,6 +28,7 @@ internal static class DashboardApiEndpoints
         var group = endpoints.MapGroup(basePath + "/api");
         group.AddEndpointFilter(DashboardAccessGate.EnforceAsync);
         group.ExcludeFromDescription();
+        group.WithoutNetApiFlowTracking();
 
         group.MapGet("/traces", GetTraces);
         group.MapGet("/traces/live", GetLiveTraces);
@@ -142,7 +144,7 @@ internal static class DashboardApiEndpoints
 
     private static async Task<IResult> GetTraceDetail(string traceId, FlowRecorder recorder, ITraceStore store, CancellationToken cancellationToken)
     {
-        var active = recorder.GetActiveTrace(traceId);
+        var active = recorder.GetPublishedActiveTrace(traceId);
         if (active is not null)
         {
             return Results.Json(TraceDetailDto.From(active), DashboardJsonOptions.Rest);
@@ -160,7 +162,7 @@ internal static class DashboardApiEndpoints
 
     private static async Task<IResult> GetSpanDetail(string traceId, string spanId, FlowRecorder recorder, ITraceStore store, CancellationToken cancellationToken)
     {
-        var spans = recorder.GetActiveTrace(traceId)?.Spans
+        var spans = recorder.GetPublishedActiveTrace(traceId)?.Spans
             ?? recorder.GetRecentlyCompleted(traceId)?.Spans;
 
         if (spans is null)
@@ -222,14 +224,28 @@ internal static class DashboardApiEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> GetBlueprint(string? method, string? route, ITraceStore store, CancellationToken cancellationToken)
+    private static async Task<IResult> GetBlueprint(string? method, string? route, string? before, ITraceStore store, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(method) || string.IsNullOrWhiteSpace(route))
         {
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var detail = await store.GetLastSuccessfulAsync(method, RouteTemplateNormalizer.NormalizeForComparison(route), cancellationToken);
+        var routeKey = RouteTemplateNormalizer.NormalizeForComparison(route);
+        FlowTraceDetail? detail;
+        if (before is null)
+        {
+            detail = await store.GetLastSuccessfulAsync(method, routeKey, cancellationToken);
+        }
+        else if (DateTimeOffset.TryParse(before, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var anchor))
+        {
+            detail = await store.GetLastSuccessfulAsync(method, routeKey, anchor.UtcDateTime, cancellationToken);
+        }
+        else
+        {
+            return Results.Problem(detail: "before must be an ISO 8601 date and time.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
         return detail is null ? Results.NoContent() : Results.Json(TraceDetailDto.From(detail), DashboardJsonOptions.Rest);
     }
 
@@ -304,9 +320,15 @@ internal static class DashboardApiEndpoints
         return Results.Json(config, DashboardJsonOptions.Rest);
     }
 
-    private static async Task<IResult> CreateDeploy(CreateDeployAnnotationRequest request, IDeployAnnotationStore store, CancellationToken cancellationToken)
+    private static async Task<IResult> CreateDeploy(HttpRequest httpRequest, IDeployAnnotationStore store, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Label))
+        if (!httpRequest.HasJsonContentType())
+        {
+            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        var request = await ReadDeployRequestAsync(httpRequest, cancellationToken);
+        if (request is null || string.IsNullOrWhiteSpace(request.Label))
         {
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest);
         }
@@ -322,6 +344,18 @@ internal static class DashboardApiEndpoints
         return Results.Json(annotation, DashboardJsonOptions.Rest, statusCode: StatusCodes.Status201Created);
     }
 
+    private static async Task<CreateDeployAnnotationRequest?> ReadDeployRequestAsync(HttpRequest httpRequest, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await httpRequest.ReadFromJsonAsync<CreateDeployAnnotationRequest>(cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private static async Task<IResult> GetDeploys(DateTime? from, DateTime? to, IDeployAnnotationStore store, CancellationToken cancellationToken)
     {
         if (from is null || to is null)
@@ -335,7 +369,7 @@ internal static class DashboardApiEndpoints
 
     /// <summary>
     /// Reads the core package version from <c>NetApiFlow</c>'s own
-    /// <see cref="AssemblyInformationalVersionAttribute"/> (D-33): the same value as
+    /// <see cref="AssemblyInformationalVersionAttribute"/>: the same value as
     /// <c>&lt;Version&gt;</c> in <c>Directory.Build.props</c>, stripped of the SourceLink commit
     /// suffix CI builds append after a <c>+</c>.
     /// </summary>

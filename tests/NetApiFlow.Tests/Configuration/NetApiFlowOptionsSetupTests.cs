@@ -35,6 +35,7 @@ public class NetApiFlowOptionsSetupTests
         options.CapturePrePipelineSteps.ShouldBeFalse();
         options.ExternalSources.ShouldBe(ExternalActivitySource.None);
         options.OpenApiDocumentPath.ShouldBe("/openapi/v1.json");
+        options.EmitTraceIdHeader.ShouldBeFalse();
         options.IncludePatterns.ShouldBeEmpty();
         options.ExcludePatterns.ShouldBeEmpty();
         options.Retention.MaxTraces.ShouldBe(1000);
@@ -60,6 +61,7 @@ public class NetApiFlowOptionsSetupTests
             ["NetApiFlow:CapturePrePipelineSteps"] = "true",
             ["NetApiFlow:ExternalSources"] = "HttpClient",
             ["NetApiFlow:OpenApiDocumentPath"] = "/swagger/v1/swagger.json",
+            ["NetApiFlow:EmitTraceIdHeader"] = "true",
         });
 
         options.Enabled.ShouldBeFalse();
@@ -68,6 +70,7 @@ public class NetApiFlowOptionsSetupTests
         options.CapturePrePipelineSteps.ShouldBeTrue();
         options.ExternalSources.ShouldBe(ExternalActivitySource.HttpClient);
         options.OpenApiDocumentPath.ShouldBe("/swagger/v1/swagger.json");
+        options.EmitTraceIdHeader.ShouldBeTrue();
     }
 
     [Fact]
@@ -148,7 +151,7 @@ public class NetApiFlowOptionsSetupTests
 
     /// <summary>
     /// <c>DashboardBasePath</c> is internal and <c>Bind</c> never touched a non-public property,
-    /// so configuration must not reach it either: <c>UseNetApiFlowDashboard</c> owns that value.
+    /// so configuration must not reach it either: <c>MapNetApiFlowDashboard</c> owns that value.
     /// </summary>
     [Fact]
     public void Configure_WithDashboardBasePathInConfiguration_IgnoresIt()

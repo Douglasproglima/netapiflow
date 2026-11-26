@@ -43,4 +43,53 @@ public class DecorateFlowTrackedTests
 
         ((FlowInterceptorProxy)(object)first).Target.ShouldBeSameAs(((FlowInterceptorProxy)(object)second).Target);
     }
+
+    [Fact]
+    public void DecorateFlowTracked_ForADisposableScopedService_DisposesTheOriginalWhenTheScopeEnds()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<IOwnedResource, OwnedResource>();
+        services.DecorateFlowTracked(type => type == typeof(OwnedResource));
+        using var provider = services.BuildServiceProvider();
+
+        OwnedResource original;
+        using (var scope = provider.CreateScope())
+        {
+            var resource = scope.ServiceProvider.GetRequiredService<IOwnedResource>();
+            original = (OwnedResource)((FlowInterceptorProxy)(object)resource).Target;
+            original.WasDisposed.ShouldBeFalse();
+        }
+
+        original.WasDisposed.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void DecorateFlowTracked_ForADisposableSingletonService_DisposesTheOriginalWhenTheProviderIsDisposed()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IOwnedResource, OwnedResource>();
+        services.DecorateFlowTracked(type => type == typeof(OwnedResource));
+        var provider = services.BuildServiceProvider();
+        var original = (OwnedResource)((FlowInterceptorProxy)(object)provider.GetRequiredService<IOwnedResource>()).Target;
+        original.WasDisposed.ShouldBeFalse();
+
+        provider.Dispose();
+
+        original.WasDisposed.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void DecorateFlowTracked_ForAnInstanceTheContainerDoesNotOwn_NeverDisposesIt()
+    {
+        var instance = new OwnedResource();
+        var services = new ServiceCollection();
+        services.AddSingleton<IOwnedResource>(instance);
+        services.DecorateFlowTracked(type => type == typeof(OwnedResource));
+
+        var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IOwnedResource>();
+        provider.Dispose();
+
+        instance.WasDisposed.ShouldBeFalse();
+    }
 }

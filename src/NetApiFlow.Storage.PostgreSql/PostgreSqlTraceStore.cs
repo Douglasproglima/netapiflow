@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
 using NetApiFlow.Routing;
 using Npgsql;
@@ -6,55 +7,71 @@ using NpgsqlTypes;
 
 namespace NetApiFlow.Storage.PostgreSql;
 
-/// <summary>
-/// <see cref="ITraceStore"/> backed by PostgreSQL via raw ADO.NET (D-05). <see cref="SaveAsync"/>
-/// uses <see cref="NpgsqlBinaryImporter"/> (the <c>COPY</c> protocol) for the batch write of a
-/// trace and its spans.
-/// </summary>
 internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 {
     private readonly string _connectionString;
     private readonly string _tracesTable;
     private readonly string _spansTable;
+    private readonly bool _autoCreateSchema;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly IntervalLogLimiter _verificationFailureLog = new(PersistenceRetryInterval.Default.Value);
+    private readonly Func<NpgsqlConnection, CancellationToken, Task<bool>> _verifySchema;
     private bool _schemaReady;
 
-    public PostgreSqlTraceStore(string connectionString, PostgreSqlStorageOptions options)
+    public PostgreSqlTraceStore(
+        string connectionString,
+        PostgreSqlStorageOptions options,
+        ILogger logger,
+        Func<NpgsqlConnection, CancellationToken, Task<bool>>? verifySchema = null)
     {
         _connectionString = connectionString;
         (_tracesTable, _spansTable) = PostgreSqlTableNames.Resolve(options.TablePrefix);
+        _autoCreateSchema = options.AutoCreateSchema;
+        _logger = logger;
+        _verifySchema = verifySchema ?? ((connection, token) =>
+            PostgreSqlSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, _verificationFailureLog, token));
     }
 
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        await using (var importer = await connection.BeginBinaryImportAsync(
+        await WriteTraceAsync(connection, trace, cancellationToken);
+        if (spans.Count > 0)
+        {
+            await WriteSpansAsync(connection, spans, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task WriteTraceAsync(NpgsqlConnection connection, FlowTrace trace, CancellationToken cancellationToken)
+    {
+        await using var importer = await connection.BeginBinaryImportAsync(
             $"COPY {_tracesTable} (trace_id, method, route_template, route_key, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags) FROM STDIN (FORMAT BINARY)",
-            cancellationToken))
-        {
-            await importer.StartRowAsync(cancellationToken);
-            await importer.WriteAsync(trace.TraceId, NpgsqlDbType.Varchar, cancellationToken);
-            await importer.WriteAsync(trace.Method, NpgsqlDbType.Varchar, cancellationToken);
-            await importer.WriteAsync(trace.RouteTemplate, NpgsqlDbType.Text, cancellationToken);
-            await importer.WriteAsync(RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate), NpgsqlDbType.Text, cancellationToken);
-            await WriteNullableAsync(importer, trace.HttpStatus, NpgsqlDbType.Integer, cancellationToken);
-            await importer.WriteAsync(trace.Status.ToString(), NpgsqlDbType.Varchar, cancellationToken);
-            await importer.WriteAsync(trace.StartedAt, NpgsqlDbType.TimestampTz, cancellationToken);
-            await WriteNullableAsync(importer, trace.EndedAt, NpgsqlDbType.TimestampTz, cancellationToken);
-            await WriteNullableAsync(importer, trace.DurationMicros, NpgsqlDbType.Bigint, cancellationToken);
-            await importer.WriteAsync(trace.SpanCount, NpgsqlDbType.Integer, cancellationToken);
-            await importer.WriteAsync(trace.Truncated, NpgsqlDbType.Boolean, cancellationToken);
-            await WriteNullableAsync(importer, trace.ErrorMessage, NpgsqlDbType.Text, cancellationToken);
-            await importer.WriteAsync(SerializeTags(trace.Tags), NpgsqlDbType.Jsonb, cancellationToken);
-            await importer.CompleteAsync(cancellationToken);
-        }
+            cancellationToken);
 
-        if (spans.Count == 0)
-        {
-            return;
-        }
+        await importer.StartRowAsync(cancellationToken);
+        await importer.WriteAsync(trace.TraceId, NpgsqlDbType.Varchar, cancellationToken);
+        await importer.WriteAsync(trace.Method, NpgsqlDbType.Varchar, cancellationToken);
+        await importer.WriteAsync(trace.RouteTemplate, NpgsqlDbType.Text, cancellationToken);
+        await importer.WriteAsync(RouteTemplateNormalizer.NormalizeForComparison(trace.RouteTemplate), NpgsqlDbType.Text, cancellationToken);
+        await WriteNullableAsync(importer, trace.HttpStatus, NpgsqlDbType.Integer, cancellationToken);
+        await importer.WriteAsync(trace.Status.ToString(), NpgsqlDbType.Varchar, cancellationToken);
+        await importer.WriteAsync(trace.StartedAt, NpgsqlDbType.TimestampTz, cancellationToken);
+        await WriteNullableAsync(importer, trace.EndedAt, NpgsqlDbType.TimestampTz, cancellationToken);
+        await WriteNullableAsync(importer, trace.DurationMicros, NpgsqlDbType.Bigint, cancellationToken);
+        await importer.WriteAsync(trace.SpanCount, NpgsqlDbType.Integer, cancellationToken);
+        await importer.WriteAsync(trace.Truncated, NpgsqlDbType.Boolean, cancellationToken);
+        await WriteNullableAsync(importer, trace.ErrorMessage, NpgsqlDbType.Text, cancellationToken);
+        await importer.WriteAsync(SerializeTags(trace.Tags), NpgsqlDbType.Jsonb, cancellationToken);
+        await importer.CompleteAsync(cancellationToken);
+    }
 
+    private async Task WriteSpansAsync(NpgsqlConnection connection, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
+    {
         await using var spanImporter = await connection.BeginBinaryImportAsync(
             $"COPY {_spansTable} (trace_id, span_id, parent_span_id, sequence, component, operation, type, started_at, ended_at, duration_micros, status, error_type, error_message, is_error_origin, tags, logs) FROM STDIN (FORMAT BINARY)",
             cancellationToken);
@@ -314,19 +331,30 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
         return BuildArchitectureMap(totalExecutions, rows);
     }
 
-    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before: null, cancellationToken);
+
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before, cancellationToken);
+
+    private async ValueTask<FlowTraceDetail?> FindLastSuccessfulAsync(string method, string routeKey, DateTime? before, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
+        var startedBefore = before is null ? string.Empty : "AND started_at < @before";
         await using var command = new NpgsqlCommand($"""
             SELECT trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE method ILIKE @method AND route_key = @routeKey AND status = 'Success'
+            WHERE method ILIKE @method AND route_key = @routeKey AND status = 'Success' {startedBefore}
             ORDER BY started_at DESC
             LIMIT 1
             """, connection);
         command.Parameters.AddWithValue("method", method);
         command.Parameters.AddWithValue("routeKey", routeKey);
+        if (before is not null)
+        {
+            command.Parameters.AddWithValue("before", NpgsqlDbType.TimestampTz, before.Value);
+        }
 
         FlowTrace? trace;
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -384,8 +412,8 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 
         if (query.RouteTemplate is not null)
         {
-            conditions.Add("route_template = @route");
-            command.Parameters.AddWithValue("route", query.RouteTemplate);
+            conditions.Add("route_key = @routeKey");
+            command.Parameters.AddWithValue("routeKey", RouteTemplateNormalizer.NormalizeForComparison(query.RouteTemplate));
         }
 
         if (query.Tenant is not null)
@@ -417,7 +445,7 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 
     /// <summary>
     /// Builds the <c>ORDER BY</c> clause from <paramref name="query"/>'s already-parsed sort enum,
-    /// never from concatenated query-string text (D-41). Ties break by <c>started_at</c>
+    /// never from concatenated query-string text. Ties break by <c>started_at</c>
     /// descending, then <c>trace_id</c>, so paginating a result set with repeated values never
     /// skips or repeats a row across pages.
     /// </summary>
@@ -466,8 +494,16 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
-            await PostgreSqlSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            if (_autoCreateSchema)
+            {
+                await PostgreSqlSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
+                await PostgreSqlSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            }
+            else if (!await _verifySchema(connection, cancellationToken))
+            {
+                return;
+            }
+
             _schemaReady = true;
         }
         finally

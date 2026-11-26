@@ -5,18 +5,18 @@ using Microsoft.Extensions.Hosting;
 
 namespace NetApiFlow.Dashboard.Endpoints;
 
-/// <summary>
-/// Shared gate for every dashboard route, API and static UI alike (risco
-/// R-09): outside Development, a route 404s unless <c>RequireAuthorization</c> or an
-/// <see cref="IFlowAccessFilter"/> was configured. An <see cref="IFlowAccessFilter"/>, when
-/// registered, is always enforced (even in Development, since the host asked for it explicitly),
-/// returning <c>403</c> when it denies the request.
-/// </summary>
 internal static class DashboardAccessGate
 {
     public static async ValueTask<object?> EnforceAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
+        SecurityHeaders.Apply(httpContext.Response);
+        var refusal = RequestOriginGuard.Refusal(httpContext);
+        if (refusal is not null)
+        {
+            return Results.Text(refusal, statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var customFilter = httpContext.RequestServices.GetService<IFlowAccessFilter>();
 
         if (customFilter is not null)
@@ -32,7 +32,10 @@ internal static class DashboardAccessGate
             return await next(context);
         }
 
-        var hasRequireAuthorization = httpContext.GetEndpoint()?.Metadata.GetMetadata<IAuthorizeData>() is not null;
-        return hasRequireAuthorization ? await next(context) : Results.NotFound();
+        return IsGuardedByAuthorization(httpContext.GetEndpoint()) ? await next(context) : Results.NotFound();
     }
+
+    private static bool IsGuardedByAuthorization(Endpoint? endpoint) =>
+        endpoint?.Metadata.GetMetadata<IAuthorizeData>() is not null
+        && endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null;
 }

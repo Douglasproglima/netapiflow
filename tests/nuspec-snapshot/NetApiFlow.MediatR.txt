@@ -1,0 +1,9 @@
+id: NetApiFlow.MediatR
+dependencies:
+  net10.0:
+    MediatR 12.5.0 (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+  net8.0:
+    MediatR 12.5.0 (exclude=Build,Analyzers)
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+frameworkReferences: (none)

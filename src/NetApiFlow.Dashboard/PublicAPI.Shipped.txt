@@ -1,0 +1,5 @@
+#nullable enable
+NetApiFlow.Dashboard.Endpoints.NetApiFlowDashboardEndpointRouteBuilderExtensions
+NetApiFlow.Dashboard.NetApiFlowDashboardServiceCollectionExtensions
+static NetApiFlow.Dashboard.Endpoints.NetApiFlowDashboardEndpointRouteBuilderExtensions.UseNetApiFlowDashboard(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, string! basePath = "/flow") -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+static NetApiFlow.Dashboard.NetApiFlowDashboardServiceCollectionExtensions.AddNetApiFlowDashboard(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

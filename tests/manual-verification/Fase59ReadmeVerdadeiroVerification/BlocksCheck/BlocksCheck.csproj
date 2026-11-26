@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetApiFlow" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="NetApiFlow.Dashboard" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="NetApiFlow.Mcp" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="NetApiFlow.MediatR" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="NetApiFlow.OpenTelemetry" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="NetApiFlow.Storage.PostgreSql" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="NetApiFlow.Storage.SqlServer" Version="[0.6.0-verify.1]" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
+  </ItemGroup>
+
+</Project>

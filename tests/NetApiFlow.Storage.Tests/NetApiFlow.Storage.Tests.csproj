@@ -16,6 +16,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\src\NetApiFlow.Storage.PostgreSql\schema.sql" Link="schema\postgresql.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\NetApiFlow.Storage.SqlServer\schema.sql" Link="schema\sqlserver.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\ManualTimeProvider.cs" Link="Shared\ManualTimeProvider.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Storage.PostgreSql\NetApiFlow.Storage.PostgreSql.csproj" />
     <ProjectReference Include="..\..\src\NetApiFlow.Storage.SqlServer\NetApiFlow.Storage.SqlServer.csproj" />

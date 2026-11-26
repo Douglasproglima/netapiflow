@@ -1,5 +1,6 @@
 #if NET8_0
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -8,6 +9,9 @@ namespace NetApiFlow.Instrumentation;
 internal sealed partial class HttpClientActivityTagBackfill
     : IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>, IDisposable
 {
+    private const string PayloadPropertiesArePreserved =
+        "The DiagnosticSource payload properties read here are preserved in published Native AOT output; verified by AotCoreVerificationNet8 on net8.0.";
+
     private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ILogger<HttpClientActivityTagBackfill> _logger;
     private readonly IDisposable _allListenersSubscription;
@@ -36,11 +40,11 @@ internal sealed partial class HttpClientActivityTagBackfill
         }
     }
 
+    private bool ShouldIgnoreDeliveryAfterDisposal => _disposed;
+
     public void OnNext(KeyValuePair<string, object?> value)
     {
-        // Disposing the subscription does not synchronously stop delivery, and a tag written here
-        // after disposal lands on whatever activity happens to be current by then.
-        if (_disposed || !_options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient))
+        if (ShouldIgnoreDeliveryAfterDisposal || !_options.Value.ExternalSources.HasFlag(ExternalActivitySource.HttpClient))
         {
             return;
         }
@@ -74,6 +78,7 @@ internal sealed partial class HttpClientActivityTagBackfill
     {
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = PayloadPropertiesArePreserved)]
     private static void BackfillRequestTags(object? payload)
     {
         if (payload?.GetType().GetProperty("Request")?.GetValue(payload) is not HttpRequestMessage request)
@@ -85,6 +90,7 @@ internal sealed partial class HttpClientActivityTagBackfill
         Activity.Current?.SetTag(HttpClientActivityTagNames.UrlFull, WithoutQueryOrFragment(request.RequestUri));
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = PayloadPropertiesArePreserved)]
     private static void BackfillResponseTags(object? payload)
     {
         if (payload?.GetType().GetProperty("Response")?.GetValue(payload) is HttpResponseMessage response)
@@ -93,6 +99,7 @@ internal sealed partial class HttpClientActivityTagBackfill
         }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = PayloadPropertiesArePreserved)]
     private static void BackfillErrorTag(object? payload)
     {
         var exceptionTypeName = payload?.GetType().GetProperty("Exception")?.GetValue(payload) is Exception exception

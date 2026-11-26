@@ -9,7 +9,7 @@ const NODE_LEFT_INSET_PX = 48;
 const NODE_RIGHT_MARGIN_PX = 10;
 // Same per-character approximation as graph-builder.ts: the component name is proportional
 // sans-serif, the operation label is monospace, both rendered by the unmodified flow-graph
-// component (D-83: the SVG renderer is reused as-is).
+// component (the SVG renderer is reused as-is).
 const COMPONENT_CHAR_WIDTH_PX = 6.8;
 const MONO_CHAR_WIDTH_PX = 6.3;
 
@@ -26,14 +26,19 @@ function nodeId(component: string, operation: string): string {
   return `${component}::${operation}`;
 }
 
-/** `node.operation` carries its own occurrence percentage, embedded in the label text (D-83): no new field on `GraphNode`, no change to flow-graph.component. */
+/** `node.operation` carries its own occurrence percentage, embedded in the label text: no new field on `GraphNode`, no change to flow-graph.component. */
 function operationLabelFor(
   executionCount: number,
   totalExecutions: number,
   operation: string,
 ): string {
-  if (executionCount >= totalExecutions) {
+  if (executionCount === totalExecutions) {
     return operation;
+  }
+
+  if (executionCount > totalExecutions) {
+    const repeats = Math.round((executionCount / totalExecutions) * 10) / 10;
+    return `${operation} (×${repeats})`;
   }
 
   const percentage = Math.round((executionCount / totalExecutions) * 100);
@@ -42,7 +47,7 @@ function operationLabelFor(
 
 /**
  * Pure function: an `ArchitectureMap` in, a laid-out graph out, in the same `GraphResult` shape
- * `flow-graph.component` already renders (D-83: the renderer is reused unmodified). Unlike
+ * `flow-graph.component` already renders (the renderer is reused unmodified). Unlike
  * `buildGraph`, there is no single trace: `sequence`, `durationMicros` and `nPlusOneCount` have no
  * equivalent in an aggregated map, so every node carries `null` for them and a uniform
  * `'completed'` state. `rankdir` is decided by the caller from the canvas's own measured aspect

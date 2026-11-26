@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { FlowDetailsPanelComponent } from './flow-details-panel.component';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { FlowSpan, FlowTraceDetail, SpanDetail } from '../../../core/models';
 
 function makeTrace(): FlowTraceDetail {
@@ -106,12 +107,129 @@ describe('FlowDetailsPanelComponent', () => {
     const text: string = fixture.nativeElement.textContent;
     expect(text).toContain('GET');
     expect(text).toContain('/api/orders/{id}');
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(text).toContain('Etapas');
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(1);
   });
 
-  describe('unexplained time badge (D-78)', () => {
+  it('gives each waterfall label the whole component and operation as its tooltip', async () => {
+    const trace = makeTrace();
+    trace.spans[0].component = 'Minimal API';
+    trace.spans[0].operation = 'GET /api/orders/{id:int}/items/{itemId:int}/history';
+
+    const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+    fixture.componentRef.setInput('trace', trace);
+    fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+    await fixture.whenStable();
+
+    const label: HTMLElement = fixture.nativeElement.querySelector('.flow-waterfall__label');
+    expect(label.getAttribute('title')).toBe(
+      'Minimal API.GET /api/orders/{id:int}/items/{itemId:int}/history',
+    );
+  });
+
+  describe('the texts of the panel', () => {
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    async function render(
+      language: 'pt-BR' | 'en',
+      trace: FlowTraceDetail,
+      selectedSpan: SpanDetail | null = null,
+    ) {
+      TestBed.inject(LanguageService).setLanguage(language);
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', trace);
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      fixture.componentRef.setInput('selectedSpan', selectedSpan);
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    it('says "less than 1%" when the share of time no step covers rounds to zero', async () => {
+      const trace = makeTrace();
+      trace.durationMicros = 402_300;
+      trace.spans[0].endedAt = '2026-01-01T00:00:00.401488Z';
+      trace.spans[0].durationMicros = 401_488;
+
+      const fixture = await render('en', trace);
+
+      const text: string = fixture.nativeElement.querySelector(
+        '.flow-details__unexplained',
+      ).textContent;
+      expect(text).toContain('<1% of the time');
+      expect(text).toContain('812 µs');
+      expect(text).not.toContain('0% of the time');
+    });
+
+    it('still rounds a share of 1% or more to a whole number', async () => {
+      const trace = makeTrace();
+      trace.durationMicros = 100_000;
+      trace.spans[0].endedAt = '2026-01-01T00:00:00.090000Z';
+      trace.spans[0].durationMicros = 90_000;
+
+      const fixture = await render('en', trace);
+
+      expect(
+        fixture.nativeElement.querySelector('.flow-details__unexplained').textContent,
+      ).toContain('10% of the time');
+    });
+
+    it.each([
+      ['Success', 'Sucesso', 'Success'],
+      ['Error', 'Erro', 'Error'],
+      ['Timeout', 'Tempo esgotado', 'Timeout'],
+      ['Cancelled', 'Cancelado', 'Cancelled'],
+      ['Running', 'Em execução', 'Running'],
+    ] as const)(
+      'shows the status %s of a step as "%s" in Portuguese and "%s" in English',
+      async (status, pt, en) => {
+        const detail = makeSpanDetail();
+        detail.span.status = status;
+        const statusOf = (fixture: { nativeElement: HTMLElement }) => {
+          const label = [...fixture.nativeElement.querySelectorAll('dt')].find(
+            (dt) => dt.textContent?.trim() === 'Status',
+          );
+          return label?.nextElementSibling?.textContent?.trim();
+        };
+
+        expect(statusOf(await render('pt-BR', makeTrace(), detail))).toBe(pt);
+        expect(statusOf(await render('en', makeTrace(), detail))).toBe(en);
+      },
+    );
+
+    it('names the request summary in the language of the panel', async () => {
+      const section = (fixture: { nativeElement: HTMLElement }) =>
+        fixture.nativeElement.querySelector('section.flow-details')!.getAttribute('aria-label');
+
+      expect(section(await render('pt-BR', makeTrace()))).toBe('Resumo da requisição');
+      expect(section(await render('en', makeTrace()))).toBe('Request summary');
+    });
+
+    it('gives the route of the summary a tooltip with the whole route, since the ellipsis cuts it', async () => {
+      const trace = makeTrace();
+      trace.routeTemplate = '/api/orders/{id:int}/items/{itemId:int}/history/{year:int}';
+
+      const fixture = await render('en', trace);
+
+      expect(
+        fixture.nativeElement.querySelector('.flow-details__route').getAttribute('title'),
+      ).toBe(trace.routeTemplate);
+    });
+
+    it('asks to inspect a step when its row of the waterfall is clicked', async () => {
+      const fixture = await render('en', makeTrace());
+      const jumped: string[] = [];
+      fixture.componentInstance.jumpToSpan.subscribe((spanId) => jumped.push(spanId));
+
+      fixture.nativeElement.querySelector('.flow-waterfall__row button').click();
+
+      expect(jumped).toEqual(['root']);
+    });
+  });
+
+  describe('unexplained time badge', () => {
     it('shows the badge with the percent and both absolute durations for a finished trace', async () => {
       const trace = makeTrace();
       trace.durationMicros = 100_000;
@@ -159,7 +277,7 @@ describe('FlowDetailsPanelComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.flow-waterfall__row')).toHaveLength(0);
   });
 
-  describe('span logs (ADR-0017)', () => {
+  describe('span logs', () => {
     it('shows no logs section when the span has no correlated logs', async () => {
       const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
       fixture.componentRef.setInput('trace', makeTrace());
@@ -208,7 +326,7 @@ describe('FlowDetailsPanelComponent', () => {
     });
   });
 
-  describe('N+1 group (D-71)', () => {
+  describe('N+1 group', () => {
     it('shows the N+1 message and jumps to the first sibling when a flagged span is selected', async () => {
       const trace = makeTrace();
       trace.spans.push(dbSpan('q1', 1), dbSpan('q2', 2), dbSpan('q3', 3));
@@ -241,6 +359,53 @@ describe('FlowDetailsPanelComponent', () => {
       await fixture.whenStable();
 
       expect(fixture.nativeElement.querySelector('.flow-details__warnbox')).toBeNull();
+    });
+  });
+
+  describe('trace identity (S3)', () => {
+    const OWN_ID = 'a'.repeat(32);
+    const W3C_ID = 'b'.repeat(32);
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    async function renderSummary(tags: Record<string, string>, language: 'pt-BR' | 'en') {
+      TestBed.inject(LanguageService).setLanguage(language);
+      const trace = makeTrace();
+      trace.traceId = OWN_ID;
+      trace.tags = tags;
+      const fixture = TestBed.createComponent(FlowDetailsPanelComponent);
+      fixture.componentRef.setInput('trace', trace);
+      fixture.componentRef.setInput('slowThresholdMicros', 250_000);
+      await fixture.whenStable();
+
+      const read = (selector: string): string[] =>
+        Array.from(fixture.nativeElement.querySelectorAll(selector)).map(
+          (element) => (element as HTMLElement).textContent?.trim() ?? '',
+        );
+      return {
+        labels: read('.flow-details__meta-dl dt'),
+        values: read('.flow-details__meta-dl dd'),
+      };
+    }
+
+    it.each(['pt-BR', 'en'] as const)(
+      'shows the id of the trace and the W3C trace id, each with its own label, in %s',
+      async (language) => {
+        const { labels, values } = await renderSummary({ 'w3c.trace_id': W3C_ID }, language);
+
+        expect(labels.slice(0, 2)).toEqual(['Trace', 'W3C trace']);
+        expect(values.slice(0, 2)).toEqual([OWN_ID, W3C_ID]);
+      },
+    );
+
+    it('shows only the id of the trace when the trace has no W3C trace id', async () => {
+      const { labels, values } = await renderSummary({}, 'en');
+
+      expect(labels).not.toContain('W3C trace');
+      expect(values).not.toContain(W3C_ID);
+      expect(values[0]).toBe(OWN_ID);
     });
   });
 });

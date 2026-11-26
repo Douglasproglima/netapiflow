@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Instrumentation;
 using NetApiFlow.Recording;
+using NetApiFlow.TestSupport;
 using Shouldly;
 using Xunit;
 
@@ -20,8 +21,7 @@ public class FlowActivityListenerTests
 
         var root = new Activity("TestRoot");
         root.Start();
-        var traceId = root.TraceId.ToString();
-        recorder.TryStartTrace(traceId, "GET", "/api/test", DateTime.UtcNow);
+        var traceId = FlowTestRequest.Begin(recorder, root, "GET", "/api/test");
 
         return (recorder, subject, traceId, root);
     }
@@ -33,7 +33,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("StockService", "ReserveAsync", ComponentType.Service))
+        using (Flow.Step("StockService", "ReserveAsync", ComponentType.Service))
         {
         }
 
@@ -86,13 +86,13 @@ public class FlowActivityListenerTests
         using var __ = root;
 
         // Warm up: let the JIT compile Step() once before measuring.
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
 
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
@@ -109,13 +109,13 @@ public class FlowActivityListenerTests
     {
         // `root` mimics ASP.NET Core's own request Activity: a real ambient parent, but never
         // recorded as a NetApiFlow span (different ActivitySource, not listened to). The contract
-        // (docs/plano/contratos.md) requires the trace's root span to report `parentSpanId: null`
+        // requires the trace's root span to report `parentSpanId: null`
         // regardless, so the frontend's root-detection (`parentSpanId === null`) always finds one.
         var (recorder, subject, traceId, root) = Arrange();
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("OrdersController", "Get", ComponentType.Controller))
+        using (Flow.Step("OrdersController", "Get", ComponentType.Controller))
         {
         }
 
@@ -130,9 +130,9 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("Outer", "Op", ComponentType.Service))
+        using (Flow.Step("Outer", "Op", ComponentType.Service))
         {
-            using (NetApiFlow.Step("Inner", "Op", ComponentType.Repository))
+            using (Flow.Step("Inner", "Op", ComponentType.Repository))
             {
             }
         }
@@ -152,9 +152,9 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (NetApiFlow.Step("Outer", "Op", ComponentType.Service))
+        using (Flow.Step("Outer", "Op", ComponentType.Service))
         {
-            var inner = NetApiFlow.Step("Inner", "Op", ComponentType.Repository);
+            var inner = Flow.Step("Inner", "Op", ComponentType.Repository);
             inner.MarkError(new InvalidOperationException("boom"));
             inner.Dispose();
         }
@@ -176,7 +176,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (var step = NetApiFlow.Step("OrdersService", "Reserve", ComponentType.Service))
+        using (var step = Flow.Step("OrdersService", "Reserve", ComponentType.Service))
         {
             step.Tag("order_id", "123");
         }
@@ -194,7 +194,7 @@ public class FlowActivityListenerTests
         using var __ = root;
         var longValue = new string('a', 5000);
 
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             step.Tag("payload", longValue);
         }
@@ -210,7 +210,7 @@ public class FlowActivityListenerTests
         using var _ = subject;
         using var __ = root;
 
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             for (var i = 0; i < 25; i++)
             {
@@ -232,24 +232,24 @@ public class FlowActivityListenerTests
         using var ___ = root;
 
         // Warm up: let the JIT compile both paths once before measuring.
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
-        using (var warmupStep = NetApiFlow.Step("Component", "Operation"))
+        using (var warmupStep = Flow.Step("Component", "Operation"))
         {
             warmupStep.Tag("order_id", "123");
         }
 
         var beforeNoTag = GC.GetAllocatedBytesForCurrentThread();
-        using (NetApiFlow.Step("Component", "Operation"))
+        using (Flow.Step("Component", "Operation"))
         {
         }
 
         var noTagAllocation = GC.GetAllocatedBytesForCurrentThread() - beforeNoTag;
 
         var beforeWithTag = GC.GetAllocatedBytesForCurrentThread();
-        using (var step = NetApiFlow.Step("Component", "Operation"))
+        using (var step = Flow.Step("Component", "Operation"))
         {
             step.Tag("order_id", "123");
         }
@@ -267,7 +267,7 @@ public class FlowActivityListenerTests
         using var __ = root;
         using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
 
-        using (NetApiFlow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
+        using (Flow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
         {
             using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
             npgsqlActivity.ShouldBeNull();
@@ -292,10 +292,10 @@ public class FlowActivityListenerTests
         ActivitySource.AddActivityListener(otherListener);
         using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
 
-        using (NetApiFlow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
+        using (Flow.Step("EntityFrameworkCore", "SELECT Users", ComponentType.Database))
         {
             using var npgsqlActivity = npgsqlSource.StartActivity("postgres");
-            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u");
+            npgsqlActivity?.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT u.\"Id\" FROM \"Users\" AS u");
         }
 
         var spans = recorder.GetActiveTrace(traceId)!.Spans;
@@ -314,7 +314,7 @@ public class FlowActivityListenerTests
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
             npgsqlActivity.ShouldNotBeNull();
-            npgsqlActivity.SetTag(NpgsqlActivityTagNames.Statement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
+            npgsqlActivity.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT u.\"Id\" FROM \"Users\" AS u WHERE u.\"Email\" = $1");
         }
 
         var spans = recorder.GetActiveTrace(traceId)!.Spans;
@@ -323,6 +323,106 @@ public class FlowActivityListenerTests
         spans[0].Operation.ShouldBe("SELECT Users");
         spans[0].Type.ShouldBe(ComponentType.Database);
         spans[0].Tags.Keys.ShouldNotContain("sql");
+    }
+
+    [Theory]
+    [InlineData("postgresql", "db.query.text", "SELECT Users")]
+    [InlineData("postgres", "db.statement", "SELECT Users")]
+    [InlineData("CONNECT custom", "db.query.text", "SELECT Users")]
+    [InlineData("CONNECT custom", "db.statement", "SELECT Users")]
+    public void ActivityStopped_WithNpgsqlCommandText_RecordsTheCommandWhateverItsNameAndConvention(string activityName, string textTag, string expectedOperation)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity(activityName))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag(textTag, "SELECT u.\"Id\" FROM \"Users\" AS u");
+        }
+
+        var span = recorder.GetActiveTrace(traceId)!.Spans.ShouldHaveSingleItem();
+        span.Component.ShouldBe("Npgsql");
+        span.Operation.ShouldBe(expectedOperation);
+        span.Status.ShouldBe(FlowStatus.Success);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivityStopped_WithNpgsqlCommandNamedLikeAConnectionOpen_KeepsTheStartDurationParentAndOutcomeOfTheActivity(bool fails)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+        var startedTwoSecondsAgo = DateTime.UtcNow.AddSeconds(-2);
+        DateTime activityStart;
+
+        using (Flow.Step("OrderRepository", "Find", ComponentType.Repository))
+        {
+            using var npgsqlActivity = npgsqlSource.StartActivity("CONNECT custom");
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetStartTime(startedTwoSecondsAgo);
+            activityStart = npgsqlActivity.StartTimeUtc;
+            npgsqlActivity.SetTag(NpgsqlActivityTagNames.QueryText, "SELECT u.\"Id\" FROM \"Users\" AS u");
+            if (fails)
+            {
+                npgsqlActivity.SetStatus(ActivityStatusCode.Error, "relation \"Users\" does not exist");
+            }
+        }
+
+        var spans = recorder.GetActiveTrace(traceId)!.Spans;
+        var repository = spans.Single(span => span.Type == ComponentType.Repository);
+        var command = spans.Single(span => span.Component == "Npgsql");
+        command.StartedAt.ShouldBe(activityStart);
+        command.DurationMicros.ShouldNotBeNull().ShouldBeGreaterThanOrEqualTo(2_000_000);
+        (command.EndedAt!.Value - command.StartedAt).TotalMicroseconds.ShouldBe(command.DurationMicros.Value, tolerance: 1);
+        command.ParentSpanId.ShouldBe(repository.SpanId);
+        command.Sequence.ShouldBeGreaterThan(repository.Sequence);
+        command.Status.ShouldBe(fails ? FlowStatus.Error : FlowStatus.Success);
+        command.IsErrorOrigin.ShouldBe(fails);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivityStopped_WithNpgsqlConnectionOpen_RecordsNoSpanEvenWhenItFails(bool fails)
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (var npgsqlActivity = npgsqlSource.StartActivity("CONNECT postgres"))
+        {
+            npgsqlActivity.ShouldNotBeNull();
+            npgsqlActivity.SetTag("db.system.name", "postgresql");
+            if (fails)
+            {
+                npgsqlActivity.SetStatus(ActivityStatusCode.Error);
+                npgsqlActivity.SetTag("error.type", "28P01");
+            }
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ActivityStopped_WithNpgsqlActivityWithoutTextUnderTheDriverName_StaysAGenericSqlCommand()
+    {
+        var (recorder, subject, traceId, root) = Arrange(new NetApiFlowOptions { ExternalSources = ExternalActivitySource.Npgsql });
+        using var _ = subject;
+        using var __ = root;
+        using var npgsqlSource = new ActivitySource(NpgsqlActivityTagNames.SourceName);
+
+        using (npgsqlSource.StartActivity("postgresql"))
+        {
+        }
+
+        recorder.GetActiveTrace(traceId)!.Spans.ShouldHaveSingleItem().Operation.ShouldBe("SQL command");
     }
 
     [Fact]
@@ -340,7 +440,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, statement);
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, statement);
             npgsqlActivity.SetTag("db.connection_string", "Host=127.0.0.1;Port=5432;Database=app;Username=postgres");
             npgsqlActivity.SetTag("db.user", "postgres");
             npgsqlActivity.SetTag("net.peer.ip", "127.0.0.1");
@@ -361,7 +461,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT * FROM \"Missing\"");
             npgsqlActivity.SetStatus(ActivityStatusCode.Error, "relation \"Missing\" does not exist");
         }
 
@@ -381,7 +481,7 @@ public class FlowActivityListenerTests
 
         using (var npgsqlActivity = npgsqlSource.StartActivity("postgres"))
         {
-            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.Statement, "SELECT * FROM \"Missing\"");
+            npgsqlActivity!.SetTag(NpgsqlActivityTagNames.LegacyStatement, "SELECT * FROM \"Missing\"");
             npgsqlActivity.SetTag("otel.status_code", "ERROR");
             npgsqlActivity.SetTag("otel.status_description", "42P01");
             npgsqlActivity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection

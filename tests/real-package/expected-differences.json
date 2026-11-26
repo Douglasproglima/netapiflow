@@ -1,0 +1,87 @@
+[
+  {
+    "scenario": "endpoint-that-throws-with-nothing-handling-it",
+    "aspect": "GET /boom header",
+    "old": false,
+    "new": true,
+    "reason": "In Development an exception that nothing handles reaches the developer exception page, which rewrote the response before the header was written. The header is now written when the response starts.",
+    "changelog": "The header is now written at the moment the response starts."
+  },
+  {
+    "scenario": "exception-handler-reexecution-recorded-path",
+    "aspect": "GET /crash header",
+    "old": false,
+    "new": true,
+    "reason": "The exception handler answers the 500 after the headers set before were reset. The header is now written when the response starts, so the 500 carries it.",
+    "changelog": "The header is now written at the moment the response starts."
+  },
+  {
+    "scenario": "exception-handler-reexecution-excluded-error-path",
+    "aspect": "GET /crash header",
+    "old": false,
+    "new": true,
+    "reason": "The exception handler answers the 500 after the headers set before were reset. The header is now written when the response starts, so the 500 carries it.",
+    "changelog": "The header is now written at the moment the response starts."
+  },
+  {
+    "scenario": "include-paths-on-a-matched-endpoint",
+    "aspect": "GET /boom header",
+    "old": false,
+    "new": true,
+    "reason": "In Development an exception that nothing handles reaches the developer exception page, which rewrote the response before the header was written. The header is now written when the response starts.",
+    "changelog": "The header is now written at the moment the response starts."
+  },
+  {
+    "scenario": "slow-request-in-a-terminal-middleware",
+    "aspect": "traces during",
+    "old": [
+      "GET (unmatched) Running steps=1"
+    ],
+    "new": [],
+    "reason": "A request that matches no endpoint is published when it ends, so it is not listed as running while it is in progress and its steps wait for the end too.",
+    "changelog": "a request that matches no endpoint is now recorded only when it ends."
+  },
+  {
+    "scenario": "exclude-paths-under-a-path-base",
+    "aspect": "GET /health header",
+    "old": true,
+    "new": false,
+    "reason": "Under UsePathBase the patterns are compared with the path the application sees, so ExcludePaths(\"/health\") now excludes /api/health.",
+    "changelog": "compared the full path, `/api/health`, with patterns written for `/health`, so none of them matched."
+  },
+  {
+    "scenario": "exclude-paths-under-a-path-base",
+    "aspect": "traces after",
+    "old": [
+      "GET /health 200",
+      "GET /orders/{id:int} 200"
+    ],
+    "new": [
+      "GET /orders/{id:int} 200"
+    ],
+    "reason": "Under UsePathBase the patterns are compared with the path the application sees, so ExcludePaths(\"/health\") now excludes /api/health.",
+    "changelog": "compared the full path, `/api/health`, with patterns written for `/health`, so none of them matched."
+  },
+  {
+    "scenario": "trace-id-header-in-production",
+    "aspect": "GET /orders/1 header",
+    "old": true,
+    "new": false,
+    "reason": "The trace id header is sent only in Development by default from 0.6.0.",
+    "changelog": "from 0.6.0 the `X-NetApiFlow-TraceId` response header is sent only in Development by default."
+  },
+  {
+    "scenario": "requests-that-share-a-traceparent",
+    "aspect": "traces after",
+    "old": [
+      "GET /orders/{id:int} 200"
+    ],
+    "new": [
+      "GET /items/{id:int} 200",
+      "GET /orders/{id:int} 200",
+      "GET /orders/{id:int} 200"
+    ],
+    "reason": "The published package used the W3C trace id of the request as the id of its trace, so requests that carry the same traceparent replaced one another in the store. Each request has its own id now, so each one is a trace.",
+    "changelog": "Each request is now its own trace"
+  }
+]

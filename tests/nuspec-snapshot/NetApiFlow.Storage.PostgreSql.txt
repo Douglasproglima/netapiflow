@@ -1,0 +1,9 @@
+id: NetApiFlow.Storage.PostgreSql
+dependencies:
+  net10.0:
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+    Npgsql 8.0.5 (exclude=Build,Analyzers)
+  net8.0:
+    NetApiFlow [{version}] (exclude=Build,Analyzers)
+    Npgsql 8.0.5 (exclude=Build,Analyzers)
+frameworkReferences: (none)

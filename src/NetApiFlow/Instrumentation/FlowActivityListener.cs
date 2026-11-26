@@ -4,19 +4,24 @@ using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Recording;
 using NetApiFlow.Sanitization;
+using NetApiFlow.Storage;
 
 namespace NetApiFlow.Instrumentation;
 
 /// <summary>
 /// Bridges <see cref="FlowActivitySource"/> activities into the <see cref="FlowRecorder"/>. Decides
-/// sampling eagerly (risk R-05): a span is only recorded when tracing is enabled and its trace is
+/// sampling eagerly: a span is only recorded when tracing is enabled and its trace is
 /// already tracked by the recorder.
 /// </summary>
-internal sealed class FlowActivityListener : IDisposable
+internal sealed partial class FlowActivityListener : IDisposable
 {
     private readonly FlowRecorder _recorder;
     private readonly IOptions<NetApiFlowOptions> _options;
     private readonly ActivityListener _listener;
+    private readonly bool _registeredAsEnabled;
+    private readonly ILogger<FlowActivityListener> _logger;
+    private readonly IntervalLogLimiter _failureLog = new(TimeSpan.FromSeconds(30));
+    private int _disposed;
 #if NET8_0
     private readonly HttpClientActivityTagBackfill _httpClientActivityTagBackfill;
 #endif
@@ -25,13 +30,17 @@ internal sealed class FlowActivityListener : IDisposable
     {
         _recorder = recorder;
         _options = options;
+        _logger = loggerFactory.CreateLogger<FlowActivityListener>();
+        NullStepArgumentLog.Attach(_logger);
+        _registeredAsEnabled = options.Value.Enabled;
+        FlowActivitySource.RegisterListener(_registeredAsEnabled);
 
         _listener = new ActivityListener
         {
-            ShouldListenTo = ShouldListenTo,
-            Sample = Sample,
-            ActivityStarted = OnActivityStarted,
-            ActivityStopped = OnActivityStopped,
+            ShouldListenTo = SafeShouldListenTo,
+            Sample = SafeSample,
+            ActivityStarted = SafeOnActivityStarted,
+            ActivityStopped = SafeOnActivityStopped,
         };
 
         ActivitySource.AddActivityListener(_listener);
@@ -42,10 +51,75 @@ internal sealed class FlowActivityListener : IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
+
+        NullStepArgumentLog.Detach(_logger);
+        FlowActivitySource.UnregisterListener(_registeredAsEnabled);
         _listener.Dispose();
 #if NET8_0
         _httpClientActivityTagBackfill.Dispose();
 #endif
+    }
+
+    private bool SafeShouldListenTo(ActivitySource source)
+    {
+        try
+        {
+            return ShouldListenTo(source);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+            return false;
+        }
+    }
+
+    private ActivitySamplingResult SafeSample(ref ActivityCreationOptions<ActivityContext> options)
+    {
+        try
+        {
+            return Sample(ref options);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+            return ActivitySamplingResult.None;
+        }
+    }
+
+    private void SafeOnActivityStarted(Activity activity)
+    {
+        try
+        {
+            OnActivityStarted(activity);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+        }
+    }
+
+    private void SafeOnActivityStopped(Activity activity)
+    {
+        try
+        {
+            OnActivityStopped(activity);
+        }
+        catch (Exception exception)
+        {
+            LogFailure(exception);
+        }
+    }
+
+    private void LogFailure(Exception exception)
+    {
+        if (_failureLog.TryAcquire())
+        {
+            Log.RecordingFailed(_logger, exception);
+        }
     }
 
     private bool ShouldListenTo(ActivitySource source) =>
@@ -62,28 +136,26 @@ internal sealed class FlowActivityListener : IDisposable
             return ActivitySamplingResult.None;
         }
 
-        var traceId = options.TraceId.ToString();
-        return _recorder.GetActiveTrace(traceId) is null
+        var traceId = FlowTraceResolver.ForSampling(options.TraceId)?.TraceId;
+        return traceId is null || _recorder.GetActiveTrace(traceId) is null
             ? ActivitySamplingResult.None
             : ActivitySamplingResult.AllDataAndRecorded;
     }
 
-    // Runs while sampling, where dropping is cheapest, and again once started: any other
-    // ActivityListener in the process that samples this source as recorded is enough for the
-    // activity to exist and reach every listener, whatever this one answered while sampling.
     private static bool IsDriverCommandAlreadyRecorded(string sourceName, Activity? enclosing) =>
         sourceName == NpgsqlActivityTagNames.SourceName && ExistingDatabaseStep.Covers(enclosing);
 
     private void OnActivityStarted(Activity activity)
     {
-        if (IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent))
+        if (IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent)
+            || NpgsqlActivityTagNames.IsNamedLikeAConnectionOpen(activity))
         {
             return;
         }
 
-        var traceId = activity.TraceId.ToString();
-        var trace = _recorder.GetActiveTrace(traceId);
-        if (trace is null)
+        var traceId = FlowTraceResolver.ForActivity(activity)?.TraceId;
+        var trace = traceId is null ? null : _recorder.GetActiveTrace(traceId);
+        if (traceId is null || trace is null)
         {
             return;
         }
@@ -96,6 +168,11 @@ internal sealed class FlowActivityListener : IDisposable
         };
 
         _recorder.TryAddSpan(traceId, span);
+
+        if (activity.Source.Name == FlowActivitySource.Name)
+        {
+            activity.SetTag(FlowTagNames.TraceId, traceId);
+        }
     }
 
     private static FlowSpan BuildFlowSpan(Activity activity, string traceId, ActiveTrace trace)
@@ -159,15 +236,16 @@ internal sealed class FlowActivityListener : IDisposable
 
     private void OnActivityStopped(Activity activity)
     {
-        var traceId = activity.TraceId.ToString();
-        var trace = _recorder.GetActiveTrace(traceId);
-        if (trace is null)
+        var traceId = FlowTraceResolver.ForActivity(activity)?.TraceId;
+        var trace = traceId is null ? null : _recorder.GetActiveTrace(traceId);
+        if (traceId is null || trace is null)
         {
             return;
         }
 
         var spanId = activity.SpanId.ToString();
-        var existing = trace.Spans.FirstOrDefault(s => s.SpanId == spanId);
+        var existing = trace.Spans.FirstOrDefault(s => s.SpanId == spanId)
+            ?? StartCommandNamedLikeAConnectionOpen(activity, traceId, trace);
         if (existing is null)
         {
             return;
@@ -186,6 +264,19 @@ internal sealed class FlowActivityListener : IDisposable
         {
             PropagateErrorToAncestors(trace, activity.Parent);
         }
+    }
+
+    private FlowSpan? StartCommandNamedLikeAConnectionOpen(Activity activity, string traceId, ActiveTrace trace)
+    {
+        if (!NpgsqlActivityTagNames.IsNamedLikeAConnectionOpen(activity)
+            || NpgsqlActivityTagNames.StatementOf(activity) is null
+            || IsDriverCommandAlreadyRecorded(activity.Source.Name, activity.Parent))
+        {
+            return null;
+        }
+
+        var span = BuildNpgsqlSpan(activity, traceId, trace);
+        return _recorder.TryAddSpan(traceId, span) ? span : null;
     }
 
     private (FlowSpan Span, bool IsErrorOrigin) CompleteFlowSpan(Activity activity, FlowSpan existing)
@@ -292,7 +383,7 @@ internal sealed class FlowActivityListener : IDisposable
     /// </summary>
     private (FlowSpan Span, bool IsErrorOrigin) CompleteNpgsqlSpan(Activity activity, FlowSpan existing)
     {
-        var statement = activity.GetTagItem(NpgsqlActivityTagNames.Statement) as string;
+        var statement = NpgsqlActivityTagNames.StatementOf(activity);
         var failure = NpgsqlCommandFailure.From(activity);
 
         var updated = existing with
@@ -328,7 +419,7 @@ internal sealed class FlowActivityListener : IDisposable
     /// ambient parents NetApiFlow never recorded as a span (e.g. ASP.NET Core's own request
     /// Activity for the root span of a trace). Only a parent already present in this trace's own
     /// spans is a real NetApiFlow parent; anything else means this span is the trace's root, and
-    /// the API contract (docs/plano/contratos.md) requires a root span's <c>parentSpanId</c> to
+    /// the API contract requires a root span's <c>parentSpanId</c> to
     /// be <see langword="null"/>, not a dangling id the frontend can never resolve.
     /// </summary>
     private static string? ResolveParentSpanId(Activity activity, ActiveTrace trace)
@@ -352,5 +443,13 @@ internal sealed class FlowActivityListener : IDisposable
 
             parent = parent.Parent;
         }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(
+            Level = LogLevel.Error,
+            Message = "NetApiFlow: recording a step failed, so the step may be missing from its trace. The request was not affected. This is logged at most once every 30 seconds.")]
+        public static partial void RecordingFailed(ILogger logger, Exception exception);
     }
 }

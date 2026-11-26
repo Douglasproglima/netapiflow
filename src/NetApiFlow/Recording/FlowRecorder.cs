@@ -2,11 +2,12 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
 using NetApiFlow.Instrumentation;
+using NetApiFlow.Middleware;
 using NetApiFlow.Sanitization;
 
 namespace NetApiFlow.Recording;
 
-/// <summary>Keeps in-memory state for traces that are still being recorded, within the limits of seção 6.7.</summary>
+/// <summary>Keeps in-memory state for traces that are still being recorded, within its fixed limits.</summary>
 internal sealed class FlowRecorder
 {
     /// <summary>Maximum number of traces tracked in memory at the same time.</summary>
@@ -54,7 +55,8 @@ internal sealed class FlowRecorder
     /// <summary>Raised when a trace closes, with its final state and spans, for the persistence writer.</summary>
     public event Action<FlowTrace, IReadOnlyList<FlowSpan>>? TraceReadyForPersistence;
 
-    public bool TryStartTrace(string traceId, string method, string routeTemplate, DateTime startedAtUtc)
+    public bool TryStartTrace(
+        string traceId, string method, string routeTemplate, DateTime startedAtUtc, IReadOnlyDictionary<string, string>? tags = null)
     {
         if (_activeTraces.Count >= MaxActiveTraces)
         {
@@ -63,7 +65,13 @@ internal sealed class FlowRecorder
             return false;
         }
 
-        if (!_activeTraces.TryAdd(traceId, new ActiveTrace(traceId, method, routeTemplate, startedAtUtc)))
+        var trace = new ActiveTrace(traceId, method, routeTemplate, startedAtUtc);
+        if (tags is not null)
+        {
+            trace.SetTags(tags);
+        }
+
+        if (!_activeTraces.TryAdd(traceId, trace))
         {
             return false;
         }
@@ -75,9 +83,74 @@ internal sealed class FlowRecorder
             RouteTemplate = routeTemplate,
             Status = FlowStatus.Running,
             StartedAt = startedAtUtc,
+            Tags = trace.Tags,
         });
 
         return true;
+    }
+
+    public bool TryReserveTrace(string traceId, string method, DateTime startedAtUtc)
+    {
+        if (_activeTraces.Count >= MaxActiveTraces)
+        {
+            return false;
+        }
+
+        return _activeTraces.TryAdd(
+            traceId,
+            new ActiveTrace(traceId, method, NetApiFlowMiddleware.UnmatchedRouteTemplate, startedAtUtc, published: false));
+    }
+
+    public bool PublishReserved(string traceId, string routeTemplate, IReadOnlyDictionary<string, string>? tags = null)
+    {
+        if (!_activeTraces.TryGetValue(traceId, out var trace) || trace.Published)
+        {
+            return false;
+        }
+
+        if (tags is not null)
+        {
+            trace.SetTags(tags);
+        }
+
+        TraceStarted?.Invoke(new FlowTrace
+        {
+            TraceId = trace.TraceId,
+            Method = trace.Method,
+            RouteTemplate = routeTemplate,
+            Status = FlowStatus.Running,
+            StartedAt = trace.StartedAtUtc,
+            Tags = trace.Tags,
+        });
+
+        var heldSpans = trace.Publish(routeTemplate);
+        if (heldSpans is null)
+        {
+            return false;
+        }
+
+        foreach (var span in heldSpans)
+        {
+            SpanStarted?.Invoke(span);
+            if (span.Status == FlowStatus.Error)
+            {
+                SpanFailed?.Invoke(span);
+            }
+            else if (span.Status != FlowStatus.Running)
+            {
+                SpanCompleted?.Invoke(span);
+            }
+        }
+
+        return true;
+    }
+
+    public void DiscardReserved(string traceId)
+    {
+        if (_activeTraces.TryGetValue(traceId, out var trace) && !trace.Published)
+        {
+            _activeTraces.TryRemove(traceId, out _);
+        }
     }
 
     /// <summary>Updates the route template for an open trace, once routing has resolved the matched endpoint.</summary>
@@ -147,9 +220,13 @@ internal sealed class FlowRecorder
             return false;
         }
 
-        if (trace.TryAddSpan(span, _options.Limits.MaxSpansPerTrace))
+        if (trace.TryAddSpan(span, _options.Limits.MaxSpansPerTrace, out var published))
         {
-            SpanStarted?.Invoke(span);
+            if (published)
+            {
+                SpanStarted?.Invoke(span);
+            }
+
             return true;
         }
 
@@ -175,7 +252,10 @@ internal sealed class FlowRecorder
             return;
         }
 
-        trace.ReplaceSpan(span);
+        if (!trace.ReplaceSpan(span))
+        {
+            return;
+        }
 
         if (span.Status == FlowStatus.Error)
         {
@@ -207,8 +287,11 @@ internal sealed class FlowRecorder
     public ActiveTrace? GetActiveTrace(string traceId) =>
         _activeTraces.TryGetValue(traceId, out var trace) ? trace : null;
 
+    public ActiveTrace? GetPublishedActiveTrace(string traceId) =>
+        _activeTraces.TryGetValue(traceId, out var trace) && trace.Published ? trace : null;
+
     /// <summary>Snapshot of every trace currently being recorded.</summary>
-    public IReadOnlyList<ActiveTrace> GetActiveTraces() => [.. _activeTraces.Values];
+    public IReadOnlyList<ActiveTrace> GetActiveTraces() => [.. _activeTraces.Values.Where(trace => trace.Published)];
 
     /// <summary>A trace that finished recently, kept in memory while the persistence writer catches up.</summary>
     public FlowTraceDetail? GetRecentlyCompleted(string traceId) =>

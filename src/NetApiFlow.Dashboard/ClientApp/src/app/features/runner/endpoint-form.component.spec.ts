@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import { EndpointFormComponent } from './endpoint-form.component';
 import { DashboardConfig, OpenApiDocument } from '../../core/models';
 import { RunnerCredentialsService } from '../../core/runner-credentials.service';
+import { environment } from '../../../environments/environment';
 
 const CONFIG: DashboardConfig = {
   slowThresholdMicros: 250_000,
@@ -86,7 +88,7 @@ describe('EndpointFormComponent', () => {
   beforeEach(() => {
     sessionStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -208,6 +210,115 @@ describe('EndpointFormComponent', () => {
 
     expect(fixture.componentInstance.lastTraceId()).toBe('t1');
     expect(dispatchedTraceId).toBe('t1');
+  });
+
+  describe('a response that carries no trace id', () => {
+    async function sendAndAnswer(
+      status: number,
+      statusText: string,
+    ): Promise<ComponentFixture<EndpointFormComponent>> {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+      httpMock.expectOne('/api/orders/5').flush(null, { status, statusText });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('names the trace id header option when a success comes back without the header', async () => {
+      const fixture = await sendAndAnswer(200, 'OK');
+
+      expect(fixture.componentInstance.sendError()).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('EmitTraceIdHeader');
+    });
+
+    it('names the options that keep a route out of tracing when a success comes back without the header', async () => {
+      const fixture = await sendAndAnswer(204, 'No Content');
+
+      expect(fixture.nativeElement.textContent).toContain('WithoutNetApiFlowTracking');
+      expect(fixture.nativeElement.textContent).toContain('IncludePaths');
+    });
+
+    it('names the missing exception handler when a server error comes back without the header', async () => {
+      const fixture = await sendAndAnswer(500, 'Internal Server Error');
+
+      expect(fixture.componentInstance.sendError()).toBe('action.requestFailed');
+      expect(fixture.nativeElement.textContent).toContain('UseExceptionHandler');
+      expect(fixture.nativeElement.textContent).toContain('500');
+    });
+
+    it('explains nothing when the response carries the header', async () => {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+      httpMock
+        .expectOne('/api/orders/5')
+        .flush(null, { headers: { 'X-NetApiFlow-TraceId': 't1' } });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('X-NetApiFlow-TraceId');
+    });
+
+    it('keeps to the demo message in the demo', async () => {
+      environment.isDemoMode = true;
+      try {
+        const fixture = await sendAndAnswer(500, 'Internal Server Error');
+
+        expect(fixture.componentInstance.sendError()).toBe('action.demoCannotSend');
+        expect(fixture.nativeElement.textContent).not.toContain('X-NetApiFlow-TraceId');
+      } finally {
+        environment.isDemoMode = false;
+      }
+    });
+  });
+
+  describe('a failure that carries no trace id', () => {
+    async function sendAndFailWithoutTraceId(): Promise<ComponentFixture<EndpointFormComponent>> {
+      const fixture = await createComponentWithConfig();
+      httpMock.expectOne('/openapi/v1.json').flush(DOC);
+      await fixture.whenStable();
+
+      fixture.componentInstance.selectEndpoint('POST', '/api/orders/{id}');
+      fixture.componentInstance.setFieldValue('id', '5');
+      fixture.componentInstance.setFieldValue('body', '{"customerName":"Acme"}');
+      fixture.componentInstance.send();
+      await fixture.whenStable();
+      httpMock.expectOne('/api/orders/5').flush(null, { status: 404, statusText: 'Not Found' });
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    it('says in the demo that it shows recorded runs and sends no real request', async () => {
+      environment.isDemoMode = true;
+      try {
+        const fixture = await sendAndFailWithoutTraceId();
+
+        expect(fixture.componentInstance.sendError()).toBe('action.demoCannotSend');
+        expect(fixture.nativeElement.textContent).toContain('não envia requisições de verdade');
+      } finally {
+        environment.isDemoMode = false;
+      }
+    });
+
+    it('keeps the generic message outside the demo', async () => {
+      const fixture = await sendAndFailWithoutTraceId();
+
+      expect(fixture.componentInstance.sendError()).toBe('action.requestFailed');
+    });
   });
 
   it('sends a configured custom header on the dispatched request', async () => {

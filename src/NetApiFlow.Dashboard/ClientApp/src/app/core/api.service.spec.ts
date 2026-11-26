@@ -109,16 +109,19 @@ describe('ApiService', () => {
     req.flush(detail);
   });
 
-  it('getBlueprint sends method and route as query params and surfaces a 204 as null', () => {
-    service.getBlueprint('GET', '/api/orders/{id}').subscribe((result) => {
-      expect(result).toBeNull();
-    });
+  it('getBlueprint sends method, route and the anchor as query params and surfaces a 204 as null', () => {
+    service
+      .getBlueprint('GET', '/api/orders/{id}', '2026-01-01T00:00:00.000000Z')
+      .subscribe((result) => {
+        expect(result).toBeNull();
+      });
 
     const req = httpMock.expectOne(
       (request) =>
         request.url === 'api/blueprint' &&
         request.params.get('method') === 'GET' &&
-        request.params.get('route') === '/api/orders/{id}',
+        request.params.get('route') === '/api/orders/{id}' &&
+        request.params.get('before') === '2026-01-01T00:00:00.000000Z',
     );
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
@@ -266,5 +269,36 @@ describe('ApiService', () => {
     expect(req.request.headers.get('X-Tenant')).toBe('acme');
     expect(req.request.headers.get('Authorization')).toBe('Bearer abc');
     req.flush(null, { status: 200, statusText: 'OK' });
+  });
+
+  it('callEndpoint reads the answer as text, so a plain-text success is never taken for a failure', () => {
+    const outcomes: string[] = [];
+    service.callEndpoint('GET', '/api/untraced').subscribe({
+      next: (response) => outcomes.push(`success ${response.status}`),
+      error: () => outcomes.push('failure'),
+    });
+
+    const req = httpMock.expectOne('/api/untraced');
+    expect(req.request.responseType).toBe('text');
+    req.flush('untraced', { status: 200, statusText: 'OK' });
+    expect(outcomes).toEqual(['success 200']);
+  });
+
+  it('callEndpoint still takes a JSON answer, an HTML answer, an empty answer and a 204 for a success', () => {
+    const outcomes: string[] = [];
+    const record = {
+      next: (response: { status: number }) => outcomes.push(`success ${response.status}`),
+      error: () => outcomes.push('failure'),
+    };
+    service.callEndpoint('GET', '/api/json').subscribe(record);
+    service.callEndpoint('GET', '/api/html').subscribe(record);
+    service.callEndpoint('GET', '/api/empty').subscribe(record);
+    service.callEndpoint('DELETE', '/api/no-content').subscribe(record);
+
+    httpMock.expectOne('/api/json').flush('{"id":5}', { status: 200, statusText: 'OK' });
+    httpMock.expectOne('/api/html').flush('<p>ok</p>', { status: 200, statusText: 'OK' });
+    httpMock.expectOne('/api/empty').flush('', { status: 200, statusText: 'OK' });
+    httpMock.expectOne('/api/no-content').flush(null, { status: 204, statusText: 'No Content' });
+    expect(outcomes).toEqual(['success 200', 'success 200', 'success 200', 'success 204']);
   });
 });

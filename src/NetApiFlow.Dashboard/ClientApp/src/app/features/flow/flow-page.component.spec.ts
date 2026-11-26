@@ -8,6 +8,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import { FlowPageComponent } from './flow-page.component';
+import { LanguageService } from '../../core/i18n/language.service';
 import { SseService, SseConnectionState } from '../../core/sse.service';
 import { FlowEvent, FlowTrace, FlowTraceDetail, FlowTraceSummary } from '../../core/models';
 
@@ -220,6 +221,124 @@ describe('FlowPageComponent', () => {
     ).toBe('not-executed');
   });
 
+  async function openTraceWithBlueprint(
+    trace: FlowTraceDetail,
+    blueprint: FlowTraceDetail | null = null,
+  ): Promise<{ fixture: ComponentFixture<FlowPageComponent>; blueprintRequests: TestRequest[] }> {
+    configure(trace.traceId);
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne(`api/traces/${trace.traceId}`).flush(trace);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    const blueprintRequests = await flushLiveBlueprint(fixture, blueprint);
+    return { fixture, blueprintRequests };
+  }
+
+  function withANotificationBranch(trace: FlowTraceDetail): FlowTraceDetail {
+    return {
+      ...trace,
+      spans: [
+        ...trace.spans,
+        {
+          ...trace.spans[0],
+          spanId: 'bp-notify',
+          parentSpanId: 's1',
+          sequence: 1,
+          component: 'NotificationService',
+          operation: 'SendAsync',
+          type: 'Service',
+          status: 'Success',
+          endedAt: '2026-01-01T00:00:00.000100Z',
+          durationMicros: 100,
+        },
+      ],
+    };
+  }
+
+  it('asks for the blueprint of a trace with the start of that trace as the anchor (F1b)', async () => {
+    const { blueprintRequests } = await openTraceWithBlueprint(makeTrace('t1'));
+
+    expect(blueprintRequests).toHaveLength(1);
+    expect(blueprintRequests[0].request.params.get('before')).toBe('2026-01-01T00:00:00.000000Z');
+  });
+
+  it('does not invent a not-executed step when no earlier execution exists', async () => {
+    const { fixture } = await openTraceWithBlueprint(makeTrace('t1'), null);
+
+    const states = fixture.componentInstance.graph().nodes.map((node) => node.state);
+    expect(states).not.toContain('not-executed');
+    expect(states).not.toContain('waiting');
+  });
+
+  it('does not ask for a blueprint for a trace whose route is unmatched', async () => {
+    const { blueprintRequests } = await openTraceWithBlueprint({
+      ...makeTrace('missing-route'),
+      routeTemplate: '(unmatched)',
+      httpStatus: 404,
+      spanCount: 0,
+      spans: [],
+    });
+
+    expect(blueprintRequests).toHaveLength(0);
+  });
+
+  it('draws the trace without a blueprint when the blueprint request fails', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+
+    const [blueprintRequest] = httpMock.match((request) => request.url === 'api/blueprint');
+    blueprintRequest.flush('boom', { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.trace()?.traceId).toBe('t1');
+    const states = fixture.componentInstance.graph().nodes.map((node) => node.state);
+    expect(states).not.toContain('not-executed');
+    expect(states).not.toContain('waiting');
+  });
+
+  it('shows a branch of the blueprint as waiting while the trace runs', async () => {
+    const running: FlowTraceDetail = {
+      ...makeTrace('running'),
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    };
+    running.spans = [
+      { ...running.spans[0], status: 'Running', endedAt: null, durationMicros: null },
+    ];
+
+    const { fixture } = await openTraceWithBlueprint(
+      running,
+      withANotificationBranch(makeTrace('running')),
+    );
+
+    const branch = fixture.componentInstance
+      .graph()
+      .nodes.find((node) => node.component === 'NotificationService');
+    expect(branch?.state).toBe('waiting');
+  });
+
+  it('shows the same branch as not executed once the trace has ended without it', async () => {
+    const { fixture } = await openTraceWithBlueprint(
+      makeTrace('ended'),
+      withANotificationBranch(makeTrace('ended')),
+    );
+
+    const branch = fixture.componentInstance
+      .graph()
+      .nodes.find((node) => node.component === 'NotificationService');
+    expect(branch?.state).toBe('not-executed');
+  });
+
   it('shows an explicit not-found state for a trace that expired or never existed (A3)', async () => {
     configure('missing');
     const fixture = TestBed.createComponent(FlowPageComponent);
@@ -237,6 +356,151 @@ describe('FlowPageComponent', () => {
     // pt-BR is the default language; must not show the generic empty-list state instead.
     expect(fixture.nativeElement.textContent).toContain('Trace não encontrada.');
     expect(fixture.nativeElement.textContent).not.toContain('Nenhuma requisição em andamento');
+  });
+
+  async function openTraceWithoutSteps(
+    traceId: string,
+    overrides: Partial<FlowTraceDetail> = {},
+    language: 'pt-BR' | 'en' = 'pt-BR',
+  ): Promise<ComponentFixture<FlowPageComponent>> {
+    configure(traceId);
+    if (language === 'en') {
+      TestBed.inject(LanguageService).setLanguage('en');
+    }
+
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock
+      .expectOne(`api/traces/${traceId}`)
+      .flush({ ...makeTrace(traceId), spanCount: 0, spans: [], ...overrides });
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+    return fixture;
+  }
+
+  it('explains how to mark a step when a finished trace has none, instead of leaving the canvas blank', async () => {
+    const fixture = await openTraceWithoutSteps('plain');
+
+    const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.flow-workspace__empty--no-steps',
+    );
+    expect(emptyState).not.toBeNull();
+    expect(emptyState?.textContent).toContain(
+      'A requisição foi gravada, mas nenhuma etapa foi marcada.',
+    );
+    expect(emptyState?.textContent).toContain('.WithNetApiFlowTracking()');
+    expect(emptyState?.textContent).toContain('Flow.Step(...)');
+    expect(emptyState?.textContent).not.toContain('NetApiFlow.Step');
+    expect(emptyState?.textContent).toContain('AddFlowTracked');
+    expect(emptyState?.querySelector('svg')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).toBeNull();
+  });
+
+  it('explains the same in English', async () => {
+    try {
+      const fixture = await openTraceWithoutSteps('plain', {}, 'en');
+
+      const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+        '.flow-workspace__empty--no-steps',
+      );
+      expect(emptyState?.textContent).toContain(
+        'The request was recorded, but no step was marked.',
+      );
+      expect(emptyState?.textContent).toContain('.WithNetApiFlowTracking()');
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it('says a Minimal API endpoint becomes a step on its own, and needs the call only with the capture turned off', async () => {
+    const fixture = await openTraceWithoutSteps('plain');
+
+    const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.flow-workspace__empty--no-steps',
+    );
+    expect(emptyState?.textContent).toContain('vira etapa sozinho');
+    expect(emptyState?.textContent).toContain('CaptureMinimalApiEndpoints');
+    expect(emptyState?.textContent).not.toContain('Um endpoint de Minimal API precisa de');
+  });
+
+  it('says the same about the Minimal API endpoint in English', async () => {
+    try {
+      const fixture = await openTraceWithoutSteps('plain', {}, 'en');
+
+      const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+        '.flow-workspace__empty--no-steps',
+      );
+      expect(emptyState?.textContent).toContain('becomes a step on its own');
+      expect(emptyState?.textContent).toContain('CaptureMinimalApiEndpoints');
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it('says there is no endpoint to mark when the request matched no route, instead of asking to mark one', async () => {
+    const fixture = await openTraceWithoutSteps('missing-route', {
+      routeTemplate: '(unmatched)',
+      httpStatus: 404,
+    });
+
+    const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+      '.flow-workspace__empty--no-steps',
+    );
+    expect(emptyState).not.toBeNull();
+    expect(emptyState?.textContent).toContain('não casou com nenhuma rota');
+    expect(emptyState?.textContent).not.toContain('.WithNetApiFlowTracking()');
+    expect(emptyState?.textContent).not.toContain('nenhuma etapa foi marcada');
+    expect(emptyState?.querySelector('svg')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).toBeNull();
+  });
+
+  it('says the same about a request that matched no route in English', async () => {
+    try {
+      const fixture = await openTraceWithoutSteps(
+        'missing-route',
+        { routeTemplate: '(unmatched)', httpStatus: 404 },
+        'en',
+      );
+
+      const emptyState: HTMLElement | null = fixture.nativeElement.querySelector(
+        '.flow-workspace__empty--no-steps',
+      );
+      expect(emptyState?.textContent).toContain('matched no route');
+      expect(emptyState?.textContent).not.toContain('.WithNetApiFlowTracking()');
+      expect(emptyState?.textContent).not.toContain('no step was marked');
+    } finally {
+      localStorage.clear();
+    }
+  });
+
+  it('does not say a trace has no steps while it is still running and its steps have not arrived', async () => {
+    const fixture = await openTraceWithoutSteps('running', {
+      status: 'Running',
+      httpStatus: null,
+      endedAt: null,
+      durationMicros: null,
+    });
+
+    expect(fixture.nativeElement.querySelector('.flow-workspace__empty--no-steps')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).not.toBeNull();
+  });
+
+  it('keeps drawing the graph for a trace that has steps', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    await fixture.whenStable();
+
+    flushAllConfigRequests();
+    httpMock.expectOne('api/traces/t1').flush(makeTrace('t1'));
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+
+    expect(fixture.nativeElement.querySelector('.flow-workspace__empty--no-steps')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-flow-graph')).not.toBeNull();
   });
 
   it('lists in-progress traces when no ?trace= param is present', async () => {
@@ -520,7 +784,7 @@ describe('FlowPageComponent', () => {
     await flushLiveBlueprint(fixture);
 
     expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(true);
-    // pt-BR is the default language (D-35).
+    // pt-BR is the default language.
     expect(fixture.nativeElement.textContent).toContain('Pausar ao vivo');
 
     fixture.componentInstance.toggleLivePause();
@@ -531,6 +795,188 @@ describe('FlowPageComponent', () => {
     fixture.componentInstance.toggleReplay();
     await fixture.whenStable();
     expect(fixture.componentInstance.isFollowingLiveRunning()).toBe(false);
+  });
+
+  function stepOf(
+    spanId: string,
+    parentSpanId: string | null,
+    component: string,
+    durationMicros: number,
+    overrides: Partial<FlowTraceDetail['spans'][number]> = {},
+  ): FlowTraceDetail['spans'][number] {
+    return {
+      ...makeTrace('t1').spans[0],
+      spanId,
+      parentSpanId,
+      component,
+      durationMicros,
+      ...overrides,
+    };
+  }
+
+  async function openTraceWith(
+    fixture: ComponentFixture<FlowPageComponent>,
+    trace: FlowTraceDetail,
+  ): Promise<void> {
+    await fixture.whenStable();
+    flushAllConfigRequests(250_000);
+    httpMock.expectOne('api/traces/t1').flush(trace);
+    flushWorkspaceChildRequests();
+    await fixture.whenStable();
+    await flushLiveBlueprint(fixture);
+  }
+
+  describe('the banner above the graph', () => {
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    async function slowestStepBanner(
+      spans: FlowTraceDetail['spans'],
+      durationMicros: number,
+    ): Promise<HTMLElement | null> {
+      configure('t1');
+      const fixture = TestBed.createComponent(FlowPageComponent);
+      const trace = makeTrace('t1');
+      trace.durationMicros = durationMicros;
+      trace.spans = spans;
+      await openTraceWith(fixture, trace);
+      return fixture.nativeElement.querySelector('.flow-workspace__banner--warning');
+    }
+
+    it('names the step with the most time of its own, which is a parent when the time is spent in its own code', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 1_000_000),
+          stepOf('controller', 'root', 'OrdersController', 900_000),
+          stepOf('repository', 'controller', 'OrderRepository', 5_000),
+        ],
+        1_000_000,
+      );
+
+      expect(banner?.textContent).toContain('OrdersController');
+      expect(banner?.textContent).toContain('895 ms');
+      expect(banner?.textContent).not.toContain('Endpoint');
+    });
+
+    it('names the slowest leaf when the parents only wait for it', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('controller', 'root', 'OrdersController', 399_000),
+          stepOf('repository', 'controller', 'OrderRepository', 390_000),
+          stepOf('cache', 'controller', 'OrderCache', 5_000),
+        ],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('OrderRepository');
+      expect(banner?.textContent).toContain('390 ms');
+    });
+
+    it('says in Portuguese that the time shown is the time of the step itself', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('repository', 'root', 'OrderRepository', 390_000),
+        ],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('tempo próprio');
+    });
+
+    it('says in English that the time shown is the time of the step itself', async () => {
+      configure('t1');
+      TestBed.inject(LanguageService).setLanguage('en');
+      const fixture = TestBed.createComponent(FlowPageComponent);
+      const trace = makeTrace('t1');
+      trace.durationMicros = 400_000;
+      trace.spans = [
+        stepOf('root', null, 'Endpoint', 400_000),
+        stepOf('repository', 'root', 'OrderRepository', 390_000),
+      ];
+      await openTraceWith(fixture, trace);
+
+      expect(
+        fixture.nativeElement.querySelector('.flow-workspace__banner--warning').textContent,
+      ).toContain('own time');
+    });
+
+    it('gives a parent whose parallel children outlast it a time of its own of zero', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('first', 'root', 'FirstCall', 380_000),
+          stepOf('second', 'root', 'SecondCall', 370_000),
+        ],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('FirstCall');
+      expect(banner?.textContent).toContain('380 ms');
+      expect(banner?.textContent).not.toContain('Endpoint');
+    });
+
+    it('shows no banner when no step has enough time of its own, even though the sum is slow', async () => {
+      const banner = await slowestStepBanner(
+        [
+          stepOf('root', null, 'Endpoint', 400_000),
+          stepOf('a', 'root', 'CallA', 100_000),
+          stepOf('b', 'root', 'CallB', 100_000),
+          stepOf('c', 'root', 'CallC', 100_000),
+          stepOf('d', 'root', 'CallD', 100_000),
+        ],
+        400_000,
+      );
+
+      expect(banner).toBeNull();
+    });
+
+    it('keeps the only step as the slowest one', async () => {
+      const banner = await slowestStepBanner(
+        [stepOf('only', null, 'OrdersController', 400_000)],
+        400_000,
+      );
+
+      expect(banner?.textContent).toContain('OrdersController');
+      expect(banner?.textContent).toContain('400 ms');
+    });
+
+    it('shows the duration of the step that started the error, not the duration of the whole trace', async () => {
+      configure('t1');
+      const fixture = TestBed.createComponent(FlowPageComponent);
+      const trace = makeTrace('t1');
+      trace.status = 'Error';
+      trace.httpStatus = 500;
+      trace.durationMicros = 400_000;
+      trace.spans = [
+        stepOf('root', null, 'Endpoint', 400_000, { status: 'Error' }),
+        stepOf('repository', 'root', 'OrderRepository', 12_000, {
+          status: 'Error',
+          isErrorOrigin: true,
+        }),
+      ];
+      await openTraceWith(fixture, trace);
+
+      const banner: HTMLElement = fixture.nativeElement.querySelector(
+        '.flow-workspace__banner--danger',
+      );
+      expect(banner.textContent).toContain('OrderRepository');
+      expect(banner.textContent).toContain('12 ms');
+      expect(banner.textContent).not.toContain('400 ms');
+    });
+  });
+
+  it('gives the route of the header a tooltip with the whole route, since the ellipsis cuts it', async () => {
+    configure('t1');
+    const fixture = TestBed.createComponent(FlowPageComponent);
+    const trace = makeTrace('t1');
+    trace.routeTemplate = '/api/orders/{id:int}/items/{itemId:int}/history/{year:int}';
+    await openTraceWith(fixture, trace);
+
+    const route: HTMLElement = fixture.nativeElement.querySelector('.flow-workspace__route');
+    expect(route.getAttribute('title')).toBe(trace.routeTemplate);
   });
 
   it('toggles and closes the action drawer', async () => {

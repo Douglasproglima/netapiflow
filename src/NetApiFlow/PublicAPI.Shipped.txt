@@ -1,0 +1,480 @@
+#nullable enable
+NetApiFlow.ArchitectureEdge
+NetApiFlow.ArchitectureEdge.<Clone>$() -> NetApiFlow.ArchitectureEdge!
+NetApiFlow.ArchitectureEdge.ArchitectureEdge() -> void
+NetApiFlow.ArchitectureEdge.CallCount.get -> int
+NetApiFlow.ArchitectureEdge.CallCount.init -> void
+NetApiFlow.ArchitectureEdge.Equals(NetApiFlow.ArchitectureEdge? other) -> bool
+NetApiFlow.ArchitectureEdge.FromComponent.get -> string!
+NetApiFlow.ArchitectureEdge.FromComponent.init -> void
+NetApiFlow.ArchitectureEdge.FromOperation.get -> string!
+NetApiFlow.ArchitectureEdge.FromOperation.init -> void
+NetApiFlow.ArchitectureEdge.ToComponent.get -> string!
+NetApiFlow.ArchitectureEdge.ToComponent.init -> void
+NetApiFlow.ArchitectureEdge.ToOperation.get -> string!
+NetApiFlow.ArchitectureEdge.ToOperation.init -> void
+NetApiFlow.ArchitectureMap
+NetApiFlow.ArchitectureMap.<Clone>$() -> NetApiFlow.ArchitectureMap!
+NetApiFlow.ArchitectureMap.ArchitectureMap() -> void
+NetApiFlow.ArchitectureMap.Edges.get -> System.Collections.Generic.IReadOnlyList<NetApiFlow.ArchitectureEdge!>!
+NetApiFlow.ArchitectureMap.Edges.init -> void
+NetApiFlow.ArchitectureMap.Equals(NetApiFlow.ArchitectureMap? other) -> bool
+NetApiFlow.ArchitectureMap.Nodes.get -> System.Collections.Generic.IReadOnlyList<NetApiFlow.ArchitectureNode!>!
+NetApiFlow.ArchitectureMap.Nodes.init -> void
+NetApiFlow.ArchitectureMap.TotalExecutions.get -> int
+NetApiFlow.ArchitectureMap.TotalExecutions.init -> void
+NetApiFlow.ArchitectureNode
+NetApiFlow.ArchitectureNode.<Clone>$() -> NetApiFlow.ArchitectureNode!
+NetApiFlow.ArchitectureNode.ArchitectureNode() -> void
+NetApiFlow.ArchitectureNode.Component.get -> string!
+NetApiFlow.ArchitectureNode.Component.init -> void
+NetApiFlow.ArchitectureNode.Equals(NetApiFlow.ArchitectureNode? other) -> bool
+NetApiFlow.ArchitectureNode.ExecutionCount.get -> int
+NetApiFlow.ArchitectureNode.ExecutionCount.init -> void
+NetApiFlow.ArchitectureNode.Operation.get -> string!
+NetApiFlow.ArchitectureNode.Operation.init -> void
+NetApiFlow.ArchitectureNode.Type.get -> NetApiFlow.ComponentType
+NetApiFlow.ArchitectureNode.Type.init -> void
+NetApiFlow.ComponentStat
+NetApiFlow.ComponentStat.<Clone>$() -> NetApiFlow.ComponentStat!
+NetApiFlow.ComponentStat.AverageDurationMicros.get -> long
+NetApiFlow.ComponentStat.AverageDurationMicros.init -> void
+NetApiFlow.ComponentStat.Component.get -> string!
+NetApiFlow.ComponentStat.Component.init -> void
+NetApiFlow.ComponentStat.ComponentStat() -> void
+NetApiFlow.ComponentStat.Equals(NetApiFlow.ComponentStat? other) -> bool
+NetApiFlow.ComponentStat.ErrorCount.get -> int
+NetApiFlow.ComponentStat.ErrorCount.init -> void
+NetApiFlow.ComponentStat.ExecutionCount.get -> int
+NetApiFlow.ComponentStat.ExecutionCount.init -> void
+NetApiFlow.ComponentStat.MaxDurationMicros.get -> long
+NetApiFlow.ComponentStat.MaxDurationMicros.init -> void
+NetApiFlow.ComponentStat.MedianDurationMicros.get -> long
+NetApiFlow.ComponentStat.MedianDurationMicros.init -> void
+NetApiFlow.ComponentStat.Operation.get -> string!
+NetApiFlow.ComponentStat.Operation.init -> void
+NetApiFlow.ComponentStat.P95DurationMicros.get -> long
+NetApiFlow.ComponentStat.P95DurationMicros.init -> void
+NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Controller = 1 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Custom = 7 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Database = 5 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Endpoint = 0 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Http = 6 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Repository = 4 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.Service = 3 -> NetApiFlow.ComponentType
+NetApiFlow.ComponentType.UseCase = 2 -> NetApiFlow.ComponentType
+NetApiFlow.DeployAnnotation
+NetApiFlow.DeployAnnotation.<Clone>$() -> NetApiFlow.DeployAnnotation!
+NetApiFlow.DeployAnnotation.DeployAnnotation() -> void
+NetApiFlow.DeployAnnotation.Equals(NetApiFlow.DeployAnnotation? other) -> bool
+NetApiFlow.DeployAnnotation.Id.get -> string!
+NetApiFlow.DeployAnnotation.Id.init -> void
+NetApiFlow.DeployAnnotation.Label.get -> string!
+NetApiFlow.DeployAnnotation.Label.init -> void
+NetApiFlow.DeployAnnotation.Timestamp.get -> System.DateTime
+NetApiFlow.DeployAnnotation.Timestamp.init -> void
+NetApiFlow.Domain.FlowSpan
+NetApiFlow.Domain.FlowSpan.<Clone>$() -> NetApiFlow.Domain.FlowSpan!
+NetApiFlow.Domain.FlowSpan.Component.get -> string!
+NetApiFlow.Domain.FlowSpan.Component.init -> void
+NetApiFlow.Domain.FlowSpan.DurationMicros.get -> long?
+NetApiFlow.Domain.FlowSpan.DurationMicros.init -> void
+NetApiFlow.Domain.FlowSpan.EndedAt.get -> System.DateTime?
+NetApiFlow.Domain.FlowSpan.EndedAt.init -> void
+NetApiFlow.Domain.FlowSpan.Equals(NetApiFlow.Domain.FlowSpan? other) -> bool
+NetApiFlow.Domain.FlowSpan.ErrorMessage.get -> string?
+NetApiFlow.Domain.FlowSpan.ErrorMessage.init -> void
+NetApiFlow.Domain.FlowSpan.ErrorType.get -> string?
+NetApiFlow.Domain.FlowSpan.ErrorType.init -> void
+NetApiFlow.Domain.FlowSpan.FlowSpan() -> void
+NetApiFlow.Domain.FlowSpan.IsErrorOrigin.get -> bool
+NetApiFlow.Domain.FlowSpan.IsErrorOrigin.init -> void
+NetApiFlow.Domain.FlowSpan.Logs.get -> System.Collections.Generic.IReadOnlyList<NetApiFlow.LogEntry!>!
+NetApiFlow.Domain.FlowSpan.Logs.init -> void
+NetApiFlow.Domain.FlowSpan.Operation.get -> string!
+NetApiFlow.Domain.FlowSpan.Operation.init -> void
+NetApiFlow.Domain.FlowSpan.ParentSpanId.get -> string?
+NetApiFlow.Domain.FlowSpan.ParentSpanId.init -> void
+NetApiFlow.Domain.FlowSpan.Sequence.get -> int
+NetApiFlow.Domain.FlowSpan.Sequence.init -> void
+NetApiFlow.Domain.FlowSpan.SpanId.get -> string!
+NetApiFlow.Domain.FlowSpan.SpanId.init -> void
+NetApiFlow.Domain.FlowSpan.StartedAt.get -> System.DateTime
+NetApiFlow.Domain.FlowSpan.StartedAt.init -> void
+NetApiFlow.Domain.FlowSpan.Status.get -> NetApiFlow.FlowStatus
+NetApiFlow.Domain.FlowSpan.Status.init -> void
+NetApiFlow.Domain.FlowSpan.Tags.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+NetApiFlow.Domain.FlowSpan.Tags.init -> void
+NetApiFlow.Domain.FlowSpan.TraceId.get -> string!
+NetApiFlow.Domain.FlowSpan.TraceId.init -> void
+NetApiFlow.Domain.FlowSpan.Type.get -> NetApiFlow.ComponentType
+NetApiFlow.Domain.FlowSpan.Type.init -> void
+NetApiFlow.Domain.FlowTrace
+NetApiFlow.Domain.FlowTrace.<Clone>$() -> NetApiFlow.Domain.FlowTrace!
+NetApiFlow.Domain.FlowTrace.DurationMicros.get -> long?
+NetApiFlow.Domain.FlowTrace.DurationMicros.init -> void
+NetApiFlow.Domain.FlowTrace.EndedAt.get -> System.DateTime?
+NetApiFlow.Domain.FlowTrace.EndedAt.init -> void
+NetApiFlow.Domain.FlowTrace.Equals(NetApiFlow.Domain.FlowTrace? other) -> bool
+NetApiFlow.Domain.FlowTrace.ErrorMessage.get -> string?
+NetApiFlow.Domain.FlowTrace.ErrorMessage.init -> void
+NetApiFlow.Domain.FlowTrace.FlowTrace() -> void
+NetApiFlow.Domain.FlowTrace.HttpStatus.get -> int?
+NetApiFlow.Domain.FlowTrace.HttpStatus.init -> void
+NetApiFlow.Domain.FlowTrace.Method.get -> string!
+NetApiFlow.Domain.FlowTrace.Method.init -> void
+NetApiFlow.Domain.FlowTrace.RouteTemplate.get -> string!
+NetApiFlow.Domain.FlowTrace.RouteTemplate.init -> void
+NetApiFlow.Domain.FlowTrace.SpanCount.get -> int
+NetApiFlow.Domain.FlowTrace.SpanCount.init -> void
+NetApiFlow.Domain.FlowTrace.StartedAt.get -> System.DateTime
+NetApiFlow.Domain.FlowTrace.StartedAt.init -> void
+NetApiFlow.Domain.FlowTrace.Status.get -> NetApiFlow.FlowStatus
+NetApiFlow.Domain.FlowTrace.Status.init -> void
+NetApiFlow.Domain.FlowTrace.Tags.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+NetApiFlow.Domain.FlowTrace.Tags.init -> void
+NetApiFlow.Domain.FlowTrace.TraceId.get -> string!
+NetApiFlow.Domain.FlowTrace.TraceId.init -> void
+NetApiFlow.Domain.FlowTrace.Truncated.get -> bool
+NetApiFlow.Domain.FlowTrace.Truncated.init -> void
+NetApiFlow.ExternalActivitySource
+NetApiFlow.ExternalActivitySource.HttpClient = 1 -> NetApiFlow.ExternalActivitySource
+NetApiFlow.ExternalActivitySource.None = 0 -> NetApiFlow.ExternalActivitySource
+NetApiFlow.ExternalActivitySource.Npgsql = 2 -> NetApiFlow.ExternalActivitySource
+NetApiFlow.ExternalActivitySource.SqlClient = 4 -> NetApiFlow.ExternalActivitySource
+NetApiFlow.FlowEvent
+NetApiFlow.FlowEvent.<Clone>$() -> NetApiFlow.FlowEvent!
+NetApiFlow.FlowEvent.Equals(NetApiFlow.FlowEvent? other) -> bool
+NetApiFlow.FlowEvent.EventId.get -> long
+NetApiFlow.FlowEvent.EventId.init -> void
+NetApiFlow.FlowEvent.FlowEvent() -> void
+NetApiFlow.FlowEvent.Span.get -> NetApiFlow.Domain.FlowSpan?
+NetApiFlow.FlowEvent.Span.init -> void
+NetApiFlow.FlowEvent.Timestamp.get -> System.DateTime
+NetApiFlow.FlowEvent.Timestamp.init -> void
+NetApiFlow.FlowEvent.Trace.get -> NetApiFlow.Domain.FlowTrace?
+NetApiFlow.FlowEvent.Trace.init -> void
+NetApiFlow.FlowEvent.TraceId.get -> string!
+NetApiFlow.FlowEvent.TraceId.init -> void
+NetApiFlow.FlowEvent.Type.get -> NetApiFlow.FlowEventType
+NetApiFlow.FlowEvent.Type.init -> void
+NetApiFlow.FlowEventType
+NetApiFlow.FlowEventType.SpanCompleted = 2 -> NetApiFlow.FlowEventType
+NetApiFlow.FlowEventType.SpanFailed = 3 -> NetApiFlow.FlowEventType
+NetApiFlow.FlowEventType.SpanStarted = 1 -> NetApiFlow.FlowEventType
+NetApiFlow.FlowEventType.TraceCompleted = 4 -> NetApiFlow.FlowEventType
+NetApiFlow.FlowEventType.TracePersisted = 5 -> NetApiFlow.FlowEventType
+NetApiFlow.FlowEventType.TraceStarted = 0 -> NetApiFlow.FlowEventType
+NetApiFlow.FlowStatus
+NetApiFlow.FlowStatus.Cancelled = 3 -> NetApiFlow.FlowStatus
+NetApiFlow.FlowStatus.Error = 2 -> NetApiFlow.FlowStatus
+NetApiFlow.FlowStatus.Running = 0 -> NetApiFlow.FlowStatus
+NetApiFlow.FlowStatus.Success = 1 -> NetApiFlow.FlowStatus
+NetApiFlow.FlowStatus.Timeout = 4 -> NetApiFlow.FlowStatus
+NetApiFlow.FlowStep
+NetApiFlow.FlowStep.Dispose() -> void
+NetApiFlow.FlowStep.FlowStep() -> void
+NetApiFlow.FlowStep.MarkError(System.Exception! exception) -> void
+NetApiFlow.FlowStep.Tag(string! key, string! value) -> void
+NetApiFlow.FlowTraceDetail
+NetApiFlow.FlowTraceDetail.<Clone>$() -> NetApiFlow.FlowTraceDetail!
+NetApiFlow.FlowTraceDetail.Equals(NetApiFlow.FlowTraceDetail? other) -> bool
+NetApiFlow.FlowTraceDetail.FlowTraceDetail() -> void
+NetApiFlow.FlowTraceDetail.Spans.get -> System.Collections.Generic.IReadOnlyList<NetApiFlow.Domain.FlowSpan!>!
+NetApiFlow.FlowTraceDetail.Spans.init -> void
+NetApiFlow.FlowTraceDetail.Trace.get -> NetApiFlow.Domain.FlowTrace!
+NetApiFlow.FlowTraceDetail.Trace.init -> void
+NetApiFlow.FlowTraceSummary
+NetApiFlow.FlowTraceSummary.<Clone>$() -> NetApiFlow.FlowTraceSummary!
+NetApiFlow.FlowTraceSummary.DurationMicros.get -> long?
+NetApiFlow.FlowTraceSummary.DurationMicros.init -> void
+NetApiFlow.FlowTraceSummary.Equals(NetApiFlow.FlowTraceSummary? other) -> bool
+NetApiFlow.FlowTraceSummary.FlowTraceSummary() -> void
+NetApiFlow.FlowTraceSummary.HttpStatus.get -> int?
+NetApiFlow.FlowTraceSummary.HttpStatus.init -> void
+NetApiFlow.FlowTraceSummary.Method.get -> string!
+NetApiFlow.FlowTraceSummary.Method.init -> void
+NetApiFlow.FlowTraceSummary.RouteTemplate.get -> string!
+NetApiFlow.FlowTraceSummary.RouteTemplate.init -> void
+NetApiFlow.FlowTraceSummary.StartedAt.get -> System.DateTime
+NetApiFlow.FlowTraceSummary.StartedAt.init -> void
+NetApiFlow.FlowTraceSummary.Status.get -> NetApiFlow.FlowStatus
+NetApiFlow.FlowTraceSummary.Status.init -> void
+NetApiFlow.FlowTraceSummary.TraceId.get -> string!
+NetApiFlow.FlowTraceSummary.TraceId.init -> void
+NetApiFlow.FlowTraceSummary.Truncated.get -> bool
+NetApiFlow.FlowTraceSummary.Truncated.init -> void
+NetApiFlow.IDeployAnnotationStore
+NetApiFlow.IDeployAnnotationStore.QueryAsync(System.DateTime from, System.DateTime until, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<NetApiFlow.DeployAnnotation!>!>
+NetApiFlow.IDeployAnnotationStore.SaveAsync(NetApiFlow.DeployAnnotation! annotation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+NetApiFlow.IFlowAccessFilter
+NetApiFlow.IFlowAccessFilter.AuthorizeAsync(Microsoft.AspNetCore.Http.HttpContext! context) -> System.Threading.Tasks.ValueTask<bool>
+NetApiFlow.IFlowEventListener
+NetApiFlow.IFlowEventListener.OnEventAsync(NetApiFlow.FlowEvent! flowEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+NetApiFlow.IFlowTenantResolver
+NetApiFlow.IFlowTenantResolver.Resolve(Microsoft.AspNetCore.Http.HttpContext! context) -> string?
+NetApiFlow.ITraceStore
+NetApiFlow.ITraceStore.ApplyRetentionAsync(NetApiFlow.RetentionPolicy! policy, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<int>
+NetApiFlow.ITraceStore.GetArchitectureMapAsync(string! method, string! routeKey, NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.ArchitectureMap!>
+NetApiFlow.ITraceStore.GetAsync(string! traceId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.FlowTraceDetail?>
+NetApiFlow.ITraceStore.GetComponentStatsAsync(NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<NetApiFlow.ComponentStat!>!>
+NetApiFlow.ITraceStore.GetLastSuccessfulAsync(string! method, string! routeKey, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.FlowTraceDetail?>
+NetApiFlow.ITraceStore.GetRouteStatsAsync(NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<NetApiFlow.RouteStat!>!>
+NetApiFlow.ITraceStore.GetTraceStatsAsync(NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.TraceStats!>
+NetApiFlow.ITraceStore.QueryAsync(NetApiFlow.TraceQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.PagedResult<NetApiFlow.FlowTraceSummary!>!>
+NetApiFlow.ITraceStore.SaveAsync(NetApiFlow.Domain.FlowTrace! trace, System.Collections.Generic.IReadOnlyList<NetApiFlow.Domain.FlowSpan!>! spans, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask
+NetApiFlow.LimitsOptions
+NetApiFlow.LimitsOptions.LimitsOptions() -> void
+NetApiFlow.LimitsOptions.MaxLogEntriesPerSpan.get -> int
+NetApiFlow.LimitsOptions.MaxLogEntriesPerSpan.set -> void
+NetApiFlow.LimitsOptions.MaxSpansPerTrace.get -> int
+NetApiFlow.LimitsOptions.MaxSpansPerTrace.set -> void
+NetApiFlow.LimitsOptions.MaxTagValueLength.get -> int
+NetApiFlow.LimitsOptions.MaxTagValueLength.set -> void
+NetApiFlow.LimitsOptions.MaxTagsPerSpan.get -> int
+NetApiFlow.LimitsOptions.MaxTagsPerSpan.set -> void
+NetApiFlow.LogCorrelationOptions
+NetApiFlow.LogCorrelationOptions.Enabled.get -> bool
+NetApiFlow.LogCorrelationOptions.Enabled.set -> void
+NetApiFlow.LogCorrelationOptions.LogCorrelationOptions() -> void
+NetApiFlow.LogCorrelationOptions.MinLevel.get -> Microsoft.Extensions.Logging.LogLevel
+NetApiFlow.LogCorrelationOptions.MinLevel.set -> void
+NetApiFlow.LogEntry
+NetApiFlow.LogEntry.<Clone>$() -> NetApiFlow.LogEntry!
+NetApiFlow.LogEntry.Equals(NetApiFlow.LogEntry? other) -> bool
+NetApiFlow.LogEntry.ExceptionMessage.get -> string?
+NetApiFlow.LogEntry.ExceptionMessage.init -> void
+NetApiFlow.LogEntry.ExceptionType.get -> string?
+NetApiFlow.LogEntry.ExceptionType.init -> void
+NetApiFlow.LogEntry.Level.get -> string!
+NetApiFlow.LogEntry.Level.init -> void
+NetApiFlow.LogEntry.LogEntry() -> void
+NetApiFlow.LogEntry.Message.get -> string!
+NetApiFlow.LogEntry.Message.init -> void
+NetApiFlow.LogEntry.Timestamp.get -> System.DateTime
+NetApiFlow.LogEntry.Timestamp.init -> void
+NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions
+NetApiFlow.NetApiFlow
+NetApiFlow.NetApiFlowEndpointFilterExtensions
+NetApiFlow.NetApiFlowOptions
+NetApiFlow.NetApiFlowOptions.CapturePrePipelineSteps.get -> bool
+NetApiFlow.NetApiFlowOptions.CapturePrePipelineSteps.set -> void
+NetApiFlow.NetApiFlowOptions.CaptureSqlText.get -> bool
+NetApiFlow.NetApiFlowOptions.CaptureSqlText.set -> void
+NetApiFlow.NetApiFlowOptions.Enabled.get -> bool
+NetApiFlow.NetApiFlowOptions.Enabled.set -> void
+NetApiFlow.NetApiFlowOptions.ExcludePaths(params string![]! patterns) -> NetApiFlow.NetApiFlowOptions!
+NetApiFlow.NetApiFlowOptions.ExcludePatterns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+NetApiFlow.NetApiFlowOptions.ExternalSources.get -> NetApiFlow.ExternalActivitySource
+NetApiFlow.NetApiFlowOptions.ExternalSources.set -> void
+NetApiFlow.NetApiFlowOptions.IncludePaths(params string![]! patterns) -> NetApiFlow.NetApiFlowOptions!
+NetApiFlow.NetApiFlowOptions.IncludePatterns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+NetApiFlow.NetApiFlowOptions.Limits.get -> NetApiFlow.LimitsOptions!
+NetApiFlow.NetApiFlowOptions.LogCorrelation.get -> NetApiFlow.LogCorrelationOptions!
+NetApiFlow.NetApiFlowOptions.NetApiFlowOptions() -> void
+NetApiFlow.NetApiFlowOptions.OpenApiDocumentPath.get -> string!
+NetApiFlow.NetApiFlowOptions.OpenApiDocumentPath.set -> void
+NetApiFlow.NetApiFlowOptions.Retention.get -> NetApiFlow.RetentionOptions!
+NetApiFlow.NetApiFlowOptions.SlowThreshold.get -> System.TimeSpan
+NetApiFlow.NetApiFlowOptions.SlowThreshold.set -> void
+NetApiFlow.NetApiFlowOptions.TailSampling.get -> NetApiFlow.TailSamplingOptions!
+NetApiFlow.NetApiFlowServiceCollectionExtensions
+NetApiFlow.PagedResult<T>
+NetApiFlow.PagedResult<T>.<Clone>$() -> NetApiFlow.PagedResult<T>!
+NetApiFlow.PagedResult<T>.Equals(NetApiFlow.PagedResult<T>? other) -> bool
+NetApiFlow.PagedResult<T>.Items.get -> System.Collections.Generic.IReadOnlyList<T>!
+NetApiFlow.PagedResult<T>.Items.init -> void
+NetApiFlow.PagedResult<T>.PagedResult() -> void
+NetApiFlow.PagedResult<T>.TotalCount.get -> int
+NetApiFlow.PagedResult<T>.TotalCount.init -> void
+NetApiFlow.RetentionOptions
+NetApiFlow.RetentionOptions.MaxAge.get -> System.TimeSpan
+NetApiFlow.RetentionOptions.MaxAge.set -> void
+NetApiFlow.RetentionOptions.MaxTraces.get -> int
+NetApiFlow.RetentionOptions.MaxTraces.set -> void
+NetApiFlow.RetentionOptions.RetentionOptions() -> void
+NetApiFlow.RetentionPolicy
+NetApiFlow.RetentionPolicy.<Clone>$() -> NetApiFlow.RetentionPolicy!
+NetApiFlow.RetentionPolicy.Equals(NetApiFlow.RetentionPolicy? other) -> bool
+NetApiFlow.RetentionPolicy.MaxAge.get -> System.TimeSpan
+NetApiFlow.RetentionPolicy.MaxAge.init -> void
+NetApiFlow.RetentionPolicy.MaxTraces.get -> int
+NetApiFlow.RetentionPolicy.MaxTraces.init -> void
+NetApiFlow.RetentionPolicy.RetentionPolicy() -> void
+NetApiFlow.RouteStat
+NetApiFlow.RouteStat.<Clone>$() -> NetApiFlow.RouteStat!
+NetApiFlow.RouteStat.AverageDurationMicros.get -> long
+NetApiFlow.RouteStat.AverageDurationMicros.init -> void
+NetApiFlow.RouteStat.Equals(NetApiFlow.RouteStat? other) -> bool
+NetApiFlow.RouteStat.ErrorCount.get -> int
+NetApiFlow.RouteStat.ErrorCount.init -> void
+NetApiFlow.RouteStat.ExecutionCount.get -> int
+NetApiFlow.RouteStat.ExecutionCount.init -> void
+NetApiFlow.RouteStat.MaxDurationMicros.get -> long
+NetApiFlow.RouteStat.MaxDurationMicros.init -> void
+NetApiFlow.RouteStat.MedianDurationMicros.get -> long
+NetApiFlow.RouteStat.MedianDurationMicros.init -> void
+NetApiFlow.RouteStat.Method.get -> string!
+NetApiFlow.RouteStat.Method.init -> void
+NetApiFlow.RouteStat.P95DurationMicros.get -> long
+NetApiFlow.RouteStat.P95DurationMicros.init -> void
+NetApiFlow.RouteStat.RouteStat() -> void
+NetApiFlow.RouteStat.RouteTemplate.get -> string!
+NetApiFlow.RouteStat.RouteTemplate.init -> void
+NetApiFlow.SortDirection
+NetApiFlow.SortDirection.Ascending = 0 -> NetApiFlow.SortDirection
+NetApiFlow.SortDirection.Descending = 1 -> NetApiFlow.SortDirection
+NetApiFlow.StatsQuery
+NetApiFlow.StatsQuery.<Clone>$() -> NetApiFlow.StatsQuery!
+NetApiFlow.StatsQuery.Equals(NetApiFlow.StatsQuery? other) -> bool
+NetApiFlow.StatsQuery.From.get -> System.DateTime?
+NetApiFlow.StatsQuery.From.init -> void
+NetApiFlow.StatsQuery.StatsQuery() -> void
+NetApiFlow.StatsQuery.To.get -> System.DateTime?
+NetApiFlow.StatsQuery.To.init -> void
+NetApiFlow.TailSamplingOptions
+NetApiFlow.TailSamplingOptions.Enabled.get -> bool
+NetApiFlow.TailSamplingOptions.Enabled.set -> void
+NetApiFlow.TailSamplingOptions.SuccessSampleRate.get -> double
+NetApiFlow.TailSamplingOptions.SuccessSampleRate.set -> void
+NetApiFlow.TailSamplingOptions.TailSamplingOptions() -> void
+NetApiFlow.TraceQuery
+NetApiFlow.TraceQuery.<Clone>$() -> NetApiFlow.TraceQuery!
+NetApiFlow.TraceQuery.Equals(NetApiFlow.TraceQuery? other) -> bool
+NetApiFlow.TraceQuery.From.get -> System.DateTime?
+NetApiFlow.TraceQuery.From.init -> void
+NetApiFlow.TraceQuery.Method.get -> string?
+NetApiFlow.TraceQuery.Method.init -> void
+NetApiFlow.TraceQuery.MinDurationMicros.get -> long?
+NetApiFlow.TraceQuery.MinDurationMicros.init -> void
+NetApiFlow.TraceQuery.Page.get -> int
+NetApiFlow.TraceQuery.Page.init -> void
+NetApiFlow.TraceQuery.PageSize.get -> int
+NetApiFlow.TraceQuery.PageSize.init -> void
+NetApiFlow.TraceQuery.RouteTemplate.get -> string?
+NetApiFlow.TraceQuery.RouteTemplate.init -> void
+NetApiFlow.TraceQuery.SortBy.get -> NetApiFlow.TraceSortField?
+NetApiFlow.TraceQuery.SortBy.init -> void
+NetApiFlow.TraceQuery.SortDirection.get -> NetApiFlow.SortDirection?
+NetApiFlow.TraceQuery.SortDirection.init -> void
+NetApiFlow.TraceQuery.Status.get -> NetApiFlow.FlowStatus?
+NetApiFlow.TraceQuery.Status.init -> void
+NetApiFlow.TraceQuery.Tenant.get -> string?
+NetApiFlow.TraceQuery.Tenant.init -> void
+NetApiFlow.TraceQuery.To.get -> System.DateTime?
+NetApiFlow.TraceQuery.To.init -> void
+NetApiFlow.TraceQuery.TraceQuery() -> void
+NetApiFlow.TraceSortField
+NetApiFlow.TraceSortField.Duration = 1 -> NetApiFlow.TraceSortField
+NetApiFlow.TraceSortField.HttpStatus = 2 -> NetApiFlow.TraceSortField
+NetApiFlow.TraceSortField.Method = 3 -> NetApiFlow.TraceSortField
+NetApiFlow.TraceSortField.Route = 4 -> NetApiFlow.TraceSortField
+NetApiFlow.TraceSortField.StartedAt = 0 -> NetApiFlow.TraceSortField
+NetApiFlow.TraceStats
+NetApiFlow.TraceStats.<Clone>$() -> NetApiFlow.TraceStats!
+NetApiFlow.TraceStats.AverageDurationMicros.get -> long
+NetApiFlow.TraceStats.AverageDurationMicros.init -> void
+NetApiFlow.TraceStats.Equals(NetApiFlow.TraceStats? other) -> bool
+NetApiFlow.TraceStats.ErrorCount.get -> int
+NetApiFlow.TraceStats.ErrorCount.init -> void
+NetApiFlow.TraceStats.MaxDurationMicros.get -> long
+NetApiFlow.TraceStats.MaxDurationMicros.init -> void
+NetApiFlow.TraceStats.P95DurationMicros.get -> long
+NetApiFlow.TraceStats.P95DurationMicros.init -> void
+NetApiFlow.TraceStats.TotalTraces.get -> int
+NetApiFlow.TraceStats.TotalTraces.init -> void
+NetApiFlow.TraceStats.TraceStats() -> void
+override NetApiFlow.ArchitectureEdge.Equals(object? obj) -> bool
+override NetApiFlow.ArchitectureEdge.GetHashCode() -> int
+override NetApiFlow.ArchitectureEdge.ToString() -> string!
+override NetApiFlow.ArchitectureMap.Equals(object? obj) -> bool
+override NetApiFlow.ArchitectureMap.GetHashCode() -> int
+override NetApiFlow.ArchitectureMap.ToString() -> string!
+override NetApiFlow.ArchitectureNode.Equals(object? obj) -> bool
+override NetApiFlow.ArchitectureNode.GetHashCode() -> int
+override NetApiFlow.ArchitectureNode.ToString() -> string!
+override NetApiFlow.ComponentStat.Equals(object? obj) -> bool
+override NetApiFlow.ComponentStat.GetHashCode() -> int
+override NetApiFlow.ComponentStat.ToString() -> string!
+override NetApiFlow.DeployAnnotation.Equals(object? obj) -> bool
+override NetApiFlow.DeployAnnotation.GetHashCode() -> int
+override NetApiFlow.DeployAnnotation.ToString() -> string!
+override NetApiFlow.Domain.FlowSpan.Equals(object? obj) -> bool
+override NetApiFlow.Domain.FlowSpan.GetHashCode() -> int
+override NetApiFlow.Domain.FlowSpan.ToString() -> string!
+override NetApiFlow.Domain.FlowTrace.Equals(object? obj) -> bool
+override NetApiFlow.Domain.FlowTrace.GetHashCode() -> int
+override NetApiFlow.Domain.FlowTrace.ToString() -> string!
+override NetApiFlow.FlowEvent.Equals(object? obj) -> bool
+override NetApiFlow.FlowEvent.GetHashCode() -> int
+override NetApiFlow.FlowEvent.ToString() -> string!
+override NetApiFlow.FlowTraceDetail.Equals(object? obj) -> bool
+override NetApiFlow.FlowTraceDetail.GetHashCode() -> int
+override NetApiFlow.FlowTraceDetail.ToString() -> string!
+override NetApiFlow.FlowTraceSummary.Equals(object? obj) -> bool
+override NetApiFlow.FlowTraceSummary.GetHashCode() -> int
+override NetApiFlow.FlowTraceSummary.ToString() -> string!
+override NetApiFlow.LogEntry.Equals(object? obj) -> bool
+override NetApiFlow.LogEntry.GetHashCode() -> int
+override NetApiFlow.LogEntry.ToString() -> string!
+override NetApiFlow.PagedResult<T>.Equals(object? obj) -> bool
+override NetApiFlow.PagedResult<T>.GetHashCode() -> int
+override NetApiFlow.PagedResult<T>.ToString() -> string!
+override NetApiFlow.RetentionPolicy.Equals(object? obj) -> bool
+override NetApiFlow.RetentionPolicy.GetHashCode() -> int
+override NetApiFlow.RetentionPolicy.ToString() -> string!
+override NetApiFlow.RouteStat.Equals(object? obj) -> bool
+override NetApiFlow.RouteStat.GetHashCode() -> int
+override NetApiFlow.RouteStat.ToString() -> string!
+override NetApiFlow.StatsQuery.Equals(object? obj) -> bool
+override NetApiFlow.StatsQuery.GetHashCode() -> int
+override NetApiFlow.StatsQuery.ToString() -> string!
+override NetApiFlow.TraceQuery.Equals(object? obj) -> bool
+override NetApiFlow.TraceQuery.GetHashCode() -> int
+override NetApiFlow.TraceQuery.ToString() -> string!
+override NetApiFlow.TraceStats.Equals(object? obj) -> bool
+override NetApiFlow.TraceStats.GetHashCode() -> int
+override NetApiFlow.TraceStats.ToString() -> string!
+static NetApiFlow.ArchitectureEdge.operator !=(NetApiFlow.ArchitectureEdge? left, NetApiFlow.ArchitectureEdge? right) -> bool
+static NetApiFlow.ArchitectureEdge.operator ==(NetApiFlow.ArchitectureEdge? left, NetApiFlow.ArchitectureEdge? right) -> bool
+static NetApiFlow.ArchitectureMap.operator !=(NetApiFlow.ArchitectureMap? left, NetApiFlow.ArchitectureMap? right) -> bool
+static NetApiFlow.ArchitectureMap.operator ==(NetApiFlow.ArchitectureMap? left, NetApiFlow.ArchitectureMap? right) -> bool
+static NetApiFlow.ArchitectureNode.operator !=(NetApiFlow.ArchitectureNode? left, NetApiFlow.ArchitectureNode? right) -> bool
+static NetApiFlow.ArchitectureNode.operator ==(NetApiFlow.ArchitectureNode? left, NetApiFlow.ArchitectureNode? right) -> bool
+static NetApiFlow.ComponentStat.operator !=(NetApiFlow.ComponentStat? left, NetApiFlow.ComponentStat? right) -> bool
+static NetApiFlow.ComponentStat.operator ==(NetApiFlow.ComponentStat? left, NetApiFlow.ComponentStat? right) -> bool
+static NetApiFlow.DeployAnnotation.operator !=(NetApiFlow.DeployAnnotation? left, NetApiFlow.DeployAnnotation? right) -> bool
+static NetApiFlow.DeployAnnotation.operator ==(NetApiFlow.DeployAnnotation? left, NetApiFlow.DeployAnnotation? right) -> bool
+static NetApiFlow.Domain.FlowSpan.operator !=(NetApiFlow.Domain.FlowSpan? left, NetApiFlow.Domain.FlowSpan? right) -> bool
+static NetApiFlow.Domain.FlowSpan.operator ==(NetApiFlow.Domain.FlowSpan? left, NetApiFlow.Domain.FlowSpan? right) -> bool
+static NetApiFlow.Domain.FlowTrace.operator !=(NetApiFlow.Domain.FlowTrace? left, NetApiFlow.Domain.FlowTrace? right) -> bool
+static NetApiFlow.Domain.FlowTrace.operator ==(NetApiFlow.Domain.FlowTrace? left, NetApiFlow.Domain.FlowTrace? right) -> bool
+static NetApiFlow.FlowEvent.operator !=(NetApiFlow.FlowEvent? left, NetApiFlow.FlowEvent? right) -> bool
+static NetApiFlow.FlowEvent.operator ==(NetApiFlow.FlowEvent? left, NetApiFlow.FlowEvent? right) -> bool
+static NetApiFlow.FlowTraceDetail.operator !=(NetApiFlow.FlowTraceDetail? left, NetApiFlow.FlowTraceDetail? right) -> bool
+static NetApiFlow.FlowTraceDetail.operator ==(NetApiFlow.FlowTraceDetail? left, NetApiFlow.FlowTraceDetail? right) -> bool
+static NetApiFlow.FlowTraceSummary.operator !=(NetApiFlow.FlowTraceSummary? left, NetApiFlow.FlowTraceSummary? right) -> bool
+static NetApiFlow.FlowTraceSummary.operator ==(NetApiFlow.FlowTraceSummary? left, NetApiFlow.FlowTraceSummary? right) -> bool
+static NetApiFlow.LogEntry.operator !=(NetApiFlow.LogEntry? left, NetApiFlow.LogEntry? right) -> bool
+static NetApiFlow.LogEntry.operator ==(NetApiFlow.LogEntry? left, NetApiFlow.LogEntry? right) -> bool
+static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.AddFlowTracked<TInterface, TImplementation>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, NetApiFlow.ComponentType componentType, Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.DecorateFlowTracked(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.Type!, bool>! predicate, NetApiFlow.ComponentType componentType = NetApiFlow.ComponentType.Service) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.NetApiFlow.CurrentTraceId.get -> string?
+static NetApiFlow.NetApiFlow.GetRecentTrace(System.IServiceProvider! services, string! traceId) -> NetApiFlow.FlowTraceDetail?
+static NetApiFlow.NetApiFlow.Step(string! component, string! operation, NetApiFlow.ComponentType type = NetApiFlow.ComponentType.Custom) -> NetApiFlow.FlowStep
+static NetApiFlow.NetApiFlowEndpointFilterExtensions.WithNetApiFlowTracking(this Microsoft.AspNetCore.Builder.RouteHandlerBuilder! builder) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
+static NetApiFlow.NetApiFlowEndpointFilterExtensions.WithNetApiFlowTracking(this Microsoft.AspNetCore.Routing.RouteGroupBuilder! builder) -> Microsoft.AspNetCore.Routing.RouteGroupBuilder!
+static NetApiFlow.NetApiFlowServiceCollectionExtensions.AddNetApiFlow(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.NetApiFlowOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.PagedResult<T>.operator !=(NetApiFlow.PagedResult<T>? left, NetApiFlow.PagedResult<T>? right) -> bool
+static NetApiFlow.PagedResult<T>.operator ==(NetApiFlow.PagedResult<T>? left, NetApiFlow.PagedResult<T>? right) -> bool
+static NetApiFlow.RetentionPolicy.operator !=(NetApiFlow.RetentionPolicy? left, NetApiFlow.RetentionPolicy? right) -> bool
+static NetApiFlow.RetentionPolicy.operator ==(NetApiFlow.RetentionPolicy? left, NetApiFlow.RetentionPolicy? right) -> bool
+static NetApiFlow.RouteStat.operator !=(NetApiFlow.RouteStat? left, NetApiFlow.RouteStat? right) -> bool
+static NetApiFlow.RouteStat.operator ==(NetApiFlow.RouteStat? left, NetApiFlow.RouteStat? right) -> bool
+static NetApiFlow.StatsQuery.operator !=(NetApiFlow.StatsQuery? left, NetApiFlow.StatsQuery? right) -> bool
+static NetApiFlow.StatsQuery.operator ==(NetApiFlow.StatsQuery? left, NetApiFlow.StatsQuery? right) -> bool
+static NetApiFlow.TraceQuery.operator !=(NetApiFlow.TraceQuery? left, NetApiFlow.TraceQuery? right) -> bool
+static NetApiFlow.TraceQuery.operator ==(NetApiFlow.TraceQuery? left, NetApiFlow.TraceQuery? right) -> bool
+static NetApiFlow.TraceStats.operator !=(NetApiFlow.TraceStats? left, NetApiFlow.TraceStats? right) -> bool
+static NetApiFlow.TraceStats.operator ==(NetApiFlow.TraceStats? left, NetApiFlow.TraceStats? right) -> bool

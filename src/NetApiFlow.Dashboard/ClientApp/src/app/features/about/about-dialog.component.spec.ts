@@ -22,7 +22,7 @@ describe('AboutDialogComponent', () => {
     httpMock.verify();
   });
 
-  it('reads the version from GET /config, not a build-time constant (D-44)', async () => {
+  it('reads the version from GET /config, not a build-time constant', async () => {
     const fixture = TestBed.createComponent(AboutDialogComponent);
     await fixture.whenStable();
 

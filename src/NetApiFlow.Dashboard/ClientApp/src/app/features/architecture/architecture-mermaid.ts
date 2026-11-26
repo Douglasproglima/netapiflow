@@ -5,7 +5,7 @@ function escapeLabel(label: string): string {
 }
 
 /**
- * Pure function: an `ArchitectureMap` in, Mermaid `flowchart TD` text out (D-83, client-side
+ * Pure function: an `ArchitectureMap` in, Mermaid `flowchart TD` text out (client-side
  * export, no new HTTP call). Node ids are assigned in encounter order, so edges always resolve to
  * an id already declared above them.
  */

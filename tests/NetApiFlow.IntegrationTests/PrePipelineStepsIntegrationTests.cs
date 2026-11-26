@@ -53,6 +53,7 @@ public class PrePipelineStepsIntegrationTests
                     services.AddNetApiFlow(o =>
                     {
                         o.IncludePaths("/api/**");
+                        o.EmitTraceIdHeader = true;
                         o.CapturePrePipelineSteps = capturePrePipelineSteps;
                     });
                     services.AddNetApiFlowEntityFrameworkCore();
@@ -278,12 +279,14 @@ public class PrePipelineStepsIntegrationTests
         var spansByTrace = TrackSpans(recorder);
 
         var client = host.GetTestServer().CreateClient();
-        var traceIds = Enumerable.Range(0, concurrentRequestCount)
+        var w3cTraceIds = Enumerable.Range(0, concurrentRequestCount)
             .Select(_ => Guid.NewGuid().ToString("N"))
             .ToList();
 
-        var responses = await Task.WhenAll(traceIds.Select(traceId => SendWithTraceParentAsync(client, "/api/orders/1", traceId)));
+        var responses = await Task.WhenAll(w3cTraceIds.Select(traceId => SendWithTraceParentAsync(client, "/api/orders/1", traceId)));
         responses.ShouldAllBe(response => response.StatusCode == HttpStatusCode.OK);
+        var traceIds = responses.Select(response => response.Headers.GetValues("X-NetApiFlow-TraceId").Single()).ToList();
+        traceIds.Distinct().Count().ShouldBe(concurrentRequestCount);
 
         foreach (var traceId in traceIds)
         {

@@ -10,8 +10,9 @@
 - `PackageReadmeFile`, `PackageIcon` (`docs/images/icon.png`, tarefa 0.7), `Description`,
   `PackageTags`, `PackageProjectUrl`, `RepositoryUrl`, `PackageLicenseExpression=MIT`. Vêm do
   `Directory.Build.props` da raiz e não se repetem por projeto: autor, licença, `RepositoryUrl`
-  (`https://github.com/Douglasproglima/netapiflow`), `PackageProjectUrl` (o site,
-  `https://douglasproglima.github.io/netapiflow-site/`) e um `PackageTags` padrão
+  (`https://github.com/Douglasproglima/netapiflow`), `PackageProjectUrl` (o site em inglês,
+  `https://douglasproglima.github.io/netapiflow-site/en/`: o site abre em português, e a página do
+  pacote no nuget.org é em inglês) e um `PackageTags` padrão
   (`netapiflow;aspnetcore;tracing;observability;diagnostics`). `Description` é de cada `.csproj`,
   nunca herdada: é o texto que o nuget.org e o gerenciador de pacotes do Visual Studio mostram
   daquele pacote específico.
@@ -25,6 +26,7 @@
   (`src/Directory.Build.props`, `BeforeTargets="Pack"`) falha o `pack` quando `Description` está
   vazio ou é o literal "Package Description", ou quando `PackageTags` está vazio. Pacote novo
   sem os dois nunca chega a gerar `.nupkg`.
+- **Pacote novo entra em `NetApiFlowOwnTypes`** (`src/NetApiFlow/Marking/NetApiFlowOwnTypes.cs`, D-244), a lista de nomes de assembly cujos tipos o `DecorateFlowTracked` e o `TrackFlowByConvention` nunca decoram. É lista de nomes e não prefixo `NetApiFlow`, porque o prefixo pegaria o `NetApiFlow.Tests`, cujos tipos os testes decoram de propósito. Um teste de guarda compara a lista com os `PackageId` de `src/`, então um décimo pacote que ficar de fora falha o CI.
 
 ## SourceLink e símbolos
 
@@ -43,8 +45,7 @@
 ## Build determinístico
 
 - `Deterministic=true` (padrão do SDK), `ContinuousIntegrationBuild=true` só em CI (não em build
-  local, para não quebrar o PathMap em debug local; ver comentário equivalente em
-  `Directory.Build.props` do RajaDocs, que serviu de referência).
+  local, para não quebrar o PathMap em debug local).
 
 ## `dotnet pack` de verificação nunca usa o número de versão real (D-153)
 
@@ -71,7 +72,7 @@ diretamente, e o SDK só usa `VersionSuffix` pra compor `$(Version)` a partir de
 `-p:Version=<próxima>-verify.<n>`** (sobrescreve `<Version>` de verdade), nunca repetindo o mesmo
 `<n>` numa mesma versão em avaliação.
 
-**Pasta padrão de fumaça e a fonte de usuário removida (D-174, D-178).** A fumaça roda em
+**Pasta padrão do teste com o pacote real e a fonte de usuário removida (D-174, D-178).** Esse teste roda em
 `tests/manual-verification/`, que já tem um `nuget.config` próprio: `<clear />` nas fontes, só
 `nuget.org` mais `netapiflow-local` apontando pra `./local-nuget-feed` (caminho relativo, vale só
 pra essa pasta), e `globalPackagesFolder` em `./local-packages`, fora do cache global da máquina.
@@ -79,9 +80,21 @@ Um deslize no número de versão contamina o cache daquela pasta, não o `~/.nug
 resto. A fonte `netapiflow-local` que existia no `NuGet.Config` de usuário desta máquina foi
 removida, junto com os builds locais `0.4.2` de número real que ocupavam o cache global. **Não
 registrar de novo:** fonte nomeada no arquivo de usuário vale pra todo projeto da máquina, e a
-isolação da fumaça vem do `nuget.config` da própria pasta. Fumaça fora de `tests/manual-verification/`
+isolação do teste vem do `nuget.config` da própria pasta. Teste com o pacote real fora de `tests/manual-verification/`
 não tem esse `nuget.config` e volta a ter o risco da D-153: usa `-p:Version=<próxima>-verify.<n>`
 mais `--source` com o caminho literal da pasta, nunca um nome registrado por `nuget add source -n`.
+
+## Os satélites pedem o núcleo na versão exata (D-231)
+
+A partir da `0.6.0`, todo pacote que depende de outro pacote do NetApiFlow o pede na faixa **exata** do mesmo release (`[0.6.0]`), nunca `>= 0.6.0`. O `pack` de uma `ProjectReference` gera `>=` por padrão, então a faixa exata é configurada e **conferida por um teste que lê o `.nuspec` empacotado**. Pacote novo que nascer com `>=` falha o teste.
+
+Por quê: os pacotes são publicados juntos (D-01, ADR-0001), e o núcleo dá `InternalsVisibleTo` ao painel e aos dois storages. Com `>=`, quem atualiza só o núcleo pode cair em `MissingMethodException` com o satélite antigo, a mesma classe do D-140. Com a versão exata, a mistura aparece no `restore` e não na execução, com a ressalva medida abaixo.
+
+Isto trava o nosso próprio núcleo ao mesmo release. **Não** sobe piso de dependência de terceiro (D-181). O README diz, na instalação, que os pacotes NetApiFlow se atualizam juntos.
+
+**O que o NuGet faz com a faixa exata (medido na 58.8, D-287).** Só um sentido vira erro. Satélite mais novo que o núcleo dá `NU1605`, erro. Núcleo mais novo que o satélite, que é o caso de quem atualiza só o núcleo, dá `NU1608`, só aviso. Não se força o `NU1608` a erro por um arquivo de props dentro dos pacotes, porque isso mudaria o build de todo consumidor e pegaria também pacote de terceiro. Quem quiser o erro usa `WarningsAsErrors`, e o CHANGELOG diz isso. O que já foi publicado, até a `0.5.3`, mantém a faixa aberta e não ganha nada disto.
+
+**O mecanismo depende de um alvo privado.** A faixa exata sai de um alvo em `src/Directory.Build.targets` que roda depois do `_GetProjectReferenceVersions`, e esse é um alvo interno do `pack` do NuGet, que um SDK futuro pode renomear. A rede é o teste do `.nuspec` (`scripts/nuspec-snapshot.mjs`), que o `release.yml` roda pelo `needs: real-package` do job de publicação: sem a faixa exata, o release para antes de publicar. Teste do `.nuspec` vermelho sem ninguém ter mexido no alvo é sinal de SDK novo.
 
 ## Release (ver também `docs/gitflow.md`)
 

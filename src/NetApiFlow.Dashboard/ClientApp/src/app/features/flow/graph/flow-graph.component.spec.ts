@@ -363,7 +363,63 @@ describe('FlowGraphComponent', () => {
     expect(zoomLayer.getAttribute('transform')).toBe('translate(0,0) scale(1)');
   });
 
-  describe('N+1 badge (D-71)', () => {
+  describe('operation tooltip', () => {
+    const shortOperation = 'GET /orders';
+    const longOperation =
+      'GET /api/orders/{id:int}/items/{itemId:int}/history/{year:int}/{month:int}';
+
+    async function renderNodes(operations: string[]): Promise<HTMLElement> {
+      const spans = operations.map((operation, index) =>
+        span({
+          spanId: `s${index}`,
+          parentSpanId: index === 0 ? null : 's0',
+          sequence: index,
+          component: 'Minimal API',
+          operation,
+        }),
+      );
+      const { nodes, edges } = buildGraph({
+        spans,
+        traceStatus: 'Success',
+        slowThresholdMicros: 250_000,
+      });
+      const fixture = TestBed.createComponent(FlowGraphComponent);
+      fixture.componentRef.setInput('nodes', nodes);
+      fixture.componentRef.setInput('edges', edges);
+      await fixture.whenStable();
+      return fixture.nativeElement;
+    }
+
+    function nodeFor(root: HTMLElement, visibleOperation: string): Element {
+      const found = Array.from(root.querySelectorAll('.flow-graph__node')).find(
+        (node) =>
+          node.querySelector('.flow-graph__node-operation')?.textContent === visibleOperation,
+      );
+      expect(found, `no node shows "${visibleOperation}"`).toBeDefined();
+      return found as Element;
+    }
+
+    it('carries the whole operation as the node tooltip when the label is cut', async () => {
+      const root = await renderNodes([shortOperation, longOperation]);
+
+      const labels = Array.from(root.querySelectorAll('.flow-graph__node-operation')).map(
+        (label) => label.textContent as string,
+      );
+      const cutLabel = labels.find((label) => label.endsWith('…')) as string;
+      expect(cutLabel).toBeDefined();
+
+      const tooltip = nodeFor(root, cutLabel).querySelector('title');
+      expect(tooltip?.textContent).toBe(longOperation);
+    });
+
+    it('adds no tooltip to a node whose operation is shown whole', async () => {
+      const root = await renderNodes([shortOperation, longOperation]);
+
+      expect(nodeFor(root, shortOperation).querySelector('title')).toBeNull();
+    });
+  });
+
+  describe('N+1 badge', () => {
     it('renders the badge only on nodes with a non-null nPlusOneCount, with the real count in its text', async () => {
       const spans: FlowSpan[] = [
         span({ spanId: 'root', parentSpanId: null, sequence: 0, component: 'C', operation: 'Op' }),

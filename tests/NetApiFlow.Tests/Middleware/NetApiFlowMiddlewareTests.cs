@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Options;
 using NetApiFlow.Domain;
+using NetApiFlow.Instrumentation;
 using NetApiFlow.Middleware;
 using NetApiFlow.Recording;
 using Shouldly;
@@ -47,7 +49,108 @@ public class NetApiFlowMiddlewareTests
         completed.RouteTemplate.ShouldBe("/api/orders/{id}");
         completed.HttpStatus.ShouldBe(200);
         completed.Status.ShouldBe(FlowStatus.Success);
-        httpContext.Response.Headers["X-NetApiFlow-TraceId"].ToString().ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithEmitTraceIdHeaderOn_WritesTheHeaderOnlyWhenTheResponseStarts()
+    {
+        var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = true });
+        var recorder = new FlowRecorder(options);
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, recorder, options);
+        var responseFeature = new StartingResponseFeature();
+        var httpContext = TracedGetRequest(responseFeature);
+
+        await subject.InvokeAsync(httpContext);
+
+        httpContext.Response.Headers.ContainsKey("X-NetApiFlow-TraceId").ShouldBeFalse();
+        await responseFeature.RunOnStartingCallbacksAsync();
+        var traceId = httpContext.Response.Headers["X-NetApiFlow-TraceId"].ToString();
+        traceId.ShouldMatch("^[0-9a-f]{32}$");
+        traceId.ShouldNotBe(httpContext.TraceIdentifier);
+        recorder.GetRecentlyCompleted(traceId).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenStartingTheTraceThrows_RunsTheRequestUntracedAndReleasesItsReservation()
+    {
+        var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = true });
+        var recorder = new FlowRecorder(options);
+        var nextRan = false;
+        var seenByTheRequest = true;
+        var subject = new NetApiFlowMiddleware(
+            _ =>
+            {
+                nextRan = true;
+                seenByTheRequest = FlowTraceResolver.ForCurrentActivity() is not null;
+                return Task.CompletedTask;
+            },
+            recorder,
+            options);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpResponseFeature>(new AlreadyStartedResponseFeature());
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/api/orders/42";
+
+        await subject.InvokeAsync(httpContext);
+
+        nextRan.ShouldBeTrue();
+        seenByTheRequest.ShouldBeFalse();
+        httpContext.Items.ContainsKey(FlowHttpContextItems.RequestState).ShouldBeFalse();
+        recorder.ActiveTraceCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenCompletingTheTraceThrows_StillMarksTheRequestAsFinished()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        recorder.TraceCompleted += _ => throw new InvalidOperationException("a subscriber failed");
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, recorder, options);
+        var httpContext = TracedGetRequest(new StartingResponseFeature());
+
+        await subject.InvokeAsync(httpContext);
+
+        var state = (FlowRequestState)httpContext.Items[FlowHttpContextItems.RequestState]!;
+        state.IsRecording.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenCompletingTheTraceThrows_ReleasesTheRequestFromAContextCapturedDuringIt()
+    {
+        var options = Options.Create(new NetApiFlowOptions());
+        var recorder = new FlowRecorder(options);
+        recorder.TraceCompleted += _ => throw new InvalidOperationException("a subscriber failed");
+        ExecutionContext? captured = null;
+        var subject = new NetApiFlowMiddleware(
+            _ =>
+            {
+                captured = ExecutionContext.Capture();
+                return Task.CompletedTask;
+            },
+            recorder,
+            options);
+        var httpContext = TracedGetRequest(new StartingResponseFeature());
+
+        await subject.InvokeAsync(httpContext);
+
+        var requestSeen = true;
+        ExecutionContext.Run(captured!, _ => requestSeen = FlowTraceResolver.ForCurrentActivity() is not null, null);
+        requestSeen.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithEmitTraceIdHeaderOff_RegistersNothingOnTheResponse()
+    {
+        var options = Options.Create(new NetApiFlowOptions { EmitTraceIdHeader = false });
+        var subject = new NetApiFlowMiddleware(_ => Task.CompletedTask, new FlowRecorder(options), options);
+        var responseFeature = new StartingResponseFeature();
+        var httpContext = TracedGetRequest(responseFeature);
+
+        await subject.InvokeAsync(httpContext);
+
+        responseFeature.RegisteredCallbacks.ShouldBe(0);
+        await responseFeature.RunOnStartingCallbacksAsync();
+        httpContext.Response.Headers.ContainsKey("X-NetApiFlow-TraceId").ShouldBeFalse();
     }
 
     [Fact]
@@ -166,5 +269,37 @@ public class NetApiFlowMiddlewareTests
 
         completed.ShouldNotBeNull();
         completed.Status.ShouldBe(FlowStatus.Timeout);
+    }
+
+    private static DefaultHttpContext TracedGetRequest(StartingResponseFeature responseFeature)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpResponseFeature>(responseFeature);
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/api/orders/42";
+        return httpContext;
+    }
+
+    private sealed class AlreadyStartedResponseFeature : HttpResponseFeature
+    {
+        public override void OnStarting(Func<object, Task> callback, object state) =>
+            throw new InvalidOperationException("The response has already started.");
+    }
+
+    private sealed class StartingResponseFeature : HttpResponseFeature
+    {
+        private readonly List<(Func<object, Task> Callback, object State)> _callbacks = [];
+
+        public int RegisteredCallbacks => _callbacks.Count;
+
+        public override void OnStarting(Func<object, Task> callback, object state) => _callbacks.Add((callback, state));
+
+        public async Task RunOnStartingCallbacksAsync()
+        {
+            foreach (var (callback, state) in _callbacks)
+            {
+                await callback(state);
+            }
+        }
     }
 }

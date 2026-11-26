@@ -2,7 +2,7 @@ using NetApiFlow.Domain;
 
 namespace NetApiFlow;
 
-/// <summary>A consolidated trace together with the spans it recorded, as returned by <see cref="ITraceStore"/> reads (D-19).</summary>
+/// <summary>A consolidated trace together with the spans it recorded, as returned by <see cref="ITraceStore"/> reads.</summary>
 public sealed record FlowTraceDetail
 {
     /// <summary>The trace itself.</summary>

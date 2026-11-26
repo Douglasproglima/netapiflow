@@ -1,20 +1,32 @@
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace NetApiFlow.Storage.PostgreSql;
 
-/// <summary><see cref="IDeployAnnotationStore"/> backed by PostgreSQL via raw ADO.NET.</summary>
 internal sealed class PostgreSqlDeployAnnotationStore : IDeployAnnotationStore, IDisposable
 {
     private readonly string _connectionString;
     private readonly string _deployAnnotationsTable;
+    private readonly bool _autoCreateSchema;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly IntervalLogLimiter _verificationFailureLog = new(PersistenceRetryInterval.Default.Value);
+    private readonly Func<NpgsqlConnection, CancellationToken, Task<bool>> _verifySchema;
     private bool _schemaReady;
 
-    public PostgreSqlDeployAnnotationStore(string connectionString, PostgreSqlStorageOptions options)
+    public PostgreSqlDeployAnnotationStore(
+        string connectionString,
+        PostgreSqlStorageOptions options,
+        ILogger logger,
+        Func<NpgsqlConnection, CancellationToken, Task<bool>>? verifySchema = null)
     {
         _connectionString = connectionString;
         _deployAnnotationsTable = PostgreSqlTableNames.ResolveDeployAnnotations(options.TablePrefix);
+        _autoCreateSchema = options.AutoCreateSchema;
+        _logger = logger;
+        _verifySchema = verifySchema ?? ((connection, token) =>
+            PostgreSqlSchemaVerifier.VerifyDeployAnnotationsAsync(connection, _deployAnnotationsTable, _logger, _verificationFailureLog, token));
     }
 
     public async ValueTask SaveAsync(DeployAnnotation annotation, CancellationToken cancellationToken)
@@ -83,7 +95,15 @@ internal sealed class PostgreSqlDeployAnnotationStore : IDeployAnnotationStore, 
 
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await PostgreSqlSchemaInitializer.EnsureDeployAnnotationsCreatedAsync(connection, _deployAnnotationsTable, cancellationToken);
+            if (_autoCreateSchema)
+            {
+                await PostgreSqlSchemaInitializer.EnsureDeployAnnotationsCreatedAsync(connection, _deployAnnotationsTable, cancellationToken);
+            }
+            else if (!await _verifySchema(connection, cancellationToken))
+            {
+                return;
+            }
+
             _schemaReady = true;
         }
         finally

@@ -1,6 +1,6 @@
 namespace NetApiFlow;
 
-/// <summary>Kind of <see cref="FlowEvent"/> published by the recorder (see seção 6.5 do prompt).</summary>
+/// <summary>Kind of <see cref="FlowEvent"/> published by the recorder.</summary>
 public enum FlowEventType
 {
     /// <summary>The middleware opened a trace.</summary>

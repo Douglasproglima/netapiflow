@@ -1,47 +1,57 @@
 using System.Data;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using NetApiFlow.Domain;
 using NetApiFlow.Routing;
 
 namespace NetApiFlow.Storage.SqlServer;
 
-/// <summary>
-/// <see cref="ITraceStore"/> backed by SQL Server via raw ADO.NET (D-05). <see cref="SaveAsync"/>
-/// uses <see cref="SqlBulkCopy"/> for the batch write of a trace and its spans.
-/// </summary>
 internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 {
     private readonly string _connectionString;
     private readonly string _tracesTable;
     private readonly string _spansTable;
+    private readonly bool _autoCreateSchema;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _schemaLock = new(1, 1);
+    private readonly IntervalLogLimiter _verificationFailureLog = new(PersistenceRetryInterval.Default.Value);
+    private readonly Func<SqlConnection, CancellationToken, Task<bool>> _verifySchema;
     private bool _schemaReady;
 
-    public SqlServerTraceStore(string connectionString, SqlServerStorageOptions options)
+    public SqlServerTraceStore(
+        string connectionString,
+        SqlServerStorageOptions options,
+        ILogger logger,
+        Func<SqlConnection, CancellationToken, Task<bool>>? verifySchema = null)
     {
         _connectionString = connectionString;
+        _autoCreateSchema = options.AutoCreateSchema;
+        _logger = logger;
         (_tracesTable, _spansTable) = SqlServerTableNames.Resolve(options.TablePrefix);
+        _verifySchema = verifySchema ?? ((connection, token) =>
+            SqlServerSchemaVerifier.VerifyTracesAsync(connection, _tracesTable, _spansTable, _logger, _verificationFailureLog, token));
     }
 
     public async ValueTask SaveAsync(FlowTrace trace, IReadOnlyList<FlowSpan> spans, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
-        using (var bulkCopy = new SqlBulkCopy(connection) { DestinationTableName = _tracesTable })
+        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction) { DestinationTableName = _tracesTable })
         {
             MapTraceColumns(bulkCopy);
             await bulkCopy.WriteToServerAsync(BuildTraceTable(trace), cancellationToken);
         }
 
-        if (spans.Count == 0)
+        if (spans.Count > 0)
         {
-            return;
+            using var spanBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction) { DestinationTableName = _spansTable };
+            MapSpanColumns(spanBulkCopy);
+            await spanBulkCopy.WriteToServerAsync(BuildSpansTable(spans), cancellationToken);
         }
 
-        using var spanBulkCopy = new SqlBulkCopy(connection) { DestinationTableName = _spansTable };
-        MapSpanColumns(spanBulkCopy);
-        await spanBulkCopy.WriteToServerAsync(BuildSpansTable(spans), cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async ValueTask<FlowTraceDetail?> GetAsync(string traceId, CancellationToken cancellationToken)
@@ -275,18 +285,29 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
         return BuildArchitectureMap(totalExecutions, rows);
     }
 
-    public async ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken)
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before: null, cancellationToken);
+
+    public ValueTask<FlowTraceDetail?> GetLastSuccessfulAsync(string method, string routeKey, DateTime before, CancellationToken cancellationToken) =>
+        FindLastSuccessfulAsync(method, routeKey, before, cancellationToken);
+
+    private async ValueTask<FlowTraceDetail?> FindLastSuccessfulAsync(string method, string routeKey, DateTime? before, CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(cancellationToken);
 
+        var startedBefore = before is null ? string.Empty : "AND started_at < @before";
         await using var command = new SqlCommand($"""
             SELECT TOP (1) trace_id, method, route_template, http_status, status, started_at, ended_at, duration_micros, span_count, truncated, error_message, tags
             FROM {_tracesTable}
-            WHERE UPPER(method) = UPPER(@method) AND route_key = @routeKey AND status = 'Success'
+            WHERE UPPER(method) = UPPER(@method) AND route_key = @routeKey AND status = 'Success' {startedBefore}
             ORDER BY started_at DESC
             """, connection);
         command.Parameters.AddWithValue("method", method);
         command.Parameters.AddWithValue("routeKey", routeKey);
+        if (before is not null)
+        {
+            command.Parameters.Add("before", SqlDbType.DateTime2).Value = before.Value;
+        }
 
         FlowTrace? trace;
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -344,8 +365,8 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
         if (query.RouteTemplate is not null)
         {
-            conditions.Add("route_template = @route");
-            command.Parameters.AddWithValue("route", query.RouteTemplate);
+            conditions.Add("route_key = @routeKey");
+            command.Parameters.AddWithValue("routeKey", RouteTemplateNormalizer.NormalizeForComparison(query.RouteTemplate));
         }
 
         if (query.Tenant is not null)
@@ -377,7 +398,7 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
     /// <summary>
     /// Builds the <c>ORDER BY</c> clause from <paramref name="query"/>'s already-parsed sort enum,
-    /// never from concatenated query-string text (D-41). Ties break by <c>started_at</c>
+    /// never from concatenated query-string text. Ties break by <c>started_at</c>
     /// descending, then <c>trace_id</c>, so paginating a result set with repeated values never
     /// skips or repeats a row across pages. <c>UPPER()</c> keeps route/method ordering consistent
     /// regardless of the server's configured collation.
@@ -427,8 +448,16 @@ internal sealed class SqlServerTraceStore : ITraceStore, IDisposable
 
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
-            await SqlServerSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            if (_autoCreateSchema)
+            {
+                await SqlServerSchemaInitializer.EnsureCreatedAsync(connection, _tracesTable, _spansTable, cancellationToken);
+                await SqlServerSchemaInitializer.NormalizeRoutesAsync(connection, _tracesTable, cancellationToken);
+            }
+            else if (!await _verifySchema(connection, cancellationToken))
+            {
+                return;
+            }
+
             _schemaReady = true;
         }
         finally

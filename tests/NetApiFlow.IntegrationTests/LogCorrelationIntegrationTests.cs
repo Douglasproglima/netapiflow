@@ -42,7 +42,7 @@ public class LogCorrelationIntegrationTests
                     {
                         endpoints.MapGet("/api/warn", (ILoggerFactory loggerFactory) =>
                         {
-                            using var step = NetApiFlow.Step("WarnController", "Warn");
+                            using var step = Flow.Step("WarnController", "Warn");
                             var logger = loggerFactory.CreateLogger("WarnController");
                             logger.Log(LogLevel.Warning, new EventId(0), "something happened", null, (s, e) => s);
                             return Results.Ok();
@@ -72,7 +72,7 @@ public class LogCorrelationIntegrationTests
         var detailResponse = await client.GetAsync($"/flow/api/traces/{traceId}");
         using var doc = JsonDocument.Parse(await detailResponse.Content.ReadAsStringAsync());
 
-        doc.RootElement.GetProperty("spans").EnumerateArray().Single().GetProperty("logs").GetArrayLength().ShouldBe(0);
+        doc.RootElement.GetProperty("spans").EnumerateArray().Single(span => span.GetProperty("component").GetString() == "WarnController").GetProperty("logs").GetArrayLength().ShouldBe(0);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class LogCorrelationIntegrationTests
         detailResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
         using var doc = JsonDocument.Parse(await detailResponse.Content.ReadAsStringAsync());
 
-        var span = doc.RootElement.GetProperty("spans").EnumerateArray().Single();
+        var span = doc.RootElement.GetProperty("spans").EnumerateArray().Single(candidate => candidate.GetProperty("component").GetString() == "WarnController");
         var logs = span.GetProperty("logs").EnumerateArray().ToList();
 
         logs.Count.ShouldBe(1);

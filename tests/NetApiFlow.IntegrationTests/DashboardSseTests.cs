@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,7 +21,7 @@ namespace NetApiFlow.IntegrationTests;
 
 /// <summary>
 /// Verifies <c>GET /stream</c>, the replay buffer with <c>Last-Event-ID</c>
-/// and the client/queue limits of risco R-10.
+/// and the client/queue limits.
 ///
 /// Runs against a real Kestrel listener on an ephemeral port, not <c>TestServer</c>: a long-lived
 /// streaming response needs each write to reach the client as it happens, and <c>TestServer</c>'s
@@ -30,7 +32,10 @@ namespace NetApiFlow.IntegrationTests;
 /// </summary>
 public class DashboardSseTests
 {
-    private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync(RecordingLoggerProvider? loggerProvider = null)
+    private static async Task<(IHost Host, HttpClient Client)> CreateHostAsync(
+        RecordingLoggerProvider? loggerProvider = null,
+        TaskCompletionSource? requestCompleted = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var host = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -48,13 +53,28 @@ public class DashboardSseTests
                     services.AddRouting();
                     services.AddNetApiFlow(o => o.IncludePaths("/api/**"));
                     services.AddNetApiFlowDashboard();
+                    configureServices?.Invoke(services);
                 });
                 webBuilder.Configure(app =>
                 {
+                    if (requestCompleted is not null)
+                    {
+                        app.Use((context, next) =>
+                        {
+                            context.Response.OnCompleted(() =>
+                            {
+                                requestCompleted.TrySetResult();
+                                return Task.CompletedTask;
+                            });
+                            return next(context);
+                        });
+                    }
+
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {
                         endpoints.MapGet("/api/ping", () => "pong").WithNetApiFlowTracking();
+                        endpoints.MapGet("/api/throws", string () => throw new InvalidOperationException("boom"));
                         endpoints.MapNetApiFlowDashboardApi();
                     });
                 });
@@ -175,6 +195,57 @@ public class DashboardSseTests
     }
 
     [Fact]
+    public async Task Stream_TraceStartedOfATracedRequest_CarriesTheW3CTraceIdAndTheTenantInItsTags()
+    {
+        var (host, client) = await CreateHostAsync(configureServices: services => services.AddSingleton<IFlowTenantResolver, FixedTenantResolver>());
+        using var _host = host;
+        using var _client = client;
+        var (response, reader) = await ConnectAsync(client);
+        using var _ = response;
+        reader.ShouldNotBeNull();
+        var w3cTraceId = ActivityTraceId.CreateRandom().ToHexString();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/ping");
+        request.Headers.Add("traceparent", $"00-{w3cTraceId}-{ActivitySpanId.CreateRandom().ToHexString()}-01");
+        var traceId = (await client.SendAsync(request)).Headers.GetValues("X-NetApiFlow-TraceId").Single();
+        var started = await ReadEventAsync(reader);
+
+        started.EventType.ShouldBe("TraceStarted");
+        started.Data.RootElement.GetProperty("traceId").GetString().ShouldBe(traceId);
+        var tags = started.Data.RootElement.GetProperty("trace").GetProperty("tags");
+        tags.GetProperty("w3c.trace_id").GetString().ShouldBe(w3cTraceId);
+        tags.GetProperty("tenant").GetString().ShouldBe("acme");
+    }
+
+    [Fact]
+    public async Task Stream_TraceStartedOfARequestWithoutAMatchedEndpoint_CarriesTheW3CTraceIdAndTheTenantInItsTags()
+    {
+        var (host, client) = await CreateHostAsync(configureServices: services => services.AddSingleton<IFlowTenantResolver, FixedTenantResolver>());
+        using var _host = host;
+        using var _client = client;
+        var (response, reader) = await ConnectAsync(client);
+        using var _ = response;
+        reader.ShouldNotBeNull();
+        var w3cTraceId = ActivityTraceId.CreateRandom().ToHexString();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/nothing-matches-this");
+        request.Headers.Add("traceparent", $"00-{w3cTraceId}-{ActivitySpanId.CreateRandom().ToHexString()}-01");
+        await client.SendAsync(request);
+        var started = await ReadEventAsync(reader);
+
+        started.EventType.ShouldBe("TraceStarted");
+        started.Data.RootElement.GetProperty("trace").GetProperty("routeTemplate").GetString().ShouldBe("(unmatched)");
+        var tags = started.Data.RootElement.GetProperty("trace").GetProperty("tags");
+        tags.GetProperty("w3c.trace_id").GetString().ShouldBe(w3cTraceId);
+        tags.GetProperty("tenant").GetString().ShouldBe("acme");
+    }
+
+    private sealed class FixedTenantResolver : IFlowTenantResolver
+    {
+        public string? Resolve(HttpContext context) => "acme";
+    }
+
+    [Fact]
     public async Task Stream_WithConcurrentTraces_NeverMixesEventsAcrossTraces()
     {
         var (host, client) = await CreateHostAsync();
@@ -245,7 +316,7 @@ public class DashboardSseTests
     [Fact]
     public async Task Stream_ReconnectWithLastEventIdAsQueryString_ReplaysMissedEvents()
     {
-        // D-22: EventSource cannot set headers on a connection it creates itself, so a manually
+        // EventSource cannot set headers on a connection it creates itself, so a manually
         // reconnecting client (own exponential backoff) sends Last-Event-ID this way.
         var (host, client) = await CreateHostAsync();
         using var _host = host;
@@ -336,29 +407,40 @@ public class DashboardSseTests
     [Fact]
     public async Task Stream_ClientDisconnects_NeverLogsAnUnhandledException()
     {
-        // D-31: cancellation (closing the tab, navigating away, EventSource reconnecting) is the
-        // normal end of an SSE connection, not a failure. Before the fix, the net10.0 writer let
-        // the resulting OperationCanceledException propagate out of the request, surfacing as an
-        // "unhandled exception" error log and a dev-mode error response.
         using var loggerProvider = new RecordingLoggerProvider();
-        var (host, client) = await CreateHostAsync(loggerProvider);
+        var requestCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (host, client) = await CreateHostAsync(loggerProvider, requestCompleted);
         using var _host = host;
         using var _client = client;
 
         var (response, reader) = await ConnectAsync(client);
         reader.ShouldNotBeNull();
 
-        response.Dispose(); // the client disconnects mid-stream, cancelling the server's request
+        response.Dispose();
+        await requestCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
-        // Give the server a moment to observe the cancellation and wind the request down.
-        await Task.Delay(TimeSpan.FromSeconds(3));
-
-        // Scoped to "unhandled exception" (the hosting layer's own wording for exactly this
-        // symptom), not every Error-level entry: an unrelated BackgroundService can log its own
-        // cancellation noise during host teardown, which isn't what this test is about.
-        loggerProvider.Entries.ShouldNotContain(entry =>
-            entry.Level >= LogLevel.Error && entry.Message.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase));
+        ErrorsAboutAnUnhandledException(loggerProvider).ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task RequestCompletionSignal_AfterAnUnhandledException_ComesAfterTheErrorWasLogged()
+    {
+        using var loggerProvider = new RecordingLoggerProvider();
+        var requestCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var (host, client) = await CreateHostAsync(loggerProvider, requestCompleted);
+        using var _host = host;
+        using var _client = client;
+
+        using var response = await client.GetAsync("/api/throws");
+        await requestCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        ErrorsAboutAnUnhandledException(loggerProvider).ShouldNotBeEmpty();
+    }
+
+    private static List<(LogLevel Level, string Message)> ErrorsAboutAnUnhandledException(RecordingLoggerProvider loggerProvider) =>
+        loggerProvider.Entries
+            .Where(entry => entry.Level >= LogLevel.Error && entry.Message.Contains("unhandled exception", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
     private sealed class RecordingLoggerProvider : ILoggerProvider
     {
