@@ -1,6 +1,8 @@
 #nullable enable
 NetApiFlow.Storage.PostgreSql.NetApiFlowPostgreSqlServiceCollectionExtensions
 NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.AutoCreateSchema.get -> bool
+NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.AutoCreateSchema.set -> void
 NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.PostgreSqlStorageOptions() -> void
 NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.TablePrefix.get -> string!
 NetApiFlow.Storage.PostgreSql.PostgreSqlStorageOptions.TablePrefix.set -> void

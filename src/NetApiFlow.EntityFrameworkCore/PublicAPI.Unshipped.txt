@@ -1,3 +1,1 @@
 #nullable enable
-override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.CommandCanceled(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandEndEventData! eventData) -> void
-override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.CommandCanceledAsync(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandEndEventData! eventData, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

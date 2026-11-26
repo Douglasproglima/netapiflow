@@ -143,6 +143,7 @@ NetApiFlow.ExternalActivitySource.HttpClient = 1 -> NetApiFlow.ExternalActivityS
 NetApiFlow.ExternalActivitySource.None = 0 -> NetApiFlow.ExternalActivitySource
 NetApiFlow.ExternalActivitySource.Npgsql = 2 -> NetApiFlow.ExternalActivitySource
 NetApiFlow.ExternalActivitySource.SqlClient = 4 -> NetApiFlow.ExternalActivitySource
+NetApiFlow.Flow
 NetApiFlow.FlowEvent
 NetApiFlow.FlowEvent.<Clone>$() -> NetApiFlow.FlowEvent!
 NetApiFlow.FlowEvent.Equals(NetApiFlow.FlowEvent? other) -> bool
@@ -176,7 +177,12 @@ NetApiFlow.FlowStep
 NetApiFlow.FlowStep.Dispose() -> void
 NetApiFlow.FlowStep.FlowStep() -> void
 NetApiFlow.FlowStep.MarkError(System.Exception! exception) -> void
+NetApiFlow.FlowStep.Tag(string! key, bool value) -> void
+NetApiFlow.FlowStep.Tag(string! key, double value) -> void
+NetApiFlow.FlowStep.Tag(string! key, int value) -> void
+NetApiFlow.FlowStep.Tag(string! key, long value) -> void
 NetApiFlow.FlowStep.Tag(string! key, string! value) -> void
+NetApiFlow.FlowStep.Tag<TEnum>(string! key, TEnum value) -> void
 NetApiFlow.FlowTraceDetail
 NetApiFlow.FlowTraceDetail.<Clone>$() -> NetApiFlow.FlowTraceDetail!
 NetApiFlow.FlowTraceDetail.Equals(NetApiFlow.FlowTraceDetail? other) -> bool
@@ -219,6 +225,7 @@ NetApiFlow.ITraceStore.ApplyRetentionAsync(NetApiFlow.RetentionPolicy! policy, S
 NetApiFlow.ITraceStore.GetArchitectureMapAsync(string! method, string! routeKey, NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.ArchitectureMap!>
 NetApiFlow.ITraceStore.GetAsync(string! traceId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.FlowTraceDetail?>
 NetApiFlow.ITraceStore.GetComponentStatsAsync(NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<NetApiFlow.ComponentStat!>!>
+NetApiFlow.ITraceStore.GetLastSuccessfulAsync(string! method, string! routeKey, System.DateTime before, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.FlowTraceDetail?>
 NetApiFlow.ITraceStore.GetLastSuccessfulAsync(string! method, string! routeKey, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.FlowTraceDetail?>
 NetApiFlow.ITraceStore.GetRouteStatsAsync(NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<NetApiFlow.RouteStat!>!>
 NetApiFlow.ITraceStore.GetTraceStatsAsync(NetApiFlow.StatsQuery! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<NetApiFlow.TraceStats!>
@@ -254,14 +261,23 @@ NetApiFlow.LogEntry.Message.get -> string!
 NetApiFlow.LogEntry.Message.init -> void
 NetApiFlow.LogEntry.Timestamp.get -> System.DateTime
 NetApiFlow.LogEntry.Timestamp.init -> void
+NetApiFlow.Marking.FlowConventionOptions
+NetApiFlow.Marking.FlowConventionOptions.FlowConventionOptions() -> void
+NetApiFlow.Marking.FlowConventionOptions.IncludeAssembly(System.Reflection.Assembly! assembly) -> NetApiFlow.Marking.FlowConventionOptions!
+NetApiFlow.Marking.FlowConventionOptions.IncludeNamespacePrefix(string! prefix) -> NetApiFlow.Marking.FlowConventionOptions!
 NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions
 NetApiFlow.NetApiFlow
+NetApiFlow.NetApiFlowEndpointConventionExtensions
 NetApiFlow.NetApiFlowEndpointFilterExtensions
 NetApiFlow.NetApiFlowOptions
+NetApiFlow.NetApiFlowOptions.CaptureMinimalApiEndpoints.get -> bool
+NetApiFlow.NetApiFlowOptions.CaptureMinimalApiEndpoints.set -> void
 NetApiFlow.NetApiFlowOptions.CapturePrePipelineSteps.get -> bool
 NetApiFlow.NetApiFlowOptions.CapturePrePipelineSteps.set -> void
 NetApiFlow.NetApiFlowOptions.CaptureSqlText.get -> bool
 NetApiFlow.NetApiFlowOptions.CaptureSqlText.set -> void
+NetApiFlow.NetApiFlowOptions.EmitTraceIdHeader.get -> bool
+NetApiFlow.NetApiFlowOptions.EmitTraceIdHeader.set -> void
 NetApiFlow.NetApiFlowOptions.Enabled.get -> bool
 NetApiFlow.NetApiFlowOptions.Enabled.set -> void
 NetApiFlow.NetApiFlowOptions.ExcludePaths(params string![]! patterns) -> NetApiFlow.NetApiFlowOptions!
@@ -450,6 +466,9 @@ static NetApiFlow.Domain.FlowSpan.operator !=(NetApiFlow.Domain.FlowSpan? left, 
 static NetApiFlow.Domain.FlowSpan.operator ==(NetApiFlow.Domain.FlowSpan? left, NetApiFlow.Domain.FlowSpan? right) -> bool
 static NetApiFlow.Domain.FlowTrace.operator !=(NetApiFlow.Domain.FlowTrace? left, NetApiFlow.Domain.FlowTrace? right) -> bool
 static NetApiFlow.Domain.FlowTrace.operator ==(NetApiFlow.Domain.FlowTrace? left, NetApiFlow.Domain.FlowTrace? right) -> bool
+static NetApiFlow.Flow.CurrentTraceId.get -> string?
+static NetApiFlow.Flow.GetRecentTrace(System.IServiceProvider! services, string! traceId) -> NetApiFlow.FlowTraceDetail?
+static NetApiFlow.Flow.Step(string! component, string! operation, NetApiFlow.ComponentType type = NetApiFlow.ComponentType.Custom) -> NetApiFlow.FlowStep
 static NetApiFlow.FlowEvent.operator !=(NetApiFlow.FlowEvent? left, NetApiFlow.FlowEvent? right) -> bool
 static NetApiFlow.FlowEvent.operator ==(NetApiFlow.FlowEvent? left, NetApiFlow.FlowEvent? right) -> bool
 static NetApiFlow.FlowTraceDetail.operator !=(NetApiFlow.FlowTraceDetail? left, NetApiFlow.FlowTraceDetail? right) -> bool
@@ -460,11 +479,14 @@ static NetApiFlow.LogEntry.operator !=(NetApiFlow.LogEntry? left, NetApiFlow.Log
 static NetApiFlow.LogEntry.operator ==(NetApiFlow.LogEntry? left, NetApiFlow.LogEntry? right) -> bool
 static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.AddFlowTracked<TInterface, TImplementation>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, NetApiFlow.ComponentType componentType, Microsoft.Extensions.DependencyInjection.ServiceLifetime lifetime = Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.DecorateFlowTracked(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.Type!, bool>! predicate, NetApiFlow.ComponentType componentType = NetApiFlow.ComponentType.Service) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.Marking.FlowTrackedServiceCollectionExtensions.TrackFlowByConvention(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.Marking.FlowConventionOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static NetApiFlow.NetApiFlow.CurrentTraceId.get -> string?
 static NetApiFlow.NetApiFlow.GetRecentTrace(System.IServiceProvider! services, string! traceId) -> NetApiFlow.FlowTraceDetail?
 static NetApiFlow.NetApiFlow.Step(string! component, string! operation, NetApiFlow.ComponentType type = NetApiFlow.ComponentType.Custom) -> NetApiFlow.FlowStep
+static NetApiFlow.NetApiFlowEndpointConventionExtensions.WithoutNetApiFlowTracking<TBuilder>(this TBuilder builder) -> TBuilder
 static NetApiFlow.NetApiFlowEndpointFilterExtensions.WithNetApiFlowTracking(this Microsoft.AspNetCore.Builder.RouteHandlerBuilder! builder) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
 static NetApiFlow.NetApiFlowEndpointFilterExtensions.WithNetApiFlowTracking(this Microsoft.AspNetCore.Routing.RouteGroupBuilder! builder) -> Microsoft.AspNetCore.Routing.RouteGroupBuilder!
+static NetApiFlow.NetApiFlowEndpointFilterExtensions.WithNetApiFlowTracking<TBuilder>(this TBuilder builder) -> TBuilder
 static NetApiFlow.NetApiFlowServiceCollectionExtensions.AddNetApiFlow(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.NetApiFlowOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static NetApiFlow.PagedResult<T>.operator !=(NetApiFlow.PagedResult<T>? left, NetApiFlow.PagedResult<T>? right) -> bool
 static NetApiFlow.PagedResult<T>.operator ==(NetApiFlow.PagedResult<T>? left, NetApiFlow.PagedResult<T>? right) -> bool

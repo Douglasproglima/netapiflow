@@ -2,6 +2,8 @@
 NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor
 NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.FlowDbCommandInterceptor(Microsoft.Extensions.Options.IOptions<NetApiFlow.NetApiFlowOptions!>! options) -> void
 NetApiFlow.EntityFrameworkCore.NetApiFlowEntityFrameworkCoreServiceCollectionExtensions
+override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.CommandCanceled(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandEndEventData! eventData) -> void
+override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.CommandCanceledAsync(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandEndEventData! eventData, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.CommandFailed(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandErrorEventData! eventData) -> void
 override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.CommandFailedAsync(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandErrorEventData! eventData, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 override NetApiFlow.EntityFrameworkCore.FlowDbCommandInterceptor.NonQueryExecuted(System.Data.Common.DbCommand! command, Microsoft.EntityFrameworkCore.Diagnostics.CommandExecutedEventData! eventData, int result) -> int

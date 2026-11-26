@@ -6,4 +6,6 @@ NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.ConfigureOtlpExporter.set -
 NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.IncludeHttpClientSource.get -> bool
 NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.IncludeHttpClientSource.set -> void
 NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions.NetApiFlowOtlpExportOptions() -> void
+NetApiFlow.OpenTelemetry.NetApiFlowTracerProviderBuilderExtensions
 static NetApiFlow.OpenTelemetry.NetApiFlowOpenTelemetryServiceCollectionExtensions.AddNetApiFlowOtlpExport(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<NetApiFlow.OpenTelemetry.NetApiFlowOtlpExportOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static NetApiFlow.OpenTelemetry.NetApiFlowTracerProviderBuilderExtensions.AddNetApiFlowSource(this OpenTelemetry.Trace.TracerProviderBuilder! builder) -> OpenTelemetry.Trace.TracerProviderBuilder!
