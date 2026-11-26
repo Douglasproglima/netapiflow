@@ -198,7 +198,7 @@ O passo de teste do `ci.yml` roda os projetos com `set -e` e para no primeiro qu
 
 ## O texto do `CHANGELOG.md` é contrato do job `comparison` (D-310)
 
-O `tests/real-package/expected-differences.json` guarda, em cada linha, uma frase que tem de aparecer **palavra por palavra** na seção `[Unreleased]` do `CHANGELOG.md` (o espaço em branco é normalizado). O job `comparison` falha com `NOT ANNOUNCED` quando a frase some. Reescrever uma entrada do `CHANGELOG`, mesmo só para dizer melhor, pode tirar a frase, e foi o que aconteceu com "Each request is now its own trace" na D-304.
+O `tests/real-package/expected-differences.json` guarda, em cada linha, uma frase que tem de aparecer **palavra por palavra** no `CHANGELOG.md`, na seção `[Unreleased]` e nas seções de versão acima da versão-base de `tests/real-package/previous-published-version.txt` (o espaço em branco é normalizado, D-315). Uma frase que só aparece na versão-base ou abaixo não conta, e a seção da versão-base ausente é erro. O job `comparison` falha com `NOT ANNOUNCED` quando a frase some. Reescrever uma entrada do `CHANGELOG`, mesmo só para dizer melhor, pode tirar a frase, e foi o que aconteceu com "Each request is now its own trace" na D-304. O renome do release (`[Unreleased]` vira `[0.6.0]`) é seguro por causa da leitura das seções acima da base (D-315).
 
 Um PR que só mexe no `CHANGELOG.md` conta como só de documentação para o `detect-changes` do `ci.yml`, que só liga o `real-package` para os READMEs, então o job não roda e a falha aparece no PR seguinte que não é só de documentação. Antes de editar uma entrada do `[Unreleased]`, conferir as frases de `expected-differences.json` contra o texto novo. Hoje são nove linhas e cinco frases distintas.
 

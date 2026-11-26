@@ -42,16 +42,16 @@ O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `D
 1. `git status` limpo em `develop`, `git pull --ff-only`, e a versão confirmada: `0.6.0` (minor, pré-1.0).
 2. **O teste com o pacote real (D-176), antes de abrir a branch.** Pacote empacotado de verdade com `-p:Version=0.6.0-verify.<n>` (nunca `0.6.0`, D-153 e D-174), em `tests/manual-verification/`: `AddNetApiFlow()` sem lambda, em `Development`, com storage real, uma requisição real.
    Mais o caminho do usuário (D-186): um `dotnet new webapi` novo, o README ao pé da letra no `net10.0` **e no `net8.0`** (o template do `net8.0` usa Swashbuckle, D-277), e cada tela do painel e da demo num navegador de verdade.
-3. `git switch -c release/0.6.0`. No `CHANGELOG.md`, a seção `## [Unreleased]` vira `## [0.6.0] - 2026-11-25` (a data do dia da tag, e o arquivo não tem links de comparação no rodapé, então nada mais muda), e `## [Unreleased]` fica sem nenhuma subseção.
+3. `git switch -c release/0.6.0`. No `CHANGELOG.md`, a seção `## [Unreleased]` vira `## [0.6.0] - 2026-11-25` (a data do dia da tag, e o arquivo não tem links de comparação no rodapé, então nada mais muda), e `## [Unreleased]` fica sem nenhuma subseção. **O renome só é seguro com a PR #526 no `develop` (squash `aab26cb`, D-315):** o `comparison` lê o `[Unreleased]` e as seções de versão acima da versão-base, e sem ela dá `NOT ANNOUNCED` nas nove linhas, na PR do release e na tag.
 4. `<Version>` em `Directory.Build.props` para `0.6.0`, e no mesmo commit o `"version"` de `src/NetApiFlow.Dashboard/ClientApp/src/assets/demo-fixtures/config.json` (o `DemoFixtureVersionTests` deixa a PR vermelha se divergirem).
-5. `dotnet pack NetApiFlow.slnx -c Release`: os 9 pacotes, `.nupkg` e `.snupkg`, com `0.6.0` no nome. Contar os 9.
-6. **O que NÃO se mexe antes da tag.** `tests/real-package/previous-published-version.txt` fica em `0.5.3`, e `expected-differences.json` fica **cheio** (hoje 9 linhas): o job `comparison` roda na tag e faz parte do `needs` da publicação (D-260).
+5. `dotnet pack NetApiFlow.slnx -c Release`: os 9 pacotes, `.nupkg` e `.snupkg`, com `0.6.0` no nome. Contar os 9. Ninguém restaura desses `.nupkg` (D-153): um app que os instale deixa um `0.6.0` local no cache global.
+6. **O que NÃO se mexe antes da tag.** `tests/real-package/previous-published-version.txt` fica em `0.5.3`, e `expected-differences.json` fica **cheio** (hoje 9 linhas): o job `comparison` roda na tag e faz parte do `needs` da publicação (D-260). Com a base em `0.5.3`, o `comparison` lê o `[0.6.0]` do `CHANGELOG` (D-315), e é por isso que o passo 3 e este passo convivem.
    `src/NetApiFlow.Mcp/CompatibilitySuppressions.xml` também fica. A baseline do `pack` (`PackageValidationBaselineVersion` em `src/Directory.Build.props`) lê o `previous-published-version.txt`, então o `pack` da `0.6.0` ainda compara com a `0.5.3`, e a supressão cobre o `CP0001` das tools do MCP que viraram `internal`.
 7. Parar. Push e `gh pr create --base main` só com a confirmação explícita de quem pediu.
 
 ### B. A `AUDITORIA`, a PR para a `main`
 
-8. A PR roda os checks. A `main` exige 5 (`pr-lint`, `secret-scan`, `detect-changes`, `build-test` no ubuntu e no windows). Olhar também `real-package / real-package`, `real-package / comparison` e `built-demo`, que rodam na PR mas ainda não são obrigatórios na `main`. Se o `DashboardSseTests.Stream_WithConcurrentTraces_NeverMixesEventsAcrossTraces` falhar no `build-test` do windows, é um teste instável conhecido (item 11 do roadmap), e reexecuta-se o job (D-314). Merge em squash.
+8. A PR roda os checks. A `main` exige 5 (`pr-lint`, `secret-scan`, `detect-changes`, `build-test` no ubuntu e no windows). Olhar também `real-package / real-package`, `real-package / comparison` e `built-demo`, que rodam na PR mas ainda não são obrigatórios na `main`. Se o `DashboardSseTests.Stream_WithConcurrentTraces_NeverMixesEventsAcrossTraces` falhar no `build-test` do windows, é um teste instável conhecido (item 11 do roadmap), e reexecuta-se o job (D-314). Merge em squash. O branch é `release/0.6.0`, e o título da PR para a `main` é `0.6.0` ou Conventional Commits (`pr-lint.yml`).
 9. **Logo depois do merge,** tornar obrigatórios na `main` os três checks `real-package / real-package`, `real-package / comparison` e `built-demo` (D-261, D-262, D-270), com a autorização do dono, dada em 25/11/2026 (relato da auditoria, D-308). A `main` passa de 5 para 8, igual ao `develop`.
    Ficaram de fora até aqui porque o `ci.yml` da `main` era o antigo, e um `hotfix/*` nasce da `main` e nunca produziria os checks. Conferir depois: `gh api repos/Douglasproglima/netapiflow/branches/main/protection/required_status_checks`.
 
@@ -77,12 +77,13 @@ O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `D
 16. Os quatro advisories, na ordem e com a condição de `advisories-0.6.0.md`.
 17. A Tarefa 62.4: o quick start e os números do site conferidos contra os pacotes `0.6.0` publicados, e o site atualizado no mesmo dia.
 18. O back-merge: PR de `main` para `develop`, com **"Create a merge commit"**, nunca squash, senão a PR perde o vínculo de ancestralidade (passo 12 da skill).
-19. **A PR de `chore/*` no `develop`, só depois da publicação e do back-merge (D-260), com estes quatro itens juntos** (passo 13 da skill):
+19. **A PR de `chore/*` no `develop`, só depois da publicação e do back-merge (D-260), com estes quatro itens juntos** (passo 13 da skill): **Só depois do passo 14,** porque a versão-base nova precisa restaurar do nuget.org (`src/Directory.Build.props:7` e `scripts/build-comparison-apps.mjs:15-18` baixam o `0.6.0`), e o nuget.org demora a indexar. O `#nullable enable` fica na primeira linha de cada `PublicAPI.Unshipped.txt`, e as 21 linhas `*REMOVED*` do `NetApiFlow.Mcp` saem do `Shipped` e somem.
     - `tests/real-package/previous-published-version.txt` para `0.6.0`;
     - `tests/real-package/expected-differences.json` para `[]`;
     - em cada pacote, as linhas do `PublicAPI.Unshipped.txt` **na tag** (`git show v0.6.0:src/<Pacote>/PublicAPI.Unshipped.txt`) vão para o `PublicAPI.Shipped.txt`, e uma linha `*REMOVED*` tira a linha dela do `Shipped` e some (D-265);
     - apagar `src/NetApiFlow.Mcp/CompatibilitySuppressions.xml` (D-278).
     **A versão e a supressão vão na mesma PR,** porque a baseline do `pack` lê o `previous-published-version.txt`. Trocar a versão para `0.6.0` sem apagar o arquivo faz o `pack` falhar com "Supressões desnecessárias encontradas", que é erro (medido pela auditoria). Apagar o arquivo sem trocar a versão faz o `pack` do `NetApiFlow.Mcp` falhar com `CP0001` contra a `0.5.3`. Um sem o outro quebra o CI do ciclo seguinte.
+**Entre o corte do `release/0.6.0` e o back-merge, nenhuma PR que mexa no `CHANGELOG.md` entra no `develop`** (D-315): o passo 3 renomeia o `[Unreleased]`, e uma entrada nova no `develop` conflita no back-merge ou se perde. A auditoria segura qualquer PR com `CHANGELOG`.
 20. A Planejadora registra o release (README do plano e `decisoes.md`) e abre a `0.7.0` com o roadmap.
 
 ## A segunda passada: o que ela cobre
