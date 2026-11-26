@@ -91,7 +91,8 @@ sistema achou. Para cada minor:
    temas e em 390 px; `Host` e `Origin`, os cabeçalhos e o 404 em `Production`; um banco real
    (PostgreSQL e SQL Server) com o filtro e o reinício; e a comparação com a versão publicada.
 3. O inventário completo, o README frase a frase e o mapa inteiro, antes da `1.0` e sempre que uma minor
-   mudar a API pública.
+   mudar a API pública. Uma linha nova ou removida no `PublicAPI.Shipped.txt` ou no `PublicAPI.Unshipped.txt`
+   já conta como mudança, e quem decide é a auditoria.
 
 Se o dono quiser outra régua, ele decide.
 
