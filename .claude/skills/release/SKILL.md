@@ -80,11 +80,11 @@ em `src/*/PublicAPI.*.txt`, que a Planejadora não escreve.
     tag existe e o nuget.org recebe o pacote, mas `gh release list` continua mostrando a versão
     anterior como "Latest" (achado real, v0.2.0 e v0.3.0 ficaram sem Release por duas rodadas
     seguidas). Criar com `gh release create v<versao> --title v<versao> --notes-file <corpo>`,
-    corpo sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`.
+    corpo sendo a seção `[<versao>]` que acabou de sair de `CHANGELOG.md`. Se a versão tem advisory, **publique os advisories antes** e crie a página depois, para o corpo já ter os números como link (D-316).
 12. Depois da tag: merge de `main` de volta em `develop`. `main` e `develop` têm proteção de
     branch (push direto é rejeitado pelo próprio GitHub), então isso sempre é PR, nunca
     fast-forward direto. Mergear com "Create a merge commit" (nunca squash), senão a PR perde o
-    vínculo de ancestralidade que o merge deveria estabelecer.
+    vínculo de ancestralidade que o merge deveria estabelecer. O back-merge conflita nas linhas do título do `CHANGELOG.md` (`[Unreleased]` e `[<versao>]`): resolva ficando com a versão da `main` (D-316).
 13. **Depois da publicação e do back-merge, nunca antes da tag (D-260),** num PR de `chore/*` no `develop`: apontar
     `tests/real-package/previous-published-version.txt` para a versão nova e esvaziar `tests/real-package/expected-differences.json`
     (`[]`). A tag publica com a lista cheia, porque o job `comparison` roda na tag e faz parte do `needs` da publicação: esvaziar

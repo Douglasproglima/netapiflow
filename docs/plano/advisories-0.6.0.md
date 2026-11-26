@@ -17,6 +17,17 @@ Os quatro têm a severidade decidida pelo dono. Os dois últimos foram confirmad
 
 As quatro notas foram recalculadas por script pela Planejadora em 25/11/2026, pela fórmula do CVSS 3.1: 4,8, 5,3, 4,2 e 5,3 (4,3 com `PR:L`). A conta bate com cada rascunho.
 
+## Publicados
+
+A auditoria publicou os quatro em 25/11/2026, **depois** de os pacotes `0.6.0` estarem no nuget.org e **antes** de criar a página de Release, para o Release já ter os números como link. O GitHub calculou as mesmas notas dos rascunhos.
+
+| # | Advisory | Número | Nota |
+|---|---|---|---|
+| 1 | 50.10, os portões | `GHSA-wwmr-9vv7-4234` | Média 4,8 |
+| 2 | Fase 54, os segredos | `GHSA-r234-jvm5-qgr2` | Média 5,3 |
+| 3 | Fase 56, `Host`, `Origin` e iframe | `GHSA-9649-h9h4-626h` | Média 4,2 |
+| 4 | Fase 71, as tools do MCP | `GHSA-7jm3-c37r-vjmw` | Média 5,3 |
+
 ## A faixa de versões vai até a `0.5.3`
 
 Os rascunhos 1, 2 e 3 foram escritos quando a última versão publicada era a `0.5.2`, e diziam `<= 0.5.2`. A `0.5.3` (o hotfix do `RetentionService`, D-235) saiu depois. `git diff v0.5.2 v0.5.3 --stat -- src` lista cinco arquivos: `PersistenceWriter.cs`, `RetentionInterval.cs`, `RetentionService.cs`, `NetApiFlowServiceCollectionExtensions.cs` e o `config.json` da demo. Nenhum é um portão, o sanitizador ou a superfície HTTP, então os três defeitos existem na `0.5.3` pela identidade do código, e os textos abaixo dizem `<= 0.5.3`. A Planejadora não reproduziu nada na `0.5.3`. **A auditoria não aceitou a faixa só pela identidade do código e reproduziu os quatro contra a `0.5.3` publicada, em 25/11/2026 (D-305):** o 1 (S4, e também o `NetApiFlow.Dashboard` `0.1.0` e o `NetApiFlow.Mcp` `0.2.0`), o 2 (S1 e S2, com um coletor), o 3 (S6 e S7) e o 4. A faixa `<= 0.5.3` está confirmada nos quatro. O rascunho 4 já nasceu com `<= 0.5.3`.
