@@ -6,7 +6,7 @@ qualquer outra coisa da `0.6.0`.
 
 A Executora empurra a branch e abre a PR no repositório do site, e **para**. A auditoria audita, faz o merge e publica (D-198).
 
-**Entregue** (21/11/2026): `netapiflow-site#1` mergeada e publicada pela auditoria (`090bd75`). O quick start foi conferido num app novo, compila e mostra uma etapa. O site não cita mais o filtro por tenant, e o repositório do site tem a licença MIT. **Pendente:** a Tarefa 62.4, no release.
+**Entregue** (21/11/2026): `netapiflow-site#1` mergeada e publicada pela auditoria (`090bd75`). O quick start foi conferido num app novo, compila e mostra uma etapa. O site não cita mais o filtro por tenant, e o repositório do site tem a licença MIT. A Tarefa 62.4 foi entregue no dia da `0.6.0` (25/11/2026), e a fase está fechada (D-319).
 
 ## O que a varredura achou
 
@@ -53,6 +53,17 @@ produto. Se o dono quiser outra para o conteúdo do site, a Planejadora leva a e
 
 Uma segunda passada, **junto do release**: o quick start e os números conferidos de novo contra os pacotes `0.6.0`, e o
 site atualizado no mesmo dia. Entra no passo 0 da skill `/release` para o `0.6.0`.
+
+## Resultado da 62.4 (25/11/2026, D-319)
+
+`netapiflow-site#2`, mergeada e publicada pela auditoria (squash `979390d`). Relato da `EXECUTORA-0.6.0` e da auditoria, e o que a Planejadora conferiu está dito no D-319.
+
+- O quick start das duas páginas é o do README da `0.6.0`, provado contra os pacotes `0.6.0` do nuget.org num `dotnet new webapi` em `net10.0` e em `net8.0`, com a requisição no painel.
+- O princípio 04 usa os números do README da `0.6.0` (13 a 14 e 16 a 23 microssegundos, `Enabled = false` entre 0,4 e 1,7), lidos como ordem de grandeza. O site não repete mais a tabela antiga.
+- `UseNetApiFlowDashboard` virou `MapNetApiFlowDashboard`, `NetApiFlow.Step` virou `Flow.Step`, e o princípio 01 cita também `DecorateFlowTracked` e `TrackFlowByConvention`.
+- A demo foi refeita da tag `v0.6.0`. A auditoria viu no ar a Arquitetura desenhando a rota e o `config` com `0.6.0`.
+- **Ressalva:** no link direto de uma rota da demo o navegador registra um 404 no console, o do próprio documento, porque o `404.html` da raiz é o redirecionamento. O site anterior já fazia igual. O critério "0 erro no console" vale só para a navegação dentro da demo.
+- Fica no roadmap (item 50, "O quick start do site não tem rede nenhuma"): um passo que cole e compile o quick start do site num app novo.
 
 ## Fora de escopo
 

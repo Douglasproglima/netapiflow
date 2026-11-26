@@ -137,7 +137,7 @@ Relato da auditoria. Vale para a `0.7.0` e para as minors seguintes:
 2. Um núcleo fixo, refeito inteiro com o pacote real antes do release, mudando ou não: o quick start no `net10.0` e no `net8.0` colado na ordem, todas as telas do painel e da demo num navegador (nos dois temas e em 390 px), `Host` e `Origin`, os cabeçalhos e o 404 em `Production`, um banco real (PostgreSQL e SQL Server) com o filtro e o reinício, e a comparação com a versão publicada. A auditoria estima uma ou duas horas.
 3. O inventário completo, o README frase a frase e o mapa inteiro, antes da `1.0` e sempre que uma minor mudar a API pública.
 
-Isto pesa no desenho da `0.7.0`. Se ela não mudar a API pública, o terceiro item não é exigido, e é mais um motivo para deixar o grupo B para a versão seguinte. Quem diz se uma mudança conta como mudança da API pública é a auditoria. O banco real do segundo item é manual até o item 56 do roadmap (o job do pacote real não tem banco) entrar no grupo E, e então vira cenário do CI.
+Isto pesa no desenho da `0.7.0`. Se ela não mudar a API pública, o terceiro item não é exigido, e é mais um motivo para deixar o grupo B para a versão seguinte. Quem diz se uma mudança conta como mudança da API pública é a auditoria, e uma linha nova ou removida no `PublicAPI.Shipped.txt` ou no `PublicAPI.Unshipped.txt` já conta. O banco real do segundo item é manual até o item 56 do roadmap (o job do pacote real não tem banco) entrar no grupo E, e então vira cenário do CI.
 
 ## O que a Planejadora faz depois da resposta
 

@@ -1,6 +1,6 @@
 # O release da `0.6.0`: a checklist, passo a passo (D-292)
 
-**Estado em 25/11/2026: publicada (D-316).** A tag `v0.6.0` está em `2175e57`, os 9 pacotes estão no nuget.org, e o Release e os quatro advisories estão publicados. O back-merge (#529, merge commit `a35ebb7`) já entrou no `develop`. O passo 19 (a `EXECUTORA-RELEASE`) foi feito na #531 (D-317). Falta só o passo 17 (o site, a Tarefa 62.4).
+**Estado em 25/11/2026: publicada (D-316).** A tag `v0.6.0` está em `2175e57`, os 9 pacotes estão no nuget.org, e o Release e os quatro advisories estão publicados. O back-merge (#529, merge commit `a35ebb7`) já entrou no `develop`. O passo 19 (a `EXECUTORA-RELEASE`) foi feito na #531 (D-317). O passo 17 (o site, a Tarefa 62.4) também foi feito, e a `0.6.0` está inteira (D-319).
 
 **O release sai hoje, 25/11/2026, com o dono presente (decisão dele, relato da auditoria, D-307).** A ordem: a 59C entra, a auditoria termina a releitura 59.5 do README, e então a `/release` por esta checklist. **Ninguém abre o `release/0.6.0` antes de a auditoria dizer "pode abrir".**
 
@@ -33,7 +33,7 @@ Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `g
 | 5 | O Trusted Publishing do nuget.org | **Conferido pelo dono** em 25/11/2026 (relato da auditoria): a política continua certa, sem mudança desde a `0.5.3` (D-308) |
 | 6 | O `develop` verde | O último `CI` do `develop` (`3b7a341`) está em `success`. O `develop` exige 8 checks e a `main` 5 |
 | 7 | O `CHANGELOG` | Lido por quem atualiza e ajustado (D-304). A 59C não mexeu no `CHANGELOG`. As nove frases do `comparison` estão inteiras (conferido pela função do repositório, D-310) |
-| 8 | A Tarefa 62.4 | Pronta para o dia, depois da publicação |
+| 8 | A Tarefa 62.4 | **Feita** depois da publicação: `netapiflow-site#2` publicada (D-319) |
 
 O que o `develop` carregava antes da tag, como o passo 6 mandava: `<Version>` `0.5.3` em `Directory.Build.props`, `previous-published-version.txt` em `0.5.3` e `expected-differences.json` com 9 linhas. Depois do passo 19 (#531, D-317): `previous-published-version.txt` em `0.6.0`, `expected-differences.json` vazio, e os sete `PublicAPI.Unshipped.txt` só com `#nullable enable`.
 
@@ -77,7 +77,7 @@ O que o `develop` carregava antes da tag, como o passo 6 mandava: `<Version>` `0
 
 15. A página de Release (passo 11 da skill): `gh release create v0.6.0 --title v0.6.0 --notes-file <corpo>`, o corpo sendo a seção `[0.6.0]` do `CHANGELOG.md`. O `release.yml` nunca cria a página. **Criada depois dos advisories (passo 16),** para o Release já ter os números como link e não publicar os marcadores `xxxx` (D-316). Na `0.6.0` foi assim.
 16. Os quatro advisories, na ordem e com a condição de `advisories-0.6.0.md`. Na `0.6.0` foram publicados antes da página de Release (passo 15), com os pacotes já no nuget.org: o 1 `GHSA-wwmr-9vv7-4234`, o 2 `GHSA-r234-jvm5-qgr2`, o 3 `GHSA-9649-h9h4-626h` e o 4 `GHSA-7jm3-c37r-vjmw`.
-17. A Tarefa 62.4: o quick start e os números do site conferidos contra os pacotes `0.6.0` publicados, e o site atualizado no mesmo dia.
+17. A Tarefa 62.4: o quick start e os números do site conferidos contra os pacotes `0.6.0` publicados, e o site atualizado no mesmo dia. **Feito:** `netapiflow-site#2`, squash `979390d` (D-319).
 18. O back-merge: PR de `main` para `develop`, com **"Create a merge commit"**, nunca squash, senão a PR perde o vínculo de ancestralidade (passo 12 da skill). **O back-merge conflita nas linhas do título do `CHANGELOG.md`** (`## [Unreleased]` e `## [0.6.0] - <data>`), porque os dois lados mexeram ali. A resolução é ficar com a versão da `main`, numa branch `chore/back-merge-<versão>` a partir do `develop`, com o merge commit da `main`: a árvore sai idêntica à da `main`, e a `main` fica como ancestral (D-316).
 19. **A PR de `chore/*` no `develop`, só depois da publicação e do back-merge (D-260), com estes quatro itens juntos** (passo 13 da skill):
     - `tests/real-package/previous-published-version.txt` para `0.6.0`;
