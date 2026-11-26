@@ -17,11 +17,12 @@ Este diretório é escrito e mantido só pela IA Planejadora. A IA Executora lê
 | `release-0.6.0.md` | A checklist do release da `0.6.0`, passo a passo, com os portões, a conferência do `release.yml` e a segunda passada (D-292) |
 | `advisories-0.6.0.md` | Os quatro advisories da `0.6.0` num lugar só, com nota e vetor, para o dono confirmar e a auditoria publicar (D-292) |
 | `release-0.6.0-notes.md` | A abertura, em inglês, do texto do GitHub Release da `0.6.0`, e como montá-lo a partir do `CHANGELOG.md` (D-303) |
+| `versao-0.7.0.md` | Rascunho da `0.7.0`: os itens do roadmap marcados `0.7.0` por tema, a recomendação da Planejadora e as perguntas ao dono e à auditoria. Não é plano até o dono responder (D-317) |
 | `fase-0-fundacao.md` … `fase-19-npgsql-investigacao.md` | Tarefas de cada fase, uma por commit, com critério de pronto |
 
 ## Estado das fases
 
-**A `0.6.0` foi publicada em 25/11/2026** (a tag `v0.6.0`, o `release.yml` no run `45732534378`, os quatro advisories e o Release), e o registro está no D-316. As linhas das Fases 50 a 71 que dizem "fechada" dizem agora também "publicada em `v0.6.0`". A Fase 62 espera a Tarefa 62.4, o site.
+**A `0.6.0` foi publicada em 25/11/2026** (a tag `v0.6.0`, o `release.yml` no run `45732534378`, os quatro advisories e o Release), e o registro está no D-316. As linhas das Fases 50 a 71 que dizem "fechada" dizem agora também "publicada em `v0.6.0`". A Fase 62 espera a Tarefa 62.4, o site. O passo 19 do release (a baseline em `0.6.0`) foi feito na #531, e a `0.7.0` está em rascunho em `versao-0.7.0.md` (D-317).
 
 | Fase | Nome | Status | Observação |
 |---|---|---|---|

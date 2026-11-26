@@ -1,6 +1,6 @@
 # O release da `0.6.0`: a checklist, passo a passo (D-292)
 
-**Estado em 25/11/2026: publicada (D-316).** A tag `v0.6.0` está em `2175e57`, os 9 pacotes estão no nuget.org, e o Release e os quatro advisories estão publicados. O back-merge (#529, merge commit `a35ebb7`) já entrou no `develop`. No momento do registro faltavam o passo 17 (o site, a Tarefa 62.4) e o passo 19 (a `EXECUTORA-RELEASE`).
+**Estado em 25/11/2026: publicada (D-316).** A tag `v0.6.0` está em `2175e57`, os 9 pacotes estão no nuget.org, e o Release e os quatro advisories estão publicados. O back-merge (#529, merge commit `a35ebb7`) já entrou no `develop`. O passo 19 (a `EXECUTORA-RELEASE`) foi feito na #531 (D-317). Falta só o passo 17 (o site, a Tarefa 62.4).
 
 **O release sai hoje, 25/11/2026, com o dono presente (decisão dele, relato da auditoria, D-307).** A ordem: a 59C entra, a auditoria termina a releitura 59.5 do README, e então a `/release` por esta checklist. **Ninguém abre o `release/0.6.0` antes de a auditoria dizer "pode abrir".**
 
@@ -35,7 +35,7 @@ Retrato da Planejadora em 25/11/2026, com o que as mensagens da auditoria e o `g
 | 7 | O `CHANGELOG` | Lido por quem atualiza e ajustado (D-304). A 59C não mexeu no `CHANGELOG`. As nove frases do `comparison` estão inteiras (conferido pela função do repositório, D-310) |
 | 8 | A Tarefa 62.4 | Pronta para o dia, depois da publicação |
 
-O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `Directory.Build.props`, `previous-published-version.txt` em `0.5.3` e `expected-differences.json` com 9 linhas.
+O que o `develop` carregava antes da tag, como o passo 6 mandava: `<Version>` `0.5.3` em `Directory.Build.props`, `previous-published-version.txt` em `0.5.3` e `expected-differences.json` com 9 linhas. Depois do passo 19 (#531, D-317): `previous-published-version.txt` em `0.6.0`, `expected-differences.json` vazio, e os sete `PublicAPI.Unshipped.txt` só com `#nullable enable`.
 
 ## Os passos
 
@@ -84,9 +84,9 @@ O que o `develop` ainda carrega, como o passo 6 manda: `<Version>` `0.5.3` em `D
     - `tests/real-package/expected-differences.json` para `[]`;
     - em cada pacote, as linhas do `PublicAPI.Unshipped.txt` **na tag** (`git show v0.6.0:src/<Pacote>/PublicAPI.Unshipped.txt`) vão para o `PublicAPI.Shipped.txt`, e uma linha `*REMOVED*` tira a linha dela do `Shipped` e some (D-265);
     - apagar `src/NetApiFlow.Mcp/CompatibilitySuppressions.xml` (D-278).
-    **A versão e a supressão vão na mesma PR,** porque a baseline do `pack` lê o `previous-published-version.txt`. Trocar a versão para `0.6.0` sem apagar o arquivo faz o `pack` falhar com "Supressões desnecessárias encontradas", que é erro (medido pela auditoria). Apagar o arquivo sem trocar a versão faz o `pack` do `NetApiFlow.Mcp` falhar com `CP0001` contra a `0.5.3`. Um sem o outro quebra o CI do ciclo seguinte. **Só depois do passo 14,** porque a versão-base nova precisa restaurar do nuget.org (`src/Directory.Build.props:7` e `scripts/build-comparison-apps.mjs:15-18` baixam o `0.6.0`), e o nuget.org demora a indexar. O `#nullable enable` fica na primeira linha de cada `PublicAPI.Unshipped.txt`, e as 21 linhas `*REMOVED*` do `NetApiFlow.Mcp` saem do `Shipped` e somem.
+    **A versão e a supressão vão na mesma PR,** porque a baseline do `pack` lê o `previous-published-version.txt`. Trocar a versão para `0.6.0` sem apagar o arquivo faz o `pack` falhar com "Supressões desnecessárias encontradas", que é erro (medido pela auditoria). Apagar o arquivo sem trocar a versão faz o `pack` do `NetApiFlow.Mcp` falhar com `CP0001` contra a `0.5.3`. Um sem o outro quebra o CI do ciclo seguinte. **Só depois do passo 14,** porque a versão-base nova precisa restaurar do nuget.org (`src/Directory.Build.props:7` e `scripts/build-comparison-apps.mjs:15-18` baixam o `0.6.0`), e o nuget.org demora a indexar. O `#nullable enable` fica na primeira linha de cada `PublicAPI.Unshipped.txt`, e as 21 linhas `*REMOVED*` do `NetApiFlow.Mcp` saem do `Shipped` e somem. **Feito na #531 (squash `da11427`, D-317).**
 **Entre o corte do `release/0.6.0` e o back-merge, nenhuma PR que mexa no `CHANGELOG.md` entra no `develop`** (D-315): o passo 3 renomeia o `[Unreleased]`, e uma entrada nova no `develop` conflita no back-merge ou se perde. A auditoria segura qualquer PR com `CHANGELOG`.
-20. A Planejadora registra o release (README do plano e `decisoes.md`) e abre a `0.7.0` com o roadmap.
+20. A Planejadora registra o release (README do plano e `decisoes.md`) e abre a `0.7.0` com o roadmap. **Feito:** o registro está no D-317, e o rascunho da `0.7.0` em `versao-0.7.0.md`, que o dono e a auditoria ainda confirmam.
 
 ## A segunda passada: o que ela cobre
 
