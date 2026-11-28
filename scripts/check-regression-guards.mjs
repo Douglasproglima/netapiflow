@@ -3,10 +3,10 @@ import { readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const KINDS = ['dotnet', 'vitest', 'ci-scenario'];
+const KINDS = ['dotnet', 'vitest', 'node-test', 'ci-scenario'];
 const JOBS = ['build-test', 'real-package', 'comparison', 'built-demo'];
 const REQUIRED_FIELDS = ['id', 'defect', 'fixedIn', 'guard', 'job'];
-const PASSED_BY_KIND = { dotnet: 'Passed', vitest: 'passed' };
+const PASSED_BY_KIND = { dotnet: 'Passed', vitest: 'passed', 'node-test': 'passed' };
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -34,6 +34,22 @@ export function parseVitest(report) {
       status: assertion.status,
     })),
   );
+}
+
+export function parseNodeTest(xml) {
+  return [...xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)].map(([, attributes, body = '']) => ({
+    file: decodeEntities(/\bfile="([^"]*)"/.exec(attributes)?.[1] ?? '').replaceAll('\\', '/'),
+    name: decodeEntities(/\bname="([^"]*)"/.exec(attributes)?.[1] ?? ''),
+    outcome: nodeTestOutcome(body),
+  }));
+}
+
+function nodeTestOutcome(body) {
+  if (/<(failure|error)\b/.test(body)) {
+    return 'failed';
+  }
+
+  return /<skipped\b/.test(body) ? 'skipped' : 'passed';
 }
 
 export function structuralProblems(guards) {
@@ -74,6 +90,10 @@ function vitestMatches(results, file, test) {
   return results.filter((result) => result.file.endsWith(`/${file}`) && result.name.startsWith(test));
 }
 
+function nodeTestMatches(results, file, test) {
+  return results.filter((result) => result.file.endsWith(`/${file}`) && result.name === test);
+}
+
 export function checkGuard(guard, sources) {
   const { kind } = guard.guard;
 
@@ -93,6 +113,15 @@ export function checkGuard(guard, sources) {
 
     const found = vitestMatches(sources.vitest, guard.guard.file, guard.guard.test);
     return outcomeProblem(guard, found, `${guard.guard.file}: ${guard.guard.test}`, PASSED_BY_KIND.vitest, (result) => result.status);
+  }
+
+  if (kind === 'node-test') {
+    if (sources.nodeTest === undefined) {
+      return `${guard.id}: the run has no node test report, so the guard cannot be found.`;
+    }
+
+    const found = nodeTestMatches(sources.nodeTest, guard.guard.file, guard.guard.test);
+    return outcomeProblem(guard, found, `${guard.guard.file}: ${guard.guard.test}`, PASSED_BY_KIND['node-test'], (result) => result.outcome);
   }
 
   const scenarios = sources.scenarios[guard.job];
@@ -161,7 +190,8 @@ async function main() {
   const guards = JSON.parse(await readFile(options.guards, 'utf8'));
 
   const vitestResult = options.vitest && existsSync(options.vitest) ? parseVitest(JSON.parse(await readFile(options.vitest, 'utf8'))) : undefined;
-  const sources = { dotnet: await loadDotnet(options.trx), vitest: vitestResult, scenarios: await loadScenarios() };
+  const nodeTestResult = options['node-test'] && existsSync(options['node-test']) ? parseNodeTest(await readFile(options['node-test'], 'utf8')) : undefined;
+  const sources = { dotnet: await loadDotnet(options.trx), vitest: vitestResult, nodeTest: nodeTestResult, scenarios: await loadScenarios() };
 
   const problems = checkRegistry(guards, sources);
   const vitestGuards = guards.filter((guard) => guard.guard?.kind === 'vitest').length;
@@ -183,10 +213,10 @@ function parseArguments(argumentList) {
   for (let index = 0; index < argumentList.length; index += 2) {
     const name = argumentList[index];
     const value = argumentList[index + 1];
-    if (name === '--guards' || name === '--trx' || name === '--vitest') {
+    if (name === '--guards' || name === '--trx' || name === '--vitest' || name === '--node-test') {
       options[name.slice(2)] = value;
     } else {
-      throw new Error(`Unknown argument "${name}". Use --trx <folder of .trx files> [--vitest <report.json>] [--guards <guards.json>].`);
+      throw new Error(`Unknown argument "${name}". Use --trx <folder of .trx files> [--vitest <report.json>] [--node-test <junit.xml>] [--guards <guards.json>].`);
     }
   }
 
