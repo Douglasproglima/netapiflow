@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using NetApiFlow;
-using Flow = NetApiFlow.NetApiFlow;
 
 [ApiController]
 [Route("db/postgres")]
@@ -25,8 +24,8 @@ public sealed class PostgresController(NpgsqlDataSource dataSource) : Controller
         return Ok(seen);
     }
 
-    [HttpGet("fails")]
-    public async Task<IActionResult> Fails()
+    [HttpGet("fails/{id:int}")]
+    public async Task<IActionResult> Fails(int id)
     {
         await using var command = dataSource.CreateCommand("SELECT count(*) FROM users");
         await command.ExecuteScalarAsync();

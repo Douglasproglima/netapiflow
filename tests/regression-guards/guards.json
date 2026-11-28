@@ -2427,16 +2427,6 @@
     "job": "real-package"
   },
   {
-    "id": "72-db-postgres-several-commands",
-    "defect": "Several commands in one method must record one step each under the caller on Npgsql too, and no scenario of the published package ran against a database",
-    "fixedIn": "#493",
-    "guard": {
-      "kind": "ci-scenario",
-      "scenario": "database:postgres:several-commands"
-    },
-    "job": "real-package"
-  },
-  {
     "id": "72-db-postgres-route-filter",
     "defect": "The PostgreSQL store compared the route filter with the stored route key without normalizing the filter, and no scenario of the published package filtered against a database",
     "fixedIn": "#504",

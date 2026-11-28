@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using NetApiFlow;
-using Flow = NetApiFlow.NetApiFlow;
 
 [ApiController]
 [Route("db/sqlserver")]
@@ -27,8 +26,8 @@ public sealed class SqlServerController(DatabaseSettings settings) : ControllerB
         return Ok(seen);
     }
 
-    [HttpGet("fails")]
-    public async Task<IActionResult> Fails()
+    [HttpGet("fails/{id:int}")]
+    public async Task<IActionResult> Fails(int id)
     {
         await using var connection = new SqlConnection(settings.ConnectionString);
         await connection.OpenAsync();

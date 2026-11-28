@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { clientFor, delay, freePort, startApplication, untilReady } from './app-harness.mjs';
 
 const TRACE_ID_HEADER = 'x-netapiflow-traceid';
@@ -30,7 +29,7 @@ export const KINDS = {
 
 export const SCENARIOS = [
   { id: 'several-commands', title: 'several commands in one method record one step each, under the controller, with the SQL and without moving the current activity' },
-  { id: 'filters', title: 'the list of traces filters by route and by status' },
+  { id: 'filters', title: 'the list of traces filters by status and by a route written without the constraint the trace was saved with' },
   { id: 'restart', title: 'the traces recorded before a restart of the host are listed again, with their steps' },
   { id: 'schema-script', title: 'the schema script of the repository is enough for AutoCreateSchema = false', onlyFor: 'new' },
 ];
@@ -171,7 +170,7 @@ async function runSession(context) {
       checkSeveralCommands(await untilTraceStored(first.app, traceId, SEVERAL_COMMANDS_SPAN_COUNT), kind, body);
     });
 
-    const failing = await callAndGetTraceId(first.app, `/db/${kind}/fails`, 500).catch((error) => ({ error }));
+    const failing = await callAndGetTraceId(first.app, `/db/${kind}/fails/7`, 500).catch((error) => ({ error }));
     recorded.failing = failing.traceId;
     if (recorded.failing) {
       await untilTraceStored(first.app, recorded.failing, 2).catch(() => undefined);
@@ -180,10 +179,12 @@ async function runSession(context) {
     await attempt('filters', async () => {
       expect(Boolean(recorded.several) && Boolean(recorded.failing), failing.error?.message ?? 'the traces to filter were not recorded');
       await untilListed(first.app, [recorded.several, recorded.failing]);
-      const byRoute = await listTraces(first.app, `&route=${encodeURIComponent(`/db/${kind}/fails`)}`);
+      const savedWithConstraint = `/db/${kind}/fails/{id:int}`;
+      const writtenWithoutConstraint = `/db/${kind}/fails/{id}`;
+      const byRoute = await listTraces(first.app, `&route=${encodeURIComponent(writtenWithoutConstraint)}`);
       expect(
-        byRoute.length === 1 && byRoute[0].traceId === recorded.failing,
-        `filtering by the route of the failing endpoint listed [${byRoute.map((item) => item.routeTemplate).join(', ')}], expected only the failing trace`,
+        byRoute.length === 1 && byRoute[0].traceId === recorded.failing && byRoute[0].routeTemplate === savedWithConstraint,
+        `filtering by ${writtenWithoutConstraint} listed [${byRoute.map((item) => item.routeTemplate).join(', ')}], expected only the trace saved as ${savedWithConstraint}`,
       );
       const byError = await listTraces(first.app, '&status=Error');
       expect(

@@ -110,7 +110,7 @@ packages of the build and against the last published version. Both builds have t
 - `package-database-scenarios.mjs` starts the app for each database with `ExternalSources` and `CaptureSqlText`
   on, and runs four scenarios: `several-commands` (three commands in one method record one step each, in order,
   under the controller, with the SQL, and the current activity of the caller does not move), `filters` (the list
-  filters by route and by status), `restart` (after the host is stopped and started again, the traces and their
+  filters by status, and by a route written without the constraint the trace was saved with), `restart` (after the host is stopped and started again, the traces and their
   steps are listed from the database) and `schema-script` (the `schema.sql` of the repository is enough with
   `AutoCreateSchema = false`, for the build only, because the package does not carry that file). A scenario waits
   until the trace is listed from the database before it filters or stops the host, so a late write cannot make
