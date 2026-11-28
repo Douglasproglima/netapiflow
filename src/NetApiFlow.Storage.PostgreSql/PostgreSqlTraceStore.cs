@@ -412,8 +412,8 @@ internal sealed class PostgreSqlTraceStore : ITraceStore, IDisposable
 
         if (query.RouteTemplate is not null)
         {
-            conditions.Add("route_key = @routeKey");
-            command.Parameters.AddWithValue("routeKey", RouteTemplateNormalizer.NormalizeForComparison(query.RouteTemplate));
+            conditions.Add("route_template = @route");
+            command.Parameters.AddWithValue("route", query.RouteTemplate);
         }
 
         if (query.Tenant is not null)
