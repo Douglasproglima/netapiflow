@@ -19,7 +19,8 @@ Every row has:
     of `scripts/*.test.mjs`, which guard the scripts and the workflows of the CI.
   - `ci-scenario`: `scenario`, the id of a scenario of a job. The scenarios are the ones of
     `scripts/package-scenarios.mjs`, the `a` of `scripts/build-user-app.mjs` and the three
-    `live-panel:<check>` of `scripts/verify-live-panel.mjs` for `real-package`, one
+    `live-panel:<check>` of `scripts/verify-live-panel.mjs` and the `database:<kind>:<scenario>` of
+    `scripts/package-database-scenarios.mjs` for `real-package`, one
     `nuspec:<PackageId>` for each file of `tests/nuspec-snapshot/`, the ids of
     `scripts/compare-with-published.mjs` for `comparison`, and the checks of
     `scripts/verify-built-demo.mjs` for `built-demo`.

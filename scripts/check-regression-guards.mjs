@@ -170,6 +170,7 @@ async function loadScenarios() {
   const demo = await import('./verify-built-demo.mjs');
   const livePanel = await import('./verify-live-panel.mjs');
   const focusRing = await import('./focus-ring.mjs');
+  const databaseScenarios = await import('./package-database-scenarios.mjs');
   const snapshotFiles = (await readdir(join(repoRoot, 'tests/nuspec-snapshot'))).filter((file) => file.endsWith('.txt'));
 
   return {
@@ -178,6 +179,7 @@ async function loadScenarios() {
       ...packageScenarios.SCENARIOS.map((scenario) => scenario.id),
       ...livePanel.CHECK_IDS,
       ...focusRing.CHECK_IDS,
+      ...databaseScenarios.CHECK_IDS,
       ...snapshotFiles.map((file) => `nuspec:${basename(file, '.txt')}`),
     ]),
     comparison: new Set(comparison.SCENARIOS.map((scenario) => scenario.id)),

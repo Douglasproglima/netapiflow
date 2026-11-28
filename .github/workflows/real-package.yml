@@ -19,6 +19,31 @@ jobs:
     env:
       DOTNET_NOLOGO: "true"
       DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only-postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci-only-sql-1
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v7
 
@@ -42,9 +67,26 @@ jobs:
       - name: Open the panel in a real browser while a request runs and after it ended
         run: node scripts/verify-live-panel.mjs --dll "$USER_APP/bin/Release/net10.0/UserApp.dll"
 
+      - name: Build the database app against this build and against the last published package
+        run: node scripts/build-database-apps.mjs --out "$DATABASE_APPS" --feed "$FEED" --version "$PACKAGE_VERSION"
+        env:
+          DATABASE_APPS: ${{ runner.temp }}/database
+
+      - name: Walk the database scenarios on PostgreSQL and SQL Server against both
+        run: >
+          node scripts/package-database-scenarios.mjs
+          --new-dll "$DATABASE_APPS/new/bin/Release/net10.0/DatabaseApp.dll"
+          --old-dll "$DATABASE_APPS/old/bin/Release/net10.0/DatabaseApp.dll"
+          --postgres "Host=127.0.0.1;Port=5432;Username=postgres;Password=ci-only-postgres;Database=app"
+          --sqlserver "Server=127.0.0.1,1433;Database=master;User Id=sa;Password=Ci-only-sql-1;TrustServerCertificate=True;Encrypt=True"
+        env:
+          DATABASE_APPS: ${{ runner.temp }}/database
+
       - name: Stop any app left running
         if: always()
-        run: pkill -f UserApp.dll || true
+        run: |
+          pkill -f UserApp.dll || true
+          pkill -f DatabaseApp.dll || true
 
   comparison:
     name: comparison
