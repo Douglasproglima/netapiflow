@@ -2349,5 +2349,38 @@
       "test": "NetApiFlow.IntegrationTests.DashboardFallbackPolicyWarningTests.Start_WithAFallbackPolicyAndTheAuthenticationSchemeOfTheApp_WarnsAboutItsChallengeWhateverTheStatusCode"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-compare-renamed-changelog",
+    "defect": "The comparison read only the Unreleased section, so a release that moved the text into its own section announced none of the expected differences",
+    "fixedIn": "#526",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/compare-with-published.test.mjs",
+      "test": "entriesMissingFromTheChangelog_WhenTheReleaseMovedTheEntryAboveTheLastPublishedVersion_FindsItX"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-compare-older-entry",
+    "defect": "The comparison counted a sentence of an old release as the announcement of a new difference",
+    "fixedIn": "#526",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/compare-with-published.test.mjs",
+      "test": "entriesMissingFromTheChangelog_WhenTheEntryIsBelowTheLastPublishedVersion_IsMissing"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-compare-reworded-entry",
+    "defect": "A CHANGELOG entry reworded away from the sentence that expected-differences.json requires was not caught before the release",
+    "fixedIn": "#520",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/compare-with-published.test.mjs",
+      "test": "entriesMissingFromTheChangelog_WhenNothingAnnouncesTheLine_IsMissing"
+    },
+    "job": "build-test"
   }
 ]

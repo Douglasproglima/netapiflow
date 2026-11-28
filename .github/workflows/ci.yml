@@ -193,9 +193,13 @@ jobs:
           run_tests NetApiFlow.Npgsql10.IntegrationTests
           run_tests NetApiFlow.SqlClient.IntegrationTests
 
+      - name: Test the scripts of the repository
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination="$RUNNER_TEMP/node-test.xml" scripts/*.test.mjs
+
       - name: Check that every regression guard still exists and passes
         if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
-        run: node scripts/check-regression-guards.mjs --trx "$RUNNER_TEMP/trx" --vitest "$RUNNER_TEMP/vitest.json"
+        run: node scripts/check-regression-guards.mjs --trx "$RUNNER_TEMP/trx" --vitest "$RUNNER_TEMP/vitest.json" --node-test "$RUNNER_TEMP/node-test.xml"
 
       - name: Create the local package folders the verification projects list
         if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'

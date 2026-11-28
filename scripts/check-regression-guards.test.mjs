@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { checkGuard, checkRegistry, parseTrx, parseVitest, structuralProblems } from './check-regression-guards.mjs';
+import { checkGuard, checkRegistry, parseNodeTest, parseTrx, parseVitest, structuralProblems } from './check-regression-guards.mjs';
 
 const TRX = `<?xml version="1.0" encoding="UTF-8"?>
 <TestRun>
@@ -25,10 +25,25 @@ const VITEST = {
   ],
 };
 
+const WINDOWS_PATH = 'C:/repo/scripts/compare-with-published.test.mjs'.replaceAll('/', String.fromCharCode(92));
+
+const NODE_TEST = `<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testcase name="a renamed CHANGELOG is still read" time="0.001" classname="test" file="/repo/scripts/compare-with-published.test.mjs"/>
+  <testcase name="the Unreleased section is announced &quot;twice&quot;" time="0.001" classname="test" file="${WINDOWS_PATH}"/>
+  <testcase name="a test that fails" time="0.001" classname="test" file="/repo/scripts/compare-with-published.test.mjs">
+    <failure type="testCodeFailure" message="boom">boom</failure>
+  </testcase>
+  <testcase name="a test that was skipped" time="0" classname="test" file="/repo/scripts/compare-with-published.test.mjs">
+    <skipped type="skipped" message="skipped"/>
+  </testcase>
+</testsuites>`;
+
 function sources(overrides = {}) {
   return {
     dotnet: new Map([['Tests', parseTrx(TRX)]]),
     vitest: parseVitest(VITEST),
+    nodeTest: parseNodeTest(NODE_TEST),
     scenarios: { 'real-package': new Set(['a', 'd', 'nuspec:NetApiFlow']), comparison: new Set(['status-page']), 'built-demo': new Set(['screens']) },
     ...overrides,
   };
@@ -40,6 +55,10 @@ function dotnetGuard(test) {
 
 function vitestGuard(test) {
   return { id: 'F1', defect: 'd', fixedIn: '#1', job: 'build-test', guard: { kind: 'vitest', file: 'src/app/core/demo-fixture-coverage.spec.ts', test } };
+}
+
+function nodeTestGuard(test) {
+  return { id: 'N1', defect: 'd', fixedIn: '#1', job: 'build-test', guard: { kind: 'node-test', file: 'scripts/compare-with-published.test.mjs', test } };
 }
 
 function scenarioGuard(job, scenario) {
@@ -94,6 +113,41 @@ test('checkGuard_ForAVitestTestThatIsGone_SaysItIsMissing', () => {
 
 test('checkGuard_ForAVitestGuardWhenThereIsNoVitestReport_DoesNotJudgeIt', () => {
   assert.equal(checkGuard(vitestGuard('anything'), sources({ vitest: undefined })), undefined);
+});
+
+test('parseNodeTest_ReadsTheNameTheFileAndTheOutcomeOfEachTestCase_AndDecodesEntities', () => {
+  const results = parseNodeTest(NODE_TEST);
+
+  assert.deepEqual(
+    results.map((result) => result.outcome),
+    ['passed', 'passed', 'failed', 'skipped'],
+  );
+  assert.equal(results[1].name, 'the Unreleased section is announced "twice"');
+  assert.equal(results[1].file, 'C:/repo/scripts/compare-with-published.test.mjs');
+});
+
+test('checkGuard_ForANodeTestThatPassed_ReportsNothing', () => {
+  assert.equal(checkGuard(nodeTestGuard('a renamed CHANGELOG is still read'), sources()), undefined);
+});
+
+test('checkGuard_ForANodeTestOfAFileRunOnWindows_FindsItByTheForwardSlashPath', () => {
+  assert.equal(checkGuard(nodeTestGuard('the Unreleased section is announced "twice"'), sources()), undefined);
+});
+
+test('checkGuard_ForANodeTestThatWasDeletedOrRenamed_SaysItIsMissing', () => {
+  assert.match(checkGuard(nodeTestGuard('a CHANGELOG that was renamed again'), sources()), /no test .* in the results \(deleted or renamed\?\)/);
+});
+
+test('checkGuard_ForANodeTestThatFails_FailsAndNamesTheOutcome', () => {
+  assert.match(checkGuard(nodeTestGuard('a test that fails'), sources()), /failed, not passed/);
+});
+
+test('checkGuard_ForANodeTestThatWasSkipped_FailsAndSaysItGuardsNothing', () => {
+  assert.match(checkGuard(nodeTestGuard('a test that was skipped'), sources()), /skipped, not passed \(a skipped test guards nothing\)/);
+});
+
+test('checkGuard_ForANodeTestWhenThereIsNoNodeTestReport_SaysSo', () => {
+  assert.match(checkGuard(nodeTestGuard('anything'), sources({ nodeTest: undefined })), /no node test report/);
 });
 
 test('checkGuard_ForAScenarioOfAJob_ReportsNothingWhenItExists', () => {
