@@ -82,6 +82,8 @@ Se um item **não** reproduzir, a Executora para nele e relata.
 
 **(d) Item 55: o Npgsql 8 na matriz.** Um terceiro projeto de integração, ao lado do `Npgsql10.IntegrationTests`, com o
 provider do piso (`8.0.5`). Não muda o piso do pacote (D-181), só o prova.
+O projeto novo entra no `ci.yml` e nas duas listas do `release.yml`, a do passo de teste e a do passo do runtime 11,
+como manda `testing.md` (D-324).
 
 **(e) Item 54.** A espera em `TraceIdentityHost.SpansOfAsync` sai, e o teste continua verde, 50 de 50 execuções em cada
 TFM.
@@ -112,7 +114,8 @@ TFM.
 - Os itens 11 (testes sensíveis a timing sob carga de CI) e 15 (a limpeza da regra de ouro em escala), que casam com este
   grupo mas não têm a marca `0.7.0`.
 - Mudar qualquer piso de dependência (D-181).
-- O `release.yml`, além do que a 72.2 (item 64) toca nos comentários dele.
+- O comportamento do `release.yml`. Mudam só os comentários que a 72.2 (item 64) toca e a linha do projeto novo da
+  72.1(d) nas duas listas (D-324).
 
 ## Critério que vale para a fase inteira
 
