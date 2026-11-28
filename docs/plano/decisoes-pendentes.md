@@ -28,3 +28,11 @@ confirmar aqui, ou editar o arquivo ele mesmo.
 - **Recomendação da Planejadora:** confirmada a leitura acima, alinhar `git-workflow.md` ao texto do
   dono: push de branch e abertura de PR são livres para a Planejadora e a Executora, e merge, tag,
   Release e publicação de pacote seguem com a auditoria e o dono.
+
+## O item 73 do roadmap na Fase 72 (D-323)
+
+O `SQLitePCLRaw` precisa de uma linha no `ignore` do `dependabot.yml`, só para a major, e isso é achado novo depois do
+congelamento da `0.7.0` (D-320). Pelo congelamento, vai para o roadmap como item 73 e espera a versão seguinte.
+
+- **Recomendação da Planejadora:** pôr o item 73 na Tarefa 72.2, junto do item 70. É uma linha no mesmo bloco do mesmo
+  arquivo, a Executora já vai mexer ali, e o pacote não muda. Se o dono aceitar, a Planejadora acrescenta o item à Fase 72.

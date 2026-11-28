@@ -79,3 +79,12 @@ Duas coisas que não são óbvias:
   reference", seção `target-branch`). O `ignore` acima não esconde PR de segurança.
 
 **Projeto de verificação que fixa o próprio NetApiFlow publicado, de propósito (D-313).** `tests/manual-verification/Fase59DesempenhoVerification` compara o `Flow.Step` com o `NetApiFlow` `0.5.3` publicado, e por isso fixa essa versão. O Dependabot pode propor subir essa linha, o que trocaria a linha de base da comparação sem ninguém ver. O `dependabot.yml` só vale a partir da `main`, e a auditoria decidiu que pôr `NetApiFlow*` no `ignore` entra na `0.7.0`. Até lá, uma PR do Dependabot que suba o `NetApiFlow` desse projeto se fecha, e não se mergeia.
+
+**Pino só de teste para sair de uma vulnerabilidade transitiva (D-323).** `SQLitePCLRaw.bundle_e_sqlite3` `2.1.13`, só no
+`NetApiFlow.EntityFrameworkCore.Ef8Tests`, tira o `SQLitePCLRaw.lib.e_sqlite3` `2.1.6` (GHSA-2m69-gcr7-jv3q) que o
+`Microsoft.EntityFrameworkCore.Sqlite` `8.0.10` puxa. Não é piso e não tem o nome da família do EF Core, então nenhuma das regras
+de cima o cobre. O patch e o minor seguem o Dependabot, porque uma `2.1.x` nova pode trazer outra correção de segurança. A major
+sobe à mão, junto da família do EF Core, porque os providers foram construídos contra a linha `2.1`. O lugar disso é uma linha
+`SQLitePCLRaw*` com `update-types: ["version-update:semver-major"]` no `dependabot.yml`, o item 73 do roadmap, que espera o dono
+por causa do congelamento da `0.7.0`. Até ela entrar, quem segura a `3.x` é o "@dependabot ignore this major version" da #477,
+guardado no Dependabot e invisível no repositório. Uma PR que suba o `SQLitePCLRaw` para a `3.x` se fecha, e não se mergeia.
