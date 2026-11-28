@@ -18,6 +18,7 @@ updates:
       - dependency-name: "Microsoft.EntityFrameworkCore*"
       - dependency-name: "Microsoft.Extensions.FileProviders.Embedded"
       - dependency-name: "ModelContextProtocol*"
+      - dependency-name: "NetApiFlow*"
       - dependency-name: "Npgsql*"
       - dependency-name: "OpenTelemetry*"
 
