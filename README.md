@@ -795,7 +795,7 @@ exception is logged at `Debug`.
 > `AllowAnonymous` wins over the policy, so without an `IFlowAccessFilter` every route answers 404.
 >
 > When the application starts with a `FallbackPolicy` and a dashboard that has neither
-> `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the 401
+> `.AllowAnonymous()` nor `.RequireAuthorization()`, NetApiFlow logs one warning that names the challenge
 > and the way out, so it does not stay unexplained.
 
 ### Which `Host` and `Origin` are accepted
