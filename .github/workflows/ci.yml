@@ -13,7 +13,7 @@ jobs:
   # Detects documentation-only changes so build-test and secret-scan can report "skipped" (which
   # satisfies a required status check) instead of never running at all. A workflow-level
   # `paths-ignore` would leave required checks permanently pending on a docs-only PR, since GitHub
-  # branch protection waits for a status that a skipped *workflow* never reports (D-64).
+  # branch protection waits for a status that a skipped *workflow* never reports.
   detect-changes:
     name: detect-changes
     runs-on: ubuntu-latest
@@ -106,7 +106,7 @@ jobs:
       # BuildAngularClient MSBuild target assumes it only ever runs once per outer,
       # TargetFramework-less pass of that one project, but a solution build with
       # ProjectReferences into it (NetApiFlow.IntegrationTests, samples) can trigger more than one
-      # such pass under MSBuild's parallel scheduling, racing on the same dist/ output (PR #17).
+      # such pass under MSBuild's parallel scheduling, racing on the same dist/ output.
       # With dist/ already fresh, every one of those passes sees its Inputs/Outputs check satisfied
       # and skips `npm run build` entirely, so the race has nothing left to race on.
       - name: Build dashboard UI
@@ -161,7 +161,7 @@ jobs:
           run_tests NetApiFlow.Mcp.Tests
           run_tests NetApiFlow.OpenTelemetry.Tests
           run_tests NetApiFlow.PrePipelineInteropSpike
-          # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners (tarefa 6.5).
+          # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners.
           if [ "${{ runner.os }}" != "Windows" ]; then
             run_tests NetApiFlow.Storage.Tests
             run_tests NetApiFlow.Npgsql.IntegrationTests
@@ -263,9 +263,9 @@ jobs:
       - name: Open every trace and screen of the built demo in a headless browser
         run: node scripts/verify-built-demo.mjs --directory src/NetApiFlow.Dashboard/ClientApp/dist/demo/browser
 
-  # D-76: visual-quality findings never fail this job (`|| true` below). The detector runs in
-  # warn-only mode for a full cycle before the Planejadora decides whether it should block.
-  # R-15: the GitHub-hosted runner doesn't run as root, so the detector's Chromium shouldn't need
+  # Visual-quality findings never fail this job (`|| true` below). The detector runs in
+  # warn-only mode for a full cycle before anyone decides whether it should block.
+  # The GitHub-hosted runner doesn't run as root, so the detector's Chromium shouldn't need
   # `--no-sandbox` here; that flag is only a known fallback for someone running this same scan
   # locally inside a root container.
   visual-quality:
