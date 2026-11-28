@@ -12,6 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `NetApiFlow.Dashboard`: the startup warning about an authorization `FallbackPolicy` no longer says that the
   authorization middleware "answers 401". It says that the middleware answers with the challenge of the
   application's authentication scheme, which is a 302 to the login page with cookies and a 401 with JWT bearer.
+  The `EventName` of the log entry is now `DashboardWouldBeChallenged` and its `EventId` changes with it, so a
+  filter or an alert that matches the old name or id has to be updated.
 
 ## [0.6.0] - 2026-11-25
 

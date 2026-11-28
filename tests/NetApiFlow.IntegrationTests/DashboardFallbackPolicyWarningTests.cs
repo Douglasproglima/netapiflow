@@ -34,7 +34,7 @@ public class DashboardFallbackPolicyWarningTests
 
         var warning = logs.Warnings().ShouldHaveSingleItem();
         warning.ShouldContain(FallbackPolicyKeyWord);
-        warning.ShouldContain("challenge of its authentication scheme");
+        warning.ShouldContain("challenge of the application's authentication scheme");
         warning.ShouldNotContain("401");
         warning.ShouldContain("AllowAnonymous()");
         warning.ShouldContain("RequireAuthorization");
@@ -122,7 +122,7 @@ public class DashboardFallbackPolicyWarningTests
             addAuthentication: services => AddAuthenticationScheme(services, scheme));
 
         var warning = logs.Warnings().ShouldHaveSingleItem();
-        warning.ShouldContain("challenge of its authentication scheme");
+        warning.ShouldContain("challenge of the application's authentication scheme");
         warning.ShouldNotContain("401");
         using var client = host.GetTestClient();
         using var response = await client.GetAsync("/flow/");

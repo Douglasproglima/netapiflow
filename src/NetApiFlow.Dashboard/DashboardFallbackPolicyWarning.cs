@@ -62,7 +62,7 @@ internal sealed partial class DashboardFallbackPolicyWarning(
     {
         [LoggerMessage(
             Level = LogLevel.Warning,
-            Message = "NetApiFlow.Dashboard: the application has an authorization FallbackPolicy and the dashboard routes under {BasePath} carry neither AllowAnonymous() nor RequireAuthorization(), so the authorization middleware answers with the challenge of its authentication scheme instead of serving the dashboard. In Development, chain AllowAnonymous() on MapNetApiFlowDashboard(). Outside Development, chain RequireAuthorization(\"YourPolicy\") alone, or chain AllowAnonymous() and register an IFlowAccessFilter. Chaining AllowAnonymous() together with RequireAuthorization() authorizes nothing.")]
+            Message = "NetApiFlow.Dashboard: the application has an authorization FallbackPolicy and the dashboard routes under {BasePath} carry neither AllowAnonymous() nor RequireAuthorization(), so the authorization middleware answers with the challenge of the application's authentication scheme instead of serving the dashboard. In Development, chain AllowAnonymous() on MapNetApiFlowDashboard(). Outside Development, chain RequireAuthorization(\"YourPolicy\") alone, or chain AllowAnonymous() and register an IFlowAccessFilter. Chaining AllowAnonymous() together with RequireAuthorization() authorizes nothing.")]
         public static partial void DashboardWouldBeChallenged(ILogger logger, string basePath);
 
         [LoggerMessage(Level = LogLevel.Debug, Message = "NetApiFlow.Dashboard: the check for the authorization FallbackPolicy failed and was skipped.")]
