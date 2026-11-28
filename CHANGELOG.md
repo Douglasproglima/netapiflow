@@ -996,3 +996,5 @@ to every dependency.
   `GET /config`, matching the installed package; it previously came from a constant baked in at
   Angular build time, which could drift out of sync with a rebuild outside the full MSBuild
   pipeline.
+
+- Probe line, never merged.
