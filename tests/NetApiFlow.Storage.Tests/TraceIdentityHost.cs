@@ -93,21 +93,8 @@ internal sealed class TraceIdentityHost : IAsyncDisposable
 
     public async Task<IReadOnlyList<FlowSpan>> SpansOfAsync(string traceId)
     {
-        var deadline = DateTime.UtcNow + StoreDeadline;
-        IReadOnlyList<FlowSpan> spans = [];
-        while (DateTime.UtcNow < deadline)
-        {
-            var detail = await Store.GetAsync(traceId, CancellationToken.None);
-            spans = detail?.Spans ?? [];
-            if (detail is not null && spans.Count >= detail.Trace.SpanCount)
-            {
-                break;
-            }
-
-            await Task.Delay(50);
-        }
-
-        return spans;
+        var detail = await Store.GetAsync(traceId, CancellationToken.None);
+        return detail?.Spans ?? [];
     }
 
     public IReadOnlyList<CapturingLoggerProvider.LogLine> NetApiFlowWarningsAndErrors() =>
