@@ -2415,5 +2415,35 @@
       "test": "the CHANGELOG turns the real-package job on, because the comparison reads it"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-db-sqlserver-several-commands",
+    "defect": "With several commands in one method the SqlClient listener left the current activity stuck, so one step was recorded for four commands and every later step got the wrong parent, and no scenario of the published package ran against a database",
+    "fixedIn": "#493",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "database:sqlserver:several-commands"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "72-db-postgres-route-filter",
+    "defect": "The PostgreSQL store compared the route filter with the stored route key without normalizing the filter, and no scenario of the published package filtered against a database",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "database:postgres:filters"
+    },
+    "job": "real-package"
+  },
+  {
+    "id": "72-db-sqlserver-route-filter",
+    "defect": "The SQL Server store compared the route filter with the stored route key without normalizing the filter, and no scenario of the published package filtered against a database",
+    "fixedIn": "#504",
+    "guard": {
+      "kind": "ci-scenario",
+      "scenario": "database:sqlserver:filters"
+    },
+    "job": "real-package"
   }
 ]

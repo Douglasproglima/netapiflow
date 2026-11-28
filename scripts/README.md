@@ -99,6 +99,24 @@ the new code does not see.
   the version in `tests/real-package/previous-published-version.txt`, fails as well. A release moves the text under
   its own version, and the text stays announced until the file points to that version.
 
+The `real-package` job also has a PostgreSQL 16 and a SQL Server 2022 as service containers. The two scripts
+below use them, with the app `tests/real-package/database-app/`, built twice like the comparison app: against the
+packages of the build and against the last published version. Both builds have to pass the same scenarios.
+
+- `build-database-apps.mjs` copies the app twice outside the repository and adds `NetApiFlow`,
+  `NetApiFlow.Dashboard` and both storage packages with an exact version. The app itself references
+  `Microsoft.Data.SqlClient` 6.1.8, because with the 5.2.2 that `NetApiFlow.Storage.SqlServer` brings the README
+  says that no SQL command is recorded.
+- `package-database-scenarios.mjs` starts the app for each database with `ExternalSources` and `CaptureSqlText`
+  on, and runs four scenarios: `several-commands` (three commands in one method record one step each, in order,
+  under the controller, with the SQL, and the current activity of the caller does not move), `filters` (the list
+  filters by status, and by a route written without the constraint the trace was saved with), `restart` (after the host is stopped and started again, the traces and their
+  steps are listed from the database) and `schema-script` (the `schema.sql` of the repository is enough with
+  `AutoCreateSchema = false`, for the build only, because the package does not carry that file). A scenario waits
+  until the trace is listed from the database before it filters or stops the host, so a late write cannot make
+  it pass or fail by chance. The scenario ids, `database:<kind>:<scenario>`, are the ones a row of
+  `tests/regression-guards/guards.json` can name.
+
 To see what the differences are now, for example when you add a scenario, run with `--print`. A difference
 without a CHANGELOG entry that can announce it is a regression, not a line for the list.
 
