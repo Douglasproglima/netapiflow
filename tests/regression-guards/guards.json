@@ -2371,5 +2371,16 @@
       "test": "entriesMissingFromTheChangelog_WhenNothingAnnouncesTheLine_IsMissing"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-design-md-generator",
+    "defect": "The DESIGN.md generator stopped with Expected 7 typography rows when the scale moved from the guide to tokens.md, and nothing in the CI ran it",
+    "fixedIn": "#540",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/generate-design-md.test.mjs",
+      "test": "the committed DESIGN.md is what the generator writes from docs/brand/tokens.md"
+    },
+    "job": "build-test"
   }
 ]
