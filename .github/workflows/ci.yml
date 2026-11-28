@@ -165,6 +165,7 @@ jobs:
           if [ "${{ runner.os }}" != "Windows" ]; then
             run_tests NetApiFlow.Storage.Tests
             run_tests NetApiFlow.Npgsql.IntegrationTests
+            run_tests NetApiFlow.Npgsql8.IntegrationTests
             run_tests NetApiFlow.Npgsql10.IntegrationTests
             run_tests NetApiFlow.SqlClient.IntegrationTests
           fi
@@ -190,6 +191,7 @@ jobs:
           run_tests NetApiFlow.PrePipelineInteropSpike
           run_tests NetApiFlow.Storage.Tests
           run_tests NetApiFlow.Npgsql.IntegrationTests
+          run_tests NetApiFlow.Npgsql8.IntegrationTests
           run_tests NetApiFlow.Npgsql10.IntegrationTests
           run_tests NetApiFlow.SqlClient.IntegrationTests
 

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>NetApiFlow.Npgsql.IntegrationTests</RootNamespace>
+    <DefineConstants>$(DefineConstants);NPGSQL_BELOW_9</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\FlowTestRequest.cs" Link="Shared\FlowTestRequest.cs" />
+    <Compile Include="..\NetApiFlow.Npgsql.IntegrationTests\AssemblyInfo.cs" Link="AssemblyInfo.cs" />
+    <Compile Include="..\NetApiFlow.Npgsql.IntegrationTests\NpgsqlContainerFixture.cs" Link="NpgsqlContainerFixture.cs" />
+    <Compile Include="..\NetApiFlow.Npgsql.IntegrationTests\NpgsqlInteropIntegrationTests.cs" Link="NpgsqlInteropIntegrationTests.cs" />
+    <Compile Include="..\NetApiFlow.Npgsql.IntegrationTests\NpgsqlCommandInsideStepIntegrationTests.cs" Link="NpgsqlCommandInsideStepIntegrationTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetApiFlow\NetApiFlow.csproj" />
+    <ProjectReference Include="..\..\src\NetApiFlow.EntityFrameworkCore\NetApiFlow.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -81,6 +81,7 @@ jobs:
           dotnet test tests/NetApiFlow.PrePipelineInteropSpike -c Release --no-build
           dotnet test tests/NetApiFlow.Storage.Tests -c Release --no-build
           dotnet test tests/NetApiFlow.Npgsql.IntegrationTests -c Release --no-build
+          dotnet test tests/NetApiFlow.Npgsql8.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.Npgsql10.IntegrationTests -c Release --no-build
           dotnet test tests/NetApiFlow.SqlClient.IntegrationTests -c Release --no-build
 
@@ -104,6 +105,7 @@ jobs:
           run_tests NetApiFlow.PrePipelineInteropSpike
           run_tests NetApiFlow.Storage.Tests
           run_tests NetApiFlow.Npgsql.IntegrationTests
+          run_tests NetApiFlow.Npgsql8.IntegrationTests
           run_tests NetApiFlow.Npgsql10.IntegrationTests
           run_tests NetApiFlow.SqlClient.IntegrationTests
 

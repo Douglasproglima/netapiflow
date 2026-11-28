@@ -12,9 +12,9 @@ document explains how to build it locally and how to send a change.
   dashboard fail with `Could not load the embedded file manifest` until you run `npm ci` and
   `npm run build` in `ClientApp`.
 - Docker, for the tests that start PostgreSQL and SQL Server in containers
-  (`NetApiFlow.Storage.Tests`, `NetApiFlow.Npgsql.IntegrationTests`, `NetApiFlow.Npgsql10.IntegrationTests`
-  and `NetApiFlow.SqlClient.IntegrationTests`). Without Docker those four projects cannot start their
-  containers.
+  (`NetApiFlow.Storage.Tests`, `NetApiFlow.Npgsql.IntegrationTests`, `NetApiFlow.Npgsql8.IntegrationTests`,
+  `NetApiFlow.Npgsql10.IntegrationTests` and `NetApiFlow.SqlClient.IntegrationTests`). Without Docker those
+  five projects cannot start their containers.
 
 ## Local setup
 
