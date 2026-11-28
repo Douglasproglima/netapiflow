@@ -2349,5 +2349,71 @@
       "test": "NetApiFlow.IntegrationTests.DashboardFallbackPolicyWarningTests.Start_WithAFallbackPolicyAndTheAuthenticationSchemeOfTheApp_WarnsAboutItsChallengeWhateverTheStatusCode"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-compare-renamed-changelog",
+    "defect": "The comparison read only the Unreleased section, so a release that moved the text into its own section announced none of the expected differences",
+    "fixedIn": "#526",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/compare-with-published.test.mjs",
+      "test": "entriesMissingFromTheChangelog_WhenTheReleaseMovedTheEntryAboveTheLastPublishedVersion_FindsIt"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-compare-older-entry",
+    "defect": "The comparison counted a sentence of an old release as the announcement of a new difference",
+    "fixedIn": "#526",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/compare-with-published.test.mjs",
+      "test": "entriesMissingFromTheChangelog_WhenTheEntryIsBelowTheLastPublishedVersion_IsMissing"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-compare-reworded-entry",
+    "defect": "A CHANGELOG entry reworded away from the sentence that expected-differences.json requires made the comparison fail, and only a pull request that also changed a README turned the job on",
+    "fixedIn": "#520",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/compare-with-published.test.mjs",
+      "test": "entriesMissingFromTheChangelog_WhenNothingAnnouncesTheLine_IsMissing"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-design-md-generator",
+    "defect": "The DESIGN.md generator stopped with Expected 7 typography rows when the scale moved from the guide to tokens.md, and nothing in the CI ran it",
+    "fixedIn": "#540",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/generate-design-md.test.mjs",
+      "test": "the committed DESIGN.md is what the generator writes from docs/brand/tokens.md"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-citations-workflows-scripts",
+    "defect": "The comments of the workflows and of the scripts cited decisions, tasks and pull requests, because the citation check read only src/ and tests/",
+    "fixedIn": "#540",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/check-citations.test.mjs",
+      "test": "a comment of a workflow or of a script that cites a decision is reported"
+    },
+    "job": "build-test"
+  },
+  {
+    "id": "72-changelog-turns-on-comparison",
+    "defect": "A pull request that changed only the CHANGELOG left the real-package and comparison jobs off, so a reworded entry broke the comparison in the next pull request",
+    "fixedIn": "#540",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/detect-changes.test.mjs",
+      "test": "the CHANGELOG turns the real-package job on, because the comparison reads it"
+    },
+    "job": "build-test"
   }
 ]

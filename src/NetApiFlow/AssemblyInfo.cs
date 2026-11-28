@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("NetApiFlow.Dashboard")]
 [assembly: InternalsVisibleTo("NetApiFlow.Storage.Tests")]
 [assembly: InternalsVisibleTo("NetApiFlow.Npgsql.IntegrationTests")]
+[assembly: InternalsVisibleTo("NetApiFlow.Npgsql8.IntegrationTests")]
 [assembly: InternalsVisibleTo("NetApiFlow.Npgsql10.IntegrationTests")]
 [assembly: InternalsVisibleTo("NetApiFlow.SqlClient.IntegrationTests")]
 [assembly: InternalsVisibleTo("NetApiFlow.Storage.PostgreSql")]

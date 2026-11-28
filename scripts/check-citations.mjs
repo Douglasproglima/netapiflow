@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export const CITATION_PATTERN = /ADR-[0-9]|\bD-[0-9]{2,3}\b|\bR-[0-9]{2}\b|do prompt|docs\/plano|docs\/adr/;
+export const CITATION_PATTERN = /ADR-[0-9]|\bD-[0-9]{2,3}\b|\bR-[0-9]{2}\b|do prompt|docs\/plano|docs\/adr|\b[Tt]arefa [0-9]+\.[0-9]+|\bPR #[0-9]+/;
 
 const CHECKED_EXTENSIONS = new Set([
   '.cs', '.csproj', '.props', '.targets', '.ts', '.html', '.scss', '.css', '.js', '.mjs', '.json', '.md', '.xml', '.yml',
@@ -11,7 +11,7 @@ const CHECKED_EXTENSIONS = new Set([
 
 const GENERATED_FILES = new Set(['package-lock.json']);
 
-const CHECKED_FOLDERS = ['src', 'tests'];
+const CHECKED_FOLDERS = ['src', 'tests', 'scripts', '.github'];
 
 export const EXCLUDED_FOLDERS = ['tests/manual-verification/', 'tests/regression-guards/'];
 
@@ -28,6 +28,8 @@ export const EXCEPTIONS = new Map([
     'src/NetApiFlow.Dashboard/ClientApp/scripts/README.md',
     'Describes the design tooling, which is defined by those ADRs.',
   ],
+  ['scripts/check-citations.mjs', 'Defines the pattern that recognises a citation.'],
+  ['scripts/check-citations.test.mjs', 'Its sample lines are citations on purpose, to prove that the check finds them.'],
 ]);
 
 export function isChecked(file) {
@@ -57,11 +59,11 @@ export function listTrackedFiles(root) {
 
 export function report(findings) {
   if (findings.length === 0) {
-    return 'No citation of an ADR, a decision, a risk or a plan document in src/ or tests/.';
+    return 'No citation of an ADR, a decision, a risk, a task, a pull request or a plan document in src/, tests/, scripts/ or .github/.';
   }
   const lines = findings.map((finding) => `${finding.file}:${finding.line}: ${finding.text}`);
   return [
-    `${findings.length} line(s) of src/ or tests/ cite an ADR, a decision, a risk or a plan document:`,
+    `${findings.length} line(s) of src/, tests/, scripts/ or .github/ cite an ADR, a decision, a risk, a task, a pull request or a plan document:`,
     ...lines,
     'Say the reason in words and drop the number. An exception goes in EXCEPTIONS of scripts/check-citations.mjs, one line per file, with the reason.',
   ].join('\n');

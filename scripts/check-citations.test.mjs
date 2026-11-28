@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EXCEPTIONS, EXCLUDED_FOLDERS, findCitations, report } from './check-citations.mjs';
+import { fileURLToPath } from 'node:url';
+import { EXCEPTIONS, EXCLUDED_FOLDERS, findCitations, listTrackedFiles, report } from './check-citations.mjs';
 
 const filesWith = (contents) => ({
   files: Object.keys(contents),
@@ -25,6 +26,8 @@ test('each form of citation is reported', () => {
     '/// the glob (see D-08 in docs/plano/decisoes.md).',
     '/** Six states of seção 7.2 do prompt. */',
     '// frozen in docs/adr/0007.md',
+    '# Testcontainers needs Docker (tarefa 6.5).',
+    '# a race between MSBuild passes (PR #17).',
   ];
 
   for (const form of forms) {
@@ -90,4 +93,22 @@ test('the verification and regression guard folders are not read', () => {
   for (const folder of EXCLUDED_FOLDERS) {
     assert.deepEqual(citationsIn({ [`${folder}notes.md`]: 'see ADR-0007 and D-35' }), [], folder);
   }
+});
+
+test('a comment of a workflow or of a script that cites a decision is reported', () => {
+  const findings = citationsIn({
+    '.github/workflows/ci.yml': '# branch protection waits for a status (D-64).',
+    'scripts/package-scenarios.mjs': '// kept for tarefa 7.7',
+  });
+
+  assert.deepEqual(findings.map((finding) => finding.file), ['.github/workflows/ci.yml', 'scripts/package-scenarios.mjs']);
+});
+
+test('the tracked files read by the check include the workflows and the scripts', () => {
+  const files = listTrackedFiles(fileURLToPath(new URL('..', import.meta.url)));
+
+  assert.ok(files.includes('.github/workflows/ci.yml'));
+  assert.ok(files.includes('scripts/check-citations.mjs'));
+  assert.ok(files.some((file) => file.startsWith('src/')));
+  assert.ok(files.some((file) => file.startsWith('tests/')));
 });

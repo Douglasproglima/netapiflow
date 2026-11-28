@@ -13,14 +13,14 @@ jobs:
   # Detects documentation-only changes so build-test and secret-scan can report "skipped" (which
   # satisfies a required status check) instead of never running at all. A workflow-level
   # `paths-ignore` would leave required checks permanently pending on a docs-only PR, since GitHub
-  # branch protection waits for a status that a skipped *workflow* never reports (D-64).
+  # branch protection waits for a status that a skipped *workflow* never reports.
   detect-changes:
     name: detect-changes
     runs-on: ubuntu-latest
     outputs:
       docs_only: ${{ steps.filter.outputs.docs_only }}
       clientapp_changed: ${{ steps.filter.outputs.clientapp_changed }}
-      readme_changed: ${{ steps.filter.outputs.readme_changed }}
+      contract_docs_changed: ${{ steps.filter.outputs.contract_docs_changed }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -42,7 +42,7 @@ jobs:
             echo "No usable base SHA (new branch or force-push), treating as a full build." >&2
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
             echo "clientapp_changed=true" >> "$GITHUB_OUTPUT"
-            echo "readme_changed=true" >> "$GITHUB_OUTPUT"
+            echo "contract_docs_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -62,10 +62,10 @@ jobs:
             echo "clientapp_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if echo "$CHANGED" | grep -qE '^README(\.pt-BR)?\.md$'; then
-            echo "readme_changed=true" >> "$GITHUB_OUTPUT"
+          if echo "$CHANGED" | grep -qE '^(README(\.pt-BR)?|CHANGELOG)\.md$'; then
+            echo "contract_docs_changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "readme_changed=false" >> "$GITHUB_OUTPUT"
+            echo "contract_docs_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
   build-test:
@@ -106,7 +106,7 @@ jobs:
       # BuildAngularClient MSBuild target assumes it only ever runs once per outer,
       # TargetFramework-less pass of that one project, but a solution build with
       # ProjectReferences into it (NetApiFlow.IntegrationTests, samples) can trigger more than one
-      # such pass under MSBuild's parallel scheduling, racing on the same dist/ output (PR #17).
+      # such pass under MSBuild's parallel scheduling, racing on the same dist/ output.
       # With dist/ already fresh, every one of those passes sees its Inputs/Outputs check satisfied
       # and skips `npm run build` entirely, so the race has nothing left to race on.
       - name: Build dashboard UI
@@ -161,10 +161,11 @@ jobs:
           run_tests NetApiFlow.Mcp.Tests
           run_tests NetApiFlow.OpenTelemetry.Tests
           run_tests NetApiFlow.PrePipelineInteropSpike
-          # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners (tarefa 6.5).
+          # Testcontainers needs Docker, unavailable on GitHub-hosted windows-latest runners.
           if [ "${{ runner.os }}" != "Windows" ]; then
             run_tests NetApiFlow.Storage.Tests
             run_tests NetApiFlow.Npgsql.IntegrationTests
+            run_tests NetApiFlow.Npgsql8.IntegrationTests
             run_tests NetApiFlow.Npgsql10.IntegrationTests
             run_tests NetApiFlow.SqlClient.IntegrationTests
           fi
@@ -190,12 +191,17 @@ jobs:
           run_tests NetApiFlow.PrePipelineInteropSpike
           run_tests NetApiFlow.Storage.Tests
           run_tests NetApiFlow.Npgsql.IntegrationTests
+          run_tests NetApiFlow.Npgsql8.IntegrationTests
           run_tests NetApiFlow.Npgsql10.IntegrationTests
           run_tests NetApiFlow.SqlClient.IntegrationTests
 
+      - name: Test the scripts of the repository
+        if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination="$RUNNER_TEMP/node-test.xml" scripts/*.test.mjs
+
       - name: Check that every regression guard still exists and passes
         if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
-        run: node scripts/check-regression-guards.mjs --trx "$RUNNER_TEMP/trx" --vitest "$RUNNER_TEMP/vitest.json"
+        run: node scripts/check-regression-guards.mjs --trx "$RUNNER_TEMP/trx" --vitest "$RUNNER_TEMP/vitest.json" --node-test "$RUNNER_TEMP/node-test.xml"
 
       - name: Create the local package folders the verification projects list
         if: needs.detect-changes.outputs.docs_only != 'true' && matrix.os == 'ubuntu-latest'
@@ -229,7 +235,7 @@ jobs:
     needs: detect-changes
     uses: ./.github/workflows/real-package.yml
     with:
-      run: ${{ needs.detect-changes.outputs.docs_only != 'true' || needs.detect-changes.outputs.readme_changed == 'true' }}
+      run: ${{ needs.detect-changes.outputs.docs_only != 'true' || needs.detect-changes.outputs.contract_docs_changed == 'true' }}
 
   built-demo:
     name: built-demo
@@ -259,9 +265,9 @@ jobs:
       - name: Open every trace and screen of the built demo in a headless browser
         run: node scripts/verify-built-demo.mjs --directory src/NetApiFlow.Dashboard/ClientApp/dist/demo/browser
 
-  # D-76: visual-quality findings never fail this job (`|| true` below). The detector runs in
-  # warn-only mode for a full cycle before the Planejadora decides whether it should block.
-  # R-15: the GitHub-hosted runner doesn't run as root, so the detector's Chromium shouldn't need
+  # Visual-quality findings never fail this job (`|| true` below). The detector runs in
+  # warn-only mode for a full cycle before anyone decides whether it should block.
+  # The GitHub-hosted runner doesn't run as root, so the detector's Chromium shouldn't need
   # `--no-sandbox` here; that flag is only a known fallback for someone running this same scan
   # locally inside a root container.
   visual-quality:

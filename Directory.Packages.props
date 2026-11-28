@@ -53,7 +53,8 @@
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
 
     <!-- samples/SampleApi.Controllers -->
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" Condition="'$(MSBuildProjectName)' != 'NetApiFlow.Npgsql10.IntegrationTests'" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" Condition="'$(MSBuildProjectName)' != 'NetApiFlow.Npgsql10.IntegrationTests' And '$(MSBuildProjectName)' != 'NetApiFlow.Npgsql8.IntegrationTests'" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" Condition="'$(MSBuildProjectName)' == 'NetApiFlow.Npgsql8.IntegrationTests'" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" Condition="'$(MSBuildProjectName)' == 'NetApiFlow.Npgsql10.IntegrationTests'" />
 
     <!-- samples/* (Runner tab of the dashboard reads each sample's own OpenAPI document) -->

@@ -83,6 +83,7 @@ public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRep
         return Ok();
     }
 
+#if !NPGSQL_BELOW_9
     [HttpGet("renamed-between-normal-commands")]
     public async Task<IActionResult> RenamedBetweenNormalCommands()
     {
@@ -125,6 +126,7 @@ public sealed class SqlInStepController(NpgsqlDataSource dataSource, IRawUserRep
         await using var command = renamed.CreateCommand("SELECT count(*) FROM \"Users\"");
         return Ok(await command.ExecuteScalarAsync());
     }
+#endif
 
     [HttpGet("raw")]
     public async Task<IActionResult> Raw()
@@ -394,6 +396,7 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
         trace.Spans.ShouldNotContain(span => span.Component == "Npgsql");
     }
 
+#if !NPGSQL_BELOW_9
     [Fact]
     public async Task CommandTheAppNamesLikeAConnection_IsStillRecordedWithItsSql()
     {
@@ -447,6 +450,7 @@ public sealed class NpgsqlCommandInsideStepIntegrationTests(NpgsqlContainerFixtu
         command.ErrorType.ShouldBe("Npgsql.PostgresException");
         command.ParentSpanId.ShouldBe(trace.Spans.Single(span => span.Type == ComponentType.Controller).SpanId);
     }
+#endif
 
     private const int NPlusOneThreshold = 3;
 

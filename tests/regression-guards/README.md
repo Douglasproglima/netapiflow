@@ -14,6 +14,9 @@ Every row has:
     its namespace and class). A `[Theory]` is guarded as a whole: every case has to pass.
   - `vitest`: `file` (the spec, from the `ClientApp` folder) and `test` (the start of the name of the
     test, `describe` and `it`, as the report writes it).
+  - `node-test`: `file` (the test file, from the repository root, for example
+    `scripts/compare-with-published.test.mjs`) and `test` (the exact name of the test). These are the tests
+    of `scripts/*.test.mjs`, which guard the scripts and the workflows of the CI.
   - `ci-scenario`: `scenario`, the id of a scenario of a job. The scenarios are the ones of
     `scripts/package-scenarios.mjs`, the `a` of `scripts/build-user-app.mjs` and the three
     `live-panel:<check>` of `scripts/verify-live-panel.mjs` for `real-package`, one
@@ -25,8 +28,8 @@ Every row has:
 ## What the CI does with it
 
 The step "Check that every regression guard still exists and passes" of `build-test` reads the `.trx`
-file of each test project and the JSON report of the dashboard tests, which the job already produces in
-one run, and fails when:
+file of each test project, the JSON report of the dashboard tests and the JUnit report of `node --test`, which
+the job already produces in one run, and fails when:
 
 - a listed test is not in the results, because it was deleted or renamed;
 - a listed test is in the results but did not pass, and a skipped test counts as not passed;
