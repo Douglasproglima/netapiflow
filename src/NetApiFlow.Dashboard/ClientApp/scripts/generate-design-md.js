@@ -5,7 +5,6 @@ const path = require('path');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const TOKENS_PATH = path.join(REPO_ROOT, 'docs', 'brand', 'tokens.md');
-const GUIDE_PATH = path.join(REPO_ROOT, 'docs', 'design', 'flow-workspace', 'guide.md');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'DESIGN.md');
 
 function readFile(filePath) {
@@ -33,7 +32,7 @@ function extractSection(markdown, headingPattern) {
 }
 
 function parseTable(block) {
-  return block
+  const [, ...bodyRows] = block
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.startsWith('|'))
@@ -43,8 +42,8 @@ function parseTable(block) {
         .slice(1, -1)
         .split('|')
         .map((cell) => cell.trim().replace(/`/g, '')),
-    )
-    .slice(1); // drop header row
+    );
+  return bodyRows;
 }
 
 function lookup(rows, key) {
@@ -74,22 +73,17 @@ function prose(value) {
     .replace(/\be\b/g, 'and');
 }
 
-function generate() {
-  const tokens = readFile(TOKENS_PATH);
-  const guide = readFile(GUIDE_PATH);
-
+function renderDesignMd(tokens) {
   const obsidian = parseTable(extractSection(tokens, /^## Cores · Obsidian/));
   const stageLight = parseTable(extractSection(tokens, /^## Cores · Stage Light/));
   const onTint = parseTable(extractSection(tokens, /^## Cores de texto sobre fundo tingido/));
-  const typography = parseTable(
-    extractSection(guide, /^### 3\.3 Tipografia aplicada ao dashboard/),
-  );
+  const typography = parseTable(extractSection(tokens, /^### Escala aplicada ao dashboard/));
 
   if (onTint.length !== 6) {
     throw new Error(`Expected 6 on-tint rows in tokens.md, found ${onTint.length}`);
   }
   if (typography.length !== 7) {
-    throw new Error(`Expected 7 typography rows in guide.md, found ${typography.length}`);
+    throw new Error(`Expected 7 typography rows in tokens.md, found ${typography.length}`);
   }
 
   const ON_TINT_LABELS = [
@@ -215,8 +209,16 @@ Replacing the primary color or the interface font requires a new ADR that explic
 ADR-0009, not a silent change to quiet a detector.
 `;
 
-  fs.writeFileSync(OUTPUT_PATH, content);
+  return content;
+}
+
+function generate() {
+  fs.writeFileSync(OUTPUT_PATH, renderDesignMd(readFile(TOKENS_PATH)));
   console.log(`Wrote ${OUTPUT_PATH}`);
 }
 
-generate();
+module.exports = { renderDesignMd };
+
+if (require.main === module) {
+  generate();
+}
