@@ -21,6 +21,8 @@ updates:
       - dependency-name: "NetApiFlow*"
       - dependency-name: "Npgsql*"
       - dependency-name: "OpenTelemetry*"
+      - dependency-name: "SQLitePCLRaw*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
