@@ -133,7 +133,7 @@ internal sealed partial class SqlClientCommandListener
             return;
         }
 
-        var step = OpenStepLeavingTheCallerActivityCurrent(SqlCommandDescriber.Describe(command.CommandText));
+        var step = Flow.Step(SqlClientDiagnosticNames.Component, SqlCommandDescriber.Describe(command.CommandText), ComponentType.Database);
 
         if (step.IsNoOp)
         {
