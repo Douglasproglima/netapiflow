@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Probe line that only exists to measure the detect-changes rule. Never merged.
+
 ## [0.6.0] - 2026-11-25
 
 ### Added
