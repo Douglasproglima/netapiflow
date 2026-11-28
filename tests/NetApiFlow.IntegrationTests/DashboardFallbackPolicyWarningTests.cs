@@ -1,11 +1,17 @@
 using System.Collections.Concurrent;
+using System.Net;
+using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NetApiFlow.Dashboard;
 using NetApiFlow.Dashboard.Endpoints;
 using Shouldly;
@@ -28,7 +34,8 @@ public class DashboardFallbackPolicyWarningTests
 
         var warning = logs.Warnings().ShouldHaveSingleItem();
         warning.ShouldContain(FallbackPolicyKeyWord);
-        warning.ShouldContain("401");
+        warning.ShouldContain("challenge of the application's authentication scheme");
+        warning.ShouldNotContain("401");
         warning.ShouldContain("AllowAnonymous()");
         warning.ShouldContain("RequireAuthorization");
         warning.ShouldContain("IFlowAccessFilter");
@@ -100,6 +107,57 @@ public class DashboardFallbackPolicyWarningTests
         logs.Warnings().ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData(CookieAuthenticationDefaults.AuthenticationScheme, HttpStatusCode.Found)]
+    [InlineData(BearerLikeScheme, HttpStatusCode.Unauthorized)]
+    public async Task Start_WithAFallbackPolicyAndTheAuthenticationSchemeOfTheApp_WarnsAboutItsChallengeWhateverTheStatusCode(string scheme, HttpStatusCode challengeStatus)
+    {
+        var logs = new CapturingLoggerProvider();
+
+        using var host = await StartHostAsync(
+            Environments.Production,
+            withFallbackPolicy: true,
+            logs,
+            configureDashboard: _ => { },
+            addAuthentication: services => AddAuthenticationScheme(services, scheme));
+
+        var warning = logs.Warnings().ShouldHaveSingleItem();
+        warning.ShouldContain("challenge of the application's authentication scheme");
+        warning.ShouldNotContain("401");
+        using var client = host.GetTestClient();
+        using var response = await client.GetAsync("/flow/");
+        response.StatusCode.ShouldBe(challengeStatus);
+    }
+
+    private const string BearerLikeScheme = "BearerLike";
+
+    private static void AddAuthenticationScheme(IServiceCollection services, string scheme)
+    {
+        var authentication = services.AddAuthentication(scheme);
+        if (scheme == CookieAuthenticationDefaults.AuthenticationScheme)
+        {
+            authentication.AddCookie();
+        }
+        else
+        {
+            authentication.AddScheme<AuthenticationSchemeOptions, ChallengesWith401Handler>(scheme, _ => { });
+        }
+    }
+
+    private sealed class ChallengesWith401Handler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory loggerFactory,
+        UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
+    {
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(AuthenticateResult.NoResult());
+
+        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+    }
+
     private static async Task<WebApplication> StartMinimalHostingAsync(
         CapturingLoggerProvider logs,
         Action<IEndpointConventionBuilder> configureDashboard)
@@ -124,7 +182,8 @@ public class DashboardFallbackPolicyWarningTests
         string environment,
         bool withFallbackPolicy,
         CapturingLoggerProvider logs,
-        Action<IEndpointConventionBuilder>? configureDashboard)
+        Action<IEndpointConventionBuilder>? configureDashboard,
+        Action<IServiceCollection>? addAuthentication = null)
     {
         return await Host.CreateDefaultBuilder()
             .ConfigureWebHost(webBuilder =>
@@ -137,7 +196,7 @@ public class DashboardFallbackPolicyWarningTests
                     services.AddRouting();
                     services.AddNetApiFlow();
                     services.AddNetApiFlowDashboard();
-                    services.AddAuthentication();
+                    (addAuthentication ?? (collection => collection.AddAuthentication()))(services);
                     services.AddAuthorization(options =>
                     {
                         options.AddPolicy("AllowedForTheTest", policy => policy.RequireAssertion(_ => true));

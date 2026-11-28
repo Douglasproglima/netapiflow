@@ -2338,5 +2338,16 @@
       "test": "NetApiFlow.Tests.Instrumentation.FlowActivityListenerDisposeTests.Dispose_CalledTwiceOnAnEnabledListener_DoesNotSilenceAnotherEnabledListener"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-fallback-policy-warning-challenge",
+    "defect": "The FallbackPolicy startup warning said the authorization middleware answers 401, but with cookie authentication it answers a 302 to the login page",
+    "fixedIn": "#541",
+    "guard": {
+      "kind": "dotnet",
+      "project": "NetApiFlow.IntegrationTests",
+      "test": "NetApiFlow.IntegrationTests.DashboardFallbackPolicyWarningTests.Start_WithAFallbackPolicyAndTheAuthenticationSchemeOfTheApp_WarnsAboutItsChallengeWhateverTheStatusCode"
+    },
+    "job": "build-test"
   }
 ]

@@ -806,7 +806,7 @@ inalcançável. A exceção completa é registrada em `Debug`.
 > `AllowAnonymous` vence a policy, então sem `IFlowAccessFilter` toda rota responde 404.
 >
 > Quando a aplicação sobe com um `FallbackPolicy` e um dashboard sem `.AllowAnonymous()` nem
-> `.RequireAuthorization()`, o NetApiFlow registra um aviso que nomeia o 401 e o caminho para
+> `.RequireAuthorization()`, o NetApiFlow registra um aviso que nomeia o desafio e o caminho para
 > resolver, para ele não ficar sem explicação.
 
 ### Quais `Host` e `Origin` são aceitos
