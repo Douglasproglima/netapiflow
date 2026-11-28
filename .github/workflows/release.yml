@@ -41,7 +41,7 @@ jobs:
           cache-dependency-path: src/NetApiFlow.Dashboard/ClientApp/package-lock.json
 
       # Built explicitly, once, before `dotnet build`: see the matching step in ci.yml for why
-      # (PR #17 race between parallel MSBuild passes over NetApiFlow.Dashboard's own dist/).
+      # (parallel MSBuild passes race over NetApiFlow.Dashboard's own dist/).
       - name: Build dashboard UI
         working-directory: src/NetApiFlow.Dashboard/ClientApp
         run: |
@@ -134,7 +134,7 @@ jobs:
 
       # Trusted Publishing (OIDC): no nuget.org API key stored in a repository secret. Requires
       # the Trusted Publishing policy configured on nuget.org for this repository and this
-      # workflow file *before* the first tag (tarefa 7.7, manual step outside this repo).
+      # workflow file *before* the first tag (a manual step outside this repo).
       - name: NuGet login (Trusted Publishing)
         id: nuget-login
         uses: NuGet/login@v1
