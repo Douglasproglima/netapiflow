@@ -2374,7 +2374,7 @@
   },
   {
     "id": "72-compare-reworded-entry",
-    "defect": "A CHANGELOG entry reworded away from the sentence that expected-differences.json requires was not caught before the release",
+    "defect": "A CHANGELOG entry reworded away from the sentence that expected-differences.json requires made the comparison fail, and only a pull request that also changed a README turned the job on",
     "fixedIn": "#520",
     "guard": {
       "kind": "node-test",
