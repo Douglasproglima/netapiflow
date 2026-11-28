@@ -2393,5 +2393,16 @@
       "test": "a comment of a workflow or of a script that cites a decision is reported"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-changelog-turns-on-comparison",
+    "defect": "A pull request that changed only the CHANGELOG left the real-package and comparison jobs off, so a reworded entry broke the comparison in the next pull request",
+    "fixedIn": "#540",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/detect-changes.test.mjs",
+      "test": "the CHANGELOG turns the real-package job on, because the comparison reads it"
+    },
+    "job": "build-test"
   }
 ]
