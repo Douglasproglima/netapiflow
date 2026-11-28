@@ -5,6 +5,8 @@ VERSION=$3
 PORT=5150
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "$HERE"
+LOG_DIR=$(mktemp -d)
+trap 'rm -rf "$LOG_DIR" 2>/dev/null' EXIT
 
 export SMOKE_SQL='Server=localhost,14330;Database=smoke;User Id=sa;Password=Smoke050!Pass;TrustServerCertificate=True;Encrypt=True'
 export ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:$PORT
@@ -16,7 +18,7 @@ stop_app() {
 }
 
 start_app() {
-  (dotnet run --no-build > "app-$TFM-$MODE.log" 2>&1 &)
+  (dotnet run --no-build > "$LOG_DIR/app-$TFM-$MODE.log" 2>&1 &)
   for _ in $(seq 1 30); do
     curl -s -o /dev/null "localhost:$PORT/flow/" && return 0
     sleep 1
