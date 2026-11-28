@@ -2393,5 +2393,16 @@
       "test": "the committed DESIGN.md is what the generator writes from docs/brand/tokens.md"
     },
     "job": "build-test"
+  },
+  {
+    "id": "72-citations-workflows-scripts",
+    "defect": "The comments of the workflows and of the scripts cited decisions, tasks and pull requests, because the citation check read only src/ and tests/",
+    "fixedIn": "#540",
+    "guard": {
+      "kind": "node-test",
+      "file": "scripts/check-citations.test.mjs",
+      "test": "a comment of a workflow or of a script that cites a decision is reported"
+    },
+    "job": "build-test"
   }
 ]
